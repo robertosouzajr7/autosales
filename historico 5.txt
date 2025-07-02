@@ -1,0 +1,297 @@
+# AutoSales - Resumo Completo do Projeto
+
+## 👨‍💻 CONTEXTO DO DESENVOLVEDOR
+**Roberto Santos** - Desenvolvedor FullStack
+- **Localização**: Salvador/BA
+- **Características**: TDAH, pai de bebê 5 meses, tempo limitado
+- **Trabalho atual**: Analista de produtos
+- **Meta**: R$ 15k/mês + trabalho remoto internacional
+- **Expertise**: Ex-experiência em contabilidade (vantagem competitiva)
+
+## 🚀 VISÃO DO PROJETO AUTOSALES
+
+### Conceito
+**AutoSales** é uma plataforma SAAS que automatiza vendas e cobrança via WhatsApp para qualquer tipo de negócio, combinando:
+- **Módulo de Cobrança**: Automatização de cobranças via WhatsApp
+- **SDR Virtual**: Qualificação automática de leads e agendamento de reuniões
+
+### Evolução da Ideia
+1. **Início**: Foco específico em escritórios contábeis (Salvador/BA)
+2. **Expansão**: Evoluiu para solução multi-vertical (qualquer negócio)
+3. **Arquitetura**: Híbrida usando código direto + N8N workflows
+
+### Diferenciais
+- ✅ Arquitetura híbrida (Código + N8N workflows)
+- ✅ Multi-vertical (qualquer segmento)
+- ✅ Trial 14 dias gratuito
+- ✅ Zero investimento inicial (VPS própria)
+- ✅ Automação completa de workflows por cliente
+
+## 🏗️ ARQUITETURA TÉCNICA
+
+### Stack Tecnológica
+- **Frontend**: Next.js 14 + TypeScript + Tailwind CSS
+- **Backend**: Node.js + PostgreSQL + Prisma
+- **Automação**: N8N (self-hosted) + Evolution API
+- **Infraestrutura**: VPS própria + Docker + Portainer
+- **Database**: Supabase (self-hosted) com PostgreSQL
+- **Deploy**: Docker Swarm via Portainer
+
+### Divisão de Responsabilidades
+**🔥 CÓDIGO DIRETO (Performance + Simplicidade)**
+- Cobrança automática básica
+- Gestão de usuários e billing
+- Dashboard principal
+- Upload e parse de planilhas
+- Templates de mensagem simples
+- Relatórios básicos
+
+**🤖 N8N WORKFLOWS (Flexibilidade + Complexidade)**
+- SDR Virtual (qualificação IA)
+- Campanhas multi-step
+- Integrações externas (Calendly, CRM)
+- Follow-ups automáticos
+- Workflows customizados por cliente
+- Automações avançadas
+
+### Infraestrutura Atual
+- **VPS**: agentesvirtuais.com (IP: 82.29.56.248)
+- **Supabase**: https://supabase.agentesvirtuais.com
+- **N8N**: https://builder.agentesvirtuais.com
+- **Evolution API**: https://evolution.agentesvirtuais.com
+- **Portainer**: Gerenciamento via interface web
+
+## 🗄️ BANCO DE DADOS
+
+### Configuração Atual
+- **Host**: 82.29.56.248 (via túnel SSH)
+- **Porta**: 5432 (mapeada para 5433 local via SSH)
+- **Database**: postgres
+- **User**: postgres
+- **Password**: d969ce5dbfe539966369d83292968476
+
+### Schema Principal
+```sql
+-- Tabelas principais criadas e funcionando:
+- users (usuários do sistema)
+- plans (planos de assinatura)
+- contacts (contatos dos usuários)
+- campaigns (campanhas de marketing)
+- templates (templates de mensagem)
+- workflows (workflows N8N)
+- api_keys (chaves de integração)
+- messages (histórico de mensagens)
+- charges (cobranças)
+```
+
+### Planos de Assinatura
+- **Trial**: R$ 0 (50 contatos, 14 dias)
+- **Starter**: R$ 197/mês (500 contatos)
+- **Professional**: R$ 497/mês (2000 contatos)
+- **Enterprise**: R$ 897/mês (contatos ilimitados)
+
+## 🔧 CONFIGURAÇÃO DE DESENVOLVIMENTO
+
+### Ambiente Local Funcionando
+- **Projeto clonado**: https://github.com/robertosouzajr7/autosales.git
+- **Conexão DB**: Via túnel SSH funcionando
+- **API**: http://localhost:3000 operacional
+- **Prisma**: Cliente gerado e conectando
+
+### .env.local Configurado
+```env
+DATABASE_URL="postgresql://postgres:d969ce5dbfe539966369d83292968476@localhost:5433/postgres"
+NEXT_PUBLIC_SUPABASE_URL=https://supabase.agentesvirtuais.com
+N8N_API_URL=https://builder.agentesvirtuais.com
+EVOLUTION_API_URL=https://evolution.agentesvirtuais.com
+NODE_ENV=development
+NEXTAUTH_SECRET=dev-secret-local
+NEXTAUTH_URL=http://localhost:3000
+```
+
+### Comando para Túnel SSH
+```bash
+ssh -L 5433:supabase_db:5432 root@82.29.56.248
+```
+
+### Prisma Configuração
+- **Schema**: Sincronizado com banco VPS
+- **Client**: Usando instância global em `lib/prisma.ts`
+- **Comandos funcionando**: `npx prisma db pull`, `npx prisma generate`
+
+## 🧪 TESTES REALIZADOS
+
+### API de Teste Funcionando
+- **Endpoint**: http://localhost:3000/api/test-db
+- **GET**: Testa conexão e lista tabelas
+- **POST**: Cria dados de teste
+- **Status**: ✅ Funcionando perfeitamente
+
+### Dados de Teste Criados
+- **Planos**: 3 planos padrão inseridos
+- **Usuário teste**: teste@autosales.com
+- **Conexão**: Validada com PostgreSQL
+
+## 🎯 MODELO DE NEGÓCIO
+
+### Target Market
+- **Primário**: Escritórios contábeis, clínicas, e-commerce
+- **Secundário**: Imobiliárias, restaurantes, SaaS pequenos
+- **Mercado**: 2.6M empresas potenciais no Brasil
+
+### Receita Projetada (Ano 1)
+- **Mês 1-3**: R$ 4.970/mês (10 clientes)
+- **Mês 4-6**: R$ 12.425/mês (25 clientes)
+- **Mês 7-9**: R$ 24.850/mês (50 clientes)
+- **Mês 10-12**: R$ 37.275/mês (75 clientes)
+- **Meta Ano 1**: R$ 35k/mês (R$ 420k/ano)
+
+### Custos Operacionais
+- **Infraestrutura**: R$ 80/mês (VPS própria)
+- **WhatsApp Business API**: R$ 0,10/msg
+- **Suporte/VA**: R$ 3.000/mês
+- **Marketing**: R$ 5.000/mês
+- **Total**: ~R$ 8.500/mês
+
+## 📋 FUNCIONALIDADES PLANEJADAS
+
+### Frontend Cliente
+**MÓDULO COBRANÇA:**
+- Upload planilha CSV/Excel
+- Cadastro manual de contatos
+- Editor de templates de mensagem
+- Configurar horários de envio
+- Dashboard com métricas
+- Histórico de mensagens
+- Relatórios de cobrança
+
+**MÓDULO SDR:**
+- Configurar qualificação (perguntas, scoring)
+- Integração Calendly
+- CRM básico de leads
+- Funil de conversão visual
+- Templates de conversas SDR
+- Dashboard de leads qualificados
+
+**CONFIGURAÇÕES:**
+- Conectar WhatsApp (QR Code)
+- Dados da empresa
+- Configurar horários
+- Billing/pagamentos
+
+### Backend/API
+- Autenticação NextAuth.js
+- APIs REST para CRUD
+- Integração N8N via webhooks
+- Sistema de billing Stripe
+- Upload e processamento arquivos
+- Relatórios e analytics
+
+## 🤖 WORKFLOWS N8N PLANEJADOS
+
+### Templates Base
+1. **SDR_Lead_Qualification**: OpenAI + scoring automático
+2. **Cobranca_Followup_Sequence**: 3 mensagens escalonadas
+3. **Meeting_Reminder_System**: Integração Calendly
+4. **Campaign_Builder**: Campanhas multi-step
+5. **Document_Collection**: Coleta automática documentos
+
+### Automação de Workflows
+- **Criação automática**: API duplica templates para cada cliente
+- **Configuração dinâmica**: Variáveis do banco de dados
+- **Zero trabalho manual**: Escalabilidade infinita
+
+## 🚀 SITUAÇÃO ATUAL
+
+### ✅ CONCLUÍDO
+- VPS configurada com todos os serviços
+- Banco de dados funcionando
+- Projeto Next.js funcionando localmente
+- Conexão VPS ↔ Local via SSH
+- API de teste validada
+- Prisma conectando perfeitamente
+- GitHub sincronizado
+- Ambiente de desenvolvimento pronto
+
+### 🔄 EM PROGRESSO
+- Dashboard principal (interface usuário)
+- Sistema de autenticação
+- APIs de integração N8N
+- Workflows base N8N
+
+### 📋 PRÓXIMOS PASSOS
+1. **Dashboard de usuário** (cadastro, login, overview)
+2. **Sistema de upload** de planilhas
+3. **Editor de templates** de mensagem
+4. **Integração N8N** para automação
+5. **Sistema de billing** Stripe
+6. **Landing page** de marketing
+7. **Beta testing** com 10 usuários
+
+## 💡 DECISÕES TÉCNICAS IMPORTANTES
+
+### Arquitetura Híbrida Justificada
+- **Código direto**: Funcionalidades simples, performance, billing
+- **N8N workflows**: Automações complexas, flexibilidade, customização
+- **Melhor dos dois mundos**: Simplicidade + Poder
+
+### VPS Própria vs Cloud
+- **Vantagem**: Controle total, custos fixos baixos
+- **Desvantagem**: Manutenção manual
+- **Decisão**: Começar VPS, migrar cloud em R$ 20k MRR
+
+### Desenvolvimento Local + VPS
+- **Banco remoto**: Dados centralizados
+- **Desenvolvimento local**: Agilidade
+- **Deploy VPS**: Controle total
+
+## 📞 INFORMAÇÕES DE CONTATO
+
+**Roberto Santos**
+- WhatsApp: (71) 99204-2802
+- Email: roberto-santos07@hotmail.com
+- GitHub: robertosouzajr7/autosales
+- VPS: root@82.29.56.248
+
+## 🔑 CREDENCIAIS E ACESSOS
+
+### GitHub
+- **Repo**: https://github.com/robertosouzajr7/autosales.git
+- **Token**: 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
+
+### Banco de Dados
+- **Connection String**: postgresql://postgres:d969ce5dbfe539966369d83292968476@localhost:5433/postgres
+- **Via SSH**: ssh -L 5433:supabase_db:5432 root@82.29.56.248
+
+### Serviços VPS
+- **Supabase**: https://supabase.agentesvirtuais.com
+- **N8N**: https://builder.agentesvirtuais.com  
+- **Evolution**: https://evolution.agentesvirtuais.com
+- **Portainer**: Interface de gerenciamento Docker
+
+## 🎯 OBJETIVOS E METAS
+
+### Curto Prazo (30 dias)
+- MVP completo funcionando
+- 10 beta testers
+- Feedback e iterações
+- Primeiro cliente pago
+
+### Médio Prazo (6 meses)
+- 100 clientes ativos
+- R$ 30k MRR
+- Equipe de 2-3 pessoas
+- Expansão para outras cidades
+
+### Longo Prazo (12 meses)
+- 500+ clientes
+- R$ 100k+ MRR
+- Trabalho remoto internacional
+- Possível aquisição ou investimento
+
+---
+
+**INSTRUÇÕES PARA PRÓXIMO CHAT:**
+Este é o estado atual completo do projeto AutoSales. Roberto tem experiência em automação, foco em resultados práticos devido ao TDAH, e precisa de estratégias diretas e executáveis. O ambiente de desenvolvimento está 100% funcional e pronto para continuar a implementação do dashboard e funcionalidades principais.
+
+**PRIORIDADE ATUAL**: Desenvolver o dashboard de usuário e sistema de autenticação, seguido pelas funcionalidades de upload de planilha e integração com N8N.

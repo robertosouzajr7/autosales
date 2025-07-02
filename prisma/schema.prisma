@@ -7,6 +7,35 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Account {
+  id                String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId            String  @db.Uuid
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  sessionToken String   @unique
+  userId       String   @db.Uuid
+  expires      DateTime @db.Timestamp(6)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([userId])
+}
+
 model Plan {
   id           String    @id @db.VarChar(50)
   name         String    @db.VarChar(100)
@@ -40,6 +69,11 @@ model User {
   scoringCriteria        Json?           @default("{}") @map("scoring_criteria")
   createdAt              DateTime?       @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt              DateTime?       @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  password               String?         @db.VarChar(255)
+  emailVerified          DateTime?       @map("email_verified") @db.Timestamp(6)
+  image                  String?         @db.VarChar(500)
+  accounts               Account[]
+  sessions               Session[]
   campaigns              Campaign[]
   contacts               Contact[]
   integrations           Integration[]
@@ -323,4 +357,12 @@ model usage_metrics {
   @@index([period_start, period_end], map: "idx_metrics_period")
   @@index([metric_type], map: "idx_metrics_type")
   @@index([user_id], map: "idx_metrics_user")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime @db.Timestamp(6)
+
+  @@unique([identifier, token])
 }

@@ -1,0 +1,93 @@
+# AutoSales Stack - Para Portainer
+# Stack Name: autosales
+version: "3.8"
+
+services:
+  # =============================================
+  # AUTOSALES APP - Frontend + Backend
+  # =============================================
+  autosales-app:
+    image: node:18-alpine
+    working_dir: /app
+    command: >
+      sh -c "
+        echo 'Limpeza TOTAL incluindo uploads...' &&
+        rm -rf * .* uploads 2>/dev/null || true &&
+        ls -la &&
+        echo 'Criando projeto Next.js em diretório 100% limpo...' &&
+        npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --yes &&
+        echo 'Verificando criação do projeto...' &&
+        ls -la &&
+        echo 'Conteúdo do package.json:' &&
+        cat package.json | head -20 &&
+        echo 'Adicionando dependências extras...' &&
+        npm install @supabase/supabase-js prisma @prisma/client axios lucide-react date-fns &&
+        echo 'Recriando pasta uploads...' &&
+        mkdir -p public/uploads &&
+        echo 'PROJETO CRIADO COM SUCESSO! Iniciando servidor...' &&
+        npm run dev
+      "
+    environment:
+      NODE_ENV: development
+
+      # Database - HOSTNAME CORRIGIDO
+      DATABASE_URL: ${DATABASE_URL}
+
+      # NextAuth
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: https://auth.agentesvirtuais.com
+
+      # Supabase (usar existente)
+      NEXT_PUBLIC_SUPABASE_URL: https://supabase.agentesvirtuais.com
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_KEY}
+
+      # N8N (usar existente)
+      N8N_API_URL: https://builder.agentesvirtuais.com
+      N8N_API_KEY: ${N8N_API_KEY}
+
+      # Evolution API (usar existente)
+      EVOLUTION_API_URL: https://evolution.agentesvirtuais.com
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY}
+
+      # OpenAI
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+
+      # Stripe
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
+
+    ports:
+      - "3000:3000"
+
+    volumes:
+      - autosales_app:/app
+
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 15s
+        max_attempts: 2
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.autosales.rule=Host(`auth.agentesvirtuais.com`)"
+        - "traefik.http.routers.autosales.tls=true"
+        - "traefik.http.routers.autosales.tls.certresolver=letsencrypt"
+        - "traefik.http.services.autosales.loadbalancer.server.port=3000"
+
+    networks:
+      - agentesvirtuais
+
+# =============================================
+# VOLUMES
+# =============================================
+volumes:
+  autosales_app:
+
+# =============================================
+# NETWORKS (usar existing)
+# =============================================
+networks:
+  agentesvirtuais:
+    external: true
