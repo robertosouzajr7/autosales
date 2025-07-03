@@ -3,7 +3,8 @@
 import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { LogOut, Settings, Crown } from "lucide-react";
+import { LogOut, Settings, Crown, Upload } from "lucide-react";
+import { useState } from "react";
 
 interface User {
   id: string;
@@ -20,8 +21,44 @@ interface DashboardHeaderProps {
 }
 
 export function DashboardHeader({ user }: DashboardHeaderProps) {
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: "/auth/signin" });
+    try {
+      setIsLoggingOut(true);
+      console.log("🚪 Iniciando logout...");
+
+      // Fazer logout do NextAuth
+      await signOut({
+        redirect: false, // ✅ Não redirecionar automaticamente
+        callbackUrl: "/auth/signin",
+      });
+
+      console.log("✅ Logout NextAuth concluído");
+
+      // Limpar storage local (se houver)
+      if (typeof window !== "undefined") {
+        localStorage.clear();
+        sessionStorage.clear();
+      }
+
+      // Aguardar um pouco e redirecionar manualmente
+      setTimeout(() => {
+        console.log("🔄 Redirecionando para login...");
+        window.location.href = "/auth/signin";
+      }, 500);
+    } catch (error) {
+      console.error("❌ Erro no logout:", error);
+      setIsLoggingOut(false);
+
+      // Fallback: redirecionar mesmo com erro
+      window.location.href = "/auth/signin";
+    }
+  };
+
+  const handleNavigation = (path: string) => {
+    if (isLoggingOut) return; // Prevenir navegação durante logout
+    window.location.href = path;
   };
 
   // Calcular dias restantes do trial
@@ -41,7 +78,15 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
     <>
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 cursor-pointer"
+          onClick={(e) => {
+            // Apenas navegar se não clicou em botões
+            if (e.target === e.currentTarget) {
+              handleNavigation("/dashboard");
+            }
+          }}
+        >
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <div className="flex items-center space-x-4">
@@ -53,6 +98,18 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
 
             {/* User Info + Menu */}
             <div className="flex items-center space-x-4">
+              {/* Botão Upload */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleNavigation("/upload")}
+                className="hidden md:flex"
+                disabled={isLoggingOut}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Importar
+              </Button>
+
               {/* Plano */}
               <Badge variant={isTrialUser ? "warning" : "success"}>
                 {user.planName || "Trial"}
@@ -72,8 +129,9 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => {}} // TODO: Abrir configurações
+                  onClick={() => handleNavigation("/configuracoes")}
                   className="p-2"
+                  disabled={isLoggingOut}
                 >
                   <Settings className="h-4 w-4" />
                 </Button>
@@ -83,8 +141,14 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
                   size="sm"
                   onClick={handleSignOut}
                   className="p-2"
+                  disabled={isLoggingOut}
+                  loading={isLoggingOut}
                 >
-                  <LogOut className="h-4 w-4" />
+                  {isLoggingOut ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+                  ) : (
+                    <LogOut className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
             </div>
@@ -105,7 +169,8 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
               <Button
                 size="sm"
                 className="ml-4 bg-yellow-600 hover:bg-yellow-700"
-                onClick={() => {}} // TODO: Ir para billing
+                onClick={() => handleNavigation("/configuracoes")}
+                disabled={isLoggingOut}
               >
                 Fazer Upgrade
               </Button>

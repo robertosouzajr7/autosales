@@ -1,3 +1,6 @@
+// src/components/ui/Table.tsx
+// ✅ VERSÃO CORRIGIDA COM SUBCOMPONENTES
+
 import React from "react";
 
 interface TableProps {
@@ -5,95 +8,61 @@ interface TableProps {
   className?: string;
 }
 
-interface TableHeaderProps {
-  children: React.ReactNode;
-  className?: string;
-}
-
-interface TableBodyProps {
-  children: React.ReactNode;
-  className?: string;
-}
-
 interface TableRowProps {
   children: React.ReactNode;
   className?: string;
-  onClick?: () => void;
 }
 
 interface TableCellProps {
   children: React.ReactNode;
   className?: string;
-  align?: "left" | "center" | "right";
 }
 
-export const Table: React.FC<TableProps> = ({ children, className = "" }) => (
+interface TableHeaderCellProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+// Componente principal
+const Table: React.FC<TableProps> & {
+  Header: React.FC<TableProps>;
+  Body: React.FC<TableProps>;
+  Row: React.FC<TableRowProps>;
+  HeaderCell: React.FC<TableHeaderCellProps>;
+  Cell: React.FC<TableCellProps>;
+} = ({ children, className = "" }) => (
   <div className="overflow-x-auto">
-    <table className={`w-full ${className}`}>{children}</table>
+    <table className={`min-w-full divide-y divide-gray-200 ${className}`}>
+      {children}
+    </table>
   </div>
 );
 
-export const TableHeader: React.FC<TableHeaderProps> = ({
-  children,
-  className = "",
-}) => <thead className={`bg-gray-50 ${className}`}>{children}</thead>;
-
-export const TableBody: React.FC<TableBodyProps> = ({
-  children,
-  className = "",
-}) => (
-  <tbody className={`divide-y divide-gray-200 ${className}`}>{children}</tbody>
+// Subcomponentes
+Table.Header = ({ children, className = "" }) => (
+  <thead className={`bg-gray-50 ${className}`}>{children}</thead>
 );
 
-export const TableRow: React.FC<TableRowProps> = ({
-  children,
-  className = "",
-  onClick,
-}) => (
-  <tr
-    className={`${
-      onClick ? "cursor-pointer hover:bg-gray-50" : ""
-    } ${className}`}
-    onClick={onClick}
+Table.Body = ({ children, className = "" }) => (
+  <tbody className={`bg-white divide-y divide-gray-200 ${className}`}>
+    {children}
+  </tbody>
+);
+
+Table.Row = ({ children, className = "" }) => (
+  <tr className={`hover:bg-gray-50 ${className}`}>{children}</tr>
+);
+
+Table.HeaderCell = ({ children, className = "" }) => (
+  <th
+    className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${className}`}
   >
     {children}
-  </tr>
+  </th>
 );
 
-export const TableCell: React.FC<TableCellProps> = ({
-  children,
-  className = "",
-  align = "left",
-}) => {
-  const alignClasses = {
-    left: "text-left",
-    center: "text-center",
-    right: "text-right",
-  };
+Table.Cell = ({ children, className = "" }) => (
+  <td className={`px-6 py-4 whitespace-nowrap ${className}`}>{children}</td>
+);
 
-  return (
-    <td className={`py-3 px-4 ${alignClasses[align]} ${className}`}>
-      {children}
-    </td>
-  );
-};
-
-export const TableHeaderCell: React.FC<TableCellProps> = ({
-  children,
-  className = "",
-  align = "left",
-}) => {
-  const alignClasses = {
-    left: "text-left",
-    center: "text-center",
-    right: "text-right",
-  };
-
-  return (
-    <th
-      className={`py-3 px-4 text-sm font-medium text-gray-700 ${alignClasses[align]} ${className}`}
-    >
-      {children}
-    </th>
-  );
-};
+export { Table };

@@ -51,7 +51,6 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name || null,
           image: user.image || null,
-          // Campos específicos do AutoSales baseados no schema
           companyName: user.companyName,
           phone: user.phone,
           planId: user.planId,
@@ -71,9 +70,8 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
-        // Armazenar dados do usuário no token JWT
         token.companyName = user.companyName;
         token.phone = user.phone;
         token.planId = user.planId;
@@ -90,7 +88,6 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (token && session.user) {
-        // Transferir dados do token para a sessão
         session.user.id = token.sub!;
         session.user.companyName = token.companyName as string;
         session.user.phone = token.phone as string;
@@ -106,50 +103,110 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-    async signIn({ user, account, profile }) {
-      // Callback executado quando o usuário faz login
+    // 🔥 CALLBACK PRINCIPAL PARA RESOLVER O LINKING
+    async signIn({ user, account, profile, email, credentials }) {
+      console.log("🔐 SignIn callback:", {
+        provider: account?.provider,
+        email: user.email,
+      });
 
-      // Se for login com Google e usuário não existe, criar no banco
+      // Se for login com Google
       if (account?.provider === "google" && user.email) {
-        const existingUser = await prisma.user.findUnique({
-          where: { email: user.email },
-        });
-
-        if (!existingUser) {
-          // Buscar plano trial padrão
-          const trialPlan = await prisma.plan.findFirst({
-            where: { name: "Trial" },
+        try {
+          // Verificar se já existe usuário com este email
+          const existingUser = await prisma.user.findUnique({
+            where: { email: user.email },
           });
 
-          await prisma.user.create({
-            data: {
-              email: user.email,
-              name: user.name,
-              image: user.image,
-              planId: trialPlan?.id || "trial",
-              // trialEndsAt e subscriptionStatus já têm defaults no schema
-            },
-          });
+          // Se usuário existe mas não tem conta Google linkada
+          if (existingUser) {
+            console.log("✅ Usuário existe, fazendo linking automático");
+
+            // Verificar se já tem conta Google linkada
+            const existingAccount = await prisma.account.findFirst({
+              where: {
+                userId: existingUser.id,
+                provider: "google",
+              },
+            });
+
+            // Se não tem conta Google, criar o link
+            if (!existingAccount) {
+              await prisma.account.create({
+                data: {
+                  userId: existingUser.id,
+                  type: account.type,
+                  provider: account.provider,
+                  providerAccountId: account.providerAccountId,
+                  refresh_token: account.refresh_token,
+                  access_token: account.access_token,
+                  expires_at: account.expires_at,
+                  token_type: account.token_type,
+                  scope: account.scope,
+                  id_token: account.id_token,
+                  session_state: account.session_state,
+                },
+              });
+              console.log("✅ Conta Google linkada com sucesso!");
+            }
+
+            // Atualizar informações do usuário com dados do Google
+            await prisma.user.update({
+              where: { id: existingUser.id },
+              data: {
+                name: user.name || existingUser.name,
+                image: user.image || existingUser.image,
+              },
+            });
+
+            return true; // Permitir login
+          }
+
+          // Se usuário não existe, será criado automaticamente pelo adapter
+          console.log("✅ Novo usuário será criado via Google");
+          return true;
+        } catch (error) {
+          console.error("❌ Erro no signIn callback:", error);
+          return false;
         }
       }
 
+      // Para outros providers ou login normal
       return true;
     },
   },
   pages: {
     signIn: "/auth/signin",
-    signUp: "/auth/signup",
+    signOut: "/auth/signup",
+    error: "/auth/error", // Página de erro customizada
   },
   events: {
     async createUser({ user }) {
-      // Log quando um novo usuário é criado
-      console.log(`Novo usuário criado: ${user.email}`);
+      console.log(`✅ Novo usuário criado: ${user.email}`);
+
+      // Se for criado via Google, configurar plano trial
+      if (!user.name?.includes("@")) {
+        // Não é email como nome
+        const trialPlan = await prisma.plan.findFirst({
+          where: { name: "Trial" },
+        });
+
+        if (trialPlan) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { planId: trialPlan.id },
+          });
+        }
+      }
     },
-    async signIn({ user, account, isNewUser }) {
-      // Log de login
-      console.log(`Login: ${user.email} via ${account?.provider}`);
+    async signIn({ user, account }) {
+      console.log(`✅ Login: ${user.email} via ${account?.provider}`);
+    },
+    async linkAccount({ user, account }) {
+      console.log(`🔗 Conta linkada: ${user.email} + ${account.provider}`);
     },
   },
+  debug: process.env.NODE_ENV === "development", // Logs detalhados em dev
 };
 
 // Tipos TypeScript para estender a sessão do NextAuth
@@ -188,7 +245,6 @@ declare module "next-auth" {
     };
   }
 }
-
 declare module "next-auth/jwt" {
   interface JWT {
     companyName?: string | null;

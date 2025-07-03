@@ -91,33 +91,39 @@ model User {
 }
 
 model Contact {
-  id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId        String    @map("user_id") @db.Uuid
-  name          String    @db.VarChar(255)
-  phone         String    @db.VarChar(20)
-  email         String?   @db.VarChar(255)
-  company       String?   @db.VarChar(255)
-  document      String?   @db.VarChar(20)
-  value         Decimal?  @db.Decimal(10, 2)
-  dueDate       DateTime? @map("due_date") @db.Date
-  daysOverdue   Int?      @default(0) @map("days_overdue")
-  invoiceNumber String?   @map("invoice_number") @db.VarChar(100)
-  description   String?
-  status        String?   @default("pending") @db.VarChar(50)
-  lastContactAt DateTime? @map("last_contact_at") @db.Timestamp(6)
-  contactCount  Int?      @default(0) @map("contact_count")
-  notes         String?
-  source        String?   @default("manual") @db.VarChar(100)
-  tags          Json?     @default("[]")
-  createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt     DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  messages      Message[]
+  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  name             String    @db.VarChar(255)
+  phone            String    @db.VarChar(20)
+  email            String?   @db.VarChar(255)
+  company          String?   @db.VarChar(255)
+  document         String?   @db.VarChar(20)
+  value            Decimal?  @db.Decimal(10, 2)
+  dueDate          DateTime? @map("due_date") @db.Date
+  daysOverdue      Int?      @default(0) @map("days_overdue")
+  invoiceNumber    String?   @map("invoice_number") @db.VarChar(100)
+  description      String?
+  status           String?   @default("pending") @db.VarChar(50)
+  lastContactAt    DateTime? @map("last_contact_at") @db.Timestamp(6)
+  contactCount     Int?      @default(0) @map("contact_count")
+  notes            String?
+  source           String?   @default("manual") @db.VarChar(100)
+  tags             Json?     @default("[]")
+  createdAt        DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt        DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  last_sent_at     DateTime? @db.Timestamp(6)
+  template_used_id String?   @db.Uuid
+  templates        Template? @relation(fields: [template_used_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  messages         Message[]
 
   @@index([lastContactAt], map: "idx_contacts_last_contact")
   @@index([phone], map: "idx_contacts_phone")
   @@index([status], map: "idx_contacts_status")
   @@index([userId], map: "idx_contacts_user")
+  @@index([dueDate], map: "idx_contacts_due_date")
+  @@index([last_sent_at], map: "idx_contacts_last_sent")
+  @@index([status, value], map: "idx_contacts_status_value")
   @@map("contacts")
 }
 
@@ -133,11 +139,13 @@ model Template {
   usageCount Int?      @default(0) @map("usage_count")
   createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt  DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  contacts   Contact[]
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([isActive], map: "idx_templates_active")
   @@index([category], map: "idx_templates_category")
   @@index([userId], map: "idx_templates_user")
+  @@index([category, isActive], map: "idx_templates_category_active")
   @@map("templates")
 }
 
@@ -158,6 +166,8 @@ model Message {
   readAt            DateTime? @map("read_at") @db.Timestamp(6)
   repliedAt         DateTime? @map("replied_at") @db.Timestamp(6)
   createdAt         DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+  campaign_id       String?   @db.Uuid
+  campaigns         Campaign? @relation(fields: [campaign_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   contact           Contact?  @relation(fields: [contactId], references: [id], onUpdate: NoAction)
   lead              Lead?     @relation(fields: [leadId], references: [id], onUpdate: NoAction)
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -167,6 +177,7 @@ model Message {
   @@index([sentAt], map: "idx_messages_sent_at")
   @@index([status], map: "idx_messages_status")
   @@index([userId], map: "idx_messages_user")
+  @@index([campaign_id], map: "idx_messages_campaign")
   @@map("messages")
 }
 
@@ -247,12 +258,15 @@ model Campaign {
   stats          Json?     @default("{\"conversions\": 0, \"messages_read\": 0, \"messages_sent\": 0, \"total_contacts\": 0, \"messages_delivered\": 0, \"responses_received\": 0}")
   createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt      DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  config         Json?     @default("{}")
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   workflow       Workflow? @relation(fields: [workflowId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  messages       Message[]
 
   @@index([status], map: "idx_campaigns_status")
   @@index([type], map: "idx_campaigns_type")
   @@index([userId], map: "idx_campaigns_user")
+  @@index([status, type], map: "idx_campaigns_status_type")
   @@map("campaigns")
 }
 
