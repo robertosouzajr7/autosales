@@ -1,29 +1,11 @@
-"use client";
-
-import { useState, useEffect } from "react";
-import { Card } from "@/components/ui/Card";
+import React, { useState, useEffect } from "react";
+import { Search, Plus, Edit, Eye, Trash2 } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Badge } from "@/components/ui/Badge";
 import { Loading } from "@/components/ui/Loading";
-import {
-  Users,
-  Search,
-  Filter,
-  Download,
-  Phone,
-  Mail,
-  DollarSign,
-  Calendar,
-  MoreHorizontal,
-  Edit,
-  Trash2,
-  MessageSquare,
-  CheckCircle,
-  Clock,
-  AlertCircle,
-  TrendingUp,
-} from "lucide-react";
+import { Modal } from "@/components/ui/Modal";
+import { Toast } from "@/components/ui/Toast";
 
 interface Contact {
   id: string;
@@ -61,13 +43,35 @@ interface ContactsResponse {
 }
 
 export function ContactsList() {
+  const { data: session } = useSession();
   const [data, setData] = useState<ContactsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
 
-  // Carregar contatos
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [currentContact, setCurrentContact] = useState<Partial<Contact>>({});
+  const [contactToView, setContactToView] = useState<Contact | null>(null);
+  const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Novo estado para ids selecionados
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Toast state
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error" | "info";
+  } | null>(null);
+
+  const showToast = (message: string, type: "success" | "error" | "info") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
   const loadContacts = async () => {
     setLoading(true);
     try {
@@ -75,309 +79,323 @@ export function ContactsList() {
         page: page.toString(),
         limit: "10",
         search,
-        status: statusFilter,
       });
-
       const response = await fetch(`/api/contacts?${params}`);
       if (response.ok) {
         const result = await response.json();
         setData(result);
+        setSelectedIds(new Set()); // limpa seleção ao recarregar
+      } else {
+        setData(null);
+        setSelectedIds(new Set());
+        showToast("Erro ao carregar contatos", "error");
       }
     } catch (error) {
       console.error("Erro ao carregar contatos:", error);
+      setData(null);
+      setSelectedIds(new Set());
+      showToast("Erro de conexão", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadContacts();
-  }, [page, search, statusFilter]);
+  // Função para deletar UM contato específico
+  const deleteSingleContact = async () => {
+    if (!contactToDelete) return;
 
-  // Atualizar status do contato
-  const updateContactStatus = async (contactId: string, status: string) => {
+    setIsSubmitting(true);
     try {
       const response = await fetch("/api/contacts", {
-        method: "PATCH",
+        method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contactId, status }),
+        body: JSON.stringify({ id: contactToDelete.id }), // Enviando apenas o ID
       });
 
       if (response.ok) {
-        loadContacts(); // Recarregar lista
+        showToast("Contato excluído com sucesso!", "success");
+        setIsDeleteModalOpen(false);
+        setContactToDelete(null);
+        await loadContacts();
+      } else {
+        const error = await response.json();
+        showToast(error.error || "Erro ao deletar contato", "error");
       }
-    } catch (error) {
-      console.error("Erro ao atualizar status:", error);
+    } catch (err) {
+      console.error("Erro ao deletar contato", err);
+      showToast("Erro ao deletar contato", "error");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // Formatar valor
-  const formatCurrency = (value?: number) => {
-    if (!value) return "-";
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
+  // Função para deletar MÚLTIPLOS contatos selecionados
+  const deleteSelectedContacts = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Confirma excluir ${selectedIds.size} contato(s)?`)) return;
+
+    setIsSubmitting(true);
+    try {
+      // Se tiver endpoint de bulk delete, use assim:
+      const response = await fetch("/api/contacts/bulk-delete", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: Array.from(selectedIds) }),
+      });
+
+      if (response.ok) {
+        showToast(`${selectedIds.size} contatos excluídos!`, "success");
+        await loadContacts();
+      } else {
+        // Se não tiver bulk delete, delete um por um
+        if (response.status === 404) {
+          let successCount = 0;
+          for (const id of selectedIds) {
+            try {
+              const res = await fetch("/api/contacts", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id }),
+              });
+              if (res.ok) successCount++;
+            } catch (err) {
+              console.error(`Erro ao deletar contato ${id}`, err);
+            }
+          }
+          if (successCount > 0) {
+            showToast(`${successCount} contatos excluídos!`, "success");
+            await loadContacts();
+          }
+        } else {
+          showToast("Erro ao deletar contatos", "error");
+        }
+      }
+    } catch (err) {
+      console.error("Erro ao deletar contatos", err);
+      showToast("Erro ao deletar contatos", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  // Formatar data
-  const formatDate = (date?: string) => {
-    if (!date) return "-";
-    return new Date(date).toLocaleDateString("pt-BR");
+  // Handler para seleção individual
+  const toggleSelectId = (id: string) => {
+    setSelectedIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) newSet.delete(id);
+      else newSet.add(id);
+      return newSet;
+    });
   };
 
-  // Badge de status
-  const getStatusBadge = (status: string) => {
-    const variants = {
-      pending: { variant: "warning" as const, label: "Pendente", icon: Clock },
-      sent: {
-        variant: "secondary" as const,
-        label: "Enviado",
-        icon: MessageSquare,
-      },
-      paid: { variant: "success" as const, label: "Pago", icon: CheckCircle },
-      overdue: {
-        variant: "destructive" as const,
-        label: "Atrasado",
-        icon: AlertCircle,
-      },
-    };
-
-    const config =
-      variants[status as keyof typeof variants] || variants.pending;
-    const Icon = config.icon;
-
-    return (
-      <Badge variant={config.variant} className="flex items-center gap-1">
-        <Icon className="h-3 w-3" />
-        {config.label}
-      </Badge>
-    );
+  // Handler para seleção geral
+  const toggleSelectAll = () => {
+    if (!data) return;
+    if (selectedIds.size === data.contacts.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(data.contacts.map((c) => c.id)));
+    }
   };
 
-  if (loading && !data) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loading />
-      </div>
-    );
-  }
+  const createContact = async () => {
+    if (!currentContact.name || !currentContact.phone) {
+      showToast("Nome e telefone são obrigatórios", "error");
+      return;
+    }
 
-  if (!data || data.contacts.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">
-          Nenhum contato encontrado
-        </h2>
-        <p className="text-gray-600 mb-6">
-          {search || statusFilter
-            ? "Nenhum contato corresponde aos filtros aplicados."
-            : "Você ainda não importou nenhum contato."}
-        </p>
-        <div className="space-y-3">
-          <Button onClick={() => (window.location.href = "/upload")}>
-            Importar Contatos
-          </Button>
-          {(search || statusFilter) && (
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/contacts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(currentContact),
+      });
+      if (response.ok) {
+        showToast("Contato criado com sucesso!", "success");
+        setIsAddModalOpen(false);
+        setCurrentContact({});
+        await loadContacts();
+      } else {
+        const error = await response.json();
+        showToast(error.error || "Erro ao criar contato", "error");
+      }
+    } catch (err) {
+      console.error("Erro ao criar contato", err);
+      showToast("Erro ao criar contato", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const updateContact = async () => {
+    if (!currentContact.id || !currentContact.name || !currentContact.phone) {
+      showToast("Dados inválidos", "error");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/contacts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(currentContact),
+      });
+      if (response.ok) {
+        showToast("Contato atualizado com sucesso!", "success");
+        setIsEditModalOpen(false);
+        setCurrentContact({});
+        await loadContacts();
+      } else {
+        const error = await response.json();
+        showToast(error.error || "Erro ao atualizar contato", "error");
+      }
+    } catch (err) {
+      console.error("Erro ao atualizar contato", err);
+      showToast("Erro ao atualizar contato", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (session?.user) {
+      loadContacts();
+    }
+  }, [session, page, search]);
+
+  return (
+    <div className="p-4">
+      {/* Barra de busca e botão novo contato */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-4 text-gray-800">
+          <Input
+            placeholder="Buscar contatos"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-64  text-gray-800"
+            icon={<Search className="h-4 w-4" />}
+          />
+          {selectedIds.size > 0 && (
             <Button
-              variant="outline"
-              onClick={() => {
-                setSearch("");
-                setStatusFilter("");
-                setPage(1);
-              }}
+              variant="danger"
+              onClick={deleteSelectedContacts}
+              disabled={isSubmitting}
+              leftIcon={<Trash2 />}
             >
-              Limpar Filtros
+              Deletar Selecionados ({selectedIds.size})
             </Button>
           )}
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Contatos</h1>
-          <p className="text-gray-600">
-            Gerencie todos os seus contatos importados
-          </p>
-        </div>
-        <Button onClick={() => (window.location.href = "/upload")}>
-          Importar Mais Contatos
+        <Button onClick={() => setIsAddModalOpen(true)} leftIcon={<Plus />}>
+          Novo Contato
         </Button>
       </div>
 
-      {/* Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card className="p-4">
-          <div className="flex items-center space-x-2">
-            <Users className="h-5 w-5 text-blue-600" />
-            <div>
-              <p className="text-sm text-gray-600">Total</p>
-              <p className="text-xl font-bold">{data.stats.total}</p>
-            </div>
-          </div>
-        </Card>
+      {/* Loading */}
+      {loading && (
+        <div className="flex justify-center py-8">
+          <Loading size="large" />
+        </div>
+      )}
 
-        <Card className="p-4">
-          <div className="flex items-center space-x-2">
-            <Clock className="h-5 w-5 text-yellow-600" />
-            <div>
-              <p className="text-sm text-gray-600">Pendentes</p>
-              <p className="text-xl font-bold">{data.stats.pending}</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4">
-          <div className="flex items-center space-x-2">
-            <MessageSquare className="h-5 w-5 text-blue-600" />
-            <div>
-              <p className="text-sm text-gray-600">Enviados</p>
-              <p className="text-xl font-bold">{data.stats.sent}</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4">
-          <div className="flex items-center space-x-2">
-            <CheckCircle className="h-5 w-5 text-green-600" />
-            <div>
-              <p className="text-sm text-gray-600">Pagos</p>
-              <p className="text-xl font-bold">{data.stats.paid}</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4">
-          <div className="flex items-center space-x-2">
-            <DollarSign className="h-5 w-5 text-green-600" />
-            <div>
-              <p className="text-sm text-gray-600">Valor Total</p>
-              <p className="text-lg font-bold">
-                {formatCurrency(data.stats.totalValue)}
-              </p>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Filtros */}
-      <Card className="p-4">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <Input
-              placeholder="Buscar por nome, telefone, email..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              leftIcon={Search}
-            />
-          </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="">Todos os status</option>
-            <option value="pending">Pendente</option>
-            <option value="sent">Enviado</option>
-            <option value="paid">Pago</option>
-            <option value="overdue">Atrasado</option>
-          </select>
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Exportar
+      {/* Mensagem quando não há contatos */}
+      {!loading && data?.contacts.length === 0 && (
+        <div className="text-center py-8">
+          <p className="text-gray-500 mb-4">Nenhum contato encontrado.</p>
+          <Button onClick={() => setIsAddModalOpen(true)} leftIcon={<Plus />}>
+            Adicionar Primeiro Contato
           </Button>
         </div>
-      </Card>
+      )}
 
-      {/* Lista de contatos */}
-      <Card className="overflow-hidden">
+      {/* Tabela de contatos */}
+      {!loading && data && data.contacts.length > 0 && (
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contato
+          <table className="w-full border-collapse bg-white rounded-lg shadow-sm text-gray-700">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="border-b p-3 text-left">
+                  <input
+                    type="checkbox"
+                    onChange={toggleSelectAll}
+                    checked={selectedIds.size === data.contacts.length}
+                    aria-label="Selecionar todos"
+                    className="rounded"
+                  />
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Empresa
+                <th className="border-b p-3 text-left text-sm font-medium text-gray-900">
+                  Nome
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Valor
+                <th className="border-b p-3 text-left text-sm font-medium text-gray-900">
+                  Telefone
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Vencimento
+                <th className="border-b p-3 text-left text-sm font-medium text-gray-900">
+                  Email
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="border-b p-3 text-left text-sm font-medium text-gray-900">
                   Ações
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody>
               {data.contacts.map((contact) => (
-                <tr key={contact.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {contact.name}
-                      </div>
-                      <div className="text-sm text-gray-500 flex items-center space-x-2">
-                        <Phone className="h-3 w-3" />
-                        <span>{contact.phone}</span>
-                      </div>
-                      {contact.email && (
-                        <div className="text-sm text-gray-500 flex items-center space-x-2">
-                          <Mail className="h-3 w-3" />
-                          <span>{contact.email}</span>
-                        </div>
-                      )}
-                    </div>
+                <tr
+                  key={contact.id}
+                  className="hover:bg-gray-50 transition-colors"
+                >
+                  <td className="border-b p-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(contact.id)}
+                      onChange={() => toggleSelectId(contact.id)}
+                      aria-label={`Selecionar ${contact.name}`}
+                      className="rounded"
+                    />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {contact.company || "-"}
+                  <td className="border-b p-3 font-medium">{contact.name}</td>
+                  <td className="border-b p-3 text-gray-900">
+                    {contact.phone}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatCurrency(contact.value)}
+                  <td className="border-b p-3 text-gray-900">
+                    {contact.email || "-"}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatDate(contact.dueDate)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {getStatusBadge(contact.status)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center space-x-2">
-                      {contact.status === "pending" && (
-                        <Button
-                          size="sm"
-                          onClick={() =>
-                            updateContactStatus(contact.id, "sent")
-                          }
-                        >
-                          <MessageSquare className="h-3 w-3 mr-1" />
-                          Enviar
-                        </Button>
-                      )}
-                      {contact.status === "sent" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            updateContactStatus(contact.id, "paid")
-                          }
-                        >
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Marcar Pago
-                        </Button>
-                      )}
+                  <td className="border-b p-3">
+                    <div className="flex gap-2">
+                      <Button
+                        size="small"
+                        variant="ghost"
+                        onClick={() => {
+                          setContactToView(contact);
+                          setIsViewModalOpen(true);
+                        }}
+                        aria-label={`Visualizar ${contact.name}`}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="ghost"
+                        onClick={() => {
+                          setCurrentContact(contact);
+                          setIsEditModalOpen(true);
+                        }}
+                        aria-label={`Editar ${contact.name}`}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="ghost"
+                        onClick={() => {
+                          setContactToDelete(contact);
+                          setIsDeleteModalOpen(true);
+                        }}
+                        aria-label={`Deletar ${contact.name}`}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -385,38 +403,284 @@ export function ContactsList() {
             </tbody>
           </table>
         </div>
+      )}
 
-        {/* Paginação */}
-        {data.pagination.pages > 1 && (
-          <div className="px-6 py-3 border-t bg-gray-50">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-700">
-                Mostrando {(page - 1) * 10 + 1} a{" "}
-                {Math.min(page * 10, data.pagination.total)} de{" "}
-                {data.pagination.total} contatos
+      {/* Paginação */}
+      {data && data.pagination.pages > 1 && (
+        <div className="flex justify-center gap-2 mt-4">
+          <Button
+            variant="secondary"
+            size="small"
+            onClick={() => setPage(Math.max(1, page - 1))}
+            disabled={page === 1}
+          >
+            Anterior
+          </Button>
+          <span className="flex items-center px-4 text-gray-600">
+            Página {page} de {data.pagination.pages}
+          </span>
+          <Button
+            variant="secondary"
+            size="small"
+            onClick={() => setPage(Math.min(data.pagination.pages, page + 1))}
+            disabled={page === data.pagination.pages}
+          >
+            Próxima
+          </Button>
+        </div>
+      )}
+
+      {/* Modal Adicionar Contato */}
+      <Modal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        title="Novo Contato"
+      >
+        <div className="space-y-4">
+          <Input
+            label="Nome *"
+            value={currentContact.name || ""}
+            onChange={(e) =>
+              setCurrentContact({ ...currentContact, name: e.target.value })
+            }
+          />
+          <Input
+            label="Telefone *"
+            value={currentContact.phone || ""}
+            onChange={(e) =>
+              setCurrentContact({ ...currentContact, phone: e.target.value })
+            }
+          />
+          <Input
+            label="Email"
+            type="email"
+            value={currentContact.email || ""}
+            onChange={(e) =>
+              setCurrentContact({ ...currentContact, email: e.target.value })
+            }
+          />
+          <Input
+            label="Empresa"
+            value={currentContact.company || ""}
+            onChange={(e) =>
+              setCurrentContact({ ...currentContact, company: e.target.value })
+            }
+          />
+          <Input
+            label="Valor"
+            type="number"
+            value={currentContact.value || ""}
+            onChange={(e) =>
+              setCurrentContact({
+                ...currentContact,
+                value: parseFloat(e.target.value) || 0,
+              })
+            }
+          />
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setIsAddModalOpen(false);
+                setCurrentContact({});
+              }}
+              disabled={isSubmitting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              onClick={createContact}
+              loading={isSubmitting}
+            >
+              Salvar
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal Editar Contato */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title="Editar Contato"
+      >
+        <div className="space-y-4 text-black ">
+          <Input
+            label="Nome *"
+            value={currentContact.name || ""}
+            onChange={(e) =>
+              setCurrentContact({ ...currentContact, name: e.target.value })
+            }
+          />
+          <Input
+            label="Telefone *"
+            value={currentContact.phone || ""}
+            onChange={(e) =>
+              setCurrentContact({ ...currentContact, phone: e.target.value })
+            }
+          />
+          <Input
+            label="Email"
+            type="email"
+            value={currentContact.email || ""}
+            onChange={(e) =>
+              setCurrentContact({ ...currentContact, email: e.target.value })
+            }
+          />
+          <Input
+            label="Empresa"
+            value={currentContact.company || ""}
+            onChange={(e) =>
+              setCurrentContact({ ...currentContact, company: e.target.value })
+            }
+          />
+          <Input
+            label="Valor"
+            type="number"
+            value={currentContact.value || ""}
+            onChange={(e) =>
+              setCurrentContact({
+                ...currentContact,
+                value: parseFloat(e.target.value) || 0,
+              })
+            }
+          />
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setIsEditModalOpen(false);
+                setCurrentContact({});
+              }}
+              disabled={isSubmitting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              onClick={updateContact}
+              loading={isSubmitting}
+            >
+              Salvar Alterações
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal Visualizar Contato */}
+      <Modal
+        isOpen={isViewModalOpen}
+        onClose={() => setIsViewModalOpen(false)}
+        title="Detalhes do Contato"
+      >
+        {contactToView && (
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium text-gray-500">Nome</label>
+              <p className="text-gray-900">{contactToView.name}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-500">
+                Telefone
+              </label>
+              <p className="text-gray-900">{contactToView.phone}</p>
+            </div>
+            {contactToView.email && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">
+                  Email
+                </label>
+                <p className="text-gray-900">{contactToView.email}</p>
               </div>
-              <div className="flex space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(page - 1)}
-                  disabled={page === 1}
-                >
-                  Anterior
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(page + 1)}
-                  disabled={page === data.pagination.pages}
-                >
-                  Próximo
-                </Button>
+            )}
+            {contactToView.company && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">
+                  Empresa
+                </label>
+                <p className="text-gray-900">{contactToView.company}</p>
               </div>
+            )}
+            {contactToView.value && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">
+                  Valor
+                </label>
+                <p className="text-gray-900">
+                  {new Intl.NumberFormat("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  }).format(contactToView.value)}
+                </p>
+              </div>
+            )}
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button
+                variant="secondary"
+                onClick={() => setIsViewModalOpen(false)}
+              >
+                Fechar
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setCurrentContact(contactToView);
+                  setIsEditModalOpen(true);
+                  setIsViewModalOpen(false);
+                }}
+              >
+                Editar
+              </Button>
             </div>
           </div>
         )}
-      </Card>
+      </Modal>
+
+      {/* Modal Confirmar Exclusão */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Confirmar Exclusão"
+      >
+        <div className="space-y-4">
+          <p>
+            Tem certeza que deseja excluir o contato{" "}
+            <strong>{contactToDelete?.name}</strong>?
+          </p>
+          <p className="text-sm text-gray-500">
+            Esta ação não pode ser desfeita.
+          </p>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setIsDeleteModalOpen(false);
+                setContactToDelete(null);
+              }}
+              disabled={isSubmitting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="danger"
+              onClick={deleteSingleContact}
+              loading={isSubmitting}
+            >
+              Excluir Contato
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }
