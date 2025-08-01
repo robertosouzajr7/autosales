@@ -72,17 +72,38 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user, account }) {
       if (user) {
-        token.companyName = user.companyName;
-        token.phone = user.phone;
-        token.planId = user.planId;
-        token.planName = user.planName;
-        token.whatsappConnected = user.whatsappConnected;
-        token.whatsappInstanceId = user.whatsappInstanceId;
-        token.trialEndsAt = user.trialEndsAt;
-        token.subscriptionStatus = user.subscriptionStatus;
-        token.stripeCustomerId = user.stripeCustomerId;
-        token.companyPix = user.companyPix;
-        token.calendlyLink = user.calendlyLink;
+        // Se for primeiro login com Google, buscar dados completos do banco
+        if (account?.provider === "google") {
+          try {
+            const dbUser = await prisma.user.findUnique({
+              where: { email: user.email! },
+              include: { plan: true },
+            });
+
+            if (dbUser) {
+              // ✅ USAR O UUID REAL DO BANCO, NÃO O GOOGLE ID
+              token.id = dbUser.id; // Este é o UUID correto
+              token.companyName = dbUser.companyName;
+              token.phone = dbUser.phone;
+              token.planId = dbUser.planId;
+              token.planName = dbUser.plan?.name;
+              token.whatsappConnected = dbUser.whatsappConnected;
+              token.whatsappInstanceId = dbUser.whatsappInstanceId;
+              token.trialEndsAt = dbUser.trialEndsAt;
+              token.subscriptionStatus = dbUser.subscriptionStatus;
+              token.stripeCustomerId = dbUser.stripeCustomerId;
+              token.companyPix = dbUser.companyPix;
+              token.calendlyLink = dbUser.calendlyLink;
+            }
+          } catch (error) {
+            console.error("❌ Erro ao buscar dados do usuário:", error);
+          }
+        } else {
+          // Login com credentials - dados já vêm do authorize
+          token.id = user.id;
+          token.companyName = user.companyName;
+          // ... resto dos campos
+        }
       }
       return token;
     },

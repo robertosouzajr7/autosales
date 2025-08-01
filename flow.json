@@ -1,0 +1,101 @@
+{
+  "screens": [
+    {
+      "data": {},
+      "id": "RECOMMEND",
+      "layout": {
+        "children": [
+          {
+            "children": [
+              {
+                "text": "📢 Queremos te ouvir!\n",
+                "type": "TextHeading"
+              },
+              {
+                "text": "👥 Como parte da preparação para o nosso **CX Discovery Workshop**, queremos **entender melhor sua realidade** para, juntos, **cocriarmos soluções relevantes**, alinhadas aos **principais desafios e oportunidades** da sua **instituição/secretaria**.\n\n📝 Para isso, pedimos sua **colaboração** respondendo às perguntas a seguir.\n📌 Suas respostas serão **fundamentais** para construirmos uma experiência **personalizada**, **prática** e de **alto valor** para você!",
+                "type": "TextBody"
+              },
+              {
+                "label": "Participar",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": {
+                    "name": "screen_zbadch",
+                    "type": "screen"
+                  },
+                  "payload": {}
+                },
+                "type": "Footer"
+              }
+            ],
+            "name": "flow_path",
+            "type": "Form"
+          }
+        ],
+        "type": "SingleColumnLayout"
+      },
+      "title": "Missão croácia | Home"
+    },
+    {
+      "data": {},
+      "id": "screen_zbadch",
+      "layout": {
+        "children": [
+          {
+            "children": [
+              {
+                "text": "Quais canais de atendimento são utilizados para acessar os serviços da sua instituição/secretaria?",
+                "type": "TextCaption"
+              },
+              {
+                "data-source": [
+                  {
+                    "id": "0_📱WhatsApp",
+                    "title": "📱WhatsApp"
+                  },
+                  {
+                    "id": "1_📞_Telefone",
+                    "title": "📞 Telefone"
+                  },
+                  {
+                    "id": "2_🙋🏽‍♀️Presencial",
+                    "title": "🙋🏽‍♀️Presencial"
+                  },
+                  {
+                    "id": "3_🌐Portal_Web",
+                    "title": "🌐Portal Web"
+                  },
+                  {
+                    "id": "4_✉️_Email",
+                    "title": "✉️ Email"
+                  }
+                ],
+                "label": "Label",
+                "name": "Label_697182",
+                "required": true,
+                "type": "CheckboxGroup"
+              },
+              {
+                "label": "Avançar",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "formIdentify": "missaoCroacia",
+                    "screen_1_Label_0": "${form.Label_697182}"
+                  }
+                },
+                "type": "Footer"
+              }
+            ],
+            "name": "flow_path",
+            "type": "Form"
+          }
+        ],
+        "type": "SingleColumnLayout"
+      },
+      "terminal": true,
+      "title": "1.⁠ ⁠Canal mais utilizado"
+    }
+  ],
+  "version": "7.1"
+}
