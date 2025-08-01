@@ -7,35 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Account {
-  id                String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId            String  @db.Uuid
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@unique([provider, providerAccountId])
-  @@index([userId])
-}
-
-model Session {
-  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  sessionToken String   @unique
-  userId       String   @db.Uuid
-  expires      DateTime @db.Timestamp(6)
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@index([userId])
-}
-
 model Plan {
   id           String    @id @db.VarChar(50)
   name         String    @db.VarChar(100)
@@ -69,11 +40,10 @@ model User {
   scoringCriteria        Json?           @default("{}") @map("scoring_criteria")
   createdAt              DateTime?       @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt              DateTime?       @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-  password               String?         @db.VarChar(255)
-  emailVerified          DateTime?       @map("email_verified") @db.Timestamp(6)
+  emailVerified          DateTime?       @db.Timestamp(6)
   image                  String?         @db.VarChar(500)
-  accounts               Account[]
-  sessions               Session[]
+  Account                Account[]
+  Session                Session[]
   campaigns              Campaign[]
   contacts               Contact[]
   integrations           Integration[]
@@ -85,202 +55,171 @@ model User {
   plan                   Plan?           @relation(fields: [planId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   workflows              Workflow[]
 
-  @@index([email], map: "idx_users_email")
-  @@index([planId], map: "idx_users_plan")
   @@map("users")
 }
 
 model Contact {
-  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId           String    @map("user_id") @db.Uuid
-  name             String    @db.VarChar(255)
-  phone            String    @db.VarChar(20)
-  email            String?   @db.VarChar(255)
-  company          String?   @db.VarChar(255)
-  document         String?   @db.VarChar(20)
-  value            Decimal?  @db.Decimal(10, 2)
-  dueDate          DateTime? @map("due_date") @db.Date
-  daysOverdue      Int?      @default(0) @map("days_overdue")
-  invoiceNumber    String?   @map("invoice_number") @db.VarChar(100)
-  description      String?
-  status           String?   @default("pending") @db.VarChar(50)
-  lastContactAt    DateTime? @map("last_contact_at") @db.Timestamp(6)
-  contactCount     Int?      @default(0) @map("contact_count")
-  notes            String?
-  source           String?   @default("manual") @db.VarChar(100)
-  tags             Json?     @default("[]")
-  createdAt        DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt        DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-  last_sent_at     DateTime? @db.Timestamp(6)
-  template_used_id String?   @db.Uuid
-  templates        Template? @relation(fields: [template_used_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  messages         Message[]
+  id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  name          String    @db.VarChar(255)
+  phone         String    @db.VarChar(20)
+  email         String?   @db.VarChar(255)
+  company       String?   @db.VarChar(255)
+  document      String?   @db.VarChar(255)
+  value         Decimal?  @db.Decimal(10, 2)
+  dueDate       DateTime? @map("due_date") @db.Date
+  daysOverdue   Int?      @default(0) @map("days_overdue")
+  invoiceNumber String?   @map("invoice_number") @db.VarChar(255)
+  description   String?
+  status        String?   @default("pending") @db.VarChar(50)
+  lastContactAt DateTime? @map("last_contact_at") @db.Timestamp(6)
+  contactCount  Int?      @default(0) @map("contact_count")
+  notes         String?
+  tags          Json?     @default("[]")
+  custom_fields Json?     @default("{}")
+  createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt     DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  messages      Message[]
 
-  @@index([lastContactAt], map: "idx_contacts_last_contact")
   @@index([phone], map: "idx_contacts_phone")
   @@index([status], map: "idx_contacts_status")
-  @@index([userId], map: "idx_contacts_user")
   @@index([dueDate], map: "idx_contacts_due_date")
-  @@index([last_sent_at], map: "idx_contacts_last_sent")
-  @@index([status, value], map: "idx_contacts_status_value")
+  @@index([userId], map: "idx_contacts_user_id")
   @@map("contacts")
 }
 
 model Template {
-  id         String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId     String    @map("user_id") @db.Uuid
-  name       String    @db.VarChar(255)
+  id         String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId     String     @map("user_id") @db.Uuid
+  name       String     @db.VarChar(255)
   content    String
-  variables  Json?     @default("[]")
-  category   String    @db.VarChar(100)
-  segment    String?   @db.VarChar(100)
-  isActive   Boolean?  @default(true) @map("is_active")
-  usageCount Int?      @default(0) @map("usage_count")
-  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt  DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-  contacts   Contact[]
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  variables  Json?      @default("[]")
+  category   String?    @default("cobranca") @db.VarChar(100)
+  isActive   Boolean?   @default(true) @map("is_active")
+  usageCount Int?       @default(0) @map("usage_count")
+  createdAt  DateTime?  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt  DateTime?  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  campaigns  Campaign[]
+  messages   Message[]
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@index([isActive], map: "idx_templates_active")
   @@index([category], map: "idx_templates_category")
-  @@index([userId], map: "idx_templates_user")
-  @@index([category, isActive], map: "idx_templates_category_active")
+  @@index([isActive], map: "idx_templates_is_active")
+  @@index([userId], map: "idx_templates_user_id")
   @@map("templates")
 }
 
 model Message {
   id                String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   userId            String    @map("user_id") @db.Uuid
-  contactId         String?   @map("contact_id") @db.Uuid
-  leadId            String?   @map("lead_id") @db.Uuid
+  contactId         String    @map("contact_id") @db.Uuid
+  campaign_id       String?   @db.Uuid
   templateId        String?   @map("template_id") @db.Uuid
   content           String
-  direction         String?   @default("outbound") @db.VarChar(20)
-  messageType       String?   @default("text") @map("message_type") @db.VarChar(50)
   status            String?   @default("sent") @db.VarChar(50)
+  direction         String?   @default("outbound") @db.VarChar(20)
   whatsappMessageId String?   @map("whatsapp_message_id") @db.VarChar(255)
-  errorMessage      String?   @map("error_message")
-  sentAt            DateTime? @default(now()) @map("sent_at") @db.Timestamp(6)
   deliveredAt       DateTime? @map("delivered_at") @db.Timestamp(6)
   readAt            DateTime? @map("read_at") @db.Timestamp(6)
   repliedAt         DateTime? @map("replied_at") @db.Timestamp(6)
+  errorMessage      String?   @map("error_message")
+  sentAt            DateTime? @default(now()) @map("sent_at") @db.Timestamp(6)
   createdAt         DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
-  campaign_id       String?   @db.Uuid
   campaigns         Campaign? @relation(fields: [campaign_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  contact           Contact?  @relation(fields: [contactId], references: [id], onUpdate: NoAction)
-  lead              Lead?     @relation(fields: [leadId], references: [id], onUpdate: NoAction)
+  contact           Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  templates         Template? @relation(fields: [templateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@index([contactId], map: "idx_messages_contact")
-  @@index([direction], map: "idx_messages_direction")
   @@index([sentAt], map: "idx_messages_sent_at")
   @@index([status], map: "idx_messages_status")
-  @@index([userId], map: "idx_messages_user")
-  @@index([campaign_id], map: "idx_messages_campaign")
+  @@index([contactId], map: "idx_messages_contact_id")
+  @@index([userId], map: "idx_messages_user_id")
   @@map("messages")
 }
 
 model Lead {
-  id                 String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId             String    @map("user_id") @db.Uuid
-  name               String?   @db.VarChar(255)
-  phone              String    @db.VarChar(20)
-  email              String?   @db.VarChar(255)
-  company            String?   @db.VarChar(255)
-  source             String?   @default("whatsapp") @db.VarChar(100)
-  utmSource          String?   @map("utm_source") @db.VarChar(100)
-  utmMedium          String?   @map("utm_medium") @db.VarChar(100)
-  utmCampaign        String?   @map("utm_campaign") @db.VarChar(100)
-  status             String?   @default("new") @db.VarChar(50)
-  score              Int?      @default(0)
-  qualificationData  Json?     @default("{}") @map("qualification_data")
-  lossReason         String?   @map("loss_reason") @db.VarChar(255)
-  meetingScheduledAt DateTime? @map("meeting_scheduled_at") @db.Timestamp(6)
-  meetingStatus      String?   @map("meeting_status") @db.VarChar(50)
-  calendlyEventId    String?   @map("calendly_event_id") @db.VarChar(255)
-  meetingLink        String?   @map("meeting_link") @db.VarChar(500)
-  lastContactAt      DateTime? @map("last_contact_at") @db.Timestamp(6)
-  nextFollowupAt     DateTime? @map("next_followup_at") @db.Timestamp(6)
-  followupCount      Int?      @default(0) @map("followup_count")
-  convertedAt        DateTime? @map("converted_at") @db.Timestamp(6)
-  conversionValue    Decimal?  @map("conversion_value") @db.Decimal(10, 2)
-  createdAt          DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt          DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  messages           Message[]
+  id                   String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId               String    @map("user_id") @db.Uuid
+  name                 String    @db.VarChar(255)
+  phone                String    @db.VarChar(20)
+  email                String?   @db.VarChar(255)
+  company              String?   @db.VarChar(255)
+  source               String?   @db.VarChar(100)
+  score                Int?      @default(0)
+  status               String?   @default("new") @db.VarChar(50)
+  qualification_status String?   @default("unqualified") @db.VarChar(50)
+  last_interaction_at  DateTime? @db.Timestamp(6)
+  scheduled_call_at    DateTime? @db.Timestamp(6)
+  notes                String?
+  custom_fields        Json?     @default("{}")
+  createdAt            DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt            DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@index([meetingScheduledAt], map: "idx_leads_meeting")
-  @@index([phone], map: "idx_leads_phone")
   @@index([score], map: "idx_leads_score")
-  @@index([source], map: "idx_leads_source")
   @@index([status], map: "idx_leads_status")
-  @@index([userId], map: "idx_leads_user")
+  @@index([userId], map: "idx_leads_user_id")
   @@map("leads")
 }
 
 model Workflow {
-  id              String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId          String     @map("user_id") @db.Uuid
-  n8nWorkflowId   String     @map("n8n_workflow_id") @db.VarChar(255)
-  templateName    String     @map("template_name") @db.VarChar(255)
-  workflowType    String     @map("workflow_type") @db.VarChar(100)
-  config          Json       @default("{}")
-  webhookUrl      String?    @map("webhook_url") @db.VarChar(500)
-  isActive        Boolean?   @default(true) @map("is_active")
-  lastExecutionAt DateTime?  @map("last_execution_at") @db.Timestamp(6)
-  executionCount  Int?       @default(0) @map("execution_count")
-  errorCount      Int?       @default(0) @map("error_count")
-  createdAt       DateTime?  @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt       DateTime?  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-  campaigns       Campaign[]
-  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  name            String    @db.VarChar(255)
+  n8nWorkflowId   String?   @map("n8n_workflow_id") @db.VarChar(255)
+  webhookUrl      String?   @map("webhook_url") @db.VarChar(500)
+  trigger_type    String?   @db.VarChar(100)
+  isActive        Boolean?  @default(true) @map("is_active")
+  executionCount  Int?      @default(0) @map("execution_count")
+  lastExecutionAt DateTime? @map("last_execution_at") @db.Timestamp(6)
+  configuration   Json?     @default("{}")
+  createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@index([isActive], map: "idx_workflows_active")
-  @@index([workflowType], map: "idx_workflows_type")
-  @@index([userId], map: "idx_workflows_user")
   @@map("workflows")
 }
 
 model Campaign {
-  id             String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId         String    @map("user_id") @db.Uuid
-  name           String    @db.VarChar(255)
-  description    String?
-  type           String    @db.VarChar(100)
-  targetContacts Json?     @map("target_contacts")
-  workflowId     String?   @map("workflow_id") @db.Uuid
-  templateId     String?   @map("template_id") @db.Uuid
-  status         String?   @default("draft") @db.VarChar(50)
-  scheduledAt    DateTime? @map("scheduled_at") @db.Timestamp(6)
-  startedAt      DateTime? @map("started_at") @db.Timestamp(6)
-  completedAt    DateTime? @map("completed_at") @db.Timestamp(6)
-  stats          Json?     @default("{\"conversions\": 0, \"messages_read\": 0, \"messages_sent\": 0, \"total_contacts\": 0, \"messages_delivered\": 0, \"responses_received\": 0}")
-  createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt      DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-  config         Json?     @default("{}")
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  workflow       Workflow? @relation(fields: [workflowId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  messages       Message[]
+  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  name            String    @db.VarChar(255)
+  templateId      String?   @map("template_id") @db.Uuid
+  status          String?   @default("draft") @db.VarChar(50)
+  scheduledAt     DateTime? @map("scheduled_at") @db.Timestamp(6)
+  total_contacts  Int?      @default(0)
+  sent_count      Int?      @default(0)
+  delivered_count Int?      @default(0)
+  read_count      Int?      @default(0)
+  replied_count   Int?      @default(0)
+  failed_count    Int?      @default(0)
+  completedAt     DateTime? @map("completed_at") @db.Timestamp(6)
+  createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  templates       Template? @relation(fields: [templateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  messages        Message[]
 
   @@index([status], map: "idx_campaigns_status")
-  @@index([type], map: "idx_campaigns_type")
-  @@index([userId], map: "idx_campaigns_user")
-  @@index([status, type], map: "idx_campaigns_status_type")
+  @@index([scheduledAt], map: "idx_campaigns_scheduled_at")
+  @@index([userId], map: "idx_campaigns_user_id")
   @@map("campaigns")
 }
 
 model Integration {
-  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId      String    @map("user_id") @db.Uuid
-  service     String    @db.VarChar(100)
-  config      Json      @default("{}")
-  credentials Json?
-  isActive    Boolean?  @default(true) @map("is_active")
-  lastSyncAt  DateTime? @map("last_sync_at") @db.Timestamp(6)
-  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt   DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  provider      String    @db.VarChar(100)
+  name          String    @db.VarChar(255)
+  api_key       String?   @db.VarChar(500)
+  webhook_url   String?   @db.VarChar(500)
+  configuration Json?     @default("{}")
+  isActive      Boolean?  @default(true) @map("is_active")
+  lastSyncAt    DateTime? @map("last_sync_at") @db.Timestamp(6)
+  createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt     DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@map("integrations")
 }
@@ -303,38 +242,20 @@ model schema_migrations {
   inserted_at DateTime? @db.Timestamp(0)
 }
 
-model system_config {
-  key         String    @id @db.VarChar(100)
-  value       Json
-  description String?
-  updated_at  DateTime? @default(now()) @db.Timestamp(6)
-}
-
 model system_logs {
-  id         String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  user_id    String?   @db.Uuid
-  level      String    @db.VarChar(20)
-  category   String    @db.VarChar(100)
-  message    String
-  data       Json?
-  created_at DateTime? @default(now()) @db.Timestamp(6)
-  users      User?     @relation(fields: [user_id], references: [id], onUpdate: NoAction)
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id     String?   @db.Uuid
+  action      String    @db.VarChar(255)
+  entity_type String?   @db.VarChar(100)
+  entity_id   String?   @db.Uuid
+  details     Json?     @default("{}")
+  ip_address  String?   @db.Inet
+  user_agent  String?
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  users       User?     @relation(fields: [user_id], references: [id], onUpdate: NoAction)
 
-  @@index([category], map: "idx_logs_category")
-  @@index([created_at], map: "idx_logs_created")
-  @@index([level], map: "idx_logs_level")
-  @@index([user_id], map: "idx_logs_user")
-}
-
-model template_defaults {
-  id         String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  name       String    @db.VarChar(255)
-  content    String
-  variables  Json?     @default("[]")
-  category   String    @db.VarChar(100)
-  segment    String?   @db.VarChar(100)
-  is_active  Boolean?  @default(true)
-  created_at DateTime? @default(now()) @db.Timestamp(6)
+  @@index([created_at], map: "idx_system_logs_created_at")
+  @@index([user_id], map: "idx_system_logs_user_id")
 }
 
 model tenants {
@@ -361,22 +282,54 @@ model usage_metrics {
   id           String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   user_id      String    @db.Uuid
   metric_type  String    @db.VarChar(100)
-  value        Int       @default(0)
+  value        Int
   period_start DateTime  @db.Date
   period_end   DateTime  @db.Date
   created_at   DateTime? @default(now()) @db.Timestamp(6)
   users        User      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([user_id, metric_type, period_start])
-  @@index([period_start, period_end], map: "idx_metrics_period")
-  @@index([metric_type], map: "idx_metrics_type")
-  @@index([user_id], map: "idx_metrics_user")
+}
+
+model Account {
+  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId            String   @db.Uuid
+  type              String   @db.VarChar(255)
+  provider          String   @db.VarChar(255)
+  providerAccountId String   @db.VarChar(255)
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?  @db.VarChar(255)
+  scope             String?
+  id_token          String?
+  session_state     String?
+  createdAt         DateTime @default(now()) @db.Timestamp(6)
+  updatedAt         DateTime @default(now()) @db.Timestamp(6)
+  users             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  sessionToken String   @unique @db.VarChar(255)
+  userId       String   @db.Uuid
+  expires      DateTime @db.Timestamp(6)
+  createdAt    DateTime @default(now()) @db.Timestamp(6)
+  updatedAt    DateTime @default(now()) @db.Timestamp(6)
+  users        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model VerificationToken {
-  identifier String
-  token      String   @unique
+  identifier String   @db.VarChar(255)
+  token      String   @unique @db.VarChar(255)
   expires    DateTime @db.Timestamp(6)
+  createdAt  DateTime @default(now()) @db.Timestamp(6)
 
+  @@id([identifier, token])
   @@unique([identifier, token])
 }
