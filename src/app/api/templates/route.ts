@@ -12,11 +12,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
-    // Buscar templates usando os campos do seu schema
+    // Buscar templates usando apenas os campos que existem no schema
     const templates = await prisma.template.findMany({
       where: {
         userId: session.user.id,
-        category: "cobranca", // Filtrar apenas templates de cobrança
+        category: "cobranca",
         isActive: true,
       },
       orderBy: {
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
         content: true,
         variables: true,
         category: true,
-        segment: true,
+        // ❌ REMOVER: segment: true, (não existe no schema)
         isActive: true,
         usageCount: true,
         createdAt: true,
@@ -62,23 +62,19 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, content, segment = "geral" } = body;
+    const { name, content } = body;
 
     // Validações
     if (!name || name.trim().length === 0) {
       return NextResponse.json(
-        {
-          error: "Nome do template é obrigatório",
-        },
+        { error: "Nome do template é obrigatório" },
         { status: 400 }
       );
     }
 
     if (!content || content.trim().length === 0) {
       return NextResponse.json(
-        {
-          error: "Conteúdo do template é obrigatório",
-        },
+        { error: "Conteúdo do template é obrigatório" },
         { status: 400 }
       );
     }
@@ -100,21 +96,19 @@ export async function POST(request: NextRequest) {
 
     if (existingTemplate) {
       return NextResponse.json(
-        {
-          error: "Já existe um template com este nome",
-        },
+        { error: "Já existe um template com este nome" },
         { status: 400 }
       );
     }
 
-    // Criar template usando seu schema
+    // Criar template usando apenas campos que existem no schema
     const template = await prisma.template.create({
       data: {
         name: name.trim(),
         content: content.trim(),
-        variables: variables, // JSON array com variáveis encontradas
+        variables: variables,
         category: "cobranca",
-        segment: segment,
+        // ❌ REMOVER: segment: "geral", (não existe no schema)
         isActive: true,
         usageCount: 0,
         userId: session.user.id,

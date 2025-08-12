@@ -9,42 +9,69 @@ export async function POST(request: NextRequest) {
     console.log("🔍 API /api/contacts/import POST chamada");
 
     const session = await getServerSession(authOptions);
-    if (!session) {
-      console.log("❌ Não autenticado");
-      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
     console.log("✅ Usuário autenticado:", session.user.email);
 
+    // ✅ CORREÇÃO: Buscar UUID correto do usuário
+    let userId = session.user.id;
+
+    const isValidUUID =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        userId
+      );
+
+    if (!isValidUUID) {
+      console.log("🔄 UserId não é UUID, buscando UUID real pelo email...");
+      const user = await prisma.user.findUnique({
+        where: { email: session.user.email! },
+        select: { id: true },
+      });
+
+      if (!user) {
+        return NextResponse.json(
+          { error: "Usuário não encontrado" },
+          { status: 404 }
+        );
+      }
+
+      userId = user.id;
+      console.log("✅ UUID real encontrado:", userId);
+    }
+
     const body = await request.json();
     const { contacts } = body;
 
-    console.log("📤 Recebidos", contacts?.length, "contatos para importar");
-
-    if (!Array.isArray(contacts) || contacts.length === 0) {
-      console.log("❌ Contatos inválidos:", contacts);
+    if (!contacts || !Array.isArray(contacts) || contacts.length === 0) {
       return NextResponse.json(
-        { error: "Contatos inválidos ou vazios" },
+        { error: "Lista de contatos é obrigatória" },
         { status: 400 }
       );
     }
 
+    console.log("📤 Recebidos", contacts.length, "contatos para importar");
+
     // Preparar dados para inserção
-    const contactsData = contacts.map((contact) => {
-      console.log("📋 Processando contato:", contact.nome);
+    const contactsData = contacts.map((contact: any) => {
+      console.log("📋 Processando contato:", contact.nome || contact.name);
 
       return {
-        userId: session.user.id,
-        name: contact.nome,
-        phone: contact.telefone,
+        userId: userId,
+        name: contact.nome || contact.name,
+        phone: contact.telefone || contact.phone,
         email: contact.email || null,
-        company: contact.empresa || null,
-        value: contact.valor ? parseFloat(contact.valor.toString()) : null,
-        dueDate: contact.vencimento ? new Date(contact.vencimento) : null,
-        invoiceNumber: contact.documento || null,
-        description: contact.descricao || null,
+        company: contact.empresa || contact.company || null,
+        value: contact.valor || contact.value || null,
+        dueDate:
+          contact.vencimento || contact.dueDate
+            ? new Date(contact.vencimento || contact.dueDate)
+            : null,
+        invoiceNumber: contact.documento || contact.invoiceNumber || null,
+        description: contact.descricao || contact.description || null,
         status: "pending",
-        source: "upload",
+        // ❌ REMOVER: source: "upload", (não existe no schema)
         contactCount: 0,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -63,22 +90,23 @@ export async function POST(request: NextRequest) {
       skipDuplicates: true,
     });
 
-    console.log("✅ Contatos inseridos:", result.count);
-
-    // Log da importação
-    console.log(
-      `✅ ${result.count} contatos importados para usuário ${session.user.email}`
-    );
+    console.log("✅ Importação concluída:", result.count, "contatos inseridos");
 
     return NextResponse.json({
-      message: "Contatos importados com sucesso",
-      imported: result.count,
       success: true,
+      imported: result.count,
+      total: contacts.length,
+      message: `${result.count} contatos importados com sucesso!`,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ Erro na importação:", error);
+
     return NextResponse.json(
-      { error: "Erro interno do servidor: " + error },
+      {
+        error: "Erro interno do servidor",
+        details:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
+      },
       { status: 500 }
     );
   }

@@ -1,24 +1,27 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { SessionProvider } from "./providers/SessionProvider";
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
+import { Providers } from "./providers/providers";
 
-export const metadata = {
+const inter = Inter({ subsets: ["latin"] });
+
+export const metadata: Metadata = {
   title: "AutoSales - Automação de Vendas",
-  description: "Automatize suas vendas e cobrança via WhatsApp",
+  description: "Automação de cobrança via WhatsApp",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
-
   return (
-    <html lang="pt-BR">
-      <body className="antialiased">
-        <SessionProvider session={session}>{children}</SessionProvider>
+    <html lang="pt-BR" suppressHydrationWarning>
+      <body
+        className={`${inter.className} antialiased`}
+        suppressHydrationWarning
+      >
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
