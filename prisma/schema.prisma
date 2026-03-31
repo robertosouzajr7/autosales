@@ -7,7 +7,7 @@ datasource db {
   url      = "file:./dev.db"
 }
 
-model Company {
+model Tenant {
   id        String   @id @default(uuid())
   name      String
   email     String   @unique
@@ -36,6 +36,7 @@ model Company {
   automations Automation[]
   sdrs      SdrBot[]
   appointments Appointment[]
+  whatsappAccounts WhatsAppAccount[]
 }
 
 model Plan {
@@ -48,7 +49,7 @@ model Plan {
   features        String?  // JSON list of features
   active          Boolean  @default(true)
   
-  companies       Company[]
+  tenants         Tenant[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
@@ -63,19 +64,31 @@ model SdrBot {
   knowledgeBase   String?  @default("") // Texto de treinamento
   trainingUrls    String?  // Links de sites ou arquivos (JSON array string)
   
-  companyId       String
+  // Parâmetros avançados de IA (Requisito 8 e 9)
+  responseDelay   Int      @default(2000) // Milisegundos
+  voiceTone       String   @default("PROFESSIONAL") // CASUAL, PROFESSIONAL, PERSUASIVE
+  escalationKeywords String? @default("atendente, falar com humano, ajuda, queima, dor, bolha")
+  
+  // Parâmetros Globais de Negócio (Extraídos dos áudios)
+  followUpInterval      Int     @default(120) // Minutos para cobrar resposta após preço
+  preConfirmationHours  Int     @default(12)  // Horas antes para pré-confirmação
+  noShowGraceMinutes    Int     @default(15)  // Minutos de tolerância antes de cobrar presença
+  postServiceCheckHours Int     @default(24)  // Horas após serviço para enviar pós-venda
+  enableWaitlist        Boolean @default(true) // Encaixe automático em desistências
+
+  tenantId        String
   active          Boolean  @default(true)
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model AutomationConfig {
   id               String   @id @default(uuid())
-  companyId        String   @unique
-  company          Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenantId        String   @unique
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   
   autoConfirmHours Int      @default(24)
   lateToleranceMin Int      @default(15)
@@ -98,11 +111,11 @@ model User {
   email     String   @unique
   password  String
   role      String   @default("ADMIN") // ADMIN, AGENT, OWNER, SUPERADMIN
-  companyId String
+  tenantId String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model Lead {
@@ -114,14 +127,14 @@ model Lead {
   source    String?  
   tags      String?  
   notes     String?  
-  companyId String
+  tenantId String
   
   isToEnrich Boolean @default(false) 
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   conversations Conversation[]
   appointments  Appointment[]
   progressions AutomationProgress[]
@@ -153,7 +166,7 @@ model Message {
 model Appointment {
   id        String   @id @default(uuid())
   leadId    String
-  companyId String
+  tenantId String
   title     String
   date      DateTime
   status    String   @default("SCHEDULED") 
@@ -162,12 +175,12 @@ model Appointment {
   updatedAt DateTime @updatedAt
 
   lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model Automation {
   id          String   @id @default(uuid())
-  companyId   String
+  tenantId   String
   name        String
   description String?
   trigger     String   
@@ -177,7 +190,7 @@ model Automation {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenant     Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   progressions AutomationProgress[]
 }
 
@@ -197,4 +210,16 @@ model AutomationProgress {
   lead         Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@unique([automationId, leadId])
+}
+
+model WhatsAppAccount {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String?
+  status    String   @default("DISCONNECTED") 
+  tenantId  String
+  
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

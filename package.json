@@ -95,5 +95,8 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.0.1",
     "vite": "^6.3.4"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
   }
 }

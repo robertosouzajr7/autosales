@@ -1,583 +1,360 @@
 import { useState, useEffect } from "react";
-import { format, startOfWeek, addDays, isToday, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import {
-  Calendar, Plus, ChevronLeft, ChevronRight, X, RefreshCw,
-  Pencil, Trash2, Eye, Clock, CheckCircle2, AlertCircle,
-} from "lucide-react";
-
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { 
+  Calendar as CalendarIcon, Clock, CheckCircle2, AlertCircle, 
+  Trash2, Plus, ArrowRight, User, 
+  Search, Filter, Smartphone, MoreHorizontal,
+  ChevronRight, CalendarDays, Save, LayoutGrid, List,
+  Calendar as LucideCalendar
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { format, isSameDay, isToday, isTomorrow, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/components/ui/use-toast";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { cn } from "@/lib/utils";
-
-// ─── Types ──────────────────────────────────────────────────────
-
-interface Lead { id: string; name: string; phone: string; }
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar } from "@/components/ui/calendar";
 
 interface Appointment {
   id: string;
   title: string;
-  status: string;
-  date: string; // ISO
+  date: string;
   notes?: string;
-  lead: Lead;
+  status: string;
   leadId: string;
-}
-
-// ─── Constants ──────────────────────────────────────────────────
-
-const STATUS_CONFIG: Record<string, { label: string; badge: string; dot: string; icon: React.ElementType }> = {
-  SCHEDULED: { label: "Agendado",   badge: "bg-blue-50 text-blue-700 border-blue-200",   dot: "bg-blue-400",   icon: Clock },
-  COMPLETED: { label: "Concluído",  badge: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500", icon: CheckCircle2 },
-  CANCELED:  { label: "Cancelado",  badge: "bg-red-50 text-red-700 border-red-200",       dot: "bg-red-400",    icon: AlertCircle },
-};
-
-const HOURS = Array.from({ length: 11 }, (_, i) => i + 8); // 8..18
-
-function formatDateLocal(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return `${y}-${m}-${day}T${hh}:${mm}`;
-}
-
-// ─── Appointment Form Dialog ──────────────────────────────────
-
-function AppointmentDialog({
-  open, onClose, initial, leads, onSaved,
-}: {
-  open: boolean;
-  onClose: () => void;
-  initial?: Appointment | null;
-  leads: Lead[];
-  onSaved: (a: Appointment) => void;
-}) {
-  const { toast } = useToast();
-  const [saving, setSaving] = useState(false);
-  const now = new Date(); now.setMinutes(0, 0, 0); now.setHours(now.getHours() + 1);
-  const [form, setForm] = useState({
-    title: "", leadId: "", clientName: "", clientPhone: "",
-    date: formatDateLocal(now), status: "SCHEDULED", notes: "",
-    newContact: false,
-  });
-
-  useEffect(() => {
-    if (initial) {
-      setForm({
-        title: initial.title || "", leadId: initial.leadId || "",
-        clientName: "", clientPhone: "",
-        date: formatDateLocal(new Date(initial.date)), status: initial.status || "SCHEDULED",
-        notes: initial.notes || "", newContact: false,
-      });
-    } else {
-      const n = new Date(); n.setMinutes(0, 0, 0); n.setHours(n.getHours() + 1);
-      setForm({ title: "", leadId: "", clientName: "", clientPhone: "", date: formatDateLocal(n), status: "SCHEDULED", notes: "", newContact: false });
-    }
-  }, [initial, open]);
-
-  const set = (k: string, v: string | boolean) => setForm(p => ({ ...p, [k]: v }));
-
-  const save = async () => {
-    if (!form.title || !form.date) return toast({ title: "Título e data são obrigatórios.", variant: "destructive" });
-    if (!form.leadId && !form.newContact) return toast({ title: "Selecione um contato ou crie um novo.", variant: "destructive" });
-    if (form.newContact && (!form.clientName || !form.clientPhone)) return toast({ title: "Nome e telefone do novo contato são obrigatórios.", variant: "destructive" });
-
-    setSaving(true);
-    try {
-      const body: Record<string, string> = {
-        title: form.title, date: new Date(form.date).toISOString(), status: form.status, notes: form.notes,
-      };
-      if (form.newContact) {
-        body.clientName = form.clientName;
-        body.clientPhone = form.clientPhone;
-      } else {
-        body.leadId = form.leadId;
-      }
-
-      const url = initial ? `/api/appointments/${initial.id}` : "/api/appointments";
-      const method = initial ? "PUT" : "POST";
-      const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      if (!res.ok) throw new Error("Erro ao salvar");
-      const saved = await res.json();
-      onSaved(saved);
-      toast({ title: initial ? "Agendamento atualizado!" : "Agendamento criado com sucesso!" });
-      onClose();
-    } catch (e) { toast({ title: "Erro ao salvar agendamento", variant: "destructive" }); }
-    setSaving(false);
+  lead?: {
+    id: string;
+    name: string;
+    phone: string;
   };
-
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{initial ? "Editar Agendamento" : "Novo Agendamento"}</DialogTitle>
-        </DialogHeader>
-
-        <div className="grid gap-4 py-2">
-          <div className="space-y-1">
-            <Label>Título / Tipo de reunião *</Label>
-            <Input value={form.title} onChange={e => set("title", e.target.value)} placeholder="Ex: Demonstração, Consulta, Reunião de Vendas..." />
-          </div>
-
-          <div className="space-y-1">
-            <Label>Data e Hora *</Label>
-            <Input type="datetime-local" value={form.date} onChange={e => set("date", e.target.value)} />
-          </div>
-
-          {!initial && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <Label>Contato existente</Label>
-                <button
-                  type="button"
-                  onClick={() => set("newContact", !form.newContact)}
-                  className="text-xs text-emerald-600 underline"
-                >
-                  {form.newContact ? "← Escolher existente" : "Criar novo contato"}
-                </button>
-              </div>
-              {form.newContact ? (
-                <div className="grid grid-cols-2 gap-2">
-                  <Input value={form.clientName} onChange={e => set("clientName", e.target.value)} placeholder="Nome do cliente" />
-                  <Input value={form.clientPhone} onChange={e => set("clientPhone", e.target.value)} placeholder="Telefone WhatsApp" />
-                </div>
-              ) : (
-                <Select value={form.leadId} onValueChange={v => set("leadId", v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecionar contato..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {leads.map(l => (
-                      <SelectItem key={l.id} value={l.id}>{l.name} — {l.phone}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-          )}
-
-          <div className="space-y-1">
-            <Label>Status</Label>
-            <Select value={form.status} onValueChange={v => set("status", v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {Object.entries(STATUS_CONFIG).map(([k, v]) => (
-                  <SelectItem key={k} value={k}>{v.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1">
-            <Label>Observações</Label>
-            <Textarea
-              value={form.notes}
-              onChange={e => set("notes", e.target.value)}
-              placeholder="Contexto desta reunião, pontos a discutir..."
-              className="h-24 resize-none text-sm"
-            />
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={save} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700">
-            {saving && <RefreshCw className="h-4 w-4 animate-spin mr-1" />}
-            {saving ? "Salvando..." : "Salvar"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
 }
-
-// ─── Appointment Detail Dialog ────────────────────────────────
-
-function AppointmentDetail({
-  appt, onClose, onEdit, onDelete,
-}: {
-  appt: Appointment | null;
-  onClose: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-}) {
-  if (!appt) return null;
-  const cfg = STATUS_CONFIG[appt.status];
-  const Icon = cfg?.icon ?? Clock;
-  const dt = new Date(appt.date);
-
-  return (
-    <Dialog open={!!appt} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Icon className="h-5 w-5 text-slate-500" />
-            {appt.title}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3 text-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-slate-500">Status</span>
-            <Badge className={`border text-xs ${cfg?.badge}`}>{cfg?.label}</Badge>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-slate-500">Data / Hora</span>
-            <span className="font-medium text-slate-800">
-              {dt.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" })} às {dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-slate-500">Cliente</span>
-            <div className="flex items-center gap-2">
-              <Avatar className="h-6 w-6"><AvatarFallback className="text-[10px] bg-emerald-100 text-emerald-700">{appt.lead?.name?.substring(0, 2).toUpperCase()}</AvatarFallback></Avatar>
-              <span className="font-medium text-slate-800">{appt.lead?.name}</span>
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-slate-500">Contato</span>
-            <span className="text-slate-700">{appt.lead?.phone}</span>
-          </div>
-          {appt.notes && (
-            <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800 mt-2">
-              {appt.notes}
-            </div>
-          )}
-        </div>
-        <DialogFooter className="gap-2">
-          <Button variant="outline" size="sm" onClick={onDelete} className="text-red-600 border-red-200 hover:bg-red-50">
-            <Trash2 className="h-3.5 w-3.5 mr-1" />Excluir
-          </Button>
-          <Button variant="outline" size="sm" onClick={onClose}>Fechar</Button>
-          <Button size="sm" onClick={onEdit} className="bg-emerald-600 hover:bg-emerald-700">
-            <Pencil className="h-3.5 w-3.5 mr-1" />Editar
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ─── Calendar Grid ────────────────────────────────────────────
-
-function WeeklyCalendar({
-  week, appointments, onSlotClick, onApptClick,
-}: {
-  week: Date[];
-  appointments: Appointment[];
-  onSlotClick: (date: Date, hour: number) => void;
-  onApptClick: (a: Appointment) => void;
-}) {
-  return (
-    <div className="overflow-x-auto">
-      <div className="min-w-[640px] grid" style={{ gridTemplateColumns: `64px repeat(${week.length}, 1fr)` }}>
-        {/* Header row */}
-        <div className="h-12 border-b border-slate-200 bg-slate-50" />
-        {week.map(day => (
-          <div
-            key={day.toISOString()}
-            className={cn(
-              "h-12 flex flex-col items-center justify-center border-b border-l border-slate-200 bg-slate-50",
-              isToday(day) && "bg-emerald-50"
-            )}
-          >
-            <p className="text-[10px] font-semibold uppercase text-slate-400 tracking-wide">
-              {format(day, "EEE", { locale: ptBR })}
-            </p>
-            <p className={cn("text-sm font-bold", isToday(day) ? "text-emerald-600" : "text-slate-700")}>
-              {format(day, "d")}
-            </p>
-          </div>
-        ))}
-
-        {/* Hour rows */}
-        {HOURS.map(hour => (
-          <>
-            <div key={`h-${hour}`} className="h-16 border-b border-slate-100 flex items-start justify-end pr-2 pt-1">
-              <span className="text-[10px] text-slate-400">{hour}:00</span>
-            </div>
-            {week.map(day => {
-              const dayStr = format(day, "yyyy-MM-dd");
-              const slotAppts = appointments.filter(a => {
-                const d = new Date(a.date);
-                return format(d, "yyyy-MM-dd") === dayStr && d.getHours() === hour;
-              });
-              return (
-                <div
-                  key={`${day.toISOString()}-${hour}`}
-                  className={cn(
-                    "h-16 border-b border-l border-slate-100 relative cursor-pointer group",
-                    isToday(day) && "bg-emerald-50/30",
-                    "hover:bg-slate-50"
-                  )}
-                  onClick={() => onSlotClick(day, hour)}
-                >
-                  {slotAppts.map(a => {
-                    const cfg = STATUS_CONFIG[a.status];
-                    return (
-                      <div
-                        key={a.id}
-                        onClick={e => { e.stopPropagation(); onApptClick(a); }}
-                        className={cn(
-                          "absolute inset-x-1 top-1 rounded-md px-2 py-1 text-[10px] font-semibold truncate cursor-pointer z-10",
-                          "border shadow-sm hover:shadow-md transition-shadow",
-                          cfg?.badge
-                        )}
-                        title={`${a.title} — ${a.lead?.name}`}
-                      >
-                        <span className={`inline-block w-1.5 h-1.5 rounded-full ${cfg?.dot} mr-1`} />
-                        {a.title} · {a.lead?.name}
-                      </div>
-                    );
-                  })}
-                  <div className="absolute inset-0 hidden group-hover:flex items-center justify-center">
-                    <Plus className="h-4 w-4 text-slate-300" />
-                  </div>
-                </div>
-              );
-            })}
-          </>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── Main Page ────────────────────────────────────────────────
 
 export default function Appointments() {
-  const { toast } = useToast();
-  const [view, setView] = useState<"week" | "list">("week");
-  const [weekRef, setWeekRef] = useState(new Date());
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [leads, setLeads] = useState<Lead[]>([]);
+  const [appts, setAppts] = useState<Appointment[]>([]);
+  const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editAppt, setEditAppt] = useState<Appointment | null>(null);
-  const [detailAppt, setDetailAppt] = useState<Appointment | null>(null);
-  const [prefillDate, setPrefillDate] = useState<Date | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newAppt, setNewAppt] = useState({ title: "", date: "", leadId: "", notes: "" });
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [viewMode, setViewMode] = useState<"day" | "week" | "month">("day");
+  const { toast } = useToast();
 
-  const week = Array.from({ length: 5 }, (_, i) => addDays(startOfWeek(weekRef, { weekStartsOn: 1 }), i));
-
-  const load = async () => {
-    setLoading(true);
+  const fetchData = async () => {
     try {
-      const [apptRes, leadRes] = await Promise.all([
+      const [aRes, lRes] = await Promise.all([
         fetch("/api/appointments"),
-        fetch("/api/leads"),
+        fetch("/api/leads")
       ]);
-      const appts = await apptRes.json();
-      const leds = await leadRes.json();
-      if (Array.isArray(appts)) setAppointments(appts);
-      if (Array.isArray(leds)) setLeads(leds);
-    } catch { /* silent */ }
+      const aData = await aRes.json();
+      const lData = await lRes.json();
+      setAppts(Array.isArray(aData) ? aData : []);
+      setLeads(Array.isArray(lData) ? lData : []);
+    } catch (e) {
+      toast({ title: "Erro na agenda", variant: "destructive" });
+    }
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { fetchData(); }, []);
 
-  const openNew = (date?: Date, hour?: number) => {
-    setEditAppt(null);
-    if (date && hour !== undefined) {
-      const d = new Date(date);
-      d.setHours(hour, 0, 0, 0);
-      setPrefillDate(d);
-    } else { setPrefillDate(null); }
-    setDialogOpen(true);
-  };
-
-  const openEdit = (a: Appointment) => {
-    setEditAppt(a);
-    setDetailAppt(null);
-    setDialogOpen(true);
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Excluir este agendamento?")) return;
+  const handleCreateAppt = async () => {
+    if (!newAppt.title || !newAppt.date || !newAppt.leadId) {
+      return toast({ title: "Dados incompletos", variant: "destructive" });
+    }
     try {
-      await fetch(`/api/appointments/${id}`, { method: "DELETE" });
-      setAppointments(p => p.filter(a => a.id !== id));
-      setDetailAppt(null);
-      toast({ title: "Agendamento excluído." });
-    } catch { toast({ title: "Erro ao excluir", variant: "destructive" }); }
+      const res = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newAppt)
+      });
+      if (res.ok) {
+        toast({ title: "Compromisso Agendado!" });
+        setIsAddModalOpen(false);
+        setNewAppt({ title: "", date: "", leadId: "", notes: "" });
+        fetchData();
+      }
+    } catch (e) { toast({ title: "Falha ao agendar", variant: "destructive" }); }
   };
 
-  const onSaved = (a: Appointment) => {
-    setAppointments(p => {
-      const idx = p.findIndex(x => x.id === a.id);
-      if (idx >= 0) { const n = [...p]; n[idx] = a; return n; }
-      return [...p, a];
-    });
+  const deleteAppt = async (id: string) => {
+    if (!confirm("Remover este compromisso?")) return;
+    try {
+      const res = await fetch(`/api/appointments/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast({ title: "Agendamento removido" });
+        fetchData();
+      }
+    } catch (e) { toast({ title: "Erro ao excluir", variant: "destructive" }); }
   };
 
-  const counts = {
-    total: appointments.length,
-    scheduled: appointments.filter(a => a.status === "SCHEDULED").length,
-    completed: appointments.filter(a => a.status === "COMPLETED").length,
-    canceled: appointments.filter(a => a.status === "CANCELED").length,
+  // Filtragem inteligente baseada no modo de visualização
+  const filteredAppts = appts.filter(appt => {
+    const apptDate = new Date(appt.date);
+    if (!selectedDate) return true;
+
+    if (viewMode === "day") {
+      return isSameDay(apptDate, selectedDate);
+    } else if (viewMode === "week") {
+      return isWithinInterval(apptDate, {
+        start: startOfWeek(selectedDate, { weekStartsOn: 0 }),
+        end: endOfWeek(selectedDate, { weekStartsOn: 0 })
+      });
+    } else {
+      return isWithinInterval(apptDate, {
+        start: startOfMonth(selectedDate),
+        end: endOfMonth(selectedDate)
+      });
+    }
+  }).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  // Agrupamento por dia para exibição estilo Timetable
+  const groupedAppts = filteredAppts.reduce((acc: any, appt) => {
+    const dateStr = format(new Date(appt.date), "yyyy-MM-dd");
+    if (!acc[dateStr]) acc[dateStr] = [];
+    acc[dateStr].push(appt);
+    return acc;
+  }, {});
+
+  const getDateLabel = (dateStr: string) => {
+    const d = new Date(dateStr + "T12:00:00");
+    if (isToday(d)) return "Hoje";
+    if (isTomorrow(d)) return "Amanhã";
+    return format(d, "eeee, d 'de' MMMM", { locale: ptBR });
   };
 
   return (
     <DashboardLayout>
-      <div className="space-y-5 pb-20">
-        {/* Header */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Agendamentos</h1>
-            <p className="text-sm text-slate-500 mt-0.5">Gerencie todos os encontros, reuniões e compromissos.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex rounded-lg border border-slate-200 bg-white overflow-hidden">
-              <button onClick={() => setView("week")} className={cn("px-3 py-1.5 text-xs font-medium", view === "week" ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-50")}>
-                Semana
-              </button>
-              <button onClick={() => setView("list")} className={cn("px-3 py-1.5 text-xs font-medium", view === "list" ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-50")}>
-                Lista
-              </button>
-            </div>
-            <Button onClick={() => openNew()} className="bg-emerald-600 hover:bg-emerald-700 gap-1.5" size="sm">
-              <Plus className="h-3.5 w-3.5" /> Novo Agendamento
-            </Button>
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: "Total", value: counts.total, color: "text-slate-700 bg-slate-50 border-slate-200" },
-            { label: "Agendados", value: counts.scheduled, color: "text-blue-700 bg-blue-50 border-blue-200" },
-            { label: "Concluídos", value: counts.completed, color: "text-emerald-700 bg-emerald-50 border-emerald-200" },
-            { label: "Cancelados", value: counts.canceled, color: "text-red-700 bg-red-50 border-red-200" },
-          ].map(s => (
-            <Card key={s.label} className={`border ${s.color}`}>
-              <CardContent className="p-3 text-center">
-                <p className="text-2xl font-bold">{s.value}</p>
-                <p className="text-xs font-medium mt-0.5">{s.label}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {view === "week" ? (
-          <Card className="border border-slate-200 shadow-sm overflow-hidden">
-            {/* Week nav */}
-            <CardHeader className="py-3 px-4 border-b border-slate-100 flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-slate-700">
-                {format(week[0], "d MMM", { locale: ptBR })} – {format(week[4], "d MMM yyyy", { locale: ptBR })}
-              </CardTitle>
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setWeekRef(d => addDays(d, -7))}>
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setWeekRef(new Date())}>Hoje</Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setWeekRef(d => addDays(d, 7))}>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+      <div className="flex flex-col gap-8 p-6 lg:p-10 max-w-screen-2xl mx-auto">
+        
+        {/* TOP BAR: SEARCH & CREATE */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+           <div className="space-y-1">
+              <div className="flex items-center gap-3">
+                 <div className="p-3 bg-emerald-500/10 rounded-2xl">
+                    <CalendarIcon className="w-6 h-6 text-emerald-500" />
+                 </div>
+                 <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">
+                    Agenda de <span className="text-emerald-500 italic">Negócios</span>
+                 </h1>
               </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              {loading ? (
-                <div className="flex items-center justify-center h-64 text-slate-400 text-sm animate-pulse">Carregando agendamentos...</div>
-              ) : (
-                <WeeklyCalendar
-                  week={week}
-                  appointments={appointments}
-                  onSlotClick={(date, hour) => openNew(date, hour)}
-                  onApptClick={a => setDetailAppt(a)}
-                />
-              )}
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="border border-slate-200 shadow-sm">
-            <CardContent className="p-0">
-              {loading ? (
-                <div className="flex items-center justify-center h-40 text-slate-400 text-sm animate-pulse">Carregando...</div>
-              ) : appointments.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400">
-                  <Calendar className="h-8 w-8" />
-                  <p className="font-medium">Nenhum agendamento encontrado</p>
-                  <Button size="sm" onClick={() => openNew()} className="mt-1 bg-emerald-600 hover:bg-emerald-700">
-                    <Plus className="h-3.5 w-3.5 mr-1" />Criar agendamento
-                  </Button>
-                </div>
-              ) : (
-                <div className="divide-y divide-slate-100">
-                  {[...appointments].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(a => {
-                    const cfg = STATUS_CONFIG[a.status];
-                    const Icon = cfg?.icon ?? Clock;
-                    const dt = new Date(a.date);
-                    return (
-                      <div key={a.id} className="flex items-center gap-4 px-4 py-3 hover:bg-slate-50">
-                        {/* Date block */}
-                        <div className="flex w-14 flex-col items-center rounded-lg border border-slate-200 bg-white py-1 shrink-0 shadow-sm">
-                          <span className="text-[10px] font-semibold uppercase text-slate-400">
-                            {format(dt, "MMM", { locale: ptBR })}
+              <p className="text-slate-400 font-bold uppercase tracking-widest text-[9px] pl-[52px]">Gestão de Reuniões e Call de Fechamento</p>
+           </div>
+           
+           <div className="flex items-center gap-3">
+              <Button 
+                onClick={() => setIsAddModalOpen(true)}
+                className="h-14 bg-slate-900 hover:bg-black px-8 rounded-2xl font-black uppercase text-xs tracking-widest text-white shadow-2xl transition-all hover:-translate-y-1 active:scale-95"
+              >
+                 <Plus className="w-5 h-5 mr-3 text-emerald-400" /> Novo Agendamento
+              </Button>
+           </div>
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+           
+           {/* SIDEBAR: MINI CALENDAR & FILTERS */}
+           <div className="xl:col-span-1 space-y-6">
+              <Card className="border-none shadow-3xl rounded-[40px] bg-white overflow-hidden">
+                 <CardHeader className="pb-0 pt-8 px-8">
+                    <CardTitle className="text-sm font-black text-slate-900 uppercase tracking-tighter">Explorar Data</CardTitle>
+                 </CardHeader>
+                 <div className="p-4 flex justify-center">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={setSelectedDate}
+                      className="rounded-3xl border-none font-bold"
+                      locale={ptBR}
+                    />
+                 </div>
+              </Card>
+
+              <Card className="border-none shadow-3xl rounded-[40px] bg-slate-900 p-8 text-white space-y-6">
+                 <div>
+                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-2">Visão Rápida</p>
+                    <h4 className="text-xl font-black">Performance SDR</h4>
+                 </div>
+                 <div className="space-y-4">
+                    <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl">
+                       <span className="text-xs font-bold text-slate-400">Total no Mês</span>
+                       <span className="text-lg font-black text-white">{appts.length}</span>
+                    </div>
+                    <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl">
+                       <span className="text-xs font-bold text-slate-400">Taxa de Show</span>
+                       <span className="text-lg font-black text-emerald-400">84%</span>
+                    </div>
+                 </div>
+              </Card>
+           </div>
+
+           {/* MAIN: AGENDA CONTENT */}
+           <div className="xl:col-span-3 space-y-6">
+              <Tabs defaultValue="day" onValueChange={(v) => setViewMode(v as any)} className="w-full">
+                 <div className="flex items-center justify-between bg-white p-2 rounded-3xl shadow-xl border border-slate-50 mb-8">
+                    <TabsList className="bg-transparent border-none">
+                       <TabsTrigger value="day" className="h-11 px-8 rounded-2xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-black uppercase text-[10px] tracking-widest transition-all">Dia</TabsTrigger>
+                       <TabsTrigger value="week" className="h-11 px-8 rounded-2xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-black uppercase text-[10px] tracking-widest transition-all">Semana</TabsTrigger>
+                       <TabsTrigger value="month" className="h-11 px-8 rounded-2xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-black uppercase text-[10px] tracking-widest transition-all">Mês</TabsTrigger>
+                    </TabsList>
+                    
+                    <div className="flex items-center gap-3 pr-2">
+                       <div className="hidden md:flex items-center bg-slate-50 rounded-2xl px-4 py-2 border border-slate-100">
+                          <CalendarDays className="w-4 h-4 text-emerald-500 mr-3" />
+                          <span className="text-[10px] font-black text-slate-500 uppercase tracking-tighter">
+                             {format(selectedDate || new Date(), "MMMM yyyy", { locale: ptBR })}
                           </span>
-                          <span className="text-lg font-bold text-slate-800 leading-tight">{format(dt, "d")}</span>
-                          <span className="text-[10px] text-slate-400">{format(dt, "HH:mm")}</span>
-                        </div>
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-semibold text-slate-800 truncate">{a.title}</p>
-                            <Badge className={`text-[10px] border shrink-0 ${cfg?.badge}`}>{cfg?.label}</Badge>
-                          </div>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <Avatar className="h-4 w-4"><AvatarFallback className="text-[8px] bg-emerald-100 text-emerald-700">{a.lead?.name?.substring(0, 2).toUpperCase()}</AvatarFallback></Avatar>
-                            <p className="text-xs text-slate-500 truncate">{a.lead?.name} · {a.lead?.phone}</p>
-                          </div>
-                          {a.notes && <p className="text-xs text-slate-400 truncate mt-0.5 italic">{a.notes}</p>}
-                        </div>
-                        {/* Actions */}
-                        <div className="flex items-center gap-1 shrink-0">
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-slate-700" onClick={() => setDetailAppt(a)}>
-                            <Eye className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-emerald-600" onClick={() => openEdit(a)}>
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-red-600" onClick={() => handleDelete(a.id)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+                       </div>
+                    </div>
+                 </div>
+
+                 <ScrollArea className="h-[calc(100vh-320px)] pr-6">
+                    <div className="space-y-12">
+                       {Object.keys(groupedAppts).length > 0 ? (
+                         Object.keys(groupedAppts).map(dateKey => (
+                           <div key={dateKey} className="space-y-6">
+                              <div className="flex items-center gap-4">
+                                 <h2 className="text-lg font-black text-slate-900 uppercase tracking-tighter italic pl-2">{getDateLabel(dateKey)}</h2>
+                                 <div className="flex-1 h-px bg-slate-100" />
+                              </div>
+
+                              <div className="grid grid-cols-1 gap-4">
+                                 {groupedAppts[dateKey].map((appt: Appointment) => (
+                                   <Card key={appt.id} className="group border-none shadow-xl hover:shadow-2xl rounded-[35px] bg-white transition-all duration-500 overflow-hidden hover:translate-x-2 border-l-8 border-emerald-500">
+                                      <div className="p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+                                         <div className="flex items-center gap-8 w-full md:w-auto">
+                                            <div className="flex flex-col items-center justify-center min-w-[80px]">
+                                               <span className="text-3xl font-black text-slate-900 tracking-tighter italic -mb-1">{format(new Date(appt.date), "HH:mm")}</span>
+                                               <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{format(new Date(appt.date), "aaa")}</span>
+                                            </div>
+                                            
+                                            <div className="h-12 w-px bg-slate-100 hidden md:block" />
+
+                                            <div className="space-y-1">
+                                               <h3 className="text-xl font-black text-slate-900 tracking-tight leading-none group-hover:text-emerald-600 transition-colors">{appt.title}</h3>
+                                               <div className="flex items-center gap-3">
+                                                  <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 rounded-full border border-slate-100">
+                                                     <User className="w-3 h-3 text-slate-400" />
+                                                     <span className="text-[10px] font-bold text-slate-500 uppercase">{appt.lead?.name || "Contato"}</span>
+                                                  </div>
+                                                  <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 rounded-full border border-slate-100">
+                                                     <Smartphone className="w-3 h-3 text-slate-400" />
+                                                     <span className="text-[10px] font-bold text-slate-500 uppercase">{appt.lead?.phone || "--"}</span>
+                                                  </div>
+                                               </div>
+                                            </div>
+                                         </div>
+
+                                         <div className="flex items-center gap-4 w-full md:w-auto justify-end">
+                                            <Badge className="bg-emerald-500/10 text-emerald-600 border-none px-5 py-2.5 rounded-2xl font-black uppercase text-[9px] tracking-widest shadow-sm">Confirmado</Badge>
+                                            <Button variant="ghost" size="icon" className="w-12 h-12 rounded-2xl hover:bg-red-50 hover:text-red-500 transition-all text-slate-200" onClick={() => deleteAppt(appt.id)}>
+                                               <Trash2 className="w-5 h-5" />
+                                            </Button>
+                                         </div>
+                                      </div>
+                                   </Card>
+                                 ))}
+                              </div>
+                           </div>
+                         ))
+                       ) : (
+                         <div className="py-24 text-center border-4 border-dashed border-slate-100 rounded-[60px] flex flex-col items-center justify-center gap-8 bg-white/50">
+                            <div className="w-24 h-24 bg-slate-50 rounded-[40px] flex items-center justify-center relative">
+                               <LucideCalendar className="w-10 h-10 text-slate-200" />
+                               <div className="absolute top-0 right-0 w-6 h-6 bg-emerald-500 rounded-full border-4 border-white animate-pulse" />
+                            </div>
+                            <div className="space-y-2">
+                               <p className="text-lg font-black text-slate-900 tracking-tighter uppercase">Nenhum agendamento encontrado</p>
+                               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest px-12">Experimente mudar o filtro de data ou criar uma nova reunião.</p>
+                            </div>
+                            <Button onClick={() => setIsAddModalOpen(true)} variant="outline" className="h-12 border-2 border-slate-100 rounded-2xl px-8 font-black uppercase text-[10px] tracking-widest hover:bg-slate-900 hover:text-white transition-all">
+                               Agendar Agora
+                            </Button>
+                         </div>
+                       )}
+                    </div>
+                 </ScrollArea>
+              </Tabs>
+           </div>
+        </div>
       </div>
 
-      <AppointmentDialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        initial={editAppt}
-        leads={leads}
-        onSaved={onSaved}
-      />
-      <AppointmentDetail
-        appt={detailAppt}
-        onClose={() => setDetailAppt(null)}
-        onEdit={() => openEdit(detailAppt!)}
-        onDelete={() => handleDelete(detailAppt!.id)}
-      />
+      {/* MODAL NOVO AGENDAMENTO */}
+      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+        <DialogContent className="rounded-[40px] p-10 max-w-lg border-none shadow-3xl bg-white overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl rounded-full" />
+          <DialogHeader>
+            <DialogTitle className="text-3xl font-black text-slate-900 tracking-tighter uppercase leading-none mb-2">
+              Nova <span className="text-emerald-500 italic">Reunião</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest">Preencha os detalhes para travar a agenda do SDR.</DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-6 py-8">
+            <div className="space-y-3">
+              <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Título do Compromisso</Label>
+              <Input 
+                value={newAppt.title} 
+                onChange={e => setNewAppt({...newAppt, title: e.target.value})} 
+                className="h-14 rounded-2xl border-none bg-slate-50 font-bold text-slate-900 px-6 focus:ring-2 focus:ring-emerald-500 transition-all" 
+                placeholder="Ex: Call de Fechamento Vendas" 
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div className="space-y-3">
+                 <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Data e Hora</Label>
+                 <Input 
+                   type="datetime-local" 
+                   value={newAppt.date} 
+                   onChange={e => setNewAppt({...newAppt, date: e.target.value})} 
+                   className="h-14 rounded-2xl border-none bg-slate-50 font-bold text-slate-900 px-6 focus:ring-2 focus:ring-emerald-500 transition-all" 
+                 />
+               </div>
+               
+               <div className="space-y-3">
+                 <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Vincular Lead</Label>
+                 <Select value={newAppt.leadId} onValueChange={v => setNewAppt({...newAppt, leadId: v})}>
+                   <SelectTrigger className="h-14 rounded-2xl border-none bg-slate-50 font-bold text-slate-900 px-6 focus:ring-2 focus:ring-emerald-500 transition-all">
+                     <SelectValue placeholder="Selecione..." />
+                   </SelectTrigger>
+                   <SelectContent className="rounded-2xl border-slate-100 shadow-2xl">
+                     {leads.map(l => (
+                       <SelectItem key={l.id} value={l.id} className="font-bold py-3">
+                         {l.name}
+                       </SelectItem>
+                     ))}
+                   </SelectContent>
+                 </Select>
+               </div>
+            </div>
+
+            <div className="space-y-3">
+              <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Notas Adicionais</Label>
+              <Input 
+                value={newAppt.notes} 
+                onChange={e => setNewAppt({...newAppt, notes: e.target.value})} 
+                className="h-14 rounded-2xl border-none bg-slate-50 font-bold text-slate-900 px-6 focus:ring-2 focus:ring-emerald-500 transition-all" 
+                placeholder="Observações importantes..." 
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="mt-4">
+             <Button 
+               onClick={handleCreateAppt} 
+               className="w-full h-16 bg-slate-900 hover:bg-black text-white font-black rounded-3xl uppercase tracking-widest text-sm transition-all shadow-2xl hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3"
+             >
+               <Save className="w-5 h-5 text-emerald-400" /> Confirmar e Salvar
+             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

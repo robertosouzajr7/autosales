@@ -7,10 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Search, MapPin, Target, Loader2, CheckCircle2, Globe, Phone, Mail, Plus, Zap, ChevronRight, MessageSquare, Star,
-  LayoutGrid, List, Layers, Info, CheckSquare, Square, Download
+  LayoutGrid, List, Layers, Info, CheckSquare, Square, Download, Building2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -62,7 +62,8 @@ export default function Prospecting() {
 
   const importLead = async (lead: DiscoveredLead) => {
     try {
-      const res = await fetch("/api/contacts", {
+      // Unificado para usar /api/leads do SaaS
+      const res = await fetch("/api/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -115,7 +116,6 @@ export default function Prospecting() {
   };
 
   const isWhatsApp = (phone: string) => {
-    // In Brazil, mobile numbers have 13 digits (55 + DD + 9XXXXXXXX)
     const clean = phone.replace(/\D/g, '');
     return clean.length >= 12 && clean.includes('9');
   };
@@ -124,7 +124,6 @@ export default function Prospecting() {
     const hasWA = lead.hasWhatsApp;
     const isSelected = selectedIds.has(lead.id);
 
-    // --- MODO LISTA ---
     if (viewMode === "list") {
       return (
         <Card key={lead.id} className={`border-none shadow-sm transition-all bg-white group overflow-hidden ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''}`}>
@@ -157,10 +156,8 @@ export default function Prospecting() {
       );
     }
 
-    // --- MODO GRID / GRADIENTE (UNIFIED CARD STYLE) ---
     return (
       <Card key={lead.id} className={`relative overflow-hidden cursor-pointer transition-all hover:shadow-2xl group border-2 ${isSelected ? 'border-primary ring-2 ring-primary/20' : lead.imported ? 'border-emerald-100' : 'border-slate-100'}`} onClick={() => setSelectedLead(lead)}>
-         {/* Checkbox para seleção rápida */}
          {!lead.imported && (
            <div className="absolute top-4 left-4 z-10" onClick={(e) => e.stopPropagation()}>
               <Checkbox checked={isSelected} onCheckedChange={() => toggleSelectLead(lead.id)} className="h-6 w-6 bg-white/80 border-slate-300" />
@@ -339,4 +336,3 @@ export default function Prospecting() {
     </DashboardLayout>
   );
 }
-import { Building2 } from "lucide-react";

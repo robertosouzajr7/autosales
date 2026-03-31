@@ -8,7 +8,12 @@ export const whatsappSessions = new Map();
 // Classe responsável por orquestrar múltiplas conexões de empresas (Multi-tenant SaaS)
 export class WhatsAppManager {
     static async createSession(companyId, emitQr) {
-        // Criar pasta isolada por empresa para segurança e escopo
+        // Se a sessão já estiver ativa e conectada, avisa o front imediatamente
+        if (whatsappSessions.has(companyId)) {
+            if (emitQr) emitQr("CONNECTED");
+            return whatsappSessions.get(companyId);
+        }
+
         const authDir = path.resolve(`./instances/${companyId}`);
         if (!fs.existsSync(authDir)) fs.mkdirSync(authDir, { recursive: true });
 
@@ -26,20 +31,22 @@ export class WhatsAppManager {
         sock.ev.on('creds.update', saveCreds);
 
         sock.ev.on('connection.update', (update) => {
-            const { connection, qr } = update;
+            const { connection, qr, lastDisconnect } = update;
             
-            // Se o sistema solicitar QR Code, emitimos via SSE (Server-Sent Events) para o Dashboard da Interface Web
             if (qr && emitQr) {
+                console.log(`[WhatsApp] QR Gerado para: ${companyId}`);
                 emitQr(qr);
             }
             
             if (connection === 'close') {
-                console.log(`[WhatsApp SaaS] Conexão da Empresa ${companyId} abortada/fechada.`);
+                const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== 401;
+                console.log(`[WhatsApp] Conexão ${companyId} fechada. Reconectar? ${shouldReconnect}`);
                 whatsappSessions.delete(companyId);
+                // O boot diário cuidará de reconectar se for erro de rede e não deslogue manual
             } else if (connection === 'open') {
-                console.log(`[WhatsApp SaaS] Empresa ${companyId} logou com Sucesso!`);
+                console.log(`[WhatsApp] ✅ Conectado: ${companyId}`);
                 whatsappSessions.set(companyId, sock);
-                if (emitQr) emitQr("CONNECTED"); // Avisa o frontend que não precisa mais do QR
+                if (emitQr) emitQr("CONNECTED");
             }
         });
 
