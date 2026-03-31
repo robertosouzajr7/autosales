@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,10 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   MessageSquare,
   UserCheck,
@@ -28,8 +31,8 @@ import {
   Tag,
   Clock,
   CheckCircle2,
-  Circle,
   PlayCircle,
+  Circle,
   SlidersHorizontal,
 } from "lucide-react";
 
@@ -59,14 +62,14 @@ interface Automation {
   description: string;
   active: boolean;
   trigger: string;
-  execucoes: number;
-  taxaSucesso: number;
-  ultimaExecucao: string;
-  nodes: FlowNode[];
+  executions: number;
+  taxaSucesso?: number;
+  ultimaExecucao?: string;
+  nodes?: FlowNode[];
 }
 
 // ---------------------------------------------------------------------------
-// Mock data
+// Templates Data
 // ---------------------------------------------------------------------------
 
 const templates: AutomationTemplate[] = [
@@ -111,142 +114,6 @@ const templates: AutomationTemplate[] = [
     name: "Pós-venda",
     description: "Colete avaliações e ofereça suporte proativo após a conclusão de uma venda.",
     color: "bg-yellow-100 text-yellow-700",
-  },
-];
-
-const defaultNodes: FlowNode[] = [
-  {
-    id: "n1",
-    type: "trigger",
-    label: "Gatilho: Nova mensagem",
-    subtitle: "Novo lead via WhatsApp",
-    icon: <PlayCircle className="w-4 h-4" />,
-  },
-  {
-    id: "n2",
-    type: "condition",
-    label: "Se contém palavra-chave",
-    subtitle: '"preço", "valor", "comprar"',
-    icon: <GitBranch className="w-4 h-4" />,
-  },
-  {
-    id: "n3",
-    type: "action",
-    label: "Enviar mensagem",
-    subtitle: "Template de boas-vindas",
-    icon: <Send className="w-4 h-4" />,
-  },
-  {
-    id: "n4",
-    type: "action",
-    label: "Atribuir tag",
-    subtitle: "Lead Quente",
-    icon: <Tag className="w-4 h-4" />,
-  },
-  {
-    id: "n5",
-    type: "action",
-    label: "Agendar follow-up",
-    subtitle: "Em 2 dias",
-    icon: <Clock className="w-4 h-4" />,
-  },
-  {
-    id: "n6",
-    type: "end",
-    label: "Fim do fluxo",
-    subtitle: "Automação concluída",
-    icon: <CheckCircle2 className="w-4 h-4" />,
-  },
-];
-
-const automations: Automation[] = [
-  {
-    id: "a1",
-    name: "Boas-vindas Novos Leads",
-    description: "Envio automático de mensagem de boas-vindas para leads que entram em contato pelo WhatsApp.",
-    active: true,
-    trigger: "Quando: Novo lead via WhatsApp",
-    execucoes: 3840,
-    taxaSucesso: 98,
-    ultimaExecucao: "há 3 minutos",
-    nodes: defaultNodes,
-  },
-  {
-    id: "a2",
-    name: "Qualificação Automática",
-    description: "Fluxo de perguntas para identificar interesse, orçamento e urgência de novos contatos.",
-    active: true,
-    trigger: "Quando: Lead sem qualificação há +1h",
-    execucoes: 2210,
-    taxaSucesso: 91,
-    ultimaExecucao: "há 12 minutos",
-    nodes: defaultNodes,
-  },
-  {
-    id: "a3",
-    name: "Follow-up D+3",
-    description: "Reengajamento de leads que não responderam em 3 dias com oferta especial.",
-    active: true,
-    trigger: "Quando: Sem resposta por 3 dias",
-    execucoes: 1590,
-    taxaSucesso: 74,
-    ultimaExecucao: "há 1 hora",
-    nodes: defaultNodes,
-  },
-  {
-    id: "a4",
-    name: "Agendamento de Demo",
-    description: "Oferece horários de demonstração automaticamente após qualificação do lead.",
-    active: true,
-    trigger: "Quando: Lead qualificado como 'Quente'",
-    execucoes: 870,
-    taxaSucesso: 88,
-    ultimaExecucao: "há 2 horas",
-    nodes: defaultNodes,
-  },
-  {
-    id: "a5",
-    name: "Recuperação de Proposta",
-    description: "Lembra clientes que receberam proposta mas não responderam após 5 dias.",
-    active: true,
-    trigger: "Quando: Proposta enviada há 5 dias sem resposta",
-    execucoes: 620,
-    taxaSucesso: 62,
-    ultimaExecucao: "há 4 horas",
-    nodes: defaultNodes,
-  },
-  {
-    id: "a6",
-    name: "Pesquisa Pós-venda",
-    description: "Coleta NPS e feedback dos clientes 7 dias após a conclusão da venda.",
-    active: true,
-    trigger: "Quando: Venda marcada como concluída",
-    execucoes: 1190,
-    taxaSucesso: 95,
-    ultimaExecucao: "ontem, 18:32",
-    nodes: defaultNodes,
-  },
-  {
-    id: "a7",
-    name: "Carrinho Abandonado v2",
-    description: "Sequência de 3 mensagens para recuperar clientes que não finalizaram a compra.",
-    active: false,
-    trigger: "Quando: Checkout abandonado há +2h",
-    execucoes: 430,
-    taxaSucesso: 55,
-    ultimaExecucao: "há 3 dias",
-    nodes: defaultNodes,
-  },
-  {
-    id: "a8",
-    name: "Onboarding Cliente",
-    description: "Série de mensagens de onboarding enviadas após a primeira compra confirmada.",
-    active: false,
-    trigger: "Quando: Primeira compra confirmada",
-    execucoes: 700,
-    taxaSucesso: 99,
-    ultimaExecucao: "há 5 dias",
-    nodes: defaultNodes,
   },
 ];
 
@@ -315,6 +182,69 @@ function MiniFlowPreview({ nodes }: { nodes: FlowNode[] }) {
 }
 
 // ---------------------------------------------------------------------------
+// Automation Form Dialog
+// ---------------------------------------------------------------------------
+
+function AutomationFormDialog({
+  open, onClose, initial, onSaved,
+}: {
+  open: boolean; onClose: () => void; initial?: Automation | null; onSaved: (a: Automation) => void;
+}) {
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ name: "", description: "", trigger: "NEW_LEAD" });
+
+  useEffect(() => {
+    if (initial) {
+      setForm({ name: initial.name || "", description: initial.description || "", trigger: initial.trigger || "NEW_LEAD" });
+    } else {
+      setForm({ name: "", description: "", trigger: "NEW_LEAD" });
+    }
+  }, [initial, open]);
+
+  const save = async () => {
+    if (!form.name) return;
+    setSaving(true);
+    try {
+      const url = initial ? `/api/automations/${initial.id}` : "/api/automations";
+      const method = initial ? "PUT" : "POST";
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, active: initial ? initial.active : true })
+      });
+      const saved = await res.json();
+      onSaved(saved);
+      onClose();
+    } catch (e) { console.error(e); }
+    setSaving(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>{initial ? "Editar" : "Nova"} Automação</DialogTitle></DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-1"><Label>Nome</Label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Nome da automação" /></div>
+          <div className="space-y-1"><Label>Descrição</Label><Input value={form.description} onChange={e => setForm({...form, description: e.target.value})} placeholder="Para que serve?" /></div>
+          <div className="space-y-1">
+            <Label>Gatilho (Trigger)</Label>
+            <select className="w-full h-10 px-3 border rounded-md text-sm" value={form.trigger} onChange={e => setForm({...form, trigger: e.target.value})}>
+              <option value="NEW_LEAD">Novo Lead</option>
+              <option value="APPOINTMENT_SCHEDULED">Agendamento Criado</option>
+              <option value="MSG_RECEIVED">Mensagem Recebida</option>
+            </select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button onClick={save} disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Flow Builder Dialog
 // ---------------------------------------------------------------------------
 
@@ -327,7 +257,7 @@ function FlowBuilderDialog({
   onClose: () => void;
   automation: Automation | null;
 }) {
-  if (!automation) return null;
+  if (!automation || !automation.nodes) return null;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -365,7 +295,7 @@ function FlowBuilderDialog({
                 </div>
 
                 {/* Connector + Add button */}
-                {idx < automation.nodes.length - 1 && (
+                {idx < automation.nodes!.length - 1 && (
                   <div className="flex flex-col items-center my-1 gap-0.5">
                     <div className="w-px h-3 bg-gray-300" />
                     <button
@@ -382,14 +312,14 @@ function FlowBuilderDialog({
           })}
         </div>
 
-        <div className="flex gap-2 pt-2 border-t">
+        <DialogFooter className="flex gap-2 pt-2 border-t">
           <Button variant="outline" className="flex-1" onClick={onClose}>
             Cancelar
           </Button>
           <Button className="flex-1">
             Salvar Fluxo
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -400,39 +330,83 @@ function FlowBuilderDialog({
 // ---------------------------------------------------------------------------
 
 export default function Automations() {
-  const [automationList, setAutomationList] = useState<Automation[]>(automations);
+  const [automationList, setAutomationList] = useState<Automation[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedAutomation, setSelectedAutomation] = useState<Automation | null>(null);
   const [builderOpen, setBuilderOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editAutomation, setEditAutomation] = useState<Automation | null>(null);
+
+  async function load() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/automations");
+      const data = await res.json();
+      if (Array.isArray(data)) setAutomationList(data);
+    } catch (e) { console.error(e); }
+    setLoading(false);
+  }
+
+  useEffect(() => { load(); }, []);
 
   const activeCount = automationList.filter((a) => a.active).length;
   const draftCount = automationList.filter((a) => !a.active).length;
-  const totalExecucoes = automationList.reduce((sum, a) => sum + a.execucoes, 0);
+  const totalExecucoes = automationList.reduce((sum, a) => sum + (a.executions || 0), 0);
 
-  function toggleActive(id: string) {
-    setAutomationList((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, active: !a.active } : a))
-    );
+  async function toggleActive(id: string) {
+    const auto = automationList.find(a => a.id === id);
+    if (!auto) return;
+    try {
+      await fetch(`/api/automations/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...auto, active: !auto.active })
+      });
+      setAutomationList((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, active: !a.active } : a))
+      );
+    } catch (e) { console.error(e); }
   }
 
-  function openEditor(automation: Automation) {
-    setSelectedAutomation(automation);
+  function openForm(a?: Automation) {
+    setEditAutomation(a || null);
+    setFormOpen(true);
+  }
+
+  function openEditor(a: Automation) {
+    setSelectedAutomation(a);
     setBuilderOpen(true);
   }
 
-  function duplicateAutomation(automation: Automation) {
-    const newItem: Automation = {
-      ...automation,
-      id: `a${Date.now()}`,
-      name: `${automation.name} (cópia)`,
-      active: false,
-      execucoes: 0,
-      ultimaExecucao: "nunca",
-    };
-    setAutomationList((prev) => [newItem, ...prev]);
+  function duplicateAutomation(a: Automation) {
+    createFromTemplate({ id: a.trigger, name: `${a.name} (Copy)`, description: a.description });
   }
 
-  function deleteAutomation(id: string) {
-    setAutomationList((prev) => prev.filter((a) => a.id !== id));
+  async function createFromTemplate(tpl: Partial<AutomationTemplate>) {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/automations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: tpl.name,
+          description: tpl.description,
+          trigger: tpl.id?.toUpperCase() || "NEW_LEAD",
+          active: true
+        })
+      });
+      const saved = await res.json();
+      setAutomationList(p => [saved, ...p]);
+    } catch (e) { console.error(e); }
+    setLoading(false);
+  }
+
+  async function deleteAutomation(id: string) {
+    if (!confirm("Excluir esta automação?")) return;
+    try {
+      await fetch(`/api/automations/${id}`, { method: "DELETE" });
+      setAutomationList((prev) => prev.filter((a) => a.id !== id));
+    } catch (e) { console.error(e); }
   }
 
   return (
@@ -467,7 +441,7 @@ export default function Automations() {
               </span>
             </div>
 
-            <Button className="gap-2">
+            <Button className="gap-2" onClick={() => openForm()}>
               <Plus className="w-4 h-4" />
               Nova Automação
             </Button>
@@ -505,6 +479,7 @@ export default function Automations() {
                     size="sm"
                     variant="outline"
                     className="w-full text-xs group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-colors"
+                    onClick={() => createFromTemplate(tpl)}
                   >
                     Usar Template
                   </Button>
@@ -520,7 +495,13 @@ export default function Automations() {
         <section>
           <h2 className="text-base font-semibold text-gray-800 mb-3">Suas automações</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {automationList.map((automation) => (
+            {loading ? (
+              <div className="col-span-full py-12 text-center text-slate-400">Carregando automações...</div>
+            ) : automationList.length === 0 ? (
+               <div className="col-span-full py-12 text-center text-slate-400 border border-dashed rounded-xl">
+                 Nenhuma automação personalizada criada.<br/>Use os templates acima ou o novo robô SDR.
+               </div>
+            ) : automationList.map((automation) => (
               <Card
                 key={automation.id}
                 className={`border transition-all ${
@@ -573,32 +554,32 @@ export default function Automations() {
                     <div className="bg-gray-50 rounded-lg px-3 py-2">
                       <p className="text-xs text-muted-foreground">Execuções</p>
                       <p className="font-semibold text-sm text-gray-900">
-                        {automation.execucoes.toLocaleString("pt-BR")}
+                        {(automation.executions || 0).toLocaleString("pt-BR")}
                       </p>
                     </div>
                     <div className="bg-gray-50 rounded-lg px-3 py-2">
                       <p className="text-xs text-muted-foreground">Taxa de sucesso</p>
                       <p
                         className={`font-semibold text-sm ${
-                          automation.taxaSucesso >= 80
+                          (automation.taxaSucesso || 0) >= 80
                             ? "text-green-600"
-                            : automation.taxaSucesso >= 60
+                            : (automation.taxaSucesso || 0) >= 60
                             ? "text-yellow-600"
                             : "text-red-500"
                         }`}
                       >
-                        {automation.taxaSucesso}%
+                        {automation.taxaSucesso || 0}%
                       </p>
                     </div>
                   </div>
 
                   {/* Mini flow preview */}
-                  <MiniFlowPreview nodes={automation.nodes} />
+                  {automation.nodes && <MiniFlowPreview nodes={automation.nodes} />}
 
                   {/* Divider + footer */}
                   <div className="border-t pt-3 flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">
-                      Última execução: {automation.ultimaExecucao}
+                      Última execução: {automation.ultimaExecucao || "nunca"}
                     </span>
                     <div className="flex items-center gap-1">
                       <Button
@@ -606,7 +587,7 @@ export default function Automations() {
                         size="icon"
                         className="h-7 w-7 text-muted-foreground hover:text-primary"
                         title="Editar"
-                        onClick={() => openEditor(automation)}
+                        onClick={() => openForm(automation)}
                       >
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>
@@ -637,9 +618,12 @@ export default function Automations() {
         </section>
       </div>
 
-      {/* ------------------------------------------------------------------ */}
-      {/* Flow Builder Dialog                                                 */}
-      {/* ------------------------------------------------------------------ */}
+      <AutomationFormDialog
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        initial={editAutomation}
+        onSaved={load}
+      />
       <FlowBuilderDialog
         open={builderOpen}
         onClose={() => setBuilderOpen(false)}
