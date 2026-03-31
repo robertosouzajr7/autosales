@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format, startOfWeek, addDays, isToday, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -114,110 +114,12 @@ const DAYS_OF_WEEK = [
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
-// Get the Monday of the current week (today = 2026-03-31, which is Tuesday)
-// Monday would be 2026-03-30
 function getWeekDates(referenceDate: Date) {
   const monday = startOfWeek(referenceDate, { weekStartsOn: 1 });
   return Array.from({ length: 5 }, (_, i) => addDays(monday, i));
 }
 
-const TODAY = new Date(2026, 2, 31); // March 31 2026 (Tuesday)
-
-function buildMockAppointments(weekDates: Date[]): Appointment[] {
-  return [
-    {
-      id: "1",
-      client: "Carlos Oliveira",
-      type: "Reunião",
-      status: "Confirmado",
-      date: format(weekDates[0], "yyyy-MM-dd"), // Monday
-      startHour: 9,
-      startMinute: 0,
-      durationSlots: 2,
-    },
-    {
-      id: "2",
-      client: "Ana Lima",
-      type: "Demonstração",
-      status: "Confirmado",
-      date: format(weekDates[1], "yyyy-MM-dd"), // Tuesday
-      startHour: 10,
-      startMinute: 0,
-      durationSlots: 3,
-    },
-    {
-      id: "3",
-      client: "Roberto Mendes",
-      type: "Consulta",
-      status: "Pendente",
-      date: format(weekDates[1], "yyyy-MM-dd"), // Tuesday
-      startHour: 14,
-      startMinute: 0,
-      durationSlots: 2,
-    },
-    {
-      id: "4",
-      client: "Fernanda Costa",
-      type: "Follow-up",
-      status: "Confirmado",
-      date: format(weekDates[2], "yyyy-MM-dd"), // Wednesday
-      startHour: 11,
-      startMinute: 30,
-      durationSlots: 2,
-    },
-    {
-      id: "5",
-      client: "Marcelo Santos",
-      type: "Reunião",
-      status: "Pendente",
-      date: format(weekDates[2], "yyyy-MM-dd"), // Wednesday
-      startHour: 15,
-      startMinute: 0,
-      durationSlots: 2,
-    },
-    {
-      id: "6",
-      client: "Juliana Ferreira",
-      type: "Demonstração",
-      status: "Confirmado",
-      date: format(weekDates[3], "yyyy-MM-dd"), // Thursday
-      startHour: 9,
-      startMinute: 30,
-      durationSlots: 3,
-    },
-    {
-      id: "7",
-      client: "Paulo Ribeiro",
-      type: "Consulta",
-      status: "Cancelado",
-      date: format(weekDates[3], "yyyy-MM-dd"), // Thursday
-      startHour: 13,
-      startMinute: 0,
-      durationSlots: 2,
-    },
-    {
-      id: "8",
-      client: "Camila Nunes",
-      type: "Follow-up",
-      status: "Confirmado",
-      date: format(weekDates[4], "yyyy-MM-dd"), // Friday
-      startHour: 10,
-      startMinute: 0,
-      durationSlots: 2,
-    },
-    {
-      id: "9",
-      client: "Diego Alves",
-      type: "Reunião",
-      status: "Pendente",
-      date: format(weekDates[4], "yyyy-MM-dd"), // Friday
-      startHour: 16,
-      startMinute: 0,
-      durationSlots: 2,
-    },
-  ];
-}
-
+const TODAY = new Date();
 const UPCOMING_APPOINTMENTS = [
   {
     id: "u1",
@@ -776,12 +678,17 @@ export default function Appointments() {
   const [currentWeekStart, setCurrentWeekStart] = useState(
     startOfWeek(TODAY, { weekStartsOn: 1 })
   );
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+
+  useEffect(() => {
+    fetch("/api/calendar/events").then(r => r.json()).then(data => {
+      if (Array.isArray(data)) setAppointments(data);
+    });
+  }, []);
 
   const weekDates = Array.from({ length: 5 }, (_, i) =>
     addDays(currentWeekStart, i)
   );
-
-  const appointments = buildMockAppointments(weekDates);
 
   function prevWeek() {
     setCurrentWeekStart((d) => addDays(d, -7));

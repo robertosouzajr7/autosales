@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -45,89 +46,19 @@ const conversionsByChannel = [
   { canal: "Indicação", conversoes: 22 },
 ];
 
-const recentConversations = [
-  {
-    id: 1,
-    name: "Mariana Costa",
-    initials: "MC",
-    lastMessage: "Gostaria de saber mais sobre os planos disponíveis...",
-    time: "2 min",
-    status: "Ativo" as const,
-  },
-  {
-    id: 2,
-    name: "Rafael Souza",
-    initials: "RS",
-    lastMessage: "Pode me enviar uma proposta comercial?",
-    time: "14 min",
-    status: "Aguardando" as const,
-  },
-  {
-    id: 3,
-    name: "Juliana Ferreira",
-    initials: "JF",
-    lastMessage: "Fechamos! Vou assinar agora mesmo.",
-    time: "1h",
-    status: "Convertido" as const,
-  },
-  {
-    id: 4,
-    name: "Carlos Almeida",
-    initials: "CA",
-    lastMessage: "Que horas podemos agendar a demonstração?",
-    time: "2h",
-    status: "Ativo" as const,
-  },
-  {
-    id: 5,
-    name: "Patrícia Lima",
-    initials: "PL",
-    lastMessage: "Vou pensar e te retorno amanhã.",
-    time: "3h",
-    status: "Aguardando" as const,
-  },
-];
-
-const upcomingAppointments = [
-  {
-    id: 1,
-    time: "09:00",
-    client: "Mariana Costa",
-    type: "Demo" as const,
-  },
-  {
-    id: 2,
-    time: "11:30",
-    client: "Ricardo Neves",
-    type: "Reunião" as const,
-  },
-  {
-    id: 3,
-    time: "14:00",
-    client: "Fernanda Rocha",
-    type: "Consulta" as const,
-  },
-  {
-    id: 4,
-    time: "16:30",
-    client: "Bruno Tavares",
-    type: "Demo" as const,
-  },
-];
-
 // --- Helpers ---
 
-const statusConfig = {
+const statusConfig: Record<string, string> = {
   Ativo: "bg-emerald-100 text-emerald-700 border-emerald-200",
   Aguardando: "bg-amber-100 text-amber-700 border-amber-200",
   Convertido: "bg-blue-100 text-blue-700 border-blue-200",
-} as const;
+};
 
-const appointmentTypeConfig = {
+const appointmentTypeConfig: Record<string, string> = {
   Demo: "bg-purple-100 text-purple-700 border-purple-200",
   Reunião: "bg-emerald-100 text-emerald-700 border-emerald-200",
   Consulta: "bg-sky-100 text-sky-700 border-sky-200",
-} as const;
+};
 
 function formatTodayDate(): string {
   return new Date().toLocaleDateString("pt-BR", {
@@ -190,8 +121,40 @@ function StatCard({
 
 // --- Page ---
 
+interface RecentConversation {
+  id: number | string;
+  name: string;
+  initials: string;
+  lastMessage: string;
+  time: string;
+  status: string;
+}
+
+interface CalendarEvent {
+  id: string;
+  date: string;
+  startHour: number;
+  startMinute: number;
+  client: string;
+  type: string;
+}
+
 export default function Dashboard() {
   const todayLabel = capitalise(formatTodayDate());
+  const [data, setData] = useState({
+    stats: { totalLeads: 0, activeBots: 0, agendamentosHoje: 0, taxa: 0, convertidos: 0 },
+    recentConversations: [] as RecentConversation[]
+  });
+  const [appointments, setAppointments] = useState<CalendarEvent[]>([]);
+
+  useEffect(() => {
+    fetch("/api/dashboard").then(r => r.json()).then(res => {
+        if (res.stats) setData(res);
+    });
+    fetch("/api/calendar/events").then(r => r.json()).then(res => {
+        if (Array.isArray(res)) setAppointments(res);
+    });
+  }, []);
 
   return (
     <DashboardLayout>
@@ -207,35 +170,35 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
             title="Total de Leads"
-            value="1.247"
-            delta="+12% este mês"
+            value={data.stats.totalLeads.toString()}
+            delta="+ Dinâmico"
             deltaPositive
             icon={Users}
             iconBg="bg-emerald-50"
             iconColor="text-emerald-600"
           />
           <StatCard
-            title="Conversas Ativas"
-            value="89"
-            delta="+5% esta semana"
+            title="SDR IA Operando"
+            value={data.stats.activeBots.toString()}
+            delta="Bots Automáticos"
             deltaPositive
             icon={MessageSquare}
             iconBg="bg-sky-50"
             iconColor="text-sky-600"
           />
           <StatCard
-            title="Agendamentos Hoje"
-            value="12"
-            delta="3 confirmados"
+            title="Agendamentos Recentes"
+            value={data.stats.agendamentosHoje.toString()}
+            delta="Atualizado via Funil"
             deltaPositive
             icon={Calendar}
             iconBg="bg-violet-50"
             iconColor="text-violet-600"
           />
           <StatCard
-            title="Taxa de Conversão"
-            value="23,5%"
-            delta="+2,3% este mês"
+            title="Taxa de Conversão Real"
+            value={`${data.stats.taxa}%`}
+            delta={`${data.stats.convertidos} convertidos`}
             deltaPositive
             icon={TrendingUp}
             iconBg="bg-amber-50"
@@ -350,10 +313,11 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3 pt-0">
-              {recentConversations.map((conv) => (
+              {data.recentConversations.length > 0 ? data.recentConversations.map((conv) => (
                 <div
                   key={conv.id}
                   className="flex items-start gap-3 rounded-lg p-2 transition-colors hover:bg-slate-50 cursor-pointer"
+                  onClick={() => window.location.href='/conversations'}
                 >
                   <Avatar className="h-9 w-9 shrink-0">
                     <AvatarImage src="" />
@@ -375,13 +339,15 @@ export default function Dashboard() {
                       {conv.lastMessage}
                     </p>
                     <Badge
-                      className={`mt-1.5 border text-[10px] px-1.5 py-0 leading-4 ${statusConfig[conv.status]}`}
+                      className={`mt-1.5 border text-[10px] px-1.5 py-0 leading-4 ${statusConfig[conv.status] || ''}`}
                     >
                       {conv.status}
                     </Badge>
                   </div>
                 </div>
-              ))}
+              )) : (
+                 <p className="text-xs text-slate-400 py-4 text-center">Nenhuma conversa recente registrada.</p>
+              )}
             </CardContent>
           </Card>
 
@@ -390,39 +356,44 @@ export default function Dashboard() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-semibold text-slate-800">
-                  Agendamentos de Hoje
+                  Agendamentos no Calendar
                 </CardTitle>
                 <Badge variant="secondary" className="text-xs">
-                  {upcomingAppointments.length} eventos
+                  {appointments.length} eventos (30d)
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="space-y-2 pt-0">
-              {upcomingAppointments.map((appt) => (
+            <CardContent className="space-y-2 pt-0 h-64 overflow-y-auto">
+              {appointments.length > 0 ? appointments.map((appt) => (
                 <div
                   key={appt.id}
                   className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5 transition-colors hover:bg-slate-100 cursor-pointer"
                 >
                   <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg bg-white border border-slate-200 shadow-sm">
-                    <span className="text-xs font-bold text-slate-700 leading-tight">
-                      {appt.time.split(":")[0]}
+                    <span className="text-[10px] font-bold text-slate-700 leading-tight">
+                      {appt.date.split("-")[2]}/{appt.date.split("-")[1]}
                     </span>
                     <span className="text-[10px] text-slate-400 leading-tight">
-                      :{appt.time.split(":")[1]}
+                      {appt.startHour}:{appt.startMinute === 0 ? "00" : appt.startMinute}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-800 truncate">
+                    <p className="text-sm font-semibold text-slate-800 truncate" title={appt.client}>
                       {appt.client}
                     </p>
                     <Badge
-                      className={`mt-0.5 border text-[10px] px-1.5 py-0 leading-4 ${appointmentTypeConfig[appt.type]}`}
+                      className={`mt-0.5 border text-[10px] px-1.5 py-0 leading-4 bg-emerald-100 text-emerald-700`}
                     >
-                      {appt.type}
+                      Reunião Google
                     </Badge>
                   </div>
                 </div>
-              ))}
+              )) : (
+                 <div className="flex flex-col items-center justify-center py-6">
+                    <p className="text-xs text-slate-400 py-4 text-center">Não há eventos futuros<br/>ou Google Calendar desconectado.</p>
+                    <Button onClick={() => window.location.href='/settings'} variant="outline" size="sm" className="mt-2 text-xs">Conectar Agenda</Button>
+                 </div>
+              )}
             </CardContent>
           </Card>
 
@@ -434,46 +405,38 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 pt-0">
-              <Button className="w-full justify-start gap-3 bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm shadow-emerald-200">
+              <Button onClick={() => window.location.href='/crm'} className="w-full justify-start gap-3 bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm shadow-emerald-200">
                 <Plus className="h-4 w-4 shrink-0" />
-                Nova Conversa
+                Acessar Novo Lead (Kanban)
               </Button>
-              <Button
+              <Button onClick={() => window.location.href='/appointments'}
                 variant="outline"
                 className="w-full justify-start gap-3 border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300"
               >
                 <CalendarPlus className="h-4 w-4 shrink-0 text-violet-600" />
-                Agendar Reunião
+                Abrir Full Calendar
               </Button>
-              <Button
+              <Button onClick={() => window.location.href='/conversations'}
                 variant="outline"
                 className="w-full justify-start gap-3 border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300"
               >
-                <UserPlus className="h-4 w-4 shrink-0 text-sky-600" />
-                Adicionar Lead
+                <MessageSquare className="h-4 w-4 shrink-0 text-sky-600" />
+                Assumir Conversa do Bot
               </Button>
 
               {/* Summary mini-stats */}
               <div className="mt-4 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 p-4 text-white">
                 <p className="text-xs font-semibold uppercase tracking-wider opacity-80">
-                  Resumo do Dia
+                  Resumo Diário Real
                 </p>
                 <div className="mt-3 grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-2xl font-bold">24</p>
-                    <p className="text-xs opacity-80">Leads hoje</p>
+                    <p className="text-2xl font-bold">{data.stats.totalLeads}</p>
+                    <p className="text-xs opacity-80">Leads mapeados</p>
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">7</p>
-                    <p className="text-xs opacity-80">Convertidos</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">18</p>
-                    <p className="text-xs opacity-80">Mensagens</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">4</p>
-                    <p className="text-xs opacity-80">Reuniões</p>
+                    <p className="text-2xl font-bold">{data.stats.convertidos}</p>
+                    <p className="text-xs opacity-80">Finalizados</p>
                   </div>
                 </div>
               </div>

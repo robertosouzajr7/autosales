@@ -32,6 +32,19 @@ app.get("/api/leads", async (req, res) => {
   }
 });
 
+app.put("/api/leads/:id/status", async (req, res) => {
+  try {
+    const { status } = req.body;
+    const lead = await prisma.lead.update({
+      where: { id: req.params.id },
+      data: { status }
+    });
+    res.json(lead);
+  } catch(e) {
+    res.status(500).json({error: e.message});
+  }
+});
+
 app.get("/api/settings", async (req, res) => {
   try {
     let company = await prisma.company.findFirst();
@@ -56,6 +69,39 @@ app.post("/api/settings", async (req, res) => {
   } catch(err) {
     res.status(500).json({ error: "Erro ao salvar config" });
   }
+});
+
+// --- Dashboard Endpoint (Home)
+app.get("/api/dashboard", async (req, res) => {
+  try {
+     const totalLeads = await prisma.lead.count();
+     const activeBots = await prisma.conversation.count({ where: { botActive: true } });
+     
+     const hoje = new Date(); hoje.setHours(0,0,0,0);
+     const agendamentosHoje = await prisma.lead.count({ where: { status: "APPOINTMENT", updatedAt: { gte: hoje } } });
+     
+     const convertidos = await prisma.lead.count({ where: { status: "CONVERTED" } });
+     const taxa = totalLeads ? Math.round((convertidos / totalLeads) * 100) : 0;
+     
+     const rConv = await prisma.conversation.findMany({
+        include: { lead: true, messages: { orderBy: { createdAt: "desc" }, take: 1 } },
+        orderBy: { updatedAt: "desc" }, take: 5
+     });
+     
+     const recentConversations = rConv.map((c, index) => ({
+        id: c.id || index,
+        name: c.lead.name, 
+        initials: c.lead.name.substring(0,2).toUpperCase(),
+        lastMessage: c.messages[0]?.content || "Sessão Iniciada",
+        time: new Date(c.updatedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+        status: c.botActive ? "Ativo" : "Aguardando"
+     }));
+     
+     res.json({
+        stats: { totalLeads, activeBots, agendamentosHoje, taxa, convertidos },
+        recentConversations
+     });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 // --- Analytics Endpoint
@@ -204,6 +250,45 @@ app.get("/api/google/callback", async (req, res) => {
   }
 });
 
+app.get("/api/calendar/events", async (req, res) => {
+  try {
+     let company = await prisma.company.findFirst();
+     if (!company || !company.googleRefreshToken) return res.json([]);
+     
+     const oauth2Client = new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET);
+     oauth2Client.setCredentials({ refresh_token: company.googleRefreshToken });
+     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+     
+     const timeMin = new Date(); timeMin.setDate(timeMin.getDate() - 7);
+     const timeMax = new Date(); timeMax.setDate(timeMax.getDate() + 30);
+     
+     const response = await calendar.events.list({
+         calendarId: 'primary',
+         timeMin: timeMin.toISOString(),
+         timeMax: timeMax.toISOString(),
+         singleEvents: true,
+         orderBy: 'startTime'
+     });
+
+     const formattedEvents = response.data.items.map(e => {
+        const start = new Date(e.start.dateTime || e.start.date);
+        const end = new Date(e.end.dateTime || e.end.date);
+        const diffMins = Math.round((end.getTime() - start.getTime()) / 60000);
+        return {
+           id: e.id,
+           client: e.summary || "Reunião SDR",
+           type: "Reunião",
+           status: "Confirmado",
+           date: start.toISOString().split("T")[0],
+           startHour: start.getHours(),
+           startMinute: start.getMinutes() >= 30 ? 30 : 0,
+           durationSlots: Math.max(1, Math.round(diffMins / 30))
+        };
+     });
+     res.json(formattedEvents);
+  } catch(e) { res.status(500).json({error: e.message}); }
+});
+
 app.post("/api/webhook/whatsapp", async (req, res) => {
   const { companyId, phone, name, content, source } = req.body;
 
@@ -235,27 +320,44 @@ app.post("/api/webhook/whatsapp", async (req, res) => {
     const useKey = company.openAiKey || process.env.GEMINI_API_KEY;
     
     if (useKey && useKey !== "simulado") {
+      const getGoogleCalendar = async () => {
+         if (!company.googleRefreshToken) return null;
+         const oauth2Client = new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET);
+         oauth2Client.setCredentials({ refresh_token: company.googleRefreshToken });
+         return google.calendar({ version: 'v3', auth: oauth2Client });
+      };
+
       const genAI = new GoogleGenerativeAI(useKey);
-      const systemPrompt = company.systemPrompt || "Você é um SDR amigável de vendas focado em conversão de serviços. Responda de forma concisa e muito humana.";
+      const systemPrompt = company.systemPrompt || "Você é um SDR amigável de vendas focado em conversão de serviços. Responda de forma concisa e muito humana. Nunca agende fora do horário comercial.";
       
       const tools = [{
         functionDeclarations: [
           {
-            name: "agendar_reuniao",
-            description: "Altera o status do cliente atual no funil do CRM para 'Reunião Agendada'. Dispare IMEDIATAMENTE após o usuário aceitar agendar uma reunião, acessar o link da agenda ou se comprometer com um horário.",
-            parameters: {
-              type: "OBJECT",
-              properties: { reason: { type: "STRING", description: "O motivo que levou ao agendamento" } },
-              required: ["reason"]
-            }
+            name: "agendar_reuniao_offline",
+            description: "Altera o status do lead para 'Reunião Agendada' caso a empresa nâo tenha calendário do Google habilitado. Confirme isso antes.",
+            parameters: { type: "OBJECT", properties: { reason: { type: "STRING" } }, required: ["reason"] }
           },
           {
             name: "marcar_venda",
-            description: "Altera o status do cliente atual no funil do CRM para 'Cliente Convertido'. Dispare quando o cliente fechar negócio, fizer o pagamento ou confirmar a contratação final.",
+            description: "Altera o status do cliente atual no funil do CRM para 'Cliente Convertido'. Dispare quando fechar.",
+            parameters: { type: "OBJECT", properties: { reason: { type: "STRING" } }, required: ["reason"] }
+          },
+          {
+            name: "consultar_horarios_livres",
+            description: "Consulta o Google Calendar da agência em tempo real e retorna os intervalos de horários ocupados dos próximos 5 dias. Use-o quando o cliente demonstrar interesse na reunião para sugerir de forma precisa os buracos vazios da agenda. Assuma 9h às 18h como jornada de trabalho, ignorando fins de semana.",
+            parameters: { type: "OBJECT", properties: {} }
+          },
+          {
+            name: "criar_evento_google",
+            description: "Chame esta função APÓS você e o cliente concordarem com um horário exato. Essa skill insere a reunião diretamente no Google Calendar oficial e move o Kanban.",
             parameters: {
               type: "OBJECT",
-              properties: { reason: { type: "STRING" } },
-              required: ["reason"]
+              properties: { 
+                dateTimeStart: { type: "STRING", description: "Data e hora de inicio em ISO (ex: 2026-10-25T14:00:00-03:00)" },
+                dateTimeEnd:   { type: "STRING", description: "Data e hora de termino em ISO (ex: 2026-10-25T15:00:00-03:00)" },
+                summary:       { type: "STRING", description: "Título do evento, use o nome do cliente" }
+              },
+              required: ["dateTimeStart", "dateTimeEnd", "summary"]
             }
           }
         ]
@@ -286,22 +388,65 @@ app.post("/api/webhook/whatsapp", async (req, res) => {
         if (call) {
            console.log(`[Function Calling] ⚡ Gemini acionou a skill: ${call.name}`);
            let novoStatus = lead.status;
+           let functionResponsePayload = null;
            
-           if (call.name === "agendar_reuniao") novoStatus = "APPOINTMENT";
-           if (call.name === "marcar_venda") novoStatus = "CONVERTED";
+           if (call.name === "agendar_reuniao_offline") {
+               novoStatus = "APPOINTMENT";
+               functionResponsePayload = { success: true };
+           }
+           if (call.name === "marcar_venda") {
+               novoStatus = "CONVERTED";
+               functionResponsePayload = { success: true };
+           }
+           
+           if (call.name === "consultar_horarios_livres") {
+               const calendar = await getGoogleCalendar();
+               if (!calendar) {
+                   functionResponsePayload = { success: false, error: "Serviço indisponível (O dono da conta não vinculou o Google no SaaS). Invente horários genéricos ou peça para acessar amanhã." };
+               } else {
+                   try {
+                       const timeMin = new Date();
+                       const timeMax = new Date(); timeMax.setDate(timeMax.getDate() + 5);
+                       const resCal = await calendar.freebusy.query({
+                           requestBody: { timeMin: timeMin.toISOString(), timeMax: timeMax.toISOString(), items: [{ id: 'primary' }] }
+                       });
+                       functionResponsePayload = { success: true, hoje: new Date().toISOString(), ocupados: resCal.data.calendars.primary.busy, regra: "Sugerir sempre os slots vazios em horário comercial util." };
+                   } catch(err) { functionResponsePayload = { success: false, error: err.message }; }
+               }
+           }
+           
+           if (call.name === "criar_evento_google") {
+               const calendar = await getGoogleCalendar();
+               if (!calendar) {
+                   functionResponsePayload = { success: false, error: "Calendario nao vinculado." };
+               } else {
+                   try {
+                       await calendar.events.insert({
+                           calendarId: 'primary',
+                           requestBody: {
+                               summary: call.args.summary || `Agendamento - ${lead.name}`,
+                               description: `Reunião automática via AI SaaS.\nTelefone do lead: ${lead.phone}`,
+                               start: { dateTime: call.args.dateTimeStart },
+                               end: { dateTime: call.args.dateTimeEnd }
+                           }
+                       });
+                       functionResponsePayload = { success: true };
+                       novoStatus = "APPOINTMENT";
+                   } catch(err) { functionResponsePayload = { success: false, error: err.message }; }
+               }
+           }
            
            if (novoStatus !== lead.status) {
               await prisma.lead.update({ where: { id: lead.id }, data: { status: novoStatus } });
-              lead.status = novoStatus; // local update so it doesn't trigger QUALIFYING later
+              lead.status = novoStatus;
               console.log(`✅ Lead movido com sucesso no Kanban para: ${novoStatus}`);
            }
            
-           // Retorna o resultado para o gemini para ele enviar a mensagem final de confirmação
            const functionCallPart = result.response.candidates[0].content;
            contents.push(functionCallPart);
            contents.push({
              role: "user",
-             parts: [{ functionResponse: { name: call.name, response: { success: true, status_atualizado: novoStatus } } }]
+             parts: [{ functionResponse: { name: call.name, response: functionResponsePayload } }]
            });
            
            const secondResult = await model.generateContent({ contents });

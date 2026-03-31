@@ -46,6 +46,38 @@ export default function CRM() {
     { id: "CONVERTED", title: "Venda Fechada", color: "bg-emerald-50 border-emerald-200", headerColor: "bg-emerald-100 text-emerald-800" }
   ];
 
+  const handleDragStart = (e: React.DragEvent, leadId: string) => {
+    e.dataTransfer.setData("leadId", leadId);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetStatus: string) => {
+    e.preventDefault();
+    const leadId = e.dataTransfer.getData("leadId");
+    if (!leadId) return;
+
+    // Atualiza otimista da UI
+    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: targetStatus } : l));
+
+    try {
+      const resp = await fetch(`/api/leads/${leadId}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: targetStatus })
+      });
+      if (!resp.ok) throw new Error("Erro da API");
+      toast({ title: "Sucesso", description: `Card movido para ${targetStatus}.` });
+    } catch (err) {
+      toast({ title: "Erro", description: "Falha ao persistir status", variant: "destructive" });
+      fetchLeads(); // Reverte
+    }
+  };
+
   const getInitials = (name: string) => name.substring(0, 2).toUpperCase();
 
   const handleTestWebhook = async () => {
@@ -88,10 +120,15 @@ export default function CRM() {
             {kanbanColumns.map((col) => {
               const colLeads = leads.filter(l => l.status === col.id);
               return (
-                <div key={col.id} className={`flex-shrink-0 w-80 rounded-xl border ${col.color} flex flex-col`}>
-                  <div className={`px-4 py-3 rounded-t-xl font-semibold flex justify-between items-center ${col.headerColor}`}>
+                <div 
+                  key={col.id} 
+                  className={`flex-shrink-0 w-80 rounded-xl border ${col.color} flex flex-col transition-colors duration-200`}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, col.id)}
+                >
+                  <div className={`px-4 py-3 rounded-t-xl font-semibold flex justify-between items-center shadow-sm ${col.headerColor}`}>
                     <span>{col.title}</span>
-                    <Badge className="bg-white/50 text-slate-800 hover:bg-white">{colLeads.length}</Badge>
+                    <Badge className="bg-white/50 text-slate-800 hover:bg-white border-transparent">{colLeads.length}</Badge>
                   </div>
                   
                   <div className="p-3 flex-1 overflow-y-auto space-y-3">
@@ -99,31 +136,36 @@ export default function CRM() {
                       const isBotActive = lead.conversations[0]?.botActive ?? true;
                       
                       return (
-                        <Card key={lead.id} className="cursor-pointer hover:shadow-md transition-shadow border-slate-200">
+                        <Card 
+                          key={lead.id} 
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, lead.id)}
+                          className="cursor-move hover:shadow-lg hover:border-blue-400 transition-all border-slate-200 shadow-md transform active:scale-95 bg-white"
+                        >
                           <CardContent className="p-4">
                             <div className="flex gap-3 items-start mb-3">
-                              <Avatar className="h-10 w-10">
+                              <Avatar className="h-10 w-10 border border-slate-100 shadow-sm">
                                 <AvatarFallback className="bg-slate-200 text-slate-700 font-bold">
                                   {getInitials(lead.name)}
                                 </AvatarFallback>
                               </Avatar>
                               <div>
-                                <p className="font-semibold text-slate-800 text-sm leading-tight">{lead.name}</p>
+                                <p className="font-semibold text-slate-800 text-sm leading-tight group-hover:text-indigo-600 transition-colors">{lead.name}</p>
                                 <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
                                   <Phone className="h-3 w-3" /> {lead.phone}
                                 </p>
                               </div>
                             </div>
                             <div className="flex items-center justify-between mt-2 pt-3 border-t border-slate-100 relative">
-                              <Badge variant="secondary" className="text-[10px] bg-slate-100 text-slate-600 flex items-center gap-1">
+                              <Badge variant="secondary" className="text-[10px] bg-slate-50 text-slate-600 flex items-center gap-1 border border-slate-100">
                                 {isBotActive ? <Bot className="w-3 h-3 text-emerald-500" /> : <User className="w-3 h-3 text-amber-500" />}
                                 {lead.source}
                               </Badge>
                               <div className="flex gap-1">
-                                <button className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors" title="Conversas">
+                                <button className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors" title="Conversas" onClick={() => window.location.href='/conversations'}>
                                   <MessageCircle className="h-4 w-4" />
                                 </button>
-                                <button className="p-1.5 text-slate-400 hover:text-violet-600 hover:bg-violet-50 rounded-md transition-colors" title="Agendar">
+                                <button className="p-1.5 text-slate-400 hover:text-violet-600 hover:bg-violet-50 rounded-md transition-colors" title="Agendar Manualmente">
                                   <Calendar className="h-4 w-4" />
                                 </button>
                               </div>
@@ -132,7 +174,11 @@ export default function CRM() {
                         </Card>
                       );
                     })}
-                    {colLeads.length === 0 && <p className="text-center text-xs text-slate-400 py-6">Nenhum lead</p>}
+                    {colLeads.length === 0 && (
+                       <div className="text-center text-xs text-slate-400 py-6 border-2 border-dashed border-slate-200 rounded-lg mx-2 my-4 h-24 flex items-center justify-center opacity-50">
+                         Arraste o card para cá
+                       </div>
+                    )}
                   </div>
                 </div>
               );
