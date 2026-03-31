@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  openAiKey String?
+  systemPrompt String?
+  googleRefreshToken String? // Token unificado SaaS
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  users     User[]
+  leads     Lead[]
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("ADMIN") // ADMIN, AGENT
+  companyId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+model Lead {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String   // WhatsApp number
+  status    String   @default("NEW") // NEW, QUALIFYING, APPOINTMENT, CONVERTED, LOST
+  source    String?  // Instagram, WhatsApp, Site
+  companyId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+  appointments  Appointment[]
+}
+
+model Conversation {
+  id        String   @id @default(uuid())
+  leadId    String
+  botActive Boolean  @default(true) // se true, a IA continua respondendo. se false, é handoff humano
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  messages  Message[]
+}
+
+model Message {
+  id             String   @id @default(uuid())
+  conversationId String
+  content        String
+  role           String   // 'user' (lead), 'assistant' (bot), 'system' (human manual)
+  messageType    String   @default("TEXT") // TEXT, AUDIO, IMAGE, VIDEO
+  mediaUrl       String?  
+  createdAt      DateTime @default(now())
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+model Appointment {
+  id        String   @id @default(uuid())
+  leadId    String
+  title     String
+  date      DateTime
+  status    String   @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELED
+  createdAt DateTime @default(now())
+
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+}

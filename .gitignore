@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+/generated/prisma
+
+# Segredos e Banco de Dados SaaS (NÃO DEVE IR PRO GIT!)
+.env
+dev.db
+instances/
