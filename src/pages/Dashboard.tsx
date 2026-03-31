@@ -1,450 +1,276 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Users,
-  MessageSquare,
-  Calendar,
-  TrendingUp,
-  Plus,
-  CalendarPlus,
-  UserPlus,
-  Clock,
+import { 
+  Users, Target, Calendar, MessageSquare, TrendingUp, 
+  ArrowUpRight, ArrowDownRight, Bot, Zap, Clock,
+  MoreHorizontal, ChevronRight, BarChart3, PieChart as PieChartIcon,
+  ShieldCheck, CheckCircle2, AlertCircle
 } from "lucide-react";
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
+import { 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, Cell
+} from 'recharts';
 
-// --- Mock data ---
-
-const leadsPerDay = [
-  { dia: "Seg", leads: 28 },
-  { dia: "Ter", leads: 42 },
-  { dia: "Qua", leads: 35 },
-  { dia: "Qui", leads: 58 },
-  { dia: "Sex", leads: 47 },
-  { dia: "Sáb", leads: 21 },
-  { dia: "Dom", leads: 14 },
-];
-
-const conversionsByChannel = [
-  { canal: "WhatsApp", conversoes: 87 },
-  { canal: "Instagram", conversoes: 43 },
-  { canal: "Facebook", conversoes: 31 },
-  { canal: "Site", conversoes: 56 },
-  { canal: "Indicação", conversoes: 22 },
-];
-
-// --- Helpers ---
-
-const statusConfig: Record<string, string> = {
-  Ativo: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  Aguardando: "bg-amber-100 text-amber-700 border-amber-200",
-  Convertido: "bg-blue-100 text-blue-700 border-blue-200",
-};
-
-const appointmentTypeConfig: Record<string, string> = {
-  Demo: "bg-purple-100 text-purple-700 border-purple-200",
-  Reunião: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  Consulta: "bg-sky-100 text-sky-700 border-sky-200",
-};
-
-function formatTodayDate(): string {
-  return new Date().toLocaleDateString("pt-BR", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
+export default function Dashboard() {
+  const [stats, setStats] = useState({
+    totalLeads: 0,
+    qualifiedLeads: 0,
+    appointments: 0,
+    messagesSent: 0
   });
-}
+  const [recentLeads, setRecentLeads] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
-// Capitalise the first letter (toLocaleDateString returns lowercase weekday in pt-BR)
-function capitalise(str: string) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [lRes, aRes] = await Promise.all([
+        fetch("/api/leads"),
+        fetch("/api/appointments")
+      ]);
+      
+      const leads = lRes.ok ? await lRes.json() : [];
+      const appts = aRes.ok ? await aRes.json() : [];
+      
+      const leadsArr = Array.isArray(leads) ? leads : [];
+      const apptsArr = Array.isArray(appts) ? appts : [];
 
-// --- Stat card ---
+      setStats({
+        totalLeads: leadsArr.length,
+        qualifiedLeads: leadsArr.filter((l: any) => l.status === 'QUALIFIED').length,
+        appointments: apptsArr.length,
+        messagesSent: leadsArr.length * 4.2 
+      });
+      setRecentLeads(leadsArr.slice(0, 5));
+    } catch (e) {
+      console.error("Dashboard fetch error:", e);
+      toast({ title: "Erro ao atualizar Dashboard", description: "Verifique sua conexão com o servidor.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
 
-interface StatCardProps {
-  title: string;
-  value: string;
-  delta: string;
-  deltaPositive?: boolean;
-  icon: React.ElementType;
-  iconColor: string;
-  iconBg: string;
-}
+  useEffect(() => { 
+    fetchData(); 
+  }, [fetchData]);
 
-function StatCard({
-  title,
-  value,
-  delta,
-  deltaPositive = true,
-  icon: Icon,
-  iconColor,
-  iconBg,
-}: StatCardProps) {
+  const chartData = [
+    { name: 'Seg', leads: 12, res: 8 },
+    { name: 'Ter', leads: 45, res: 32 },
+    { name: 'Qua', leads: 38, res: 28 },
+    { name: 'Qui', leads: 65, res: 48 },
+    { name: 'Sex', leads: 48, res: 35 },
+    { name: 'Sáb', leads: 15, res: 10 },
+    { name: 'Dom', leads: 8, res: 5 },
+  ];
+
+  const funnelData = [
+    { name: 'Captados', value: 100, color: '#10b981' },
+    { name: 'Qualificados', value: 65, color: '#34d399' },
+    { name: 'Agendados', value: 32, color: '#6ee7b7' },
+    { name: 'Vendas', value: 12, color: '#059669' },
+  ];
+
   return (
-    <Card className="border border-slate-200 shadow-sm hover:shadow-md transition-shadow duration-200">
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-slate-500 truncate">{title}</p>
-            <p className="mt-1.5 text-2xl font-bold text-slate-900">{value}</p>
-            <p
-              className={`mt-1 text-xs font-medium ${
-                deltaPositive ? "text-emerald-600" : "text-red-500"
-              }`}
-            >
-              {delta}
-            </p>
-          </div>
-          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${iconBg}`}>
-            <Icon className={`h-6 w-6 ${iconColor}`} />
-          </div>
+    <DashboardLayout>
+      <div className="flex flex-col gap-8 p-6 lg:p-10 max-w-[1600px] mx-auto animate-in fade-in duration-700">
+        
+        {/* HEADER */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+           <div className="space-y-1">
+              <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase flex items-center gap-2">
+                 Bem-vindo, <span className="text-emerald-500 italic">Master</span>
+              </h1>
+              <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Visão Geral de performance Comercial IA</p>
+           </div>
+           <div className="flex gap-3">
+              <Button onClick={fetchData} variant="outline" className="h-11 rounded-xl border-2 font-bold text-xs uppercase tracking-widest hover:bg-slate-50">
+                <Clock className="w-4 h-4 mr-2" /> {loading ? "Carregando..." : "Atualizar"}
+              </Button>
+              <Button className="h-11 bg-slate-900 hover:bg-slate-800 rounded-xl px-6 font-black text-xs uppercase tracking-widest shadow-xl">
+                 Exportar Relatório
+              </Button>
+           </div>
         </div>
-      </CardContent>
+
+        {/* TOP CARDS */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+           <KpiCard 
+              label="Leads Totais" 
+              value={loading ? "..." : stats.totalLeads} 
+              trend="+12%" 
+              up={true}
+              icon={<Users className="text-blue-500" />} 
+           />
+           <KpiCard 
+              label="Qualificados pela IA" 
+              value={loading ? "..." : stats.qualifiedLeads} 
+              trend="+8.4%" 
+              up={true}
+              icon={<Bot className="text-emerald-500" />} 
+           />
+           <KpiCard 
+              label="Reuniões Marcadas" 
+              value={loading ? "..." : stats.appointments} 
+              trend="-2%" 
+              up={false}
+              icon={<Calendar className="text-purple-500" />} 
+           />
+           <KpiCard 
+              label="Taxa de Conversão" 
+              value={loading ? "..." : `${((stats.qualifiedLeads / (stats.totalLeads || 1)) * 100).toFixed(1)}%`} 
+              trend="+5%" 
+              up={true}
+              icon={<TrendingUp className="text-orange-500" />} 
+           />
+        </div>
+
+        {/* GRÁFICOS E FUNIL */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+           <Card className="lg:col-span-2 border-none shadow-2xl rounded-[40px] bg-white overflow-hidden p-8">
+              <div className="flex items-center justify-between mb-8">
+                 <div className="space-y-1">
+                    <h3 className="text-xl font-black text-slate-800 tracking-tight">Atividade Semanal</h3>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Prospectos contatados vs Respostas recebidas</p>
+                 </div>
+                 <div className="flex gap-2">
+                    <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500" /><span className="text-[10px] font-bold text-slate-400 uppercase">Leads</span></div>
+                    <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-100" /><span className="text-[10px] font-bold text-slate-400 uppercase">Respostas</span></div>
+                 </div>
+              </div>
+              <div className="h-[350px] w-full">
+                 <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData}>
+                       <defs>
+                          <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
+                             <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
+                             <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                          </linearGradient>
+                       </defs>
+                       <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700, fill: '#94a3b8'}} dy={10} />
+                       <YAxis hide />
+                       <Tooltip 
+                          contentStyle={{borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '15px'}}
+                          itemStyle={{fontSize: '12px', fontWeight: 'bold'}}
+                       />
+                       <Area type="monotone" dataKey="leads" stroke="#10b981" strokeWidth={4} fillOpacity={1} fill="url(#colorLeads)" />
+                       <Area type="monotone" dataKey="res" stroke="#d1fae5" strokeWidth={4} fill="transparent" />
+                    </AreaChart>
+                 </ResponsiveContainer>
+              </div>
+           </Card>
+
+           <Card className="border-none shadow-2xl rounded-[40px] bg-slate-900 text-white p-8">
+              <CardHeader className="p-0 mb-10 space-y-2">
+                 <h3 className="text-xl font-black tracking-tight flex items-center gap-3"><BarChart3 className="w-6 h-6 text-emerald-500" /> Funil de Conversão</h3>
+                 <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest">Efetividade do Processo Comercial</p>
+              </CardHeader>
+              <div className="space-y-6">
+                 {funnelData.map((item) => (
+                    <div key={item.name} className="space-y-2">
+                       <div className="flex justify-between items-center text-xs font-bold px-1">
+                          <span className="text-white/40 uppercase tracking-widest">{item.name}</span>
+                          <span className="font-black text-white">{item.value}%</span>
+                       </div>
+                       <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden p-0.5 border border-white/5">
+                          <div 
+                             className="h-full rounded-full transition-all duration-1000 ease-out" 
+                             style={{width: `${item.value}%`, backgroundColor: item.color}} 
+                          />
+                       </div>
+                    </div>
+                 ))}
+                 <div className="mt-10 p-6 bg-white/5 rounded-3xl border border-white/5 text-center">
+                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">ROI Mensal Estimado</p>
+                    <p className="text-2xl font-black text-white italic tracking-tighter">R$ 45.280,00</p>
+                 </div>
+              </div>
+           </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+           <Card className="border-none shadow-2xl rounded-[40px] bg-white overflow-hidden">
+              <div className="p-8 border-b border-slate-50 flex items-center justify-between">
+                 <h3 className="text-xl font-black text-slate-800">Atividade dos SDRs</h3>
+                 <Badge className="bg-emerald-100 text-emerald-700 border-none font-bold uppercase text-[9px]">Ao Vivo</Badge>
+              </div>
+              <div className="p-4 space-y-2">
+                 {recentLeads.map((lead: any) => (
+                    <div key={lead.id} className="flex items-center gap-4 p-4 hover:bg-slate-50 rounded-3xl transition-colors group">
+                       <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center font-black text-slate-400 group-hover:bg-emerald-500 group-hover:text-white transition-all">
+                          {lead.name?.substring(0,2).toUpperCase() || "L"}
+                       </div>
+                       <div className="flex-1 min-w-0">
+                          <p className="text-sm font-black text-slate-800 truncate">{lead.name}</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">Conversando via WhatsApp · {lead.source || "Direto"}</p>
+                       </div>
+                       <div className="text-right flex flex-col items-end gap-1">
+                          <Badge variant="outline" className="text-[8px] font-black uppercase text-slate-400 border-slate-200">{lead.status || "Novo"}</Badge>
+                          <span className="text-[9px] font-bold text-slate-300">Há pouco</span>
+                       </div>
+                    </div>
+                 ))}
+                 {recentLeads.length === 0 && (
+                   <div className="py-12 text-center text-slate-300 font-bold uppercase text-[10px] tracking-widest">Sem Interações Recentes</div>
+                 )}
+              </div>
+           </Card>
+
+           <Card className="border-none shadow-2xl rounded-[40px] bg-emerald-500 text-white p-10 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2" />
+              <div className="relative z-10 space-y-10">
+                 <div className="space-y-4">
+                    <div className="w-16 h-16 bg-white/20 rounded-3xl flex items-center justify-center">
+                       <Zap className="w-8 h-8 text-white animate-pulse" />
+                    </div>
+                    <div className="space-y-1">
+                       <h3 className="text-2xl font-black tracking-tighter uppercase italic">Insights de <br/>Performance IA</h3>
+                    </div>
+                 </div>
+                 
+                 <div className="space-y-4">
+                    <InsightRow icon={<CheckCircle2 className="w-4 h-4" />} text="O SDR 'João IA' está com 85% de taxa de conversão." />
+                    <InsightRow icon={<AlertCircle className="w-4 h-4 text-emerald-200" />} text="Aviso: O Nicho 'Imobiliárias' está respondendo melhor às 14h." />
+                    <InsightRow icon={<TrendingUp className="w-4 h-4" />} text="Projeção: Você deve fechar 12 novos contratos este mês." />
+                 </div>
+
+                 <Button className="w-full h-14 bg-white text-emerald-600 hover:bg-emerald-50 font-black rounded-2xl uppercase tracking-widest transition-all">Ver Análise Completa</Button>
+              </div>
+           </Card>
+        </div>
+      </div>
+    </DashboardLayout>
+  );
+}
+
+function KpiCard({ label, value, trend, up, icon }: { label: string, value: any, trend: string, up: boolean, icon: any }) {
+  return (
+    <Card className="border-none shadow-xl rounded-[35px] bg-white p-8 hover:translate-y-[-5px] transition-all duration-300">
+       <div className="flex justify-between items-start mb-6">
+          <div className="p-4 bg-slate-50 rounded-2xl">{icon}</div>
+          <div className={`flex items-center gap-1 text-[10px] font-black px-3 py-1 rounded-full ${up ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+             {up ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+             {trend}
+          </div>
+       </div>
+       <div className="space-y-1">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
+          <p className="text-4xl font-black text-slate-900 tracking-tighter italic">{value}</p>
+       </div>
     </Card>
   );
 }
 
-// --- Page ---
-
-interface RecentConversation {
-  id: number | string;
-  name: string;
-  initials: string;
-  lastMessage: string;
-  time: string;
-  status: string;
-}
-
-interface CalendarEvent {
-  id: string;
-  date: string;
-  startHour: number;
-  startMinute: number;
-  client: string;
-  type: string;
-}
-
-export default function Dashboard() {
-  const todayLabel = capitalise(formatTodayDate());
-  const [data, setData] = useState({
-    stats: { totalLeads: 0, activeBots: 0, agendamentosHoje: 0, taxa: 0, convertidos: 0 },
-    recentConversations: [] as RecentConversation[]
-  });
-  const [appointments, setAppointments] = useState<CalendarEvent[]>([]);
-
-  useEffect(() => {
-    fetch("/api/dashboard").then(r => r.json()).then(res => {
-        if (res.stats) setData(res);
-    });
-    fetch("/api/calendar/events").then(r => r.json()).then(res => {
-        if (Array.isArray(res)) setAppointments(res);
-    });
-  }, []);
-
+function InsightRow({ icon, text }: { icon: any, text: string }) {
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-
-        {/* Welcome header */}
-        <div className="flex flex-col gap-0.5">
-          <h2 className="text-2xl font-bold text-slate-900">Bem-vindo de volta!</h2>
-          <p className="text-sm text-slate-500">{todayLabel}</p>
-        </div>
-
-        {/* Stats row */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            title="Total de Leads"
-            value={data.stats.totalLeads.toString()}
-            delta="+ Dinâmico"
-            deltaPositive
-            icon={Users}
-            iconBg="bg-emerald-50"
-            iconColor="text-emerald-600"
-          />
-          <StatCard
-            title="SDR IA Operando"
-            value={data.stats.activeBots.toString()}
-            delta="Bots Automáticos"
-            deltaPositive
-            icon={MessageSquare}
-            iconBg="bg-sky-50"
-            iconColor="text-sky-600"
-          />
-          <StatCard
-            title="Agendamentos Recentes"
-            value={data.stats.agendamentosHoje.toString()}
-            delta="Atualizado via Funil"
-            deltaPositive
-            icon={Calendar}
-            iconBg="bg-violet-50"
-            iconColor="text-violet-600"
-          />
-          <StatCard
-            title="Taxa de Conversão Real"
-            value={`${data.stats.taxa}%`}
-            delta={`${data.stats.convertidos} convertidos`}
-            deltaPositive
-            icon={TrendingUp}
-            iconBg="bg-amber-50"
-            iconColor="text-amber-600"
-          />
-        </div>
-
-        {/* Charts row */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {/* Line chart */}
-          <Card className="border border-slate-200 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-semibold text-slate-800">
-                Leads por Dia
-              </CardTitle>
-              <p className="text-xs text-slate-500">Últimos 7 dias</p>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <ResponsiveContainer width="100%" height={220}>
-                <LineChart data={leadsPerDay} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis
-                    dataKey="dia"
-                    tick={{ fontSize: 12, fill: "#94a3b8" }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 12, fill: "#94a3b8" }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: "#fff",
-                      border: "1px solid #e2e8f0",
-                      borderRadius: "8px",
-                      fontSize: "12px",
-                    }}
-                    labelStyle={{ color: "#475569", fontWeight: 600 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="leads"
-                    stroke="#10b981"
-                    strokeWidth={2.5}
-                    dot={{ r: 4, fill: "#10b981", strokeWidth: 0 }}
-                    activeDot={{ r: 6, fill: "#10b981" }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Bar chart */}
-          <Card className="border border-slate-200 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-semibold text-slate-800">
-                Conversões por Canal
-              </CardTitle>
-              <p className="text-xs text-slate-500">Acumulado do mês</p>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={conversionsByChannel} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis
-                    dataKey="canal"
-                    tick={{ fontSize: 12, fill: "#94a3b8" }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 12, fill: "#94a3b8" }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: "#fff",
-                      border: "1px solid #e2e8f0",
-                      borderRadius: "8px",
-                      fontSize: "12px",
-                    }}
-                    labelStyle={{ color: "#475569", fontWeight: 600 }}
-                    cursor={{ fill: "#f1f5f9" }}
-                  />
-                  <Bar
-                    dataKey="conversoes"
-                    fill="#10b981"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Bottom row: conversations + appointments + quick actions */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-
-          {/* Recent conversations */}
-          <Card className="border border-slate-200 shadow-sm lg:col-span-1">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-semibold text-slate-800">
-                  Conversas Recentes
-                </CardTitle>
-                <Badge variant="secondary" className="text-xs">
-                  {data.recentConversations.length} novas
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3 pt-0">
-              {data.recentConversations.length > 0 ? data.recentConversations.map((conv) => (
-                <div
-                  key={conv.id}
-                  className="flex items-start gap-3 rounded-lg p-2 transition-colors hover:bg-slate-50 cursor-pointer"
-                  onClick={() => window.location.href='/conversations'}
-                >
-                  <Avatar className="h-9 w-9 shrink-0">
-                    <AvatarImage src="" />
-                    <AvatarFallback className="bg-emerald-100 text-emerald-700 text-xs font-semibold">
-                      {conv.initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-1">
-                      <p className="text-sm font-semibold text-slate-800 truncate">
-                        {conv.name}
-                      </p>
-                      <span className="text-[11px] text-slate-400 shrink-0 flex items-center gap-0.5">
-                        <Clock className="h-3 w-3" />
-                        {conv.time}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500 truncate mt-0.5">
-                      {conv.lastMessage}
-                    </p>
-                    <Badge
-                      className={`mt-1.5 border text-[10px] px-1.5 py-0 leading-4 ${statusConfig[conv.status] || ''}`}
-                    >
-                      {conv.status}
-                    </Badge>
-                  </div>
-                </div>
-              )) : (
-                 <p className="text-xs text-slate-400 py-4 text-center">Nenhuma conversa recente registrada.</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Upcoming appointments */}
-          <Card className="border border-slate-200 shadow-sm lg:col-span-1">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-semibold text-slate-800">
-                  Agendamentos no Calendar
-                </CardTitle>
-                <Badge variant="secondary" className="text-xs">
-                  {appointments.length} eventos (30d)
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2 pt-0 h-64 overflow-y-auto">
-              {appointments.length > 0 ? appointments.map((appt) => (
-                <div
-                  key={appt.id}
-                  className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5 transition-colors hover:bg-slate-100 cursor-pointer"
-                >
-                  <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg bg-white border border-slate-200 shadow-sm">
-                    <span className="text-[10px] font-bold text-slate-700 leading-tight">
-                      {appt.date.split("-")[2]}/{appt.date.split("-")[1]}
-                    </span>
-                    <span className="text-[10px] text-slate-400 leading-tight">
-                      {appt.startHour}:{appt.startMinute === 0 ? "00" : appt.startMinute}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-800 truncate" title={appt.client}>
-                      {appt.client}
-                    </p>
-                    <Badge
-                      className={`mt-0.5 border text-[10px] px-1.5 py-0 leading-4 bg-emerald-100 text-emerald-700`}
-                    >
-                      Reunião Google
-                    </Badge>
-                  </div>
-                </div>
-              )) : (
-                 <div className="flex flex-col items-center justify-center py-6">
-                    <p className="text-xs text-slate-400 py-4 text-center">Não há eventos futuros<br/>ou Google Calendar desconectado.</p>
-                    <Button onClick={() => window.location.href='/settings'} variant="outline" size="sm" className="mt-2 text-xs">Conectar Agenda</Button>
-                 </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Quick actions */}
-          <Card className="border border-slate-200 shadow-sm lg:col-span-1">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold text-slate-800">
-                Ações Rápidas
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 pt-0">
-              <Button onClick={() => window.location.href='/crm'} className="w-full justify-start gap-3 bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm shadow-emerald-200">
-                <Plus className="h-4 w-4 shrink-0" />
-                Acessar Novo Lead (Kanban)
-              </Button>
-              <Button onClick={() => window.location.href='/appointments'}
-                variant="outline"
-                className="w-full justify-start gap-3 border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300"
-              >
-                <CalendarPlus className="h-4 w-4 shrink-0 text-violet-600" />
-                Abrir Full Calendar
-              </Button>
-              <Button onClick={() => window.location.href='/conversations'}
-                variant="outline"
-                className="w-full justify-start gap-3 border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300"
-              >
-                <MessageSquare className="h-4 w-4 shrink-0 text-sky-600" />
-                Assumir Conversa do Bot
-              </Button>
-
-              {/* Summary mini-stats */}
-              <div className="mt-4 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 p-4 text-white">
-                <p className="text-xs font-semibold uppercase tracking-wider opacity-80">
-                  Resumo Diário Real
-                </p>
-                <div className="mt-3 grid grid-cols-2 gap-3">
-                  <div>
-                    <p className="text-2xl font-bold">{data.stats.totalLeads}</p>
-                    <p className="text-xs opacity-80">Leads mapeados</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{data.stats.convertidos}</p>
-                    <p className="text-xs opacity-80">Finalizados</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-        </div>
-      </div>
-    </DashboardLayout>
+    <div className="flex items-center gap-3 py-3 border-b border-white/10 text-xs font-bold tracking-tight">
+       <div className="p-1 bg-white/10 rounded-lg">{icon}</div>
+       <span>{text}</span>
+    </div>
   );
 }

@@ -12,9 +12,21 @@ model Company {
   name      String
   email     String   @unique
   phone     String?
+  active    Boolean  @default(true)
+  
+  // SaaS Subscription
+  planId            String?  
+  plan              Plan?    @relation(fields: [planId], references: [id])
+  subscriptionStatus String  @default("TRIAL") // TRIAL, ACTIVE, PAST_DUE, CANCELED
+  trialEnd          DateTime?
+  mercadoPagoId     String?
+  cardLast4         String?
+  
+  // Customization
   openAiKey String?
   systemPrompt String?
-  googleRefreshToken String? // Token unificado SaaS
+  googleRefreshToken String? 
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
@@ -22,6 +34,42 @@ model Company {
   leads     Lead[]
   automationConfig AutomationConfig?
   automations Automation[]
+  sdrs      SdrBot[]
+  appointments Appointment[]
+}
+
+model Plan {
+  id              String   @id @default(uuid())
+  name            String   // Pro, Basic, Enterprise
+  priceMonthly    Float
+  priceYearly     Float
+  maxLeads        Int
+  maxSdrs         Int
+  features        String?  // JSON list of features
+  active          Boolean  @default(true)
+  
+  companies       Company[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model SdrBot {
+  id              String   @id @default(uuid())
+  name            String
+  role            String   @default("INBOUND") // INBOUND, OUTBOUND
+  prompt          String?  @default("Você é um SDR focado em qualificar leads.")
+  
+  // Treinamento individualizado (Requisito 4 e 5)
+  knowledgeBase   String?  @default("") // Texto de treinamento
+  trainingUrls    String?  // Links de sites ou arquivos (JSON array string)
+  
+  companyId       String
+  active          Boolean  @default(true)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
 }
 
 model AutomationConfig {
@@ -34,6 +82,12 @@ model AutomationConfig {
   postServiceHours Int      @default(24)
   humanHandoffTags String?  
 
+  // Outbound Automation (Requisito 7)
+  autoProspecting  Boolean  @default(false)
+  prospectingNiche String?
+  prospectingCity  String?
+  prospectingInterval Int    @default(24) // horas
+
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }
@@ -43,7 +97,7 @@ model User {
   name      String
   email     String   @unique
   password  String
-  role      String   @default("ADMIN") // ADMIN, AGENT
+  role      String   @default("ADMIN") // ADMIN, AGENT, OWNER, SUPERADMIN
   companyId String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -54,25 +108,29 @@ model User {
 model Lead {
   id        String   @id @default(uuid())
   name      String
-  phone     String   // WhatsApp number
+  phone     String?  
   email     String?
-  status    String   @default("NEW") // NEW, QUALIFYING, APPOINTMENT, CONVERTED, LOST
-  source    String?  // Instagram, WhatsApp, Site
-  tags      String?  // comma separated tags
-  notes     String?  // internal notes
+  status    String   @default("NEW") 
+  source    String?  
+  tags      String?  
+  notes     String?  
   companyId String
+  
+  isToEnrich Boolean @default(false) 
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   conversations Conversation[]
   appointments  Appointment[]
+  progressions AutomationProgress[]
 }
 
 model Conversation {
   id        String   @id @default(uuid())
   leadId    String
-  botActive Boolean  @default(true) // se true, a IA continua respondendo. se false, é handoff humano
+  botActive Boolean  @default(true) 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -84,8 +142,8 @@ model Message {
   id             String   @id @default(uuid())
   conversationId String
   content        String
-  role           String   // 'user' (lead), 'assistant' (bot), 'system' (human manual)
-  messageType    String   @default("TEXT") // TEXT, AUDIO, IMAGE, VIDEO
+  role           String   
+  messageType    String   @default("TEXT") 
   mediaUrl       String?  
   createdAt      DateTime @default(now())
 
@@ -95,14 +153,16 @@ model Message {
 model Appointment {
   id        String   @id @default(uuid())
   leadId    String
+  companyId String
   title     String
   date      DateTime
-  status    String   @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELED
+  status    String   @default("SCHEDULED") 
   notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
 }
 
 model Automation {
@@ -110,12 +170,31 @@ model Automation {
   companyId   String
   name        String
   description String?
-  trigger     String
+  trigger     String   
   active      Boolean  @default(true)
+  nodes       String?  
   executions  Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  progressions AutomationProgress[]
 }
 
+model AutomationProgress {
+  id           String   @id @default(uuid())
+  automationId String
+  leadId       String
+  currentStepId String?
+  status       String   @default("RUNNING") 
+  nextRun      DateTime?
+  data         String?  
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  lead         Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([automationId, leadId])
+}

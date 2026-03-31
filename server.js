@@ -5,6 +5,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { google } from "googleapis";
 import dotenv from "dotenv";
 import { WhatsAppManager, whatsappSessions } from "./whatsapp.js";
+import AutomationEngine from "./automation_engine.js";
+import ProspectorService from "./prospector_service.js";
 
 dotenv.config();
 
@@ -69,6 +71,131 @@ app.post("/api/settings", async (req, res) => {
   } catch(err) {
     res.status(500).json({ error: "Erro ao salvar config" });
   }
+});
+
+// --- Global SaaS Admin (Requirement 4, 6) ---
+app.get("/api/admin/tenants", async (req, res) => {
+  try {
+    const companies = await prisma.company.findMany({
+      include: { 
+        plan: true,
+        _count: { select: { leads: true, sdrs: true } } 
+      }
+    });
+    res.json(companies);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/admin/tenants", async (req, res) => {
+  try {
+    const { name, email, planId } = req.body;
+    const company = await prisma.company.create({
+      data: { name, email, planId, subscriptionStatus: "ACTIVE" }
+    });
+    res.json(company);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put("/api/admin/tenants/:id", async (req, res) => {
+  try {
+    const { planId, status, active } = req.body;
+    const company = await prisma.company.update({
+      where: { id: req.params.id },
+      data: { planId, subscriptionStatus: status, active }
+    });
+    res.json(company);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- Plan CRUD (Requirement 2) ---
+app.get("/api/admin/plans", async (req, res) => {
+  try {
+    const plans = await prisma.plan.findMany();
+    res.json(plans);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/admin/plans", async (req, res) => {
+  try {
+    const plan = await prisma.plan.create({ data: req.body });
+    res.json(plan);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put("/api/admin/plans/:id", async (req, res) => {
+  try {
+    const plan = await prisma.plan.update({ where: { id: req.params.id }, data: req.body });
+    res.json(plan);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete("/api/admin/plans/:id", async (req, res) => {
+  try {
+    await prisma.plan.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- SDR Management (Requirement 8 & 9) ---
+app.get("/api/sdrs", async (req, res) => {
+  try {
+    const company = await prisma.company.findFirst();
+    const sdrs = await prisma.sdrBot.findMany({ where: { companyId: company.id } });
+    res.json(sdrs);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/sdrs", async (req, res) => {
+  try {
+    const company = await prisma.company.findFirst({ include: { plan: true } });
+    const { name, role, prompt, knowledgeBase, trainingUrls } = req.body;
+    
+    // Usage Limit Check (Requirement 10)
+    const count = await prisma.sdrBot.count({ where: { companyId: company.id } });
+    const limit = company.plan?.maxSdrs || 2;
+    if (count >= limit) return res.status(403).json({ error: "Limite de SDRs atingido para seu plano." });
+
+    const sdr = await prisma.sdrBot.create({
+      data: { name, role, prompt, knowledgeBase, trainingUrls, companyId: company.id }
+    });
+    res.json(sdr);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put("/api/sdrs/:id", async (req, res) => {
+  try {
+    const sdr = await prisma.sdrBot.update({
+      where: { id: req.params.id },
+      data: req.body
+    });
+    res.json(sdr);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- Mercado Pago Simulation (Requirement 5) ---
+app.post("/api/subscription/checkout", async (req, res) => {
+  try {
+    const { cardToken, email, plan } = req.body;
+    console.log(`[MercadoPago] 💳 Processando adesão de ${email} ao plano ${plan}...`);
+    // Simulando delay da API
+    await new Promise(r => setTimeout(r, 2000));
+    
+    // Cria o Tenant/Company com Trial de 7 Dias
+    const trialEnd = new Date();
+    trialEnd.setDate(trialEnd.getDate() + 7);
+    
+    const company = await prisma.company.create({
+      data: { 
+        name: email.split('@')[0], 
+        email, 
+        plan, 
+        subscriptionStatus: "TRIAL", 
+        trialEnd 
+      }
+    });
+
+    res.json({ success: true, companyId: company.id });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 // --- Automações (ConfigGlobais) Endpoint
@@ -235,7 +362,7 @@ app.get("/api/google/auth", async (req, res) => {
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    "http://localhost:3000/api/google/callback" 
+    process.env.GOOGLE_REDIRECT_URI || "http://localhost:3000/api/google/callback"
   );
 
   const scopes = [
@@ -252,12 +379,12 @@ app.get("/api/google/auth", async (req, res) => {
   res.redirect(url);
 });
 
-app.get("/api/google/callback", async (req, res) => {
+app.get("/api/auth/google/callback", async (req, res) => {
   const { code } = req.query;
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    "http://localhost:3000/api/google/callback"
+    process.env.GOOGLE_REDIRECT_URI || "http://localhost:3000/api/google/callback"
   );
   
   try {
@@ -269,7 +396,11 @@ app.get("/api/google/callback", async (req, res) => {
             data: { googleRefreshToken: tokens.refresh_token }
         });
     }
-    res.redirect("http://localhost:8080/settings?gcal=success");
+    // Dynamic frontend port detection (handling 8080 or 8081)
+    // Explicitly redirect back to the standard Vite port (8080)
+    const finalRedirect = "http://localhost:8080/settings";
+    
+    res.redirect(`${finalRedirect}?gcal=success`);
   } catch (e) {
     console.error("Erro no callback OAuth", e);
     res.redirect("http://localhost:8080/settings?gcal=error");
@@ -319,18 +450,23 @@ app.post("/api/webhook/whatsapp", async (req, res) => {
   const { companyId, phone, name, content, source } = req.body;
 
   try {
-    let company = await prisma.company.findFirst();
-    if (!company) {
-      company = await prisma.company.create({
-        data: { name: "Minha Empresa SaaS", email: "admin@minhaempresa.com" }
-      });
-    }
-
+    const company = await prisma.company.findFirst();
     let lead = await prisma.lead.findFirst({ where: { phone, companyId: company.id } });
-    if (!lead) {
+    const isNew = !lead;
+
+    if (isNew) {
       lead = await prisma.lead.create({
         data: { name, phone, source: source || "WhatsApp", companyId: company.id, status: "NEW" }
       });
+      // Trigger NEW_LEAD automations
+      await AutomationEngine.trigger(lead, 'NEW_LEAD');
+    }
+
+    // Check if automation engine handles this message (Condition matching or Keyword trigger)
+    const handledByAutomation = await AutomationEngine.handleIncoming(phone, content, company.id);
+    if (handledByAutomation) {
+       console.log(`[Automation] 🤖 Workflow assumiu a conversa para ${phone}`);
+       return res.json({ success: true, handled: true });
     }
 
     let conversation = await prisma.conversation.findFirst({ where: { leadId: lead.id } });
@@ -354,8 +490,17 @@ app.post("/api/webhook/whatsapp", async (req, res) => {
       };
 
       const genAI = new GoogleGenerativeAI(useKey);
-      const systemPrompt = company.systemPrompt || "Você é um SDR amigável de vendas focado em conversão de serviços. Responda de forma concisa e muito humana. Nunca agende fora do horário comercial.";
       
+      // ORQUESTRADOR MULTI-SDR (Requirement 8 & 9)
+      // Decide qual SDR responderá baseado no status do lead
+      const sdrRoleNeeded = (lead.status === 'NEW' || lead.status === 'QUALIFYING') ? 'OUTBOUND' : 'INBOUND';
+      const activeSdr = await prisma.sdrBot.findFirst({ 
+        where: { companyId: company.id, role: sdrRoleNeeded, active: true } 
+      }) || { prompt: company.systemPrompt || "Você é um SDR amigável." };
+
+      const systemPrompt = activeSdr.prompt;
+      console.log(`[SDR Router] 🤖 Agente ${activeSdr.name || 'Padrão'} assumiu a resposta (${sdrRoleNeeded})`);
+
       const tools = [{
         functionDeclarations: [
           {
@@ -504,11 +649,47 @@ app.post("/api/webhook/whatsapp", async (req, res) => {
   }
 });
 
+// --- AI Auto Prospecting Engine (Requirement 7) ---
+// Rodando o motor de busca automática a cada 24 horas (exemplo simplificado)
+setInterval(async () => {
+    const configs = await prisma.automationConfig.findMany({
+        where: { autoProspecting: true }
+    });
+
+    for (const config of configs) {
+        if (!config.prospectingNiche || !config.prospectingCity) continue;
+        console.log(`[AutoProspector] Buscando leads para empresa ${config.companyId}...`);
+        
+        // Chamada simulada/real ao motor de busca que já implementamos
+        try {
+            const results = await searchGoogleMapsLeads(config.prospectingNiche, config.prospectingCity);
+            for (const leadData of results) {
+                // Adicionando ao pipeline da empresa se não existir
+                const existing = await prisma.lead.findFirst({
+                    where: { phone: leadData.phone, companyId: config.companyId }
+                });
+                if (!existing) {
+                    await prisma.lead.create({
+                        data: {
+                            name: leadData.name,
+                            phone: leadData.phone,
+                            email: leadData.email,
+                            source: "AutoProspector",
+                            companyId: config.companyId
+                        }
+                    });
+                }
+            }
+        } catch (e) { console.error("Falha no AutoProspector diário", e); }
+    }
+}, 1000 * 60 * 60 * 24); // Roda a cada 24h
+
 // ─── APPOINTMENTS CRUD ──────────────────────────────────────
 app.get("/api/appointments", async (req, res) => {
   try {
     const company = await prisma.company.findFirst();
     const appointments = await prisma.appointment.findMany({
+      where: { companyId: company.id },
       include: { lead: true },
       orderBy: { date: "asc" }
     });
@@ -530,8 +711,8 @@ app.get("/api/appointments/:id", async (req, res) => {
 app.post("/api/appointments", async (req, res) => {
   try {
     const company = await prisma.company.findFirst();
-    const { leadId, title, date, status, type, notes } = req.body;
-    // If leadId not provided, create a temporary lead
+    const { leadId, title, date, status, notes } = req.body;
+    
     let targetLeadId = leadId;
     if (!targetLeadId) {
       const { clientName, clientPhone } = req.body;
@@ -541,7 +722,7 @@ app.post("/api/appointments", async (req, res) => {
       targetLeadId = lead.id;
     }
     const appt = await prisma.appointment.create({
-      data: { leadId: targetLeadId, title, date: new Date(date), status: status || "SCHEDULED", notes: notes || "" },
+      data: { leadId: targetLeadId, companyId: company.id, title, date: new Date(date), status: status || "SCHEDULED", notes: notes || "" },
       include: { lead: true }
     });
     res.json(appt);
@@ -677,9 +858,9 @@ app.get("/api/automations", async (req, res) => {
 app.post("/api/automations", async (req, res) => {
   try {
     const company = await prisma.company.findFirst();
-    const { name, description, trigger, active } = req.body;
+    const { name, description, trigger, active, nodes } = req.body;
     const automation = await prisma.automation.create({
-      data: { name, description, trigger, active: active ?? true, companyId: company.id }
+      data: { name, description, trigger, active: active ?? true, nodes: nodes || "[]", companyId: company.id }
     });
     res.json(automation);
   } catch(e) { res.status(500).json({ error: e.message }); }
@@ -687,10 +868,10 @@ app.post("/api/automations", async (req, res) => {
 
 app.put("/api/automations/:id", async (req, res) => {
   try {
-    const { name, description, trigger, active } = req.body;
+    const { name, description, trigger, active, nodes } = req.body;
     const automation = await prisma.automation.update({
       where: { id: req.params.id },
-      data: { name, description, trigger, active }
+      data: { name, description, trigger, active, nodes }
     });
     res.json(automation);
   } catch(e) { res.status(500).json({ error: e.message }); }
@@ -701,6 +882,18 @@ app.delete("/api/automations/:id", async (req, res) => {
     await prisma.automation.delete({ where: { id: req.params.id } });
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── PROSPECTOR API ──────────────────────────────────────────
+app.post("/api/prospect", async (req, res) => {
+  try {
+    const { niche, location } = req.body;
+    const leads = await ProspectorService.search(niche, location);
+    res.json(leads);
+  } catch(e) { 
+    console.error(e);
+    res.status(500).json({ error: e.message }); 
+  }
 });
 
 app.listen(PORT, () => {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   MessageSquare,
@@ -16,9 +16,13 @@ import {
   Menu,
   LogOut,
   User,
+  Send,
   Building2,
   SlidersHorizontal,
   BookUser,
+  Target,
+  Smartphone,
+  ShieldCheck,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -49,6 +53,7 @@ interface NavItem {
   label: string;
   icon: React.ElementType;
   href: string;
+  adminOnly?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -57,10 +62,13 @@ const navItems: NavItem[] = [
   { label: "CRM / Leads", icon: Users, href: "/crm" },
   { label: "Contatos", icon: BookUser, href: "/contacts" },
   { label: "Agendamentos", icon: Calendar, href: "/appointments" },
+  { label: "Prospecção", icon: Target, href: "/prospecting" },
+  { label: "Time de SDRs", icon: Bot, href: "/sdrs" },
   { label: "Automações", icon: Zap, href: "/automations" },
-  { label: "Parâmetros", icon: SlidersHorizontal, href: "/automations/config" },
-  { label: "Análises", icon: BarChart3, href: "/analytics" },
+  { label: "Disparos", icon: Send, href: "/disparos" },
+  { label: "Conexões", icon: Smartphone, href: "/connections" },
   { label: "Configurações", icon: Settings, href: "/settings" },
+  { label: "Admin SaaS", icon: ShieldCheck, href: "/admin", adminOnly: true },
 ];
 
 interface SidebarNavProps {
@@ -74,6 +82,10 @@ function SidebarNav({ collapsed, onNavClick }: SidebarNavProps) {
   return (
     <nav className="flex flex-col gap-1 px-3">
       {navItems.map((item) => {
+  const userRole = localStorage.getItem("userRole") || "OWNER";
+  const isAdmin = userRole === "SUPERADMIN";
+  if (item.adminOnly && !isAdmin) return null;
+
         const Icon = item.icon;
         const isActive =
           location.pathname === item.href ||
@@ -175,20 +187,28 @@ function SidebarContent({
         )}
       </div>
 
-      {/* Navigation label */}
-      {!collapsed && (
-        <div className="px-6 pb-1 pt-5">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-            Menu
-          </p>
-        </div>
-      )}
-      {collapsed && <div className="pt-4" />}
-
       {/* Nav items */}
       <div className="flex-1 overflow-y-auto py-2">
         <SidebarNav collapsed={collapsed} onNavClick={onNavClick} />
       </div>
+
+      {/* PLAN STATUS IN SIDEBAR */}
+      {!collapsed && (
+        <div className="px-6 py-6 border-t border-slate-800">
+          <div className="p-4 bg-slate-800 rounded-2xl space-y-3">
+            <div className="flex justify-between items-center">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Plano Atual</p>
+              <Badge className="bg-emerald-500/10 text-emerald-400 border-none text-[8px] font-black uppercase tracking-tighter leading-normal">
+                {localStorage.getItem("userPlan") || "BASIC"}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-emerald-400 animate-pulse" />
+              <p className="text-xs font-black text-slate-200">60% de uso</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bottom user section */}
       <div className="border-t border-slate-700/60 p-3">
@@ -241,9 +261,17 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+
+  const handleLogout = () => {
+    localStorage.removeItem("userToken");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("userPlan");
+    navigate("/login");
+  };
 
   const currentPage =
     navItems.find(
@@ -367,7 +395,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="flex cursor-pointer items-center gap-2 text-red-600 focus:text-red-600">
+              <DropdownMenuItem onClick={handleLogout} className="flex cursor-pointer items-center gap-2 text-red-600 focus:text-red-600">
                 <LogOut className="h-4 w-4" />
                 Sair
               </DropdownMenuItem>

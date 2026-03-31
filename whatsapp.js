@@ -56,11 +56,19 @@ export class WhatsAppManager {
             if (remoteJid.includes('@g.us') || remoteJid === 'status@broadcast') return;
 
             try {
-                // Ao invez de uma API externa, chama diretamente o webhook interno enviando o ID da empresa!
+                // ROTEAMENTO INTELIGENTE DE SDR (Requirement 8 & 9)
+                // Busca no banco de dados qual SDR deve responder este contato
                 const response = await fetch('http://localhost:3000/api/webhook/whatsapp', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ companyId, phone, name, content, source: 'WhatsApp' })
+                    body: JSON.stringify({ 
+                        companyId, 
+                        phone, 
+                        name, 
+                        content, 
+                        source: 'WhatsApp',
+                        // O backend decidirá qual SDR usar (Inbound/Outbound) baseado no histórico
+                    })
                 });
                 const data = await response.json();
                 
@@ -88,6 +96,26 @@ export class WhatsAppManager {
         for (const companyId of companies) {
             console.log(`[WhatsApp SaaS] Reiniciando sessão salva para: ${companyId}`);
             this.createSession(companyId, null).catch(err => console.error(err));
+        }
+    }
+
+    // Verifica se os números possuem WhatsApp usando a primeira sessão ativa disponível
+    static async checkWhatsApp(phones) {
+        if (whatsappSessions.size === 0) return phones.map(p => ({ phone: p, exists: null }));
+        
+        const sessions = Array.from(whatsappSessions.values());
+        const sock = sessions[0]; // Usa qualquer sessão ativa
+
+        try {
+            const results = await Promise.all(phones.map(async (p) => {
+                const jid = p + '@s.whatsapp.net';
+                const [result] = await sock.onWhatsApp(jid);
+                return { phone: p, exists: !!result?.exists };
+            }));
+            return results;
+        } catch (e) {
+            console.error("[WhatsApp SaaS] Erro ao verificar números:", e);
+            return phones.map(p => ({ phone: p, exists: null }));
         }
     }
 }
