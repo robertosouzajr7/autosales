@@ -12,8 +12,10 @@ const Conversations = lazy(() => import("./pages/Conversations"));
 const CRM = lazy(() => import("./pages/CRM"));
 const Appointments = lazy(() => import("./pages/Appointments"));
 const Automations = lazy(() => import("./pages/Automations"));
+const AutomationConfig = lazy(() => import("./pages/AutomationConfig"));
 const Analytics = lazy(() => import("./pages/Analytics"));
 const Settings = lazy(() => import("./pages/Settings"));
+const Contacts = lazy(() => import("./pages/Contacts"));
 
 const queryClient = new QueryClient();
 
@@ -37,7 +39,9 @@ const App = () => (
             <Route path="/crm" element={<CRM />} />
             <Route path="/appointments" element={<Appointments />} />
             <Route path="/automations" element={<Automations />} />
+            <Route path="/automations/config" element={<AutomationConfig />} />
             <Route path="/analytics" element={<Analytics />} />
+            <Route path="/contacts" element={<Contacts />} />
             <Route path="/settings" element={<Settings />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

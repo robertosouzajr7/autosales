@@ -20,6 +20,22 @@ model Company {
   
   users     User[]
   leads     Lead[]
+  automationConfig AutomationConfig?
+  automations Automation[]
+}
+
+model AutomationConfig {
+  id               String   @id @default(uuid())
+  companyId        String   @unique
+  company          Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  autoConfirmHours Int      @default(24)
+  lateToleranceMin Int      @default(15)
+  postServiceHours Int      @default(24)
+  humanHandoffTags String?  
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model User {
@@ -39,8 +55,11 @@ model Lead {
   id        String   @id @default(uuid())
   name      String
   phone     String   // WhatsApp number
+  email     String?
   status    String   @default("NEW") // NEW, QUALIFYING, APPOINTMENT, CONVERTED, LOST
   source    String?  // Instagram, WhatsApp, Site
+  tags      String?  // comma separated tags
+  notes     String?  // internal notes
   companyId String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -79,7 +98,24 @@ model Appointment {
   title     String
   date      DateTime
   status    String   @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELED
+  notes     String?
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
 }
+
+model Automation {
+  id          String   @id @default(uuid())
+  companyId   String
+  name        String
+  description String?
+  trigger     String
+  active      Boolean  @default(true)
+  executions  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+

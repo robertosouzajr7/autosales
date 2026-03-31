@@ -17,6 +17,8 @@ import {
   LogOut,
   User,
   Building2,
+  SlidersHorizontal,
+  BookUser,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -53,8 +55,10 @@ const navItems: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
   { label: "Conversas", icon: MessageSquare, href: "/conversations" },
   { label: "CRM / Leads", icon: Users, href: "/crm" },
+  { label: "Contatos", icon: BookUser, href: "/contacts" },
   { label: "Agendamentos", icon: Calendar, href: "/appointments" },
   { label: "Automações", icon: Zap, href: "/automations" },
+  { label: "Parâmetros", icon: SlidersHorizontal, href: "/automations/config" },
   { label: "Análises", icon: BarChart3, href: "/analytics" },
   { label: "Configurações", icon: Settings, href: "/settings" },
 ];

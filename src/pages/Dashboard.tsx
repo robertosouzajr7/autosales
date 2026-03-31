@@ -308,7 +308,7 @@ export default function Dashboard() {
                   Conversas Recentes
                 </CardTitle>
                 <Badge variant="secondary" className="text-xs">
-                  {recentConversations.length} novas
+                  {data.recentConversations.length} novas
                 </Badge>
               </div>
             </CardHeader>

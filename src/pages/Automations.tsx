@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,7 @@ import {
   CheckCircle2,
   Circle,
   PlayCircle,
+  SlidersHorizontal,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -469,6 +471,12 @@ export default function Automations() {
               <Plus className="w-4 h-4" />
               Nova Automação
             </Button>
+            <Link to="/automations/config">
+              <Button variant="outline" className="gap-2">
+                <SlidersHorizontal className="w-4 h-4" />
+                Parâmetros
+              </Button>
+            </Link>
           </div>
         </div>
 

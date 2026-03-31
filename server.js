@@ -71,6 +71,32 @@ app.post("/api/settings", async (req, res) => {
   }
 });
 
+// --- Automações (ConfigGlobais) Endpoint
+app.get("/api/automations/config", async (req, res) => {
+  try {
+     const company = await prisma.company.findFirst();
+     if (!company) return res.status(404).json({ error: "No company found" });
+     let config = await prisma.automationConfig.findUnique({ where: { companyId: company.id } });
+     if (!config) {
+         config = await prisma.automationConfig.create({ data: { companyId: company.id } });
+     }
+     res.json(config);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/automations/config", async (req, res) => {
+  try {
+     const company = await prisma.company.findFirst();
+     const { autoConfirmHours, lateToleranceMin, postServiceHours, humanHandoffTags } = req.body;
+     const config = await prisma.automationConfig.upsert({
+         where: { companyId: company.id },
+         update: { autoConfirmHours, lateToleranceMin, postServiceHours, humanHandoffTags },
+         create: { companyId: company.id, autoConfirmHours, lateToleranceMin, postServiceHours, humanHandoffTags }
+     });
+     res.json(config);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 // --- Dashboard Endpoint (Home)
 app.get("/api/dashboard", async (req, res) => {
   try {
@@ -478,8 +504,207 @@ app.post("/api/webhook/whatsapp", async (req, res) => {
   }
 });
 
+// ─── APPOINTMENTS CRUD ──────────────────────────────────────
+app.get("/api/appointments", async (req, res) => {
+  try {
+    const company = await prisma.company.findFirst();
+    const appointments = await prisma.appointment.findMany({
+      include: { lead: true },
+      orderBy: { date: "asc" }
+    });
+    res.json(appointments);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get("/api/appointments/:id", async (req, res) => {
+  try {
+    const appt = await prisma.appointment.findUnique({
+      where: { id: req.params.id },
+      include: { lead: true }
+    });
+    if (!appt) return res.status(404).json({ error: "Not found" });
+    res.json(appt);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/appointments", async (req, res) => {
+  try {
+    const company = await prisma.company.findFirst();
+    const { leadId, title, date, status, type, notes } = req.body;
+    // If leadId not provided, create a temporary lead
+    let targetLeadId = leadId;
+    if (!targetLeadId) {
+      const { clientName, clientPhone } = req.body;
+      const lead = await prisma.lead.create({
+        data: { name: clientName || "Contato Manual", phone: clientPhone || "000", companyId: company.id }
+      });
+      targetLeadId = lead.id;
+    }
+    const appt = await prisma.appointment.create({
+      data: { leadId: targetLeadId, title, date: new Date(date), status: status || "SCHEDULED", notes: notes || "" },
+      include: { lead: true }
+    });
+    res.json(appt);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put("/api/appointments/:id", async (req, res) => {
+  try {
+    const { title, date, status, notes } = req.body;
+    const appt = await prisma.appointment.update({
+      where: { id: req.params.id },
+      data: { title, date: date ? new Date(date) : undefined, status, notes },
+      include: { lead: true }
+    });
+    res.json(appt);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete("/api/appointments/:id", async (req, res) => {
+  try {
+    await prisma.appointment.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── CONTACTS (CDP) CRUD ────────────────────────────────────
+app.get("/api/contacts", async (req, res) => {
+  try {
+    const company = await prisma.company.findFirst();
+    const { search, status, source } = req.query;
+    const where = { companyId: company.id };
+    if (status && status !== "all") where.status = status;
+    if (source && source !== "all") where.source = source;
+    if (search) {
+      where.OR = [
+        { name: { contains: search } },
+        { phone: { contains: search } },
+        { email: { contains: search } }
+      ];
+    }
+    const contacts = await prisma.lead.findMany({
+      where,
+      include: { conversations: { select: { id: true, botActive: true } } },
+      orderBy: { createdAt: "desc" }
+    });
+    res.json(contacts);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get("/api/contacts/:id", async (req, res) => {
+  try {
+    const contact = await prisma.lead.findUnique({
+      where: { id: req.params.id },
+      include: {
+        conversations: { include: { messages: { orderBy: { createdAt: "desc" }, take: 1 } } },
+        appointments: { orderBy: { date: "desc" } }
+      }
+    });
+    if (!contact) return res.status(404).json({ error: "Not found" });
+    res.json(contact);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/contacts", async (req, res) => {
+  try {
+    const company = await prisma.company.findFirst();
+    const { name, phone, email, source, tags, notes, status } = req.body;
+    const contact = await prisma.lead.create({
+      data: { name, phone, email, source, tags, notes, status: status || "NEW", companyId: company.id }
+    });
+    res.json(contact);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put("/api/contacts/:id", async (req, res) => {
+  try {
+    const { name, phone, email, source, tags, notes, status } = req.body;
+    const contact = await prisma.lead.update({
+      where: { id: req.params.id },
+      data: { name, phone, email, source, tags, notes, status }
+    });
+    res.json(contact);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete("/api/contacts/:id", async (req, res) => {
+  try {
+    await prisma.lead.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Bulk import contacts from CSV-like JSON array
+app.post("/api/contacts/import", async (req, res) => {
+  try {
+    const company = await prisma.company.findFirst();
+    const { contacts } = req.body; // [{ name, phone, email, source, tags }]
+    let created = 0;
+    for (const c of contacts) {
+      const exists = await prisma.lead.findFirst({ where: { phone: c.phone, companyId: company.id } });
+      if (!exists) {
+        await prisma.lead.create({ data: { ...c, companyId: company.id, status: c.status || "NEW" } });
+        created++;
+      }
+    }
+    res.json({ success: true, created, total: contacts.length });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Export all contacts as JSON
+app.get("/api/contacts/export", async (req, res) => {
+  try {
+    const company = await prisma.company.findFirst();
+    const contacts = await prisma.lead.findMany({ where: { companyId: company.id } });
+    res.setHeader("Content-Disposition", "attachment; filename=contacts.json");
+    res.setHeader("Content-Type", "application/json");
+    res.json(contacts);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── AUTOMATIONS CRUD ───────────────────────────────────────
+app.get("/api/automations", async (req, res) => {
+  try {
+    const company = await prisma.company.findFirst();
+    const automations = await prisma.automation.findMany({
+      where: { companyId: company.id },
+      orderBy: { createdAt: "desc" }
+    });
+    res.json(automations);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/automations", async (req, res) => {
+  try {
+    const company = await prisma.company.findFirst();
+    const { name, description, trigger, active } = req.body;
+    const automation = await prisma.automation.create({
+      data: { name, description, trigger, active: active ?? true, companyId: company.id }
+    });
+    res.json(automation);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put("/api/automations/:id", async (req, res) => {
+  try {
+    const { name, description, trigger, active } = req.body;
+    const automation = await prisma.automation.update({
+      where: { id: req.params.id },
+      data: { name, description, trigger, active }
+    });
+    res.json(automation);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete("/api/automations/:id", async (req, res) => {
+  try {
+    await prisma.automation.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.listen(PORT, () => {
   console.log(`Backend SaaS rodando na porta ${PORT}`);
-  // Inicia todas as contas das empresas automaticamente do banco de instâncias
   WhatsAppManager.bootExistingSessions().catch(err => console.error("Erro no boot do SaaS:", err));
 });
+
