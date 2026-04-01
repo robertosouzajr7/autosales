@@ -166,25 +166,44 @@ app.post("/api/whatsapp/accounts", async (req, res) => {
 
 app.delete("/api/whatsapp/accounts/:id", async (req, res) => {
   try {
+    // Desconecta sessão ativa antes de deletar do banco
+    await WhatsAppManager.disconnectSession(req.params.id);
     await prisma.whatsAppAccount.delete({ where: { id: req.params.id } });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Desconectar uma conta sem deletar
+app.post("/api/whatsapp/accounts/:id/disconnect", async (req, res) => {
+  try {
+    await WhatsAppManager.disconnectSession(req.params.id);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Status em tempo real de todas as sessões
+app.get("/api/whatsapp/sessions/status", (req, res) => {
+  res.json(WhatsAppManager.getSessionsStatus());
 });
 
 app.get("/api/whatsapp/qr/:id", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
-  
+  res.flushHeaders();
+
+  // Envia um heartbeat imediato para confirmar que o stream está vivo
+  res.write(`data: ${JSON.stringify({ status: "WAITING" })}\n\n`);
+
   const onStatus = (msg) => {
+    // msg já vem como JSON string do WhatsAppManager
     res.write(`data: ${msg}\n\n`);
   };
 
-  // createSession agora coordena o envio do QR ou CONNECTED via onStatus
   WhatsAppManager.createSession(req.params.id, onStatus)
     .catch(err => {
        console.error("Erro ao abrir sessão:", err);
-       res.write("data: ERROR\n\n");
+       res.write(`data: ${JSON.stringify({ status: "ERROR", message: err.message })}\n\n`);
     });
 
   req.on("close", () => {
