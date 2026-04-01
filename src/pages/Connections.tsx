@@ -71,37 +71,52 @@ export default function Connections() {
     setSelectedAccountId(id);
     setShowQrModal(true);
     setQrCode(null);
-    setQrStatus("Gerando QR...");
+    setQrStatus("Conectando...");
 
     const eventSource = new EventSource(`/api/whatsapp/qr/${id}`);
-    
+
     eventSource.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.status === "CONNECTED" || data.qr === "CONNECTED") {
-          setQrStatus("Conectado!");
-          toast({ title: "✅ WhatsApp Conectado!" });
+
+        if (data.status === "CONNECTED") {
+          setQrCode(null);
+          setQrStatus("✅ Conectado!");
+          toast({ title: "✅ WhatsApp Conectado!", description: data.phone ? `Número: ${data.phone}` : undefined });
           eventSource.close();
           setTimeout(() => { setShowQrModal(false); fetchConnections(); }, 2000);
+        } else if (data.status === "DISCONNECTED") {
+          setQrCode(null);
+          setQrStatus("Desconectado. Tente novamente.");
+          eventSource.close();
+          fetchConnections();
+        } else if (data.status === "ERROR") {
+          setQrCode(null);
+          setQrStatus(`Erro: ${data.message || "Falha na conexão"}`);
+          toast({ title: "Erro na conexão", description: data.message, variant: "destructive" });
+          eventSource.close();
+        } else if (data.status === "WAITING") {
+          setQrStatus("Gerando QR Code...");
         } else if (data.qr) {
+          // QR code recebido — exibe para o usuário escanear
           setQrCode(data.qr);
-          setQrStatus("Escaneie agora");
+          setQrStatus("Escaneie o QR Code com seu WhatsApp");
         }
-      } catch (e) {
-        // Fallback para texto puro (caso não seja JSON)
+      } catch {
+        // Fallback para texto puro (compatibilidade)
         if (event.data === "CONNECTED") {
-          setQrStatus("Conectado!");
+          setQrStatus("✅ Conectado!");
           eventSource.close();
           setTimeout(() => { setShowQrModal(false); fetchConnections(); }, 2000);
-        } else {
+        } else if (event.data && event.data.length > 20) {
           setQrCode(event.data);
-          setQrStatus("Escaneie agora");
+          setQrStatus("Escaneie o QR Code");
         }
       }
     };
 
     eventSource.onerror = () => {
-      setQrStatus("Erro na conexão SSE.");
+      setQrStatus("Erro na conexão com o servidor. Verifique se o backend está rodando.");
       eventSource.close();
     };
   };
