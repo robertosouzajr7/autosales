@@ -1,0 +1,230 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  active    Boolean  @default(true)
+  
+  // SaaS Subscription
+  planId            String?  
+  plan              Plan?    @relation(fields: [planId], references: [id])
+  subscriptionStatus String  @default("TRIAL") // TRIAL, ACTIVE, PAST_DUE, CANCELED
+  trialEnd          DateTime?
+  mercadoPagoId     String?
+  cardLast4         String?
+  
+  // Customization
+  openAiKey String?
+  systemPrompt String?
+  googleRefreshToken String? 
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  users     User[]
+  leads     Lead[]
+  automationConfig AutomationConfig?
+  automations Automation[]
+  sdrs      SdrBot[]
+  appointments Appointment[]
+  whatsappAccounts WhatsAppAccount[]
+}
+
+model Plan {
+  id              String   @id @default(uuid())
+  name            String   // Pro, Basic, Enterprise
+  priceMonthly    Float
+  priceYearly     Float
+  maxLeads        Int
+  maxSdrs         Int
+  features        String?  // JSON list of features
+  active          Boolean  @default(true)
+  
+  tenants         Tenant[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model SdrBot {
+  id              String   @id @default(uuid())
+  name            String
+  role            String   @default("INBOUND") // INBOUND, OUTBOUND
+  prompt          String?  @default("Você é um SDR focado em qualificar leads.")
+  
+  // Treinamento individualizado (Requisito 4 e 5)
+  knowledgeBase   String?  @default("") // Texto de treinamento
+  trainingUrls    String?  // Links de sites ou arquivos (JSON array string)
+  
+  // Parâmetros avançados de IA (Requisito 8 e 9)
+  responseDelay   Int      @default(2000) // Milisegundos
+  voiceTone       String   @default("PROFESSIONAL") // CASUAL, PROFESSIONAL, PERSUASIVE
+  escalationKeywords String? @default("atendente, falar com humano, ajuda, queima, dor, bolha")
+  
+  // Parâmetros Globais de Negócio (Extraídos dos áudios)
+  followUpInterval      Int     @default(120) // Minutos para cobrar resposta após preço
+  preConfirmationHours  Int     @default(12)  // Horas antes para pré-confirmação
+  noShowGraceMinutes    Int     @default(15)  // Minutos de tolerância antes de cobrar presença
+  postServiceCheckHours Int     @default(24)  // Horas após serviço para enviar pós-venda
+  enableWaitlist        Boolean @default(true) // Encaixe automático em desistências
+
+  tenantId        String
+  active          Boolean  @default(true)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model AutomationConfig {
+  id                    String   @id @default(uuid())
+  // Parâmetros Globais de Negócio (Extraídos dos áudios)
+  autoConfirmHours      Int      @default(24)
+  lateToleranceMin      Int      @default(15)
+  postServiceHours      Int      @default(24)
+  humanHandoffTags      String   @default("ajuda, atendente, humano, queima, dor, bolha")
+  
+  // Estrutura Visual (Opcional se usado como Hub Global)
+  nodes                 String?  // JSON string
+  edges                 String?  // JSON string
+  
+  // Templates de Mensagens (Universalização)
+  confirmMsgTemplate    String?  @default("Olá {name}! 👋 Passando para confirmar seu atendimento de amanhã às {time}. Podemos confirmar? ✅")
+  lateMsgTemplate       String?  @default("Oi {name}! 😊 Notamos que você ainda não chegou para o seu horário das {time}. Está tudo bem?")
+  postServiceMsgTemplate String? @default("Oi {name}! Esperamos que tenha gostado do atendimento! ✨ Como foi sua experiência?")
+  
+  tenantId              String   @unique
+  tenant                Tenant   @relation(fields: [tenantId], references: [id])
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model Automation {
+  id          String   @id @default(uuid())
+  tenantId   String
+  name        String
+  description String?
+  trigger     String   
+  active      Boolean  @default(true)
+  nodes       String?  
+  edges       String?
+  executions  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant     Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  progressions AutomationProgress[]
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("ADMIN") // ADMIN, AGENT, OWNER, SUPERADMIN
+  tenantId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model Lead {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String?  
+  email     String?
+  status    String   @default("NEW") 
+  source    String?  
+  tags      String?  
+  notes     String?  
+  tenantId String
+  
+  isToEnrich Boolean @default(false) 
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+  appointments  Appointment[]
+  progressions AutomationProgress[]
+}
+
+model Conversation {
+  id        String   @id @default(uuid())
+  leadId    String
+  botActive Boolean  @default(true) 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  messages  Message[]
+}
+
+model Message {
+  id             String   @id @default(uuid())
+  conversationId String
+  content        String
+  role           String   
+  messageType    String   @default("TEXT") 
+  mediaUrl       String?  
+  createdAt      DateTime @default(now())
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+model Appointment {
+  id        String   @id @default(uuid())
+  leadId    String
+  tenantId String
+  title     String
+  date      DateTime
+  status    String   @default("SCHEDULED") 
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model AutomationProgress {
+  id           String   @id @default(uuid())
+  automationId String
+  leadId       String
+  currentStepId String?
+  status       String   @default("RUNNING") 
+  nextRun      DateTime?
+  data         String?  
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  lead         Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([automationId, leadId])
+}
+
+model WhatsAppAccount {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String?
+  status    String   @default("DISCONNECTED") 
+  tenantId  String
+  
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

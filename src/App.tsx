@@ -1,51 +1,55 @@
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import LandingPage from "@/pages/LandingPage";
+import Login from "@/pages/Login";
+import Register from "@/pages/Register";
+import CRM from "@/pages/CRM";
+import Automations from "@/pages/Automations";
+import Prospecting from "@/pages/Prospecting";
+import Settings from "@/pages/Settings";
+import Connections from "@/pages/Connections";
+import AdminDashboard from "@/pages/AdminDashboard"; // Módulo SaaS Owner
+import SdrManagement from "@/pages/SdrManagement"; // Módulo Multi-SDR
+import Dashboard from "@/pages/Dashboard";
+import Conversations from "@/pages/Conversations";
+import Contacts from "@/pages/Contacts";
+import Appointments from "@/pages/Appointments";
+import Analytics from "@/pages/Analytics";
+import AutomationConfig from "@/pages/AutomationConfig";
+import BulkMessaging from "@/pages/BulkMessaging";
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { lazy, Suspense } from "react";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
 
-const Dashboard = lazy(() => import("./pages/Dashboard"));
-const Conversations = lazy(() => import("./pages/Conversations"));
-const CRM = lazy(() => import("./pages/CRM"));
-const Appointments = lazy(() => import("./pages/Appointments"));
-const Automations = lazy(() => import("./pages/Automations"));
-const Analytics = lazy(() => import("./pages/Analytics"));
-const Settings = lazy(() => import("./pages/Settings"));
+function App() {
+  return (
+    <Router>
+      <Routes>
+        {/* PÚBLICO */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
-const queryClient = new QueryClient();
+        {/* CLIENTE SaaS */}
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/conversations" element={<Conversations />} />
+        <Route path="/crm" element={<CRM />} />
+        <Route path="/contacts" element={<Contacts />} />
+        <Route path="/appointments" element={<Appointments />} />
+        <Route path="/prospecting" element={<Prospecting />} />
+        <Route path="/sdrs" element={<SdrManagement />} />
+        <Route path="/automations" element={<Automations />} />
+        <Route path="/automations/config" element={<AutomationConfig />} />
+        <Route path="/connections" element={<Connections />} />
+        <Route path="/disparos" element={<BulkMessaging />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/analytics" element={<Analytics />} />
 
-const Loading = () => (
-  <div className="min-h-screen flex items-center justify-center">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600" />
-  </div>
-);
+        {/* PROPRIETÁRIO DO SaaS (Admin) */}
+        <Route path="/admin" element={<AdminDashboard />} />
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
       <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Suspense fallback={<Loading />}>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/conversations" element={<Conversations />} />
-            <Route path="/crm" element={<CRM />} />
-            <Route path="/appointments" element={<Appointments />} />
-            <Route path="/automations" element={<Automations />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/settings" element={<Settings />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+    </Router>
+  );
+}
 
 export default App;

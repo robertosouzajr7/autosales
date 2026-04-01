@@ -1,642 +1,338 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  MessageSquare,
-  UserCheck,
-  CalendarCheck,
-  RefreshCw,
-  ShoppingCart,
-  Star,
-  Plus,
-  Pencil,
-  Copy,
-  Trash2,
-  Zap,
-  GitBranch,
-  Send,
-  Tag,
-  Clock,
-  CheckCircle2,
-  Circle,
-  PlayCircle,
+import { 
+  Zap, Plus, Trash2, Edit3, Settings, 
+  Play, Pause, RefreshCw, BarChart,
+  ArrowRight, Search, Filter, ShieldCheck, 
+  Settings2, Activity, CheckCircle2, AlertCircle,
+  MoreVertical, Clock, Save, Code, MessageCircle, Split, Globe, Timer, X, UserPlus, MessageSquare, Target
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+export default function Automations() {
+  const [autos, setAutos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isBuilderOpen, setIsBuilderOpen] = useState(false);
+  const [selectedAuto, setSelectedAuto] = useState<any | null>(null);
+  const [newAuto, setNewAuto] = useState({ name: "", trigger: "NEW_LEAD", description: "" });
+  const [builderSteps, setBuilderSteps] = useState<any[]>([]);
+  const { toast } = useToast();
 
-interface AutomationTemplate {
-  id: string;
-  icon: React.ReactNode;
-  name: string;
-  description: string;
-  color: string;
-}
+  const triggers = [
+    { id: "NEW_LEAD", label: "Novo Lead Cadastrado", icon: <UserPlus className="w-4 h-4" /> },
+    { id: "KEYWORD", label: "Palavra-chave no Chat", icon: <MessageSquare className="w-4 h-4" /> },
+    { id: "PIPELINE_MOVE", label: "Mudança de Status CRM", icon: <Target className="w-4 h-4" /> },
+    { id: "ABANDONED", label: "Carrinho Abandonado", icon: <Zap className="w-4 h-4" /> }
+  ];
 
-interface FlowNode {
-  id: string;
-  type: "trigger" | "condition" | "action" | "end";
-  label: string;
-  subtitle: string;
-  icon: React.ReactNode;
-}
+  const stepTypes = [
+     { id: "SEND_MSG", label: "Enviar WhatsApp", icon: <MessageCircle className="w-4 h-4" />, color: "bg-emerald-500" },
+     { id: "WAIT", label: "Aguardar Tempo", icon: <Timer className="w-4 h-4" />, color: "bg-blue-500" },
+     { id: "AI_QUALIFY", label: "Qualificar com IA", icon: <Zap className="w-4 h-4" />, color: "bg-purple-500" },
+     { id: "HTTP_REQ", label: "Chamada Webhook API", icon: <Globe className="w-4 h-4" />, color: "bg-slate-900" },
+     { id: "CONDITION", label: "Condição (IF/ELSE)", icon: <Split className="w-4 h-4" />, color: "bg-orange-500" }
+  ];
 
-interface Automation {
-  id: string;
-  name: string;
-  description: string;
-  active: boolean;
-  trigger: string;
-  execucoes: number;
-  taxaSucesso: number;
-  ultimaExecucao: string;
-  nodes: FlowNode[];
-}
+  const fetchData = async () => {
+    try {
+      const res = await fetch("/api/automations");
+      const data = await res.json();
+      setAutos(Array.isArray(data) ? data : []);
+    } catch (e) {
+      toast({ title: "Erro nas automações", variant: "destructive" });
+    }
+    setLoading(false);
+  };
 
-// ---------------------------------------------------------------------------
-// Mock data
-// ---------------------------------------------------------------------------
+  useEffect(() => { fetchData(); }, []);
 
-const templates: AutomationTemplate[] = [
-  {
-    id: "boas-vindas",
-    icon: <MessageSquare className="w-6 h-6" />,
-    name: "Boas-vindas Automático",
-    description: "Envie uma mensagem de boas-vindas personalizada para novos leads assim que entrarem em contato.",
-    color: "bg-green-100 text-green-700",
-  },
-  {
-    id: "qualificacao",
-    icon: <UserCheck className="w-6 h-6" />,
-    name: "Qualificação de Lead",
-    description: "Faça perguntas inteligentes para qualificar leads automaticamente e categorizar intenção de compra.",
-    color: "bg-blue-100 text-blue-700",
-  },
-  {
-    id: "agendamento",
-    icon: <CalendarCheck className="w-6 h-6" />,
-    name: "Agendamento Automático",
-    description: "Ofereça horários disponíveis e confirme reuniões sem intervenção manual.",
-    color: "bg-purple-100 text-purple-700",
-  },
-  {
-    id: "followup",
-    icon: <RefreshCw className="w-6 h-6" />,
-    name: "Follow-up Inteligente",
-    description: "Reengaje automaticamente leads que não responderam após X dias com mensagens contextuais.",
-    color: "bg-orange-100 text-orange-700",
-  },
-  {
-    id: "carrinho",
-    icon: <ShoppingCart className="w-6 h-6" />,
-    name: "Recuperação de Carrinho",
-    description: "Recupere vendas perdidas enviando lembretes para clientes que abandonaram o processo de compra.",
-    color: "bg-red-100 text-red-700",
-  },
-  {
-    id: "pos-venda",
-    icon: <Star className="w-6 h-6" />,
-    name: "Pós-venda",
-    description: "Colete avaliações e ofereça suporte proativo após a conclusão de uma venda.",
-    color: "bg-yellow-100 text-yellow-700",
-  },
-];
+  const handleCreateAuto = async () => {
+    if (!newAuto.name || !newAuto.trigger) return toast({ title: "Preencha o nome do fluxo", variant: "destructive" });
+    try {
+      const res = await fetch("/api/automations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newAuto)
+      });
+      if (res.ok) {
+        toast({ title: "Workflow Criado!" });
+        setIsAddModalOpen(false);
+        setNewAuto({ name: "", trigger: "NEW_LEAD", description: "" });
+        fetchData();
+      }
+    } catch (e) { toast({ title: "Falha ao criar", variant: "destructive" }); }
+  };
 
-const defaultNodes: FlowNode[] = [
-  {
-    id: "n1",
-    type: "trigger",
-    label: "Gatilho: Nova mensagem",
-    subtitle: "Novo lead via WhatsApp",
-    icon: <PlayCircle className="w-4 h-4" />,
-  },
-  {
-    id: "n2",
-    type: "condition",
-    label: "Se contém palavra-chave",
-    subtitle: '"preço", "valor", "comprar"',
-    icon: <GitBranch className="w-4 h-4" />,
-  },
-  {
-    id: "n3",
-    type: "action",
-    label: "Enviar mensagem",
-    subtitle: "Template de boas-vindas",
-    icon: <Send className="w-4 h-4" />,
-  },
-  {
-    id: "n4",
-    type: "action",
-    label: "Atribuir tag",
-    subtitle: "Lead Quente",
-    icon: <Tag className="w-4 h-4" />,
-  },
-  {
-    id: "n5",
-    type: "action",
-    label: "Agendar follow-up",
-    subtitle: "Em 2 dias",
-    icon: <Clock className="w-4 h-4" />,
-  },
-  {
-    id: "n6",
-    type: "end",
-    label: "Fim do fluxo",
-    subtitle: "Automação concluída",
-    icon: <CheckCircle2 className="w-4 h-4" />,
-  },
-];
+  const toggleAuto = async (id: string, current: boolean) => {
+    try {
+      const res = await fetch(`/api/automations/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: !current })
+      });
+      if (res.ok) {
+         toast({ title: current ? "Fluxo Pausado" : "Fluxo Ativado" });
+         fetchData();
+      }
+    } catch (e) { toast({ title: "Erro ao alternar status", variant: "destructive" }); }
+  };
 
-const automations: Automation[] = [
-  {
-    id: "a1",
-    name: "Boas-vindas Novos Leads",
-    description: "Envio automático de mensagem de boas-vindas para leads que entram em contato pelo WhatsApp.",
-    active: true,
-    trigger: "Quando: Novo lead via WhatsApp",
-    execucoes: 3840,
-    taxaSucesso: 98,
-    ultimaExecucao: "há 3 minutos",
-    nodes: defaultNodes,
-  },
-  {
-    id: "a2",
-    name: "Qualificação Automática",
-    description: "Fluxo de perguntas para identificar interesse, orçamento e urgência de novos contatos.",
-    active: true,
-    trigger: "Quando: Lead sem qualificação há +1h",
-    execucoes: 2210,
-    taxaSucesso: 91,
-    ultimaExecucao: "há 12 minutos",
-    nodes: defaultNodes,
-  },
-  {
-    id: "a3",
-    name: "Follow-up D+3",
-    description: "Reengajamento de leads que não responderam em 3 dias com oferta especial.",
-    active: true,
-    trigger: "Quando: Sem resposta por 3 dias",
-    execucoes: 1590,
-    taxaSucesso: 74,
-    ultimaExecucao: "há 1 hora",
-    nodes: defaultNodes,
-  },
-  {
-    id: "a4",
-    name: "Agendamento de Demo",
-    description: "Oferece horários de demonstração automaticamente após qualificação do lead.",
-    active: true,
-    trigger: "Quando: Lead qualificado como 'Quente'",
-    execucoes: 870,
-    taxaSucesso: 88,
-    ultimaExecucao: "há 2 horas",
-    nodes: defaultNodes,
-  },
-  {
-    id: "a5",
-    name: "Recuperação de Proposta",
-    description: "Lembra clientes que receberam proposta mas não responderam após 5 dias.",
-    active: true,
-    trigger: "Quando: Proposta enviada há 5 dias sem resposta",
-    execucoes: 620,
-    taxaSucesso: 62,
-    ultimaExecucao: "há 4 horas",
-    nodes: defaultNodes,
-  },
-  {
-    id: "a6",
-    name: "Pesquisa Pós-venda",
-    description: "Coleta NPS e feedback dos clientes 7 dias após a conclusão da venda.",
-    active: true,
-    trigger: "Quando: Venda marcada como concluída",
-    execucoes: 1190,
-    taxaSucesso: 95,
-    ultimaExecucao: "ontem, 18:32",
-    nodes: defaultNodes,
-  },
-  {
-    id: "a7",
-    name: "Carrinho Abandonado v2",
-    description: "Sequência de 3 mensagens para recuperar clientes que não finalizaram a compra.",
-    active: false,
-    trigger: "Quando: Checkout abandonado há +2h",
-    execucoes: 430,
-    taxaSucesso: 55,
-    ultimaExecucao: "há 3 dias",
-    nodes: defaultNodes,
-  },
-  {
-    id: "a8",
-    name: "Onboarding Cliente",
-    description: "Série de mensagens de onboarding enviadas após a primeira compra confirmada.",
-    active: false,
-    trigger: "Quando: Primeira compra confirmada",
-    execucoes: 700,
-    taxaSucesso: 99,
-    ultimaExecucao: "há 5 dias",
-    nodes: defaultNodes,
-  },
-];
+  const deleteAuto = async (id: string) => {
+    if (!confirm("Deletar esta automação permanentemente?")) return;
+    await fetch(`/api/automations/${id}`, { method: "DELETE" });
+    fetchData();
+  };
 
-// ---------------------------------------------------------------------------
-// Node style helpers
-// ---------------------------------------------------------------------------
+  const openBuilder = (auto: any) => {
+    setSelectedAuto(auto);
+    try {
+      setBuilderSteps(JSON.parse(auto.nodes || "[]"));
+    } catch(e) { setBuilderSteps([]); }
+    setIsBuilderOpen(true);
+  };
 
-const nodeStyles: Record<FlowNode["type"], { border: string; bg: string; badge: string; badgeText: string }> = {
-  trigger: {
-    border: "border-green-400",
-    bg: "bg-green-50",
-    badge: "bg-green-100 text-green-700",
-    badgeText: "Gatilho",
-  },
-  condition: {
-    border: "border-yellow-400",
-    bg: "bg-yellow-50",
-    badge: "bg-yellow-100 text-yellow-700",
-    badgeText: "Condição",
-  },
-  action: {
-    border: "border-blue-400",
-    bg: "bg-blue-50",
-    badge: "bg-blue-100 text-blue-700",
-    badgeText: "Ação",
-  },
-  end: {
-    border: "border-gray-300",
-    bg: "bg-gray-50",
-    badge: "bg-gray-100 text-gray-600",
-    badgeText: "Fim",
-  },
-};
+  const handleSaveWorkflow = async () => {
+    try {
+      const res = await fetch(`/api/automations/${selectedAuto.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nodes: JSON.stringify(builderSteps) })
+      });
+      if (res.ok) {
+        toast({ title: "💎 Workflow Salvo!", description: "Sua lógica de automação foi atualizada." });
+        setIsBuilderOpen(false);
+        fetchData();
+      }
+    } catch (e) { toast({ title: "Erro ao salvar", variant: "destructive" }); }
+  };
 
-// ---------------------------------------------------------------------------
-// Mini flow preview (inside automation cards)
-// ---------------------------------------------------------------------------
-
-function MiniFlowPreview({ nodes }: { nodes: FlowNode[] }) {
-  const preview = nodes.slice(0, 4);
-  const colors: Record<FlowNode["type"], string> = {
-    trigger: "bg-green-500",
-    condition: "bg-yellow-400",
-    action: "bg-blue-500",
-    end: "bg-gray-400",
+  const addStep = (typeId: string) => {
+    const type = stepTypes.find(t => t.id === typeId);
+    setBuilderSteps([...builderSteps, { 
+      id: Date.now().toString(), 
+      type: typeId, 
+      label: type?.label, 
+      config: {}, 
+      icon: typeId 
+    }]);
   };
 
   return (
-    <div className="flex items-center gap-1 mt-3">
-      {preview.map((node, idx) => (
-        <div key={node.id} className="flex items-center gap-1">
-          <div
-            className={`w-3 h-3 rounded-full ${colors[node.type]} flex-shrink-0`}
-            title={node.label}
-          />
-          {idx < preview.length - 1 && (
-            <div className="w-4 h-px bg-gray-300 flex-shrink-0" />
-          )}
-        </div>
-      ))}
-      {nodes.length > 4 && (
-        <span className="text-xs text-muted-foreground ml-1">+{nodes.length - 4}</span>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Flow Builder Dialog
-// ---------------------------------------------------------------------------
-
-function FlowBuilderDialog({
-  open,
-  onClose,
-  automation,
-}: {
-  open: boolean;
-  onClose: () => void;
-  automation: Automation | null;
-}) {
-  if (!automation) return null;
-
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Zap className="w-5 h-5 text-primary" />
-            {automation.name}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="flex flex-col items-center gap-0 py-2">
-          {automation.nodes.map((node, idx) => {
-            const style = nodeStyles[node.type];
-            return (
-              <div key={node.id} className="flex flex-col items-center w-full">
-                {/* Node card */}
-                <div
-                  className={`w-full border-2 rounded-xl px-4 py-3 ${style.border} ${style.bg} flex items-start gap-3`}
-                >
-                  <div className={`mt-0.5 p-1.5 rounded-lg ${style.badge}`}>
-                    {node.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-sm text-gray-900">{node.label}</span>
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full font-medium ${style.badge}`}
-                      >
-                        {style.badgeText}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">{node.subtitle}</p>
-                  </div>
-                </div>
-
-                {/* Connector + Add button */}
-                {idx < automation.nodes.length - 1 && (
-                  <div className="flex flex-col items-center my-1 gap-0.5">
-                    <div className="w-px h-3 bg-gray-300" />
-                    <button
-                      className="w-6 h-6 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-primary hover:text-primary transition-colors"
-                      title="Adicionar passo"
-                    >
-                      <Plus className="w-3 h-3" />
-                    </button>
-                    <div className="w-px h-3 bg-gray-300" />
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="flex gap-2 pt-2 border-t">
-          <Button variant="outline" className="flex-1" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button className="flex-1">
-            Salvar Fluxo
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Main page
-// ---------------------------------------------------------------------------
-
-export default function Automations() {
-  const [automationList, setAutomationList] = useState<Automation[]>(automations);
-  const [selectedAutomation, setSelectedAutomation] = useState<Automation | null>(null);
-  const [builderOpen, setBuilderOpen] = useState(false);
-
-  const activeCount = automationList.filter((a) => a.active).length;
-  const draftCount = automationList.filter((a) => !a.active).length;
-  const totalExecucoes = automationList.reduce((sum, a) => sum + a.execucoes, 0);
-
-  function toggleActive(id: string) {
-    setAutomationList((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, active: !a.active } : a))
-    );
-  }
-
-  function openEditor(automation: Automation) {
-    setSelectedAutomation(automation);
-    setBuilderOpen(true);
-  }
-
-  function duplicateAutomation(automation: Automation) {
-    const newItem: Automation = {
-      ...automation,
-      id: `a${Date.now()}`,
-      name: `${automation.name} (cópia)`,
-      active: false,
-      execucoes: 0,
-      ultimaExecucao: "nunca",
-    };
-    setAutomationList((prev) => [newItem, ...prev]);
-  }
-
-  function deleteAutomation(id: string) {
-    setAutomationList((prev) => prev.filter((a) => a.id !== id));
-  }
-
-  return (
     <DashboardLayout>
-      <div className="flex flex-col gap-8 p-6 lg:p-8 max-w-screen-xl mx-auto">
-
-        {/* ---------------------------------------------------------------- */}
-        {/* Header                                                            */}
-        {/* ---------------------------------------------------------------- */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Automações</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Crie fluxos automáticos para engajar e converter leads sem esforço manual.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3 flex-wrap">
-            {/* Stat pills */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 bg-green-50 text-green-700 border border-green-200 text-sm font-medium px-3 py-1.5 rounded-full">
-                <Circle className="w-2.5 h-2.5 fill-green-500 text-green-500" />
-                {activeCount} Ativas
-              </span>
-              <span className="inline-flex items-center gap-1.5 bg-yellow-50 text-yellow-700 border border-yellow-200 text-sm font-medium px-3 py-1.5 rounded-full">
-                <Circle className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
-                {draftCount} Rascunhos
-              </span>
-              <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 border border-blue-200 text-sm font-medium px-3 py-1.5 rounded-full">
-                <Zap className="w-3 h-3" />
-                {totalExecucoes.toLocaleString("pt-BR")} Execuções
-              </span>
-            </div>
-
-            <Button className="gap-2">
-              <Plus className="w-4 h-4" />
-              Nova Automação
-            </Button>
-          </div>
+      <div className="flex flex-col gap-10 p-6 lg:p-10 max-w-[1600px] mx-auto animate-in slide-in-from-top duration-700">
+        
+        {/* HEADER AUTOMAÇÕES */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+           <div className="space-y-1">
+              <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase flex items-center gap-3">
+                 Hub de <span className="text-emerald-500 italic">Automações</span>
+              </h1>
+              <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Cérebro Operacional e Fluxos de Atendimentos</p>
+           </div>
+           
+           <div className="flex gap-4">
+              <Button 
+                onClick={() => setIsAddModalOpen(true)}
+                className="h-12 bg-emerald-500 hover:bg-emerald-600 px-8 rounded-2xl font-black uppercase text-xs tracking-widest text-white shadow-xl shadow-emerald-500/20"
+              >
+                 <Plus className="w-4 h-4 mr-2" /> Criar Workflow
+              </Button>
+           </div>
         </div>
 
-        {/* ---------------------------------------------------------------- */}
-        {/* Template Gallery                                                  */}
-        {/* ---------------------------------------------------------------- */}
-        <section>
-          <h2 className="text-base font-semibold text-gray-800 mb-3">Começar com um template</h2>
-          <div className="flex gap-4 overflow-x-auto pb-3 -mx-1 px-1">
-            {templates.map((tpl) => (
-              <Card
-                key={tpl.id}
-                className="flex-shrink-0 w-56 border border-gray-200 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group"
-              >
-                <CardContent className="p-4 flex flex-col gap-3 h-full">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${tpl.color}`}>
-                    {tpl.icon}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-sm text-gray-900 leading-tight">{tpl.name}</p>
-                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-3">
-                      {tpl.description}
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full text-xs group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-colors"
-                  >
-                    Usar Template
-                  </Button>
+        {/* WORKFLOW GRID */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+           {autos.map(auto => (
+             <Card key={auto.id} className="border-none shadow-xl rounded-[40px] bg-white overflow-hidden hover:translate-y-[-4px] transition-all duration-300 group">
+                <CardContent className="p-0">
+                   <div className="p-8 bg-slate-50 border-b border-slate-100 flex items-center justify-between group-hover:bg-slate-900 transition-colors">
+                      <div className="flex items-center gap-4">
+                         <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-all ${auto.active ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
+                            <Zap className="w-8 h-8" />
+                         </div>
+                         <div className="space-y-1">
+                            <h3 className="text-lg font-black text-slate-800 tracking-tight group-hover:text-white transition-colors">{auto.name}</h3>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest group-hover:text-white/40">{auto.trigger}</p>
+                         </div>
+                      </div>
+                      <Switch 
+                        checked={auto.active} 
+                        onCheckedChange={() => toggleAuto(auto.id, auto.active)}
+                        className="data-[state=checked]:bg-emerald-500" 
+                      />
+                   </div>
+
+                   <div className="p-8 space-y-6">
+                      <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex justify-between items-center">
+                         <p className="text-[9px] font-black text-slate-300 uppercase">Execuções</p>
+                         <p className="text-xl font-black text-slate-700 italic">{auto.executions}</p>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2">
+                         <div className="flex gap-2">
+                            <Button variant="ghost" size="icon" className="w-10 h-10 rounded-xl hover:bg-slate-50">
+                               <Settings2 className="w-5 h-5 text-slate-300" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="w-10 h-10 rounded-xl hover:bg-red-50 hover:text-red-500" onClick={() => deleteAuto(auto.id)}>
+                               <Trash2 className="w-5 h-5" />
+                            </Button>
+                         </div>
+                          <button onClick={() => openBuilder(auto)} className="text-emerald-500 font-black text-[10px] uppercase tracking-widest flex items-center gap-1 hover:gap-2 transition-all">
+                             Configurar Workflow <ArrowRight className="w-4 h-4" />
+                          </button>
+                      </div>
+                   </div>
                 </CardContent>
-              </Card>
-            ))}
-          </div>
-        </section>
-
-        {/* ---------------------------------------------------------------- */}
-        {/* Active automations grid                                           */}
-        {/* ---------------------------------------------------------------- */}
-        <section>
-          <h2 className="text-base font-semibold text-gray-800 mb-3">Suas automações</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {automationList.map((automation) => (
-              <Card
-                key={automation.id}
-                className={`border transition-all ${
-                  automation.active
-                    ? "border-gray-200 hover:shadow-md"
-                    : "border-gray-200 opacity-70 hover:opacity-90"
-                }`}
-              >
-                <CardHeader className="pb-2 pt-4 px-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-sm font-semibold text-gray-900 leading-snug">
-                        {automation.name}
-                      </CardTitle>
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                        {automation.description}
-                      </p>
-                    </div>
-                    <Switch
-                      checked={automation.active}
-                      onCheckedChange={() => toggleActive(automation.id)}
-                      className="flex-shrink-0 mt-0.5"
-                    />
-                  </div>
-                </CardHeader>
-
-                <CardContent className="px-4 pb-4 flex flex-col gap-3">
-                  {/* Status badge */}
-                  <div>
-                    <Badge
-                      variant="secondary"
-                      className={
-                        automation.active
-                          ? "bg-green-50 text-green-700 border border-green-200"
-                          : "bg-gray-100 text-gray-500 border border-gray-200"
-                      }
-                    >
-                      {automation.active ? "Ativo" : "Inativo"}
-                    </Badge>
-                  </div>
-
-                  {/* Trigger */}
-                  <div className="flex items-start gap-2 bg-gray-50 rounded-lg px-3 py-2">
-                    <PlayCircle className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
-                    <span className="text-xs text-gray-700 leading-relaxed">{automation.trigger}</span>
-                  </div>
-
-                  {/* Stats */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-gray-50 rounded-lg px-3 py-2">
-                      <p className="text-xs text-muted-foreground">Execuções</p>
-                      <p className="font-semibold text-sm text-gray-900">
-                        {automation.execucoes.toLocaleString("pt-BR")}
-                      </p>
-                    </div>
-                    <div className="bg-gray-50 rounded-lg px-3 py-2">
-                      <p className="text-xs text-muted-foreground">Taxa de sucesso</p>
-                      <p
-                        className={`font-semibold text-sm ${
-                          automation.taxaSucesso >= 80
-                            ? "text-green-600"
-                            : automation.taxaSucesso >= 60
-                            ? "text-yellow-600"
-                            : "text-red-500"
-                        }`}
-                      >
-                        {automation.taxaSucesso}%
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Mini flow preview */}
-                  <MiniFlowPreview nodes={automation.nodes} />
-
-                  {/* Divider + footer */}
-                  <div className="border-t pt-3 flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">
-                      Última execução: {automation.ultimaExecucao}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-primary"
-                        title="Editar"
-                        onClick={() => openEditor(automation)}
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-blue-600"
-                        title="Duplicar"
-                        onClick={() => duplicateAutomation(automation)}
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                        title="Excluir"
-                        onClick={() => deleteAutomation(automation.id)}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </section>
+             </Card>
+           ))}
+        </div>
       </div>
 
-      {/* ------------------------------------------------------------------ */}
-      {/* Flow Builder Dialog                                                 */}
-      {/* ------------------------------------------------------------------ */}
-      <FlowBuilderDialog
-        open={builderOpen}
-        onClose={() => setBuilderOpen(false)}
-        automation={selectedAutomation}
-      />
+      {/* MODAL NOVO WORKFLOW */}
+      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+        <DialogContent className="rounded-[40px] p-10 max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black flex items-center gap-2">
+              <Zap className="text-emerald-500" /> Novo Workflow
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-6 py-4">
+            <div className="space-y-2">
+              <Label className="font-bold text-xs uppercase tracking-widest">Nome da Automação</Label>
+              <Input value={newAuto.name} onChange={e => setNewAuto({...newAuto, name: e.target.value})} className="h-14 rounded-2xl border-2 border-slate-50" placeholder="Ex: Boas-vindas WhatsApp" />
+            </div>
+             <div className="space-y-2">
+               <Label className="font-bold text-xs uppercase tracking-widest pl-1">Gatilho (Trigger)</Label>
+               <Select value={newAuto.trigger} onValueChange={v => setNewAuto({...newAuto, trigger: v})}>
+                  <SelectTrigger className="h-14 rounded-2xl border-2 border-slate-50 font-bold bg-slate-50/20">
+                     <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl border-none shadow-2xl">
+                     {triggers.map(t => <SelectItem key={t.id} value={t.id} className="font-bold py-3">{t.label}</SelectItem>)}
+                  </SelectContent>
+               </Select>
+             </div>
+            <div className="space-y-2">
+              <Label className="font-bold text-xs uppercase tracking-widest">Descrição do Fluxo</Label>
+              <Textarea value={newAuto.description} onChange={e => setNewAuto({...newAuto, description: e.target.value})} className="min-h-[100px] rounded-2xl border-2 border-slate-50" placeholder="O que este fluxo faz?" />
+            </div>
+          </div>
+          <DialogFooter>
+             <Button onClick={handleCreateAuto} className="w-full h-16 bg-slate-900 hover:bg-slate-800 text-white font-black rounded-2xl uppercase tracking-widest text-sm transition-all shadow-2xl">
+               <Save className="w-4 h-4 mr-2 text-emerald-500" /> Ativar Automação
+             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+       {/* BUILDER MODAL (Requirement 7) */}
+      <Dialog open={isBuilderOpen} onOpenChange={setIsBuilderOpen}>
+        <DialogContent className="max-w-[1200px] h-[90vh] p-0 overflow-hidden border-none shadow-3xl rounded-[40px] flex flex-col bg-slate-50">
+           <div className="p-8 bg-white border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                 <div className="bg-emerald-500 p-2.5 rounded-xl shadow-lg"><Zap className="text-white w-5 h-5" /></div>
+                 <div>
+                    <h2 className="text-xl font-black text-slate-900 tracking-tight leading-none uppercase">{selectedAuto?.name}</h2>
+                    <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest italic">Workflow Visual Builder</p>
+                 </div>
+              </div>
+              <div className="flex gap-3">
+                 <Button onClick={() => setIsBuilderOpen(false)} variant="ghost" className="h-12 w-12 rounded-2xl text-slate-300 hover:text-slate-900"><X className="w-5 h-5" /></Button>
+                 <Button onClick={handleSaveWorkflow} className="h-12 bg-slate-900 hover:bg-black px-8 rounded-2xl font-black uppercase text-xs tracking-widest text-white shadow-xl">
+                    <Save className="w-4 h-4 mr-2 text-emerald-500" /> Salvar Lógica
+                 </Button>
+              </div>
+           </div>
+
+           <div className="flex-1 flex overflow-hidden">
+              {/* SIDEBAR PALETTE */}
+              <div className="w-72 bg-white border-r border-slate-100 p-6 flex flex-col gap-6">
+                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Blocos de Ações</h4>
+                 <div className="grid gap-4">
+                    {stepTypes.map(st => (
+                       <button 
+                         key={st.id} 
+                         onClick={() => addStep(st.id)}
+                         className="flex items-center gap-4 p-4 rounded-[25px] hover:bg-slate-50 active:scale-95 transition-all text-left border border-transparent hover:border-slate-100 group"
+                       >
+                          <div className={`w-10 h-10 ${st.color} rounded-xl flex items-center justify-center text-white shadow-lg`}>{st.icon}</div>
+                          <span className="text-[11px] font-black uppercase text-slate-600 tracking-tight group-hover:text-slate-900">{st.label}</span>
+                       </button>
+                    ))}
+                 </div>
+                 <div className="mt-auto p-4 bg-emerald-50 border border-emerald-100 rounded-3xl">
+                    <p className="text-[9px] font-bold text-emerald-700 leading-normal uppercase">Dica: Adicione blocos para construir a jornada do seu lead em tempo real.</p>
+                 </div>
+              </div>
+
+              {/* BUILDER CANVAS */}
+              <div className="flex-1 overflow-auto p-12 relative flex flex-col items-center gap-8">
+                 {/* START NODE */}
+                 <div className="flex flex-col items-center gap-4">
+                    <div className="px-8 py-4 bg-white shadow-xl rounded-full border-2 border-emerald-100 flex items-center gap-3">
+                       <Play className="text-emerald-500 w-4 h-4" />
+                       <span className="text-[11px] font-black uppercase tracking-widest text-slate-900 italic">Início: {selectedAuto?.trigger}</span>
+                    </div>
+                    <div className="w-0.5 h-8 bg-slate-200" />
+                 </div>
+
+                 {builderSteps.map((step, idx) => (
+                    <div key={step.id} className="flex flex-col items-center gap-4 group">
+                       <div className="relative">
+                          <Card className="w-80 p-6 rounded-[35px] border-none shadow-2xl bg-white hover:scale-105 transition-all duration-300 ring-2 ring-transparent hover:ring-emerald-500/20">
+                             <div className="flex items-center gap-4">
+                                <div className={`w-12 h-12 ${stepTypes.find(t => t.id === step.type)?.color || 'bg-slate-200'} rounded-2xl flex items-center justify-center text-white shadow-xl`}>
+                                   {stepTypes.find(t => t.id === step.type)?.icon}
+                                </div>
+                                <div className="flex-1">
+                                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{step.type}</p>
+                                   <p className="text-[12px] font-black text-slate-900 italic">{step.label}</p>
+                                </div>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  onClick={() => setBuilderSteps(builderSteps.filter(s => s.id !== step.id))}
+                                  className="w-8 h-8 rounded-xl text-slate-200 hover:text-red-500"
+                                >
+                                   <Trash2 className="w-3 h-3" />
+                                </Button>
+                             </div>
+                             <div className="mt-6 space-y-4">
+                                {step.type === 'SEND_MSG' && (
+                                   <Input placeholder="Mensagem Customizada" className="h-10 text-[10px] rounded-xl border-slate-50 bg-slate-50/50" />
+                                )}
+                                {step.type === 'WAIT' && (
+                                   <Input placeholder="Tempo (ex: 2h)" className="h-10 text-[10px] rounded-xl border-slate-50 bg-slate-50/50" />
+                                )}
+                             </div>
+                          </Card>
+                       </div>
+                       {idx < builderSteps.length - 1 && <div className="w-0.5 h-8 bg-slate-200" />}
+                    </div>
+                 ))}
+
+                 {builderSteps.length === 0 && (
+                    <div className="flex flex-col items-center gap-4 py-20 opacity-30">
+                       <div className="w-16 h-16 rounded-full border-4 border-dashed border-slate-300 flex items-center justify-center">
+                          <Plus className="text-slate-300" />
+                       </div>
+                       <p className="text-xs font-black uppercase tracking-widest text-slate-400">Arraste um bloco do menu lateral</p>
+                    </div>
+                 )}
+              </div>
+           </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
