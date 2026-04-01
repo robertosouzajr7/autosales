@@ -18,12 +18,24 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+interface Lead {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string | null;
+  status?: string;
+  tags?: string | null;
+  notes?: string | null;
+  source?: string | null;
+  createdAt?: string;
+}
+
 export default function Contacts() {
-  const [contacts, setContacts] = useState<any[]>([]);
+  const [contacts, setContacts] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [selectedContact, setSelectedContact] = useState<any | null>(null);
+  const [selectedContact, setSelectedContact] = useState<Lead | null>(null);
   const [newContact, setNewContact] = useState({ name: "", phone: "", email: "" });
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -62,7 +74,7 @@ export default function Contacts() {
   const handleDeleteContact = async (id: string) => {
     if (!confirm("Tem certeza que deseja excluir este contato?")) return;
     try {
-      const res = await fetch(`/api/contacts/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/leads/${id}`, { method: "DELETE" });
       if (res.ok) {
         toast({ title: "🗑️ Contato removido." });
         setSelectedContact(null);
@@ -74,7 +86,7 @@ export default function Contacts() {
   const handleUpdateContact = async () => {
     if (!selectedContact) return;
     try {
-      const res = await fetch(`/api/contacts/${selectedContact.id}`, {
+      const res = await fetch(`/api/leads/${selectedContact.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(selectedContact)

@@ -86,23 +86,44 @@ model SdrBot {
 }
 
 model AutomationConfig {
-  id               String   @id @default(uuid())
-  tenantId        String   @unique
-  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id                    String   @id @default(uuid())
+  // Parâmetros Globais de Negócio (Extraídos dos áudios)
+  autoConfirmHours      Int      @default(24)
+  lateToleranceMin      Int      @default(15)
+  postServiceHours      Int      @default(24)
+  humanHandoffTags      String   @default("ajuda, atendente, humano, queima, dor, bolha")
   
-  autoConfirmHours Int      @default(24)
-  lateToleranceMin Int      @default(15)
-  postServiceHours Int      @default(24)
-  humanHandoffTags String?  
+  // Estrutura Visual (Opcional se usado como Hub Global)
+  nodes                 String?  // JSON string
+  edges                 String?  // JSON string
+  
+  // Templates de Mensagens (Universalização)
+  confirmMsgTemplate    String?  @default("Olá {name}! 👋 Passando para confirmar seu atendimento de amanhã às {time}. Podemos confirmar? ✅")
+  lateMsgTemplate       String?  @default("Oi {name}! 😊 Notamos que você ainda não chegou para o seu horário das {time}. Está tudo bem?")
+  postServiceMsgTemplate String? @default("Oi {name}! Esperamos que tenha gostado do atendimento! ✨ Como foi sua experiência?")
+  
+  tenantId              String   @unique
+  tenant                Tenant   @relation(fields: [tenantId], references: [id])
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
 
-  // Outbound Automation (Requisito 7)
-  autoProspecting  Boolean  @default(false)
-  prospectingNiche String?
-  prospectingCity  String?
-  prospectingInterval Int    @default(24) // horas
+model Automation {
+  id          String   @id @default(uuid())
+  tenantId   String
+  name        String
+  description String?
+  trigger     String   
+  active      Boolean  @default(true)
+  nodes       String?  
+  edges       String?
+  executions  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  tenant     Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  progressions AutomationProgress[]
 }
 
 model User {
@@ -176,22 +197,6 @@ model Appointment {
 
   lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
   tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-}
-
-model Automation {
-  id          String   @id @default(uuid())
-  tenantId   String
-  name        String
-  description String?
-  trigger     String   
-  active      Boolean  @default(true)
-  nodes       String?  
-  executions  Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  tenant     Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  progressions AutomationProgress[]
 }
 
 model AutomationProgress {

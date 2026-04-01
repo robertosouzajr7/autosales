@@ -36,6 +36,9 @@ interface AutomationConfig {
   lateToleranceMin: number;
   postServiceHours: number;
   humanHandoffTags: string;
+  confirmMsgTemplate: string;
+  lateMsgTemplate: string;
+  postServiceMsgTemplate: string;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -197,6 +200,9 @@ export default function AutomationConfig() {
     lateToleranceMin: 15,
     postServiceHours: 24,
     humanHandoffTags: "",
+    confirmMsgTemplate: "Olá {name}! 👋 Passando para confirmar seu atendimento de amanhã às {time}. Podemos confirmar? ✅",
+    lateMsgTemplate: "Oi {name}! 😊 Notamos que você ainda não chegou para o seu horário das {time}. Está tudo bem?",
+    postServiceMsgTemplate: "Oi {name}! Esperamos que tenha gostado do atendimento! ✨ Como foi sua experiência?",
   });
 
   // Feature toggles (local only for UX — backed by real field in future)
@@ -326,14 +332,14 @@ export default function AutomationConfig() {
                 />
 
                 <div className="space-y-1.5">
-                  <Label className="text-sm font-medium text-slate-700">Preview da mensagem de confirmação</Label>
+                  <Label className="text-sm font-medium text-slate-700">Mensagem de confirmação</Label>
                   <Textarea
-                    className="text-xs text-slate-500 h-24 resize-none bg-slate-50"
-                    readOnly
-                    value={`Olá {nome}! 👋\n\nSeu agendamento está marcado para *{data}* às *{hora}*.\nTudo certo? Responda:\n✅ *SIM* para confirmar\n❌ *NÃO* para cancelar`}
+                    className="text-xs text-slate-700 h-24 resize-none bg-white border-2"
+                    value={config.confirmMsgTemplate}
+                    onChange={(e) => setConfig({ ...config, confirmMsgTemplate: e.target.value })}
                   />
                   <p className="text-[11px] text-slate-400">
-                    As variáveis {"{nome}"}, {"{data}"} e {"{hora}"} são preenchidas automaticamente pelo sistema.
+                    Use {"{name}"} e {"{time}"} para inserir o nome e horário automaticamente.
                   </p>
                 </div>
 
@@ -407,12 +413,15 @@ export default function AutomationConfig() {
                 />
 
                 <div className="space-y-1.5">
-                  <Label className="text-sm font-medium text-slate-700">Preview da mensagem de atraso</Label>
+                  <Label className="text-sm font-medium text-slate-700">Mensagem de atraso</Label>
                   <Textarea
-                    className="text-xs text-slate-500 h-20 resize-none bg-slate-50"
-                    readOnly
-                    value={`Oi {nome}! 😊 Seu horário era às {hora} e já passaram ${config.lateToleranceMin} minutos.\nVocê ainda está a caminho?`}
+                    className="text-xs text-slate-700 h-20 resize-none bg-white border-2"
+                    value={config.lateMsgTemplate}
+                    onChange={(e) => setConfig({ ...config, lateMsgTemplate: e.target.value })}
                   />
+                  <p className="text-[11px] text-slate-400">
+                    Use {"{name}"} e {"{time}"} para inserir os dados dinâmicos.
+                  </p>
                 </div>
               </div>
             </ConfigCard>
@@ -451,12 +460,15 @@ export default function AutomationConfig() {
                 />
 
                 <div className="space-y-1.5">
-                  <Label className="text-sm font-medium text-slate-700">Preview da mensagem pós-atendimento</Label>
+                  <Label className="text-sm font-medium text-slate-700">Mensagem pós-atendimento</Label>
                   <Textarea
-                    className="text-xs text-slate-500 h-24 resize-none bg-slate-50"
-                    readOnly
-                    value={`Oi {nome}! Esperamos que tenha gostado do atendimento. 😊\nEstá tudo ok? Se tiver qualquer dúvida, é só falar!\nDe 1 a 5, qual nota você daria para a nossa experiência?`}
+                    className="text-xs text-slate-700 h-24 resize-none bg-white border-2"
+                    value={config.postServiceMsgTemplate}
+                    onChange={(e) => setConfig({ ...config, postServiceMsgTemplate: e.target.value })}
                   />
+                  <p className="text-[11px] text-slate-400">
+                    Use {"{name}"} para personalizar com o nome da cliente.
+                  </p>
                 </div>
               </div>
             </ConfigCard>

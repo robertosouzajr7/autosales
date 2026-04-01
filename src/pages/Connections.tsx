@@ -76,17 +76,27 @@ export default function Connections() {
     const eventSource = new EventSource(`/api/whatsapp/qr/${id}`);
     
     eventSource.onmessage = (event) => {
-      if (event.data === "CONNECTED") {
-        setQrStatus("Conectado!");
-        toast({ title: "✅ WhatsApp Conectado!" });
-        eventSource.close();
-        setTimeout(() => { setShowQrModal(false); fetchConnections(); }, 2000);
-      } else if (event.data.startsWith("ERROR")) {
-        setQrStatus("Erro na geração.");
-        eventSource.close();
-      } else {
-        setQrCode(event.data);
-        setQrStatus("Escaneie agora");
+      try {
+        const data = JSON.parse(event.data);
+        if (data.status === "CONNECTED" || data.qr === "CONNECTED") {
+          setQrStatus("Conectado!");
+          toast({ title: "✅ WhatsApp Conectado!" });
+          eventSource.close();
+          setTimeout(() => { setShowQrModal(false); fetchConnections(); }, 2000);
+        } else if (data.qr) {
+          setQrCode(data.qr);
+          setQrStatus("Escaneie agora");
+        }
+      } catch (e) {
+        // Fallback para texto puro (caso não seja JSON)
+        if (event.data === "CONNECTED") {
+          setQrStatus("Conectado!");
+          eventSource.close();
+          setTimeout(() => { setShowQrModal(false); fetchConnections(); }, 2000);
+        } else {
+          setQrCode(event.data);
+          setQrStatus("Escaneie agora");
+        }
       }
     };
 

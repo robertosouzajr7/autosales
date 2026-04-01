@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
-  Bot, Plus, Trash2, Brain, Zap, Globe, Save, RefreshCw, Sliders, User, ShieldCheck, Clock, CheckCircle2, MessageSquare
+  Bot, Plus, Trash2, Brain, Zap, Globe, Save, RefreshCw, Sliders, User, ShieldCheck, Clock, CheckCircle2, MessageSquare, Upload, FileText, FileJson
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
@@ -40,6 +40,8 @@ export default function SdrManagement() {
     enableWaitlist: true,
     active: true
   });
+  
+  const [uploading, setUploading] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -111,6 +113,35 @@ export default function SdrManagement() {
     } catch (e) { toast({ title: "Erro ao salvar", variant: "destructive" }); }
   };
 
+  const handleFileUpload = async (e: any) => {
+    console.log(`[Neural-Training] Iniciando upload para SDR: ${editingSdr?.id}`);
+    const file = e.target.files[0];
+    if (!file || !editingSdr) return;
+    
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch(`/api/sdrs/${editingSdr.id}/training`, {
+        method: "POST",
+        body: formData
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast({ title: "📚 Conhecimento Absorvido", description: "O SDR agora é especialista no documento enviado." });
+        setForm({...form, knowledgeBase: data.sdr.knowledgeBase});
+        fetchData();
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (err: any) {
+      toast({ title: "Erro no treinamento", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const deleteSdr = async (id: string) => {
     if (!confirm("Remover este robô do time?")) return;
     await fetch(`/api/sdrs/${id}`, { method: "DELETE" });
@@ -129,7 +160,7 @@ export default function SdrManagement() {
               <h1 className="text-4xl font-black text-white tracking-tighter uppercase flex items-center gap-4">
                  Frota de <span className="text-emerald-500 italic">SDRs IA</span>
               </h1>
-              <p className="text-white/30 font-bold uppercase tracking-widest text-[9px] pl-[56px] leading-relaxed max-w-md">Baseado nos requisitos de agendamento, confirmação e pós-venda coletados nos áudios de 30/03.</p>
+              <p className="text-white/30 font-bold uppercase tracking-widest text-[9px] pl-[56px] leading-relaxed max-w-md">Gerencie e treine seu time de SDRs inteligentes para atuar em qualquer tipo de negócio.</p>
            </div>
            
            <Button 
@@ -203,12 +234,16 @@ export default function SdrManagement() {
         <DialogContent className="max-w-4xl p-0 border-none shadow-3xl bg-white overflow-hidden rounded-[40px]">
           <div className="flex flex-col md:flex-row h-[85vh]">
             <div className="w-full md:w-80 bg-slate-900 p-10 flex flex-col justify-between relative overflow-hidden">
+              <DialogHeader className="hidden">
+                 <DialogTitle>Gerenciador de SDR Inteligente</DialogTitle>
+                 <DialogDescription>Ajuste os parâmetros de comportamento e conhecimento do seu robô.</DialogDescription>
+              </DialogHeader>
               <div className="absolute top-0 left-0 w-32 h-32 bg-emerald-500/10 blur-3xl rounded-full translate-x-[-50%] translate-y-[-50%]" />
               <div className="space-y-10 relative z-10">
                  <div className="w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center shadow-lg"><Brain className="w-8 h-8 text-white" /></div>
                  <div className="space-y-3">
                     <h3 className="text-2xl font-black text-white tracking-tighter uppercase leading-tight">Módulo <span className="text-emerald-500 italic font-medium">Global</span></h3>
-                    <p className="text-white/30 text-[9px] font-bold uppercase tracking-widest leading-relaxed">Configuração baseada na dinâmica de Bronzeamento e Serviços.</p>
+                    <p className="text-white/30 text-[9px] font-bold uppercase tracking-widest leading-relaxed">Personalize a inteligência e o comportamento para o fluxo de qualquer negócio.</p>
                  </div>
               </div>
               <div className="p-5 bg-white/5 rounded-3xl border border-white/5 space-y-2">
@@ -249,13 +284,43 @@ export default function SdrManagement() {
                   </TabsContent>
 
                   <TabsContent value="knowledge" className="space-y-6 animate-in fade-in slide-in-from-top-4">
+                    {editingSdr && (
+                      <div className="p-6 bg-emerald-50 rounded-[30px] border-2 border-dashed border-emerald-200 space-y-4">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center shadow-lg">
+                            <Upload className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-black text-emerald-900 uppercase tracking-tighter">Treinamento Neural</h4>
+                            <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest">Upload de PDF, DOCX ou TXT</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <Input 
+                            type="file" 
+                            accept=".pdf,.docx,.txt" 
+                            onChange={handleFileUpload}
+                            disabled={uploading}
+                            className="hidden" 
+                            id="training-file"
+                          />
+                          <Button 
+                            asChild 
+                            className="w-full h-12 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-xl uppercase text-[10px] tracking-widest cursor-pointer shadow-lg"
+                          >
+                            <label htmlFor="training-file">
+                              {uploading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+                              {uploading ? "Absorvendo conteúdo..." : "Selecionar Documento"}
+                            </label>
+                          </Button>
+                        </div>
+                        <p className="text-[9px] text-emerald-400 italic font-medium text-center">O robô lerá o arquivo e especializará sua base de respostas automaticamente.</p>
+                      </div>
+                    )}
+                    
                     <div className="space-y-2">
-                       <Label className="font-black text-[9px] uppercase tracking-widest text-slate-400 pl-1">Tabela de Preços e Dados (Cérebro)</Label>
-                       <Textarea value={form.knowledgeBase} onChange={e => setForm({...form, knowledgeBase: e.target.value})} className="min-h-[200px] rounded-2xl border-none bg-slate-50 p-6 font-medium leading-relaxed" placeholder="Ex: 'Bronze Natural: R$ 100, Paredão: R$ 120...'" />
-                    </div>
-                    <div className="space-y-2">
-                       <Label className="font-black text-[9px] uppercase tracking-widest text-slate-400 pl-1">Links para Consulta (Training)</Label>
-                       <Input value={form.trainingUrls} onChange={e => setForm({...form, trainingUrls: e.target.value})} className="h-14 rounded-2xl border-none bg-slate-50 font-bold px-6 shadow-inner" placeholder="https://bronzeamento.com/preços" />
+                       <Label className="font-black text-[9px] uppercase tracking-widest text-slate-400 pl-1">Cérebro do Agente (Texto Consolidado)</Label>
+                       <Textarea value={form.knowledgeBase} onChange={e => setForm({...form, knowledgeBase: e.target.value})} className="min-h-[200px] rounded-2xl border-none bg-slate-50 p-6 font-medium leading-relaxed text-sm" placeholder="O conteúdo dos arquivos e textos manuais aparecerão aqui..." />
                     </div>
                   </TabsContent>
 
