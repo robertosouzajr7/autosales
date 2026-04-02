@@ -98,6 +98,7 @@ model Lead {
   conversations Conversation[]
   appointments  Appointment[]
   progressions AutomationProgress[]
+  automationExecutions AutomationExecution[]
 }
 
 model Campaign {
@@ -212,15 +213,27 @@ model Automation {
   tenantId   String
   name        String
   description String?
-  trigger     String   
+
+  // Trigger config
+  trigger     String   // NEW_LEAD, NEW_MSG, KEYWORD, PIPELINE_MOVE, INACTIVITY, APPOINTMENT_CREATED, SCHEDULE
+  triggerConfig String? // JSON: { keywords: [], inactivityMinutes: 1440, schedule: "0 9 * * *" }
+
+  // Flow Definition (ReactFlow format)
+  nodes       String?  // JSON: [{ id, type, position: {x,y}, data: { label, config } }]
+  edges       String?  // JSON: [{ id, source, target, sourceHandle }]
+
   active      Boolean  @default(true)
-  nodes       String?  
-  edges       String?
-  executions  Int      @default(0)
+  version     Int      @default(1)
+
+  // Stats
+  totalExecutions  Int @default(0)
+  lastExecutedAt   DateTime?
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   tenant     Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  executions AutomationExecution[]
   progressions AutomationProgress[]
 }
 
@@ -285,9 +298,9 @@ model AutomationProgress {
   automationId String
   leadId       String
   currentStepId String?
-  status       String   @default("RUNNING") 
+  status       String   @default("RUNNING")
   nextRun      DateTime?
-  data         String?  
+  data         String?
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -296,6 +309,49 @@ model AutomationProgress {
   lead         Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@unique([automationId, leadId])
+}
+
+model AutomationExecution {
+  id             String   @id @default(uuid())
+  automationId   String
+  leadId         String
+
+  status         String   @default("RUNNING") // RUNNING, WAITING_INPUT, WAITING_DELAY, COMPLETED, FAILED, CANCELLED
+  currentNodeId  String?
+
+  // Flow context (variables persisted between steps)
+  context        String?  // JSON: { variables: {}, inputs: {}, metadata: {} }
+
+  // Delay/scheduling
+  resumeAt       DateTime?
+
+  // User input collection
+  waitingForInput Boolean @default(false)
+  inputVariable   String? // variable name to save user response into
+
+  startedAt      DateTime @default(now())
+  completedAt    DateTime?
+  error          String?
+
+  automation     Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  lead           Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  steps          AutomationStepLog[]
+}
+
+model AutomationStepLog {
+  id           String   @id @default(uuid())
+  executionId  String
+  nodeId       String
+  nodeType     String
+
+  status       String   @default("SUCCESS") // SUCCESS, FAILED, SKIPPED
+  input        String?  // JSON: node config/data
+  output       String?  // JSON: result of execution
+  duration     Int?     // ms
+
+  createdAt    DateTime @default(now())
+
+  execution    AutomationExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
 }
 
 model WhatsAppAccount {
