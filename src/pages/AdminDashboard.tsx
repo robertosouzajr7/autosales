@@ -29,8 +29,8 @@ export default function AdminDashboard() {
   const [isTenantModalOpen, setIsTenantModalOpen] = useState(false);
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
 
-  const [newTenant, setNewTenant] = useState({ name: "", email: "", planId: "" });
-  const [newPlan, setNewPlan] = useState({ name: "", priceMonthly: 0, priceYearly: 0, maxLeads: 1000, maxSdrs: 2 });
+  const [newTenant, setNewTenant] = useState({ name: "", email: "", planId: "", adminName: "", adminPassword: "" });
+  const [newPlan, setNewPlan] = useState({ name: "", priceMonthly: 0, priceYearly: 0, maxLeads: 1000, maxSdrs: 2, aiEnabled: false, webhookEnabled: false, maxAutomations: 3, maxExecutions: 1000 });
 
   // CMS State
   const [lpSettings, setLpSettings] = useState({
@@ -101,10 +101,24 @@ export default function AdminDashboard() {
 
   const handleCreatePlan = async () => {
     try {
+      const planPayload = {
+        name: newPlan.name,
+        priceMonthly: newPlan.priceMonthly,
+        priceYearly: newPlan.priceYearly,
+        maxLeads: newPlan.maxLeads,
+        maxSdrs: newPlan.maxSdrs,
+        features: JSON.stringify({
+          aiEnabled: newPlan.aiEnabled,
+          webhookEnabled: newPlan.webhookEnabled,
+          maxAutomations: newPlan.maxAutomations,
+          maxExecutions: newPlan.maxExecutions
+        })
+      };
+
       const res = await fetch("/api/admin/plans", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newPlan)
+        body: JSON.stringify(planPayload)
       });
       if (res.ok) {
         toast({ title: "💎 Plano Ativado!" });
@@ -389,7 +403,17 @@ export default function AdminDashboard() {
             </div>
             <div className="space-y-2">
               <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">E-mail Administrativo</Label>
-              <Input value={newTenant.email} onChange={e => setNewTenant({...newTenant, email: e.target.value})} className="h-16 rounded-2xl border-none bg-slate-50 font-bold px-8 shadow-inner" placeholder="admin@empresa.com" />
+              <Input value={newTenant.email} onChange={e => setNewTenant({...newTenant, email: e.target.value})} className="h-14 rounded-2xl border-none bg-slate-50 font-bold px-8 shadow-inner" placeholder="admin@empresa.com" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+               <div className="space-y-2">
+                 <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Nome do Admin</Label>
+                 <Input value={newTenant.adminName} onChange={e => setNewTenant({...newTenant, adminName: e.target.value})} className="h-14 rounded-2xl border-none bg-slate-50 font-bold px-8 shadow-inner" placeholder="Nome" />
+               </div>
+               <div className="space-y-2">
+                 <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Senha (Admin)</Label>
+                 <Input type="password" value={newTenant.adminPassword} onChange={e => setNewTenant({...newTenant, adminPassword: e.target.value})} className="h-14 rounded-2xl border-none bg-slate-50 font-bold px-8 shadow-inner" placeholder="******" />
+               </div>
             </div>
             <div className="space-y-2">
               <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Plano Atual</Label>
@@ -420,19 +444,37 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-2 gap-8 py-4">
             <div className="col-span-2 space-y-2">
               <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Nome do Plano</Label>
-              <Input value={newPlan.name} onChange={e => setNewPlan({...newPlan, name: e.target.value})} className="h-16 rounded-2xl border-none bg-slate-50 font-bold px-8" placeholder="Ex: Premium Elite" />
+              <Input value={newPlan.name} onChange={e => setNewPlan({...newPlan, name: e.target.value})} className="h-14 rounded-2xl border-none bg-slate-50 font-bold px-8" placeholder="Ex: Premium Elite" />
             </div>
             <div className="space-y-2">
               <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Preço Mensal (R$)</Label>
-              <Input type="number" value={newPlan.priceMonthly} onChange={e => setNewPlan({...newPlan, priceMonthly: parseFloat(e.target.value)})} className="h-16 rounded-2xl border-none bg-slate-50 font-bold px-8" />
+              <Input type="number" value={newPlan.priceMonthly} onChange={e => setNewPlan({...newPlan, priceMonthly: parseFloat(e.target.value)})} className="h-14 rounded-2xl border-none bg-slate-50 font-bold px-8" />
             </div>
             <div className="space-y-2">
               <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Máximo SDRs</Label>
-              <Input type="number" value={newPlan.maxSdrs} onChange={e => setNewPlan({...newPlan, maxSdrs: parseInt(e.target.value)})} className="h-16 rounded-2xl border-none bg-slate-50 font-bold px-8" />
+              <Input type="number" value={newPlan.maxSdrs} onChange={e => setNewPlan({...newPlan, maxSdrs: parseInt(e.target.value)})} className="h-14 rounded-2xl border-none bg-slate-50 font-bold px-8" />
+            </div>
+            <div className="space-y-2">
+              <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Max Automações</Label>
+              <Input type="number" value={newPlan.maxAutomations} onChange={e => setNewPlan({...newPlan, maxAutomations: parseInt(e.target.value)})} className="h-14 rounded-2xl border-none bg-slate-50 font-bold px-8" />
+            </div>
+            <div className="space-y-2">
+              <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Max Execuções/mês</Label>
+              <Input type="number" value={newPlan.maxExecutions} onChange={e => setNewPlan({...newPlan, maxExecutions: parseInt(e.target.value)})} className="h-14 rounded-2xl border-none bg-slate-50 font-bold px-8" />
+            </div>
+            <div className="col-span-2 flex items-center gap-6">
+               <div className="flex items-center space-x-2">
+                 <Checkbox id="plan-ai" checked={newPlan.aiEnabled} onCheckedChange={(c) => setNewPlan({...newPlan, aiEnabled: !!c})} />
+                 <Label htmlFor="plan-ai" className="text-sm font-bold text-slate-700">Liberar Nós IA Premium</Label>
+               </div>
+               <div className="flex items-center space-x-2">
+                 <Checkbox id="plan-webhook" checked={newPlan.webhookEnabled} onCheckedChange={(c) => setNewPlan({...newPlan, webhookEnabled: !!c})} />
+                 <Label htmlFor="plan-webhook" className="text-sm font-bold text-slate-700">Liberar Ferramenta Webhook</Label>
+               </div>
             </div>
           </div>
           <DialogFooter className="mt-8">
-            <Button onClick={handleCreatePlan} className="w-full h-20 bg-slate-900 hover:bg-black text-white font-black rounded-3xl uppercase tracking-widest text-sm transition-all shadow-3xl active:scale-95">Publicar Plano</Button>
+            <Button onClick={handleCreatePlan} className="w-full h-16 bg-slate-900 hover:bg-black text-white font-black rounded-3xl uppercase tracking-widest text-sm transition-all shadow-3xl active:scale-95">Publicar Plano</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

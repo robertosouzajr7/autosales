@@ -92,20 +92,90 @@ export default function LandingPage() {
       </header>
 
       {/* HERO SECTION */}
-      <section className="relative pt-20 pb-32 lg:pt-32 lg:pb-52 overflow-hidden px-6 lg:px-20">
+      <section className="relative pt-20 pb-32 lg:pt-32 lg:pb-40 overflow-hidden px-6 lg:px-20">
          <div className="absolute top-0 right-0 w-2/3 h-full bg-gradient-to-l from-primary/5 via-primary/0 to-transparent -z-10 rounded-full translate-x-1/2 blur-3xl opacity-50" />
          
          <div className="max-w-4xl mx-auto text-center space-y-10">
             <Badge className="bg-primary/10 text-primary border-none py-1.5 px-4 font-black text-xs uppercase tracking-widest leading-loose">
                A NOVA GERAÇÃO DE VENDAS B2B ESTÁ AQUI
             </Badge>
-            <h1 className="text-5xl lg:text-8xl font-black text-slate-900 tracking-tighter leading-[0.9] text-balance">
+            <h1 className="text-5xl lg:text-7xl font-black text-slate-900 tracking-tighter leading-[0.9] text-balance">
                Scale suas Vendas com <span className="text-primary italic">SDRs Infinitos</span> de IA.
             </h1>
             <p className="text-xl text-slate-500 font-medium max-w-2xl mx-auto leading-relaxed">
-               Minere milhares de leads em segundos e deixe nossa IA Inbound & Outbound qualificar, conversar e agendar reuniões 24/7. O fim das planilhas frias chegou.
+               Automatize seu WhatsApp, qualifique leads 24h por dia e deixe nossos Agentes de Inteligência Artificial cuidarem da prospecção e do seu funil. Você foca apenas em fechar negócios.
             </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-6">
+               <Link to="/register">
+                 <Button className="h-16 px-10 text-lg font-black bg-primary hover:bg-primary/90 text-white rounded-2xl shadow-[0_20px_40px_-5px_rgba(var(--primary-rgb),0.3)] hover:scale-105 transition-all">
+                   Testar a Plataforma Agora
+                 </Button>
+               </Link>
+               <a href="#features" className="h-16 px-10 flex items-center justify-center text-sm font-bold text-slate-600 hover:text-slate-900 bg-white border-2 border-slate-100 hover:border-slate-200 rounded-2xl transition-all">
+                 Ver Como Funciona <ArrowRight className="ml-2 w-4 h-4" />
+               </a>
+            </div>
          </div>
+      </section>
+
+      {/* RECURSOS COMPLETOS (Mapeamento Funcionalidades) */}
+      <section id="features" className="py-32 bg-white px-6 lg:px-20 relative">
+        <div className="max-w-7xl mx-auto space-y-20">
+          <div className="text-center space-y-6">
+            <h2 className="text-4xl lg:text-5xl font-black text-slate-900 tracking-tighter">O Ecossistema Completo que sua <span className="text-primary italic">Máquina de Vendas</span> precisa.</h2>
+            <p className="text-xl text-slate-500 font-medium max-w-2xl mx-auto">Deixamos as integrações difíceis resolvidos. Tudo o que você precisa está unificado para aumentar conversões imediatamente.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <Card className="p-10 border-2 border-slate-50 shadow-md hover:shadow-2xl hover:border-primary/20 transition-all rounded-[40px] space-y-6 group">
+              <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-3xl flex items-center justify-center group-hover:scale-110 group-hover:bg-blue-500 group-hover:text-white transition-all">
+                <Target className="w-8 h-8" />
+              </div>
+              <h3 className="text-2xl font-black text-slate-800 tracking-tighter">Workflow No-Code</h3>
+              <p className="text-slate-500 font-medium leading-relaxed">Crie suas automações arrastando blocos na tela. Conecte dezenas de gatilhos visuais e decida exatamente cada mensagem ou verificação condicional.</p>
+            </Card>
+
+            <Card className="p-10 border-2 border-slate-50 shadow-md hover:shadow-2xl hover:border-primary/20 transition-all rounded-[40px] space-y-6 group">
+              <div className="w-16 h-16 bg-purple-50 text-purple-500 rounded-3xl flex items-center justify-center group-hover:scale-110 group-hover:bg-purple-500 group-hover:text-white transition-all">
+                <Globe className="w-8 h-8" />
+              </div>
+              <h3 className="text-2xl font-black text-slate-800 tracking-tighter">Agentes IA & Score GenAI</h3>
+              <p className="text-slate-500 font-medium leading-relaxed">Use SDRs inteligentes com personalidade. A IA não apenas responde o WhatsApp, ela qualifica e pontua o Lead (Score de 0 a 100) extraindo os dados cruciais para o CRM.</p>
+            </Card>
+
+            <Card className="p-10 border-2 border-slate-50 shadow-md hover:shadow-2xl hover:border-primary/20 transition-all rounded-[40px] space-y-6 group">
+              <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-3xl flex items-center justify-center group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all">
+                <Users className="w-8 h-8" />
+              </div>
+              <h3 className="text-2xl font-black text-slate-800 tracking-tighter">Multi-Atendentes</h3>
+              <p className="text-slate-500 font-medium leading-relaxed">Centralize todas as mensagens. Conecte seu WhatsApp de forma oficial através da Cloud API. Seu time inteiro responde pelo mesmo número através de uma tela.</p>
+            </Card>
+
+            <Card className="p-10 border-2 border-slate-50 shadow-md hover:shadow-2xl hover:border-primary/20 transition-all rounded-[40px] space-y-6 group">
+              <div className="w-16 h-16 bg-orange-50 text-orange-500 rounded-3xl flex items-center justify-center group-hover:scale-110 group-hover:bg-orange-500 group-hover:text-white transition-all">
+                <BarChart className="w-8 h-8" />
+              </div>
+              <h3 className="text-2xl font-black text-slate-800 tracking-tighter">Pipeline & Integração Nativa</h3>
+              <p className="text-slate-500 font-medium leading-relaxed">Mova os clientes pelo Funil (Kanban). Acesse dashboards completos em tempo real e dispare campanhas em massa de remarketing segmentado.</p>
+            </Card>
+
+            <Card className="p-10 border-2 border-slate-50 shadow-md hover:shadow-2xl hover:border-primary/20 transition-all rounded-[40px] space-y-6 group">
+              <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-3xl flex items-center justify-center group-hover:scale-110 group-hover:bg-rose-500 group-hover:text-white transition-all">
+                <Zap className="w-8 h-8" />
+              </div>
+              <h3 className="text-2xl font-black text-slate-800 tracking-tighter">Webhooks Premium</h3>
+              <p className="text-slate-500 font-medium leading-relaxed">A comunicação não é um fim. Crie requisições HTTP para a PagSeguro ou receba triggers instantâneos quando seu site notificar que o cliente completou o formulário.</p>
+            </Card>
+
+            <Card className="p-10 border-2 border-slate-50 shadow-md hover:shadow-2xl hover:border-primary/20 transition-all rounded-[40px] space-y-6 group">
+              <div className="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-3xl flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-500 group-hover:text-white transition-all">
+                <Shield className="w-8 h-8" />
+              </div>
+              <h3 className="text-2xl font-black text-slate-800 tracking-tighter">Agendamento & Calendly Integrado</h3>
+              <p className="text-slate-500 font-medium leading-relaxed">Página pública elegante para o Lead agendar um horário com seu time. O próprio sistema avisa via WhatsApp confirmando o evento e lida com lembretes automáticos!</p>
+            </Card>
+          </div>
+        </div>
       </section>
 
       {/* PRICING - DYNAMIC */}

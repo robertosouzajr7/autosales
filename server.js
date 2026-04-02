@@ -969,9 +969,43 @@ app.get("/api/admin/tenants", async (req, res) => {
 
 app.post("/api/admin/tenants", async (req, res) => {
   try {
-    const tenant = await prisma.tenant.create({ data: req.body });
+    const { name, email, planId, adminName, adminPassword } = req.body;
+    
+    // 1. Criar o Tenant
+    const tenant = await prisma.tenant.create({ 
+      data: { name, email, planId } 
+    });
+
+    // 2. Hash Password e Criar Admin do Tenant
+    if (adminName && adminPassword) {
+      const hashedPassword = await bcrypt.hash(adminPassword, 10);
+      await prisma.user.create({
+        data: {
+          name: adminName,
+          email: email, // Usando o email do tenant/admin como login
+          password: hashedPassword,
+          role: "ADMIN",
+          tenantId: tenant.id
+        }
+      });
+    }
+
+    // 3. Criar Pipeline Stages Iniciais
+    await prisma.pipelineStage.createMany({
+      data: [
+        { name: "Novos", color: "#3b82f6", order: 0, tenantId: tenant.id },
+        { name: "Qualificando", color: "#f59e0b", order: 1, tenantId: tenant.id },
+        { name: "Interessados", color: "#10b981", order: 2, tenantId: tenant.id },
+        { name: "Agendados", color: "#8b5cf6", order: 3, tenantId: tenant.id },
+        { name: "Convertidos", color: "#0f172a", order: 4, tenantId: tenant.id }
+      ]
+    });
+
     res.json(tenant);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { 
+    console.error("Erro criando tenant:", e);
+    res.status(500).json({ error: e.message }); 
+  }
 });
 
 app.delete("/api/admin/tenants/:id", async (req, res) => {
