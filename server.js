@@ -686,6 +686,73 @@ app.post("/api/automations/config", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// --- Webhook Trigger (Fase 4) ---
+app.post("/api/webhook/:tenantId/:automationId", async (req, res) => {
+  try {
+    const { tenantId, automationId } = req.params;
+    const { leadId, phone, data: webhookData } = req.body;
+    const automation = await prisma.automation.findFirst({ where: { id: automationId, tenantId, active: true } });
+    if (!automation) return res.status(404).json({ error: "Automação não encontrada" });
+    let lead;
+    if (leadId) {
+      lead = await prisma.lead.findUnique({ where: { id: leadId } });
+    } else if (phone) {
+      lead = await prisma.lead.findFirst({ where: { phone, tenantId } });
+      if (!lead) lead = await prisma.lead.create({ data: { name: webhookData?.name || phone, phone, tenantId, source: "WEBHOOK" } });
+    }
+    if (!lead) return res.status(400).json({ error: "leadId ou phone obrigatório" });
+    const AutoEngine = (await import("./automation_engine.js")).default;
+    AutoEngine.enqueueExecution(automation, lead);
+    res.json({ success: true, message: `Automação "${automation.name}" enfileirada para lead ${lead.name}` });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- Funnel Analytics (Fase 4) ---
+app.get("/api/automations/:id/funnel", async (req, res) => {
+  try {
+    const automation = await prisma.automation.findUnique({ where: { id: req.params.id } });
+    if (!automation) return res.status(404).json({ error: "Automação não encontrada" });
+    const nodes = JSON.parse(automation.nodes || "[]");
+    const executions = await prisma.automationExecution.findMany({
+      where: { automationId: req.params.id },
+      include: { steps: true }
+    });
+    const totalExecutions = executions.length;
+    const completedExecutions = executions.filter(e => e.status === "COMPLETED").length;
+    const failedExecutions = executions.filter(e => e.status === "FAILED").length;
+    const nodeStats = nodes.map(node => {
+      const nodeSteps = executions.flatMap(e => e.steps).filter(s => s.nodeId === node.id);
+      const successes = nodeSteps.filter(s => s.status === "SUCCESS").length;
+      const failures = nodeSteps.filter(s => s.status === "FAILED").length;
+      const avgDuration = nodeSteps.length > 0 ? Math.round(nodeSteps.reduce((sum, s) => sum + (s.duration || 0), 0) / nodeSteps.length) : 0;
+      return {
+        nodeId: node.id, nodeType: node.type || node.data?.nodeType, label: node.data?.label || node.type,
+        reached: nodeSteps.length, successes, failures,
+        completionRate: totalExecutions > 0 ? Math.round((nodeSteps.length / totalExecutions) * 100) : 0,
+        avgDurationMs: avgDuration
+      };
+    });
+    const dropOffNodes = nodeStats.filter(n => n.reached > 0 && n.completionRate < 100).sort((a, b) => b.reached - a.reached);
+    res.json({
+      automationId: req.params.id, automationName: automation.name,
+      totalExecutions, completedExecutions, failedExecutions,
+      completionRate: totalExecutions > 0 ? Math.round((completedExecutions / totalExecutions) * 100) : 0,
+      nodeStats, dropOffNodes: dropOffNodes.slice(0, 5)
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- Engine Queue Status (Fase 4) ---
+app.get("/api/automations/queue/status", async (req, res) => {
+  try {
+    const AutoEngine = (await import("./automation_engine.js")).default;
+    res.json({
+      queueLength: AutoEngine.executionQueue?.length || 0, runningCount: AutoEngine.runningCount || 0,
+      maxConcurrent: 10, rateLimit: 20
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // --- Prospector ---
 app.post("/api/prospect", async (req, res) => {
   try {

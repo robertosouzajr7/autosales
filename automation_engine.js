@@ -4,13 +4,69 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const prisma = new PrismaClient();
 const MAX_STEPS = 100;
+const MAX_CONCURRENT_EXECUTIONS = 10;
+const RATE_LIMIT_PER_MINUTE = 20; // max msgs per tenant per minute
 
 class AutomationEngine {
   constructor() {
+    // Job Queue
+    this.executionQueue = [];
+    this.runningCount = 0;
+
+    // Rate Limiter (per tenant)
+    this.rateLimiter = new Map(); // tenantId -> { count, resetAt }
+
+    // Schedulers
     this.checkInterval = setInterval(() => this.processPendingDelays(), 30 * 1000);
     this.routineInterval = setInterval(() => this.processGlobalRoutines(), 5 * 60 * 1000);
     this.inactivityInterval = setInterval(() => this.processInactivityTriggers(), 5 * 60 * 1000);
-    console.log("[AutoEngine] ✅ Engine iniciado com DAG executor, variáveis e condições.");
+    this.queueInterval = setInterval(() => this.processQueue(), 1000);
+    console.log(`[AutoEngine] ✅ Engine iniciado (concurrency: ${MAX_CONCURRENT_EXECUTIONS}, rate: ${RATE_LIMIT_PER_MINUTE} msg/min).`);
+  }
+
+  // ========== JOB QUEUE ==========
+
+  enqueueExecution(automation, lead) {
+    return new Promise((resolve, reject) => {
+      this.executionQueue.push({ automation, lead, resolve, reject });
+      this.processQueue();
+    });
+  }
+
+  async processQueue() {
+    while (this.runningCount < MAX_CONCURRENT_EXECUTIONS && this.executionQueue.length > 0) {
+      const job = this.executionQueue.shift();
+      this.runningCount++;
+      this.startExecution(job.automation, job.lead)
+        .then(job.resolve)
+        .catch(job.reject)
+        .finally(() => { this.runningCount--; });
+    }
+  }
+
+  // ========== RATE LIMITER ==========
+
+  async rateLimitedSend(tenantId, phone, content, mediaUrl = null, mediaType = null) {
+    const now = Date.now();
+    let bucket = this.rateLimiter.get(tenantId);
+    if (!bucket || now > bucket.resetAt) {
+      bucket = { count: 0, resetAt: now + 60000 };
+      this.rateLimiter.set(tenantId, bucket);
+    }
+
+    if (bucket.count >= RATE_LIMIT_PER_MINUTE) {
+      const waitMs = bucket.resetAt - now;
+      console.log(`[RateLimit] Tenant ${tenantId}: esperando ${waitMs}ms (${bucket.count}/${RATE_LIMIT_PER_MINUTE} msgs)`);
+      await new Promise(r => setTimeout(r, waitMs));
+      bucket = { count: 0, resetAt: Date.now() + 60000 };
+      this.rateLimiter.set(tenantId, bucket);
+    }
+
+    bucket.count++;
+    if (mediaUrl && mediaType) {
+      return WhatsAppManager.sendMedia(tenantId, phone, mediaUrl, mediaType, content);
+    }
+    return WhatsAppManager.sendMessage(tenantId, phone, content);
   }
 
   // ========== VARIABLE RESOLUTION ==========
@@ -158,7 +214,7 @@ class AutomationEngine {
       switch (node.type) {
         case "SEND_MSG": {
           const msg = this.resolveTemplate(config.message || node.data?.label || "Olá!", ctx);
-          await WhatsAppManager.sendMessage(lead.tenantId, lead.phone, msg);
+          await this.rateLimitedSend(lead.tenantId, lead.phone, msg);
           result.output = { message: msg };
           break;
         }
@@ -187,7 +243,7 @@ class AutomationEngine {
 
         case "COLLECT_INPUT": {
           const prompt = this.resolveTemplate(config.prompt || "Por favor, responda:", ctx);
-          await WhatsAppManager.sendMessage(lead.tenantId, lead.phone, prompt);
+          await this.rateLimitedSend(lead.tenantId, lead.phone, prompt);
           await prisma.automationExecution.update({
             where: { id: execution.id },
             data: {
@@ -207,7 +263,7 @@ class AutomationEngine {
           const aiResponse = await this.callAI(aiPrompt, lead, ctx);
           await this.updateExecutionContext(execution.id, "ai.response", aiResponse);
           if (config.sendToLead !== false) {
-            await WhatsAppManager.sendMessage(lead.tenantId, lead.phone, aiResponse);
+            await this.rateLimitedSend(lead.tenantId, lead.phone, aiResponse);
           }
           result.output = { response: aiResponse.substring(0, 200) };
           break;
@@ -319,7 +375,7 @@ class AutomationEngine {
           await this.updateExecutionContext(execution.id, "ai.response", aiResult.text);
           await this.updateExecutionContext(execution.id, "ai.tool_calls", JSON.stringify(aiResult.toolCalls));
           if (config.sendToLead !== false && aiResult.text) {
-            await WhatsAppManager.sendMessage(lead.tenantId, lead.phone, aiResult.text);
+            await this.rateLimitedSend(lead.tenantId, lead.phone, aiResult.text);
           }
           result.output = { response: aiResult.text?.substring(0, 200), toolCalls: aiResult.toolCalls };
           break;
@@ -374,7 +430,7 @@ class AutomationEngine {
           // Weighted random or pure random
           const selected = variants[Math.floor(Math.random() * variants.length)];
           const resolvedMsg = this.resolveTemplate(selected.message, ctx);
-          await WhatsAppManager.sendMessage(lead.tenantId, lead.phone, resolvedMsg);
+          await this.rateLimitedSend(lead.tenantId, lead.phone, resolvedMsg);
           await this.updateExecutionContext(execution.id, "ab.variant", selected.id);
           await this.updateExecutionContext(execution.id, "ab.message", resolvedMsg);
           // Log variant for analytics
@@ -401,6 +457,28 @@ class AutomationEngine {
 
         case "END": {
           result.output = { ended: true };
+          break;
+        }
+
+        // ========== FASE 4 NODES ==========
+
+        case "SUBFLOW": {
+          const targetAutoId = config.automationId;
+          if (!targetAutoId) { result.output = { error: "automationId não configurado" }; break; }
+          const targetAuto = await prisma.automation.findUnique({ where: { id: targetAutoId } });
+          if (!targetAuto) { result.output = { error: `Subfluxo ${targetAutoId} não encontrado` }; break; }
+          // Queue the subflow execution (non-blocking)
+          this.enqueueExecution(targetAuto, lead);
+          result.output = { subflow: targetAuto.name, queued: true };
+          break;
+        }
+
+        case "SEND_MEDIA": {
+          const caption = this.resolveTemplate(config.caption || "", ctx);
+          const mediaUrl = this.resolveTemplate(config.mediaUrl || "", ctx);
+          const mediaType = config.mediaType || "image"; // image, video, document, audio
+          await this.rateLimitedSend(lead.tenantId, lead.phone, caption, mediaUrl, mediaType);
+          result.output = { mediaUrl, mediaType, caption };
           break;
         }
 
@@ -838,7 +916,8 @@ Retorne APENAS um JSON com: { "score": 0-100, "reasoning": "explicação de 2-3 
         });
         if (existing) continue;
 
-        await this.startExecution(auto, lead);
+        // Use job queue instead of direct execution
+        this.enqueueExecution(auto, lead);
       }
     } catch (e) {
       console.error(`[AutoEngine] Erro no dispatchTrigger(${triggerType}):`, e);

@@ -7,7 +7,8 @@ import {
   MessageSquare, Target, MessageCircle, Timer, Split, Globe, Bot,
   Inbox, Clock, Tag, MoveRight, Users, Calendar, FileEdit,
   StopCircle, Copy, Search, Send, ChevronRight, Layers, Map,
-  Sparkles, Brain, GitBranch, Shuffle, BarChart3, Wrench, ScanText
+  Sparkles, Brain, GitBranch, Shuffle, BarChart3, Wrench, ScanText,
+  Image, Workflow
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
@@ -69,6 +70,9 @@ const NODE_TYPES_DEF: NodeTypeDef[] = [
   { id: "CLASSIFY_INTENT", label: "Classificar Intent", icon: <GitBranch className="w-4 h-4" />, color: "#c026d3", category: "ai" },
   { id: "AB_TEST", label: "Teste A/B", icon: <Shuffle className="w-4 h-4" />, color: "#ea580c", category: "ai" },
   { id: "AI_SCORE", label: "Score IA", icon: <BarChart3 className="w-4 h-4" />, color: "#16a34a", category: "ai" },
+  // Fase 4 — Escalabilidade
+  { id: "SUBFLOW", label: "Subfluxo", icon: <Workflow className="w-4 h-4" />, color: "#6d28d9", category: "logic" },
+  { id: "SEND_MEDIA", label: "Enviar Mídia", icon: <Image className="w-4 h-4" />, color: "#059669", category: "action" },
   // Lógica
   { id: "CONDITION", label: "Condição IF/ELSE", icon: <Split className="w-4 h-4" />, color: "#f97316", category: "logic" },
   { id: "END", label: "Fim do Fluxo", icon: <StopCircle className="w-4 h-4" />, color: "#94a3b8", category: "logic" },
@@ -911,6 +915,41 @@ export default function Automations() {
                     <>
                       <div className="space-y-2"><Label className="text-[8px] font-black uppercase text-slate-400">Nome</Label><Input value={selectedNodeData.config?.name || ""} onChange={e => updateNodeConfig(selectedNode.id, "name", e.target.value)} className="h-9 rounded-lg text-xs" /></div>
                       <div className="space-y-2"><Label className="text-[8px] font-black uppercase text-slate-400">Email</Label><Input value={selectedNodeData.config?.email || ""} onChange={e => updateNodeConfig(selectedNode.id, "email", e.target.value)} className="h-9 rounded-lg text-xs" /></div>
+                    </>
+                  )}
+
+                  {/* ===== FASE 4 — SUBFLOW & MEDIA ===== */}
+
+                  {selectedNodeData.nodeType === "SUBFLOW" && (
+                    <div className="space-y-2">
+                      <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">ID da Automação</Label>
+                      <Input value={selectedNodeData.config?.automationId || ""} onChange={e => updateNodeConfig(selectedNode.id, "automationId", e.target.value)} className="h-9 rounded-lg text-xs font-mono" placeholder="UUID da automação alvo" />
+                      <p className="text-[7px] text-violet-400 font-bold">Dispara outra automação para o mesmo lead (enfileirado)</p>
+                    </div>
+                  )}
+
+                  {selectedNodeData.nodeType === "SEND_MEDIA" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">URL da Mídia</Label>
+                        <Input value={selectedNodeData.config?.mediaUrl || ""} onChange={e => updateNodeConfig(selectedNode.id, "mediaUrl", e.target.value)} className="h-9 rounded-lg text-xs" placeholder="https://..." />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Tipo</Label>
+                        <Select value={selectedNodeData.config?.mediaType || "image"} onValueChange={v => updateNodeConfig(selectedNode.id, "mediaType", v)}>
+                          <SelectTrigger className="h-9 rounded-lg"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="image">Imagem</SelectItem>
+                            <SelectItem value="video">Vídeo</SelectItem>
+                            <SelectItem value="document">Documento</SelectItem>
+                            <SelectItem value="audio">Áudio</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Legenda</Label>
+                        <Textarea value={selectedNodeData.config?.caption || ""} onChange={e => updateNodeConfig(selectedNode.id, "caption", e.target.value)} className="min-h-[60px] rounded-xl text-xs" placeholder="Veja nosso catálogo..." />
+                      </div>
                     </>
                   )}
 

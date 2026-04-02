@@ -285,4 +285,44 @@ export class WhatsAppManager {
         console.warn(`[WhatsApp] Falha total no envio: Nenhuma conexão ativa para o tenant ${tenantId}`);
         return false;
     }
+
+    // Envia mídia (imagem, vídeo, documento, áudio) - Fase 4
+    static async sendMedia(tenantId, phone, mediaUrl, mediaType, caption = "") {
+        const sessionEntry = Array.from(whatsappSessions.entries()).find(
+            ([_, s]) => s.tenantId === tenantId && s.status === 'CONNECTED'
+        );
+
+        if (sessionEntry) {
+            const [_, session] = sessionEntry;
+            const jid = phone.includes('@s.whatsapp.net') ? phone : `${phone}@s.whatsapp.net`;
+            try {
+                let msgContent = {};
+                switch (mediaType) {
+                    case 'image':
+                        msgContent = { image: { url: mediaUrl }, caption };
+                        break;
+                    case 'video':
+                        msgContent = { video: { url: mediaUrl }, caption };
+                        break;
+                    case 'document':
+                        msgContent = { document: { url: mediaUrl }, caption, fileName: caption || 'document' };
+                        break;
+                    case 'audio':
+                        msgContent = { audio: { url: mediaUrl }, mimetype: 'audio/mpeg' };
+                        break;
+                    default:
+                        msgContent = { image: { url: mediaUrl }, caption };
+                }
+                await session.sock.sendMessage(jid, msgContent);
+                console.log(`[WhatsApp Baileys] Mídia ${mediaType} enviada p/ ${phone}`);
+                return true;
+            } catch (e) {
+                console.error(`[WhatsApp Baileys] Erro no envio de mídia:`, e);
+            }
+        }
+
+        // Fallback: texto com link
+        console.warn(`[WhatsApp] sendMedia fallback: enviando como texto p/ ${phone}`);
+        return this.sendMessage(tenantId, phone, `${caption}\n${mediaUrl}`);
+    }
 }
