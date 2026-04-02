@@ -138,7 +138,16 @@ app.post("/api/leads", async (req, res) => {
 
 app.put("/api/leads/:id", async (req, res) => {
   try {
+    // Track stage change for PIPELINE_MOVE trigger
+    const oldLead = await prisma.lead.findUnique({ where: { id: req.params.id } });
     const lead = await prisma.lead.update({ where: { id: req.params.id }, data: req.body });
+
+    if (oldLead && req.body.stageId && oldLead.stageId !== req.body.stageId) {
+      AutomationEngine.dispatchTrigger("PIPELINE_MOVE", {
+        lead, tenantId: lead.tenantId,
+        oldStageId: oldLead.stageId, newStageId: req.body.stageId
+      }).catch(e => console.error("[Leads] PIPELINE_MOVE trigger error:", e));
+    }
     res.json(lead);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -596,7 +605,10 @@ app.get("/api/automations", async (req, res) => {
   try {
     const tenant = await prisma.tenant.findFirst();
     if (!tenant) return res.json([]);
-    const auts = await prisma.automation.findMany({ where: { tenantId: tenant.id } });
+    const auts = await prisma.automation.findMany({
+      where: { tenantId: tenant.id },
+      orderBy: { createdAt: "desc" }
+    });
     res.json(auts);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -605,22 +617,98 @@ app.post("/api/automations", async (req, res) => {
   try {
     const tenant = await prisma.tenant.findFirst();
     if (!tenant) return res.status(400).json({ error: "No tenant found" });
-    const aut = await prisma.automation.create({ data: { ...req.body, tenantId: tenant.id } });
+    const { name, trigger, triggerConfig, description, nodes, edges } = req.body;
+    const aut = await prisma.automation.create({
+      data: { name, trigger, triggerConfig, description, nodes, edges, tenantId: tenant.id }
+    });
     res.json(aut);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.put("/api/automations/:id", async (req, res) => {
   try {
-    const aut = await prisma.automation.update({ where: { id: req.params.id }, data: req.body });
+    const { name, trigger, triggerConfig, description, nodes, edges, active } = req.body;
+    const data = {};
+    if (name !== undefined) data.name = name;
+    if (trigger !== undefined) data.trigger = trigger;
+    if (triggerConfig !== undefined) data.triggerConfig = triggerConfig;
+    if (description !== undefined) data.description = description;
+    if (nodes !== undefined) data.nodes = nodes;
+    if (edges !== undefined) data.edges = edges;
+    if (active !== undefined) data.active = active;
+    const aut = await prisma.automation.update({ where: { id: req.params.id }, data });
     res.json(aut);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/automations/:id/duplicate", async (req, res) => {
+  try {
+    const original = await prisma.automation.findUnique({ where: { id: req.params.id } });
+    if (!original) return res.status(404).json({ error: "Not found" });
+    const copy = await prisma.automation.create({
+      data: {
+        name: `${original.name} (cópia)`,
+        trigger: original.trigger,
+        triggerConfig: original.triggerConfig,
+        description: original.description,
+        nodes: original.nodes,
+        edges: original.edges,
+        tenantId: original.tenantId
+      }
+    });
+    res.json(copy);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.delete("/api/automations/:id", async (req, res) => {
   try {
+    // Delete related executions first
+    await prisma.automationStepLog.deleteMany({
+      where: { execution: { automationId: req.params.id } }
+    });
+    await prisma.automationExecution.deleteMany({ where: { automationId: req.params.id } });
+    await prisma.automationProgress.deleteMany({ where: { automationId: req.params.id } });
     await prisma.automation.delete({ where: { id: req.params.id } });
     res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- Automation Executions (Logs) ---
+app.get("/api/automations/:id/executions", async (req, res) => {
+  try {
+    const execs = await prisma.automationExecution.findMany({
+      where: { automationId: req.params.id },
+      include: { lead: true, steps: { orderBy: { createdAt: "asc" } } },
+      orderBy: { startedAt: "desc" },
+      take: 50
+    });
+    res.json(execs);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get("/api/automations/executions/stats", async (req, res) => {
+  try {
+    const tenant = await prisma.tenant.findFirst();
+    if (!tenant) return res.json({});
+    const total = await prisma.automationExecution.count({
+      where: { automation: { tenantId: tenant.id } }
+    });
+    const running = await prisma.automationExecution.count({
+      where: { automation: { tenantId: tenant.id }, status: "RUNNING" }
+    });
+    const completed = await prisma.automationExecution.count({
+      where: { automation: { tenantId: tenant.id }, status: "COMPLETED" }
+    });
+    const failed = await prisma.automationExecution.count({
+      where: { automation: { tenantId: tenant.id }, status: "FAILED" }
+    });
+    const activeAutomations = await prisma.automation.count({
+      where: { tenantId: tenant.id, active: true }
+    });
+    const draftAutomations = await prisma.automation.count({
+      where: { tenantId: tenant.id, active: false }
+    });
+    res.json({ total, running, completed, failed, activeAutomations, draftAutomations });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -712,15 +800,22 @@ app.get("/api/appointments", async (req, res) => {
 app.post("/api/appointments", async (req, res) => {
   try {
     const tenant = await prisma.tenant.findFirst();
-    const appt = await prisma.appointment.create({ 
-      data: { 
+    const appt = await prisma.appointment.create({
+      data: {
         title: req.body.title,
         date: new Date(req.body.date),
         notes: req.body.notes,
         leadId: req.body.leadId,
-        tenantId: tenant.id 
-      } 
+        tenantId: tenant.id
+      },
+      include: { lead: true }
     });
+
+    // Dispatch APPOINTMENT_CREATED trigger
+    AutomationEngine.dispatchTrigger("APPOINTMENT_CREATED", {
+      lead: appt.lead, tenantId: tenant.id, appointment: appt
+    }).catch(e => console.error("[Appointments] trigger error:", e));
+
     res.json(appt);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1105,11 +1200,20 @@ app.post("/api/webhook/whatsapp", async (req, res) => {
   try {
     // 1. Verificar se é um Lead existente ou criar novo
     let lead = await prisma.lead.findFirst({ where: { phone, tenantId } });
+    let isNewLead = false;
     if (!lead) {
       lead = await prisma.lead.create({ data: { name, phone, tenantId, source: "WHATSAPP" } });
+      isNewLead = true;
     }
 
-    // 2. Chamar o Motor de Automação para Triagem de Crise / Workflows
+    // 2a. Dispatch NEW_LEAD trigger if lead was just created
+    if (isNewLead) {
+      AutomationEngine.dispatchTrigger("NEW_LEAD", { lead, tenantId }).catch(e =>
+        console.error("[Webhook] NEW_LEAD trigger error:", e)
+      );
+    }
+
+    // 2b. Chamar o Motor de Automação para Triagem de Crise / Workflows / Input collection
     const handledByEngine = await AutomationEngine.handleIncoming(phone, content, tenantId);
     if (handledByEngine) {
       return res.json({ success: true, handled: "engine" });
