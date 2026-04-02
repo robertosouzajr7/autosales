@@ -1,24 +1,17 @@
 import { PrismaClient } from "@prisma/client";
-import { whatsappSessions } from "./whatsapp.js";
+import { WhatsAppManager } from "./whatsapp.js";
 
 const prisma = new PrismaClient();
 
 class AutomationEngine {
   constructor() {
-    // Roda o processamento de passos a cada 30s
     this.checkInterval = setInterval(() => this.processPendingProgressions(), 30 * 1000);
-    // Roda as Rotinas de Negócio (Confirm/No-Show/Followup/Post-Venda) a cada 5 min
     this.routineInterval = setInterval(() => this.processGlobalRoutines(), 5 * 60 * 1000);
   }
 
   async sendMessage(phone, content, tenantId) {
-    const sock = whatsappSessions.get(tenantId);
-    if (!sock) {
-      console.error(`[AutomationEngine] Sessão não encontrada para tenant ${tenantId}`);
-      return;
-    }
-    const remoteJid = `${phone}@s.whatsapp.net`;
-    await sock.sendMessage(remoteJid, { text: content });
+    // Agora centralizado no WhatsAppManager que suporta tanto Baileys quanto Meta Official
+    await WhatsAppManager.sendMessage(tenantId, phone, content);
   }
 
   // --- 1. PROCESSAMENTO DE WORKFLOWS VISUAIS ---

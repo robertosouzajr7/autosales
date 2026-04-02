@@ -243,12 +243,46 @@ export class WhatsAppManager {
         await this.updateAccountStatus(accountId, 'DISCONNECTED');
     }
 
-    // Retorna o status em tempo real de todas as sessões
-    static getSessionsStatus() {
-        const result = {};
-        for (const [id, session] of whatsappSessions) {
-            result[id] = { status: session.status, tenantId: session.tenantId };
+    // Envia uma mensagem de texto simples usando a sessão ativa do tenant (Baileys ou Meta)
+    static async sendMessage(tenantId, phone, text) {
+        // 1. Prioridade: Tentativa via Baileys (Sessão em Memória)
+        const sessionEntry = Array.from(whatsappSessions.entries()).find(
+            ([_, s]) => s.tenantId === tenantId && s.status === 'CONNECTED'
+        );
+
+        if (sessionEntry) {
+            const [_, session] = sessionEntry;
+            const jid = phone.includes('@s.whatsapp.net') ? phone : `${phone}@s.whatsapp.net`;
+            try {
+                await session.sock.sendMessage(jid, { text });
+                console.log(`[WhatsApp Baileys] Enviado p/ ${phone}`);
+                return true;
+            } catch (e) {
+                console.error(`[WhatsApp Baileys] Erro no envio:`, e);
+            }
         }
-        return result;
+
+        // 2. Fallback: Tentativa via Meta Cloud API Official
+        try {
+            const metaAccount = await prisma.whatsAppAccount.findFirst({
+                where: { 
+                    tenantId, 
+                    phoneId: { not: null },
+                    accessToken: { not: null }
+                }
+            });
+
+            if (metaAccount) {
+                const { MetaManager } = await import('./meta.js');
+                await MetaManager.sendMessage(metaAccount.phoneId, metaAccount.accessToken, phone, text);
+                console.log(`[WhatsApp Meta] Enviado p/ ${phone} via API Oficial`);
+                return true;
+            }
+        } catch (err) {
+            console.error(`[WhatsApp Meta] Erro no envio fallback:`, err.message);
+        }
+
+        console.warn(`[WhatsApp] Falha total no envio: Nenhuma conexão ativa para o tenant ${tenantId}`);
+        return false;
     }
 }

@@ -16,12 +16,13 @@ import {
 } from 'recharts';
 
 export default function Dashboard() {
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<any>({
     totalLeads: 0,
     qualifiedLeads: 0,
     appointments: 0,
     activeSdrs: 0,
-    conversionRate: 0
+    conversionRate: 0,
+    funnel: []
   });
   const [recentLeads, setRecentLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,36 +31,32 @@ export default function Dashboard() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [lRes, aRes, sRes] = await Promise.all([
+      const [statsRes, lRes, sRes] = await Promise.all([
+        fetch("/api/stats/dashboard"),
         fetch("/api/leads"),
-        fetch("/api/appointments"),
         fetch("/api/sdrs")
       ]);
       
-      const leads = lRes.ok ? await lRes.json() : [];
-      const appts = aRes.ok ? await aRes.json() : [];
-      const sdrs = sRes.ok ? await sRes.json() : [];
+      const dashboard = await statsRes.json();
+      const leadsArr = await lRes.json();
+      const sdrsArr = await sRes.json();
       
-      const leadsArr = Array.isArray(leads) ? leads : [];
-      const apptsArr = Array.isArray(appts) ? appts : [];
-      const sdrsArr = Array.isArray(sdrs) ? sdrs : [];
-
-      const qualified = leadsArr.filter((l: any) => l.status === 'INTERESTED' || l.status === 'APPOINTMENT' || l.status === 'CONVERTED').length;
-      const convertedCount = leadsArr.filter((l: any) => l.status === 'CONVERTED').length;
-      const conversion = leadsArr.length > 0 ? (convertedCount / leadsArr.length) * 100 : 0;
-
+      const fData = dashboard.funnelData || [];
+      
       setStats({
-        totalLeads: leadsArr.length,
-        qualifiedLeads: qualified,
-        appointments: apptsArr.length,
-        activeSdrs: sdrsArr.filter((s: any) => s.active).length,
-        conversionRate: conversion
+        totalLeads: dashboard.stats.totalLeads || 0,
+        qualifiedLeads: dashboard.stats.totalLeads - (fData[0]?.value || 0),
+        appointments: dashboard.stats.appointments || 0,
+        activeSdrs: dashboard.stats.activeSdrs || 0,
+        conversionRate: dashboard.stats.conversionRate || 0,
+        funnel: fData.map((f: any) => ({ label: f.name, value: f.value })),
+        openOpportunities: fData.slice(1).reduce((acc: number, curr: any) => acc + curr.value, 0)
       });
-      setRecentLeads(leadsArr.slice(0, 6));
+      setRecentLeads(Array.isArray(leadsArr) ? leadsArr.slice(0, 6) : []);
 
     } catch (e) {
       console.error("Dashboard fetch error:", e);
-      toast({ title: "Atualização Falhou", description: "Conexão instável com o servidor.", variant: "destructive" });
+      // toast({ title: "Atualização Falhou", description: "Conexão instável com o servidor.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -76,12 +73,11 @@ export default function Dashboard() {
     { name: 'Agendados', leads: stats.appointments },
   ];
 
-  const funnelData = [
-    { name: 'Leads Totais', value: 100, color: '#10b981' },
-    { name: 'Qualificação', value: stats.totalLeads > 0 ? Math.round((stats.qualifiedLeads/stats.totalLeads)*100) : 0, color: '#34d399' },
-    { name: 'Interessados', value: stats.totalLeads > 0 ? Math.round((stats.appointments/stats.totalLeads)*100) : 0, color: '#6ee7b7' },
-    { name: 'Fechados', value: stats.totalLeads > 0 ? Math.round((stats.conversionRate)) : 0, color: '#059669' },
-  ];
+  const funnelData = (stats.funnel || []).map((item: any, idx: number) => ({
+    name: item.label,
+    value: stats.totalLeads > 0 ? Math.round((item.value / stats.totalLeads) * 100) : 0,
+    color: ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#0f172a'][idx] || '#cbd5e1'
+  }));
 
   return (
     <DashboardLayout>
@@ -155,7 +151,7 @@ export default function Dashboard() {
               
               <div className="h-[300px] w-full">
                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                    <BarChart data={stats.funnel.map((f: any) => ({ name: f.label, leads: f.value }))} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
                        <defs>
                           <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
                              <stop offset="0%" stopColor="#10b981" stopOpacity={1}/>
@@ -169,7 +165,7 @@ export default function Dashboard() {
                           itemStyle={{fontSize: '14px', fontWeight: '900', color: '#0f172a'}}
                        />
                        <Bar dataKey="leads" radius={[15, 15, 15, 15]} barSize={60}>
-                          {chartData.map((entry, index) => (
+                          {(stats.funnel || []).map((entry: any, index: number) => (
                              <Cell key={`cell-${index}`} fill="url(#barGradient)" />
                           ))}
                        </Bar>
@@ -187,7 +183,7 @@ export default function Dashboard() {
               </div>
 
               <div className="space-y-8 relative z-10">
-                 {funnelData.map((item) => (
+                 {funnelData.map((item: any) => (
                     <div key={item.name} className="space-y-3">
                        <div className="flex justify-between items-center text-[10px] font-black px-1 uppercase tracking-[0.1em]">
                           <span className="text-white/40">{item.name}</span>
@@ -204,7 +200,7 @@ export default function Dashboard() {
                  
                  <div className="mt-8 p-6 bg-white/5 rounded-3xl border border-white/5 text-center backdrop-blur-xl">
                     <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1 leading-none">Oportunidades em Aberto</p>
-                    <p className="text-3xl font-black text-white italic tracking-tighter">R$ {(stats.totalLeads * 1250).toLocaleString('pt-BR')},00</p>
+                    <p className="text-3xl font-black text-white italic tracking-tighter">{stats.openOpportunities} Oportunidades</p>
                  </div>
               </div>
            </Card>

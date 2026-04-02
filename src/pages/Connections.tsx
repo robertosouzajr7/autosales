@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription 
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { QRCodeCanvas } from "qrcode.react";
 
 interface Connection {
@@ -251,20 +252,65 @@ export default function Connections() {
         <DialogContent className="max-w-md p-10 border-none shadow-3xl rounded-[40px] bg-white">
           <DialogHeader>
             <DialogTitle className="text-2xl font-black text-slate-900 uppercase">Novo Canal</DialogTitle>
-            <DialogDescription>Dê um nome para identificar esta conta de WhatsApp.</DialogDescription>
+            <DialogDescription>Escolha como deseja conectar seu WhatsApp.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-             <input 
-               type="text" 
-               placeholder="Ex: Atendimento Comercial"
-               value={newName}
-               onChange={(e) => setNewName(e.target.value)}
-               className="w-full h-14 px-6 bg-slate-100 rounded-2xl border-none font-bold text-slate-900 focus:ring-2 focus:ring-primary outline-none"
-             />
-             <Button onClick={handleAddConnection} disabled={loading || !newName} className="w-full h-14 bg-slate-900 font-black rounded-2xl">
-                {loading ? "Criando..." : "CRIAR CANAL AGORA"}
-             </Button>
-          </div>
+
+          <Tabs defaultValue="baileys" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 rounded-2xl bg-slate-100 p-1 mb-6">
+              <TabsTrigger value="baileys" className="rounded-xl font-bold text-[10px] uppercase">QR Code (Baileys)</TabsTrigger>
+              <TabsTrigger value="meta" className="rounded-xl font-bold text-[10px] uppercase">Meta Oficial (Cloud API)</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="baileys" className="space-y-4">
+               <input 
+                 type="text" 
+                 placeholder="Nome da Conexão (ex: Comercial)"
+                 value={newName}
+                 onChange={(e) => setNewName(e.target.value)}
+                 className="w-full h-14 px-6 bg-slate-100 rounded-2xl border-none font-bold text-slate-900 focus:ring-2 focus:ring-primary outline-none"
+               />
+               <Button onClick={handleAddConnection} disabled={loading || !newName} className="w-full h-14 bg-slate-900 font-black rounded-2xl text-white">
+                  {loading ? "Processando..." : "GERAR QR CODE"}
+               </Button>
+            </TabsContent>
+
+            <TabsContent value="meta" className="space-y-4">
+               <div className="space-y-3">
+                  <input type="text" id="meta-name" placeholder="Nome do Canal" className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-xl font-bold text-sm" />
+                  <input type="text" id="meta-phone" placeholder="Seu Número (ex: 5511999999999)" className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-xl font-bold text-sm" />
+                  <input type="text" id="meta-phoneid" placeholder="Phone Number ID" className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-xl font-bold text-sm" />
+                  <input type="text" id="meta-waba" placeholder="WABA (Business Account ID)" className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-xl font-bold text-sm" />
+                  <textarea id="meta-token" placeholder="Access Token Permanente (Bearer)" className="w-full h-24 px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl font-bold text-xs" />
+               </div>
+               <Button 
+                onClick={async () => {
+                  setLoading(true);
+                  const payload = {
+                    name: (document.getElementById("meta-name") as HTMLInputElement).value,
+                    phone: (document.getElementById("meta-phone") as HTMLInputElement).value,
+                    phoneId: (document.getElementById("meta-phoneid") as HTMLInputElement).value,
+                    wabaId: (document.getElementById("meta-waba") as HTMLInputElement).value,
+                    accessToken: (document.getElementById("meta-token") as HTMLTextAreaElement).value,
+                  };
+                  try {
+                    await fetch("/api/whatsapp/accounts/meta", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(payload)
+                    });
+                    toast({ title: "✅ Conta Meta Vinculada!" });
+                    setShowAddModal(false);
+                    fetchConnections();
+                  } catch (e) { toast({ title: "Erro na conexão", variant: "destructive" }); }
+                  finally { setLoading(false); }
+                }}
+                disabled={loading} 
+                className="w-full h-14 bg-primary font-black rounded-2xl text-white"
+               >
+                  {loading ? "Vinculando..." : "VINCULAR CONTA OFICIAL"}
+               </Button>
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 

@@ -17,17 +17,31 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Simulação de login
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    if (email === "admin@autosales.ai" && password === "admin") {
-      localStorage.setItem("userRole", "SUPERADMIN");
-      navigate("/admin");
-    } else {
-      localStorage.setItem("userRole", "OWNER");
-      navigate("/crm");
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      
+      if (res.ok) {
+        localStorage.setItem("userRole", data.user.role);
+        if (data.tenant) {
+            localStorage.setItem("tenantId", data.tenant.id);
+            localStorage.setItem("userPlan", data.tenant.planId);
+        }
+        
+        if (data.user.role === "SUPERADMIN") navigate("/admin");
+        else navigate("/crm");
+      } else {
+        toast({ title: "Erro no login", description: data.error, variant: "destructive" });
+      }
+    } catch (e) {
+      toast({ title: "Erro na conexão", description: "Não foi possível autenticar.", variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (

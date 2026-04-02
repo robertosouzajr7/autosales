@@ -28,18 +28,33 @@ export default function Register() {
 
   const handleFinish = async () => {
     setLoading(true);
-    // Simulação de criação de conta SaaS + Registro no Mercado Pago
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    toast({ 
-      title: "🚀 Conta Criada com Sucesso!", 
-      description: "Seu trial de 7 dias começou. Você não será cobrado hoje." 
-    });
-    
-    // Redireciona para o Dashboard (Na vida real, criaria o tenant no backend aqui)
-    localStorage.setItem("userRole", "OWNER");
-    localStorage.setItem("userPlan", formData.plan);
-    navigate("/crm");
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData)
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        toast({ 
+          title: "🚀 Conta Criada com Sucesso!", 
+          description: "Seu trial de 7 dias começou. Você não será cobrado hoje." 
+        });
+        
+        localStorage.setItem("userRole", "OWNER");
+        localStorage.setItem("userPlan", formData.plan);
+        localStorage.setItem("tenantId", data.tenant.id);
+        navigate("/crm");
+      } else {
+        toast({ title: "Erro no registro", description: data.error, variant: "destructive" });
+      }
+    } catch (e) {
+      toast({ title: "Erro na conexão", description: "Não foi possível registrar.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

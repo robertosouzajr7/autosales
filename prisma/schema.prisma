@@ -23,6 +23,7 @@ model Tenant {
   cardLast4         String?
   
   // Customization
+  webChatUrl   String?
   openAiKey String?
   systemPrompt String?
   googleRefreshToken String? 
@@ -37,6 +38,103 @@ model Tenant {
   sdrs      SdrBot[]
   appointments Appointment[]
   whatsappAccounts WhatsAppAccount[]
+  
+  // Custom Pipelines
+  pipelineStages PipelineStage[]
+  
+  // Marketing / Bulk Messaging
+  campaigns    Campaign[]
+  templates    MessageTemplate[]
+  
+  conversations Conversation[]
+  messages      Message[]
+}
+
+model PipelineStage {
+  id        String   @id @default(uuid())
+  name      String   // Ex: Novos, Qualificando, Agendados
+  color     String?  @default("#3b82f6")
+  order     Int      @default(0)
+  
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  leads     Lead[]
+}
+
+model Tag {
+  id        String   @id @default(uuid())
+  name      String
+  color     String?  @default("#cbd5e1")
+  
+  // Many-to-many relationship with Leads is better but SQLite doesn't support implicit join tables easily for large scale. 
+  // I'll use a string of tag IDs in Lead for now as a common pattern for SQLite portability, or a explicit join model.
+  // Actually, standard Many-to-Many is fine.
+  leads     Lead[]
+}
+
+model Lead {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String?  
+  email     String?
+  
+  // Reference to PipelineStage
+  status    String   @default("NEW") 
+  stageId   String?
+  stage     PipelineStage? @relation(fields: [stageId], references: [id])
+  
+  source    String?  
+  tags      Tag[]    // Many-to-Many
+  notes     String?  
+  tenantId String
+  
+  isToEnrich Boolean @default(false) 
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+  appointments  Appointment[]
+  progressions AutomationProgress[]
+}
+
+model Campaign {
+  id          String   @id @default(uuid())
+  name        String
+  status      String   @default("DRAFT") // DRAFT, RUNNING, COMPLETED, PAUSED
+  scheduledAt DateTime?
+  
+  templateId  String
+  template    MessageTemplate @relation(fields: [templateId], references: [id])
+  
+  targetTagIds String? // IDs das tags participantes (JSON string)
+  
+  sentCount   Int      @default(0)
+  errorCount  Int      @default(0)
+  
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model MessageTemplate {
+  id        String   @id @default(uuid())
+  name      String
+  content   String   // Texto com {{name}}
+  mediaUrl  String?  // Imagem/Vídeo
+  buttons   String?  // JSON string dos botões
+  
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  campaigns Campaign[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Plan {
@@ -139,42 +237,24 @@ model User {
   tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
-model Lead {
-  id        String   @id @default(uuid())
-  name      String
-  phone     String?  
-  email     String?
-  status    String   @default("NEW") 
-  source    String?  
-  tags      String?  
-  notes     String?  
-  tenantId String
-  
-  isToEnrich Boolean @default(false) 
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  conversations Conversation[]
-  appointments  Appointment[]
-  progressions AutomationProgress[]
-}
 
 model Conversation {
   id        String   @id @default(uuid())
-  leadId    String
+  leadId    String   @unique
+  tenantId  String
   botActive Boolean  @default(true) 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   messages  Message[]
 }
 
 model Message {
   id             String   @id @default(uuid())
   conversationId String
+  tenantId       String
   content        String
   role           String   
   messageType    String   @default("TEXT") 
@@ -182,6 +262,7 @@ model Message {
   createdAt      DateTime @default(now())
 
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  tenant         Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model Appointment {
@@ -222,9 +303,34 @@ model WhatsAppAccount {
   name      String
   phone     String?
   status    String   @default("DISCONNECTED") 
+  
+  // Meta Cloud API Fields
+  phoneId     String?
+  accessToken String?
+  wabaId      String?
+  
   tenantId  String
   
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model LandingPageSettings {
+  id               String   @id @default("singleton")
+  logoUrl          String?
+  contactWhatsApp  String?
+  contactEmail     String?
+  contactInstagram String?
+  contactLinkedIn  String?
+  contactYouTube   String?
+  
+  // SDR for Landing Page Chat
+  selectedSdrId    String?
+  
+  // Plans to show (comma separated IDs)
+  visiblePlanIds   String?  @default("") 
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }

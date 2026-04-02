@@ -139,6 +139,33 @@ export default function SettingsPage() {
                     </div>
                  </div>
               </Card>
+
+              {/* PORTAL WEBCHAT PREMIUM */}
+              <Card className="border-none shadow-3xl rounded-[40px] bg-emerald-500 text-white p-10 mt-10 relative overflow-hidden group">
+                 <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 blur-[100px] rounded-full translate-x-1/2 -translate-y-1/2" />
+                 <div className="flex flex-col md:flex-row items-center justify-between gap-10 relative z-10 text-center md:text-left">
+                    <div className="space-y-4">
+                       <div className="flex items-center justify-center md:justify-start gap-3">
+                          <Globe className="w-8 h-8 text-emerald-100" />
+                          <h3 className="text-2xl font-black uppercase tracking-tighter italic">Seu Portal Webchat <span className="text-slate-900 border-b-4 border-slate-900">PRO</span></h3>
+                       </div>
+                       <p className="text-white/80 text-xs font-bold uppercase tracking-widest leading-relaxed max-w-md">Disponibilize o atendimento especializado dos seus SDRs em uma URL exclusiva.</p>
+                       <div className="bg-slate-900/40 p-4 px-6 rounded-2xl flex items-center gap-4 border border-white/5 w-fit mx-auto md:mx-0">
+                          <code className="text-[10px] font-black tracking-tight text-emerald-200 uppercase">{window.location.host}/chat/tenant_id</code>
+                       </div>
+                    </div>
+                    <Button 
+                      onClick={() => {
+                         const url = `${window.location.origin}/chat/tenant_id`;
+                         navigator.clipboard.writeText(url);
+                         toast({ title: "🌐 Link Copiado!", description: "O portal de webchat já está no seu clipboard." });
+                      }}
+                      className="h-16 px-10 bg-white text-emerald-600 hover:bg-slate-50 font-black rounded-2xl uppercase tracking-widest text-xs shadow-2xl transition-all active:scale-90 shrink-0"
+                    >
+                       Copiar Link Público
+                    </Button>
+                 </div>
+              </Card>
            </TabsContent>
 
            <TabsContent value="integracoes" className="animate-in zoom-in-95 duration-500">

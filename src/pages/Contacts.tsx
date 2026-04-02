@@ -100,26 +100,30 @@ export default function Contacts() {
   };
 
   const handleExport = () => {
-    window.location.href = "/api/contacts/export";
-    toast({ title: "📥 Exportação Iniciada", description: "Seu arquivo JSON está sendo baixado." });
+    window.open("/api/contacts/export", "_blank");
+    toast({ title: "📥 Exportação Iniciada" });
   };
 
-  const handleImport = async () => {
-    const data = prompt("Cole aqui o JSON de contatos (Array de objetos {name, phone, email}):");
-    if (!data) return;
+  const handleImport = async (e: any) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const formData = new FormData();
+    formData.append("file", file);
+
     try {
-      const contactsToImport = JSON.parse(data);
-      const res = await fetch("/api/contacts/import", {
+      setLoading(true);
+      const res = await fetch("/api/contacts/import-csv", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contacts: contactsToImport })
+        body: formData
       });
       if (res.ok) {
         const result = await res.json();
         toast({ title: "📤 Importação Concluída", description: `${result.created} contatos adicionados.` });
         fetchData();
       }
-    } catch (e) { toast({ title: "Erro no formato JSON", variant: "destructive" }); }
+    } catch (e) { toast({ title: "Erro na importação", variant: "destructive" }); }
+    setLoading(false);
   };
 
   const toggleSelect = (id: string, e: any) => {
@@ -133,13 +137,17 @@ export default function Contacts() {
   const handleBulkDelete = async () => {
     if (!confirm(`Excluir ${selectedIds.size} contatos selecionados?`)) return;
     try {
-      for (const id of Array.from(selectedIds)) {
-        await fetch(`/api/contacts/${id}`, { method: "DELETE" });
+      const res = await fetch("/api/contacts/bulk-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: Array.from(selectedIds) })
+      });
+      if (res.ok) {
+        toast({ title: "🗑️ Deleção em massa concluída" });
+        setSelectedIds(new Set());
+        fetchData();
       }
-      toast({ title: "🗑️ Deleção em massa concluída" });
-      setSelectedIds(new Set());
-      fetchData();
-    } catch (e) { toast({ title: "Erro em algumas deleções", variant: "destructive" }); }
+    } catch (e) { toast({ title: "Erro na deleção", variant: "destructive" }); }
   };
 
   return (
@@ -155,10 +163,17 @@ export default function Contacts() {
               <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Gerenciamento Premium de Pipeline</p>
            </div>
            
-           <div className="flex gap-4">
+            <div className="flex gap-4">
                <div className="flex gap-2">
+                 <input 
+                    type="file" 
+                    id="csvImport" 
+                    className="hidden" 
+                    accept=".csv" 
+                    onChange={handleImport} 
+                 />
                  <Button variant="outline" size="icon" onClick={handleExport} className="h-12 w-12 rounded-2xl border-2"><Download className="w-4 h-4" /></Button>
-                 <Button variant="outline" size="icon" onClick={handleImport} className="h-12 w-12 rounded-2xl border-2"><UserPlus className="w-4 h-4" /></Button>
+                 <Button variant="outline" size="icon" onClick={() => document.getElementById('csvImport')?.click()} className="h-12 w-12 rounded-2xl border-2"><UserPlus className="w-4 h-4" /></Button>
                  {selectedIds.size > 0 && (
                    <Button variant="destructive" size="icon" onClick={handleBulkDelete} className="h-12 w-12 rounded-2xl animate-in zoom-in"><Trash2 className="w-4 h-4" /></Button>
                  )}

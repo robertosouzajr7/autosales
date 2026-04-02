@@ -16,22 +16,57 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 export default function Conversations() {
   const [chats, setChats] = useState<any[]>([]);
   const [selectedChat, setSelectedChat] = useState<any>(null);
+  const [messages, setMessages] = useState<any[]>([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // Mock de mensagens para exemplo visual "Uau!"
-  const mockMessages = [
-    { id: 1, role: "LEAD", content: "Olá, gostaria de saber mais sobre o plano Pro.", time: "10:30" },
-    { id: 2, role: "SDR", content: "Claro! Nosso plano Pro inclui SDRs ilimitados e integração total com CRM.", time: "10:31" },
-    { id: 3, role: "LEAD", content: "Excelente, vocês aceitam boleto?", time: "10:32" },
-  ];
+  const fetchData = async () => {
+    try {
+      const res = await fetch("/api/leads");
+      const data = await res.json();
+      setChats(Array.isArray(data) ? data : []);
+    } catch (e) {}
+    setLoading(false);
+  };
+
+  const fetchMessages = async (leadId: string) => {
+    if (!leadId) return;
+    try {
+      const res = await fetch(`/api/messages/${leadId}`);
+      const data = await res.json();
+      setMessages(Array.isArray(data) ? data : []);
+    } catch (e) {}
+  };
+
+  const handleSend = async () => {
+    if (!message.trim() || !selectedChat) return;
+    const content = message;
+    setMessage("");
+    try {
+      const res = await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadId: selectedChat.id, content, role: "SDR" })
+      });
+      if (res.ok) {
+        fetchMessages(selectedChat.id);
+      }
+    } catch (e) {}
+  };
 
   useEffect(() => {
-    fetch("/api/leads").then(r => r.json()).then(data => {
-      setChats(Array.isArray(data) ? data : []);
-      setLoading(false);
-    });
+    fetchData();
+    const interval = setInterval(fetchData, 10000);
+    return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (selectedChat) {
+      fetchMessages(selectedChat.id);
+      const interval = setInterval(() => fetchMessages(selectedChat.id), 3000);
+      return () => clearInterval(interval);
+    }
+  }, [selectedChat]);
 
   return (
     <DashboardLayout>
@@ -105,31 +140,41 @@ export default function Conversations() {
 
               {/* Mensagens */}
               <ScrollArea className="flex-1 p-10 bg-slate-50/30">
-                 <div className="space-y-6 max-w-4xl mx-auto">
-                    {mockMessages.map(msg => (
-                      <div key={msg.id} className={`flex ${msg.role === 'SDR' ? 'justify-end' : 'justify-start'}`}>
-                         <div className={`max-w-[70%] p-5 rounded-3xl text-sm font-medium shadow-sm ${msg.role === 'SDR' ? 'bg-slate-900 text-white rounded-tr-none' : 'bg-white text-slate-700 rounded-tl-none border border-slate-100'}`}>
+                 <div className="space-y-6 max-w-4xl mx-auto flex flex-col">
+                    {messages.map(msg => (
+                      <div key={msg.id} className={`flex ${msg.role === 'SDR' || msg.role === 'ASSISTANT' ? 'justify-end' : 'justify-start'}`}>
+                         <div className={`max-w-[70%] p-5 rounded-3xl text-sm font-medium shadow-sm ${msg.role === 'SDR' || msg.role === 'ASSISTANT' ? 'bg-slate-900 text-white rounded-tr-none' : 'bg-white text-slate-700 rounded-tl-none border border-slate-100'}`}>
                             {msg.content}
-                            <p className={`text-[8px] font-bold uppercase mt-2 text-right ${msg.role === 'SDR' ? 'text-white/30' : 'text-slate-300'}`}>{msg.time}</p>
+                            <p className={`text-[8px] font-bold uppercase mt-2 text-right ${msg.role === 'SDR' || msg.role === 'ASSISTANT' ? 'text-white/30' : 'text-slate-300'}`}>
+                              {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
                          </div>
                       </div>
                     ))}
+                    {messages.length === 0 && (
+                      <div className="py-20 text-center text-slate-300 font-black uppercase text-[10px] tracking-[0.2em]">
+                         Nenhuma mensagem trocada ainda
+                      </div>
+                    )}
                  </div>
               </ScrollArea>
 
               {/* Input */}
               <div className="p-8 px-10 bg-white border-t border-slate-50">
-                 <div className="flex items-center gap-4 bg-slate-50 p-2 pl-6 rounded-3xl border border-slate-100 focus-within:ring-4 focus-within:ring-emerald-500/5 transition-all">
+                 <form 
+                  onSubmit={(e) => { e.preventDefault(); handleSend(); }}
+                  className="flex items-center gap-4 bg-slate-50 p-2 pl-6 rounded-3xl border border-slate-100 focus-within:ring-4 focus-within:ring-emerald-500/5 transition-all"
+                >
                     <Input 
                       placeholder="Responda manualmente ou deixe a IA agir..." 
                       className="border-none bg-transparent shadow-none focus-visible:ring-0 font-bold text-xs"
                       value={message}
                       onChange={e => setMessage(e.target.value)}
                     />
-                    <Button className="h-12 w-12 bg-emerald-500 hover:bg-emerald-600 rounded-2xl shadow-lg shadow-emerald-500/30 shrink-0">
+                    <Button type="submit" className="h-12 w-12 bg-emerald-500 hover:bg-emerald-600 rounded-2xl shadow-lg shadow-emerald-500/30 shrink-0">
                        <Send className="w-5 h-5 text-white" />
                     </Button>
-                 </div>
+                 </form>
               </div>
             </>
           ) : (
