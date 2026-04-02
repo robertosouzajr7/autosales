@@ -266,43 +266,7 @@ app.delete("/api/pipeline-stages/:id", async (req, res) => {
 });
 
 // --- Dashboard Stats ---
-app.get("/api/stats/dashboard", async (req, res) => {
-  try {
-    const tenant = await prisma.tenant.findFirst({ include: { pipelineStages: true } });
-    if (!tenant) return res.json({ totalLeads: 0, funnel: [] });
-
-    const totalLeads = await prisma.lead.count({ where: { tenantId: tenant.id } });
-    
-    // Contagem por stage
-    const funnel = [];
-    for (const stage of tenant.pipelineStages) {
-      const count = await prisma.lead.count({ where: { stageId: stage.id } });
-      funnel.push({ label: stage.name, value: count, id: stage.id });
-    }
-
-    // Oportunidades em aberto (Qualquer coisa que não seja Convertido ou Perdido - simplificando)
-    const openOpportunities = await prisma.lead.count({ 
-      where: { 
-        tenantId: tenant.id,
-        NOT: { stage: { name: { contains: "Convertido" } } } 
-      } 
-    });
-
-    res.json({ totalLeads, funnel, openOpportunities });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get("/api/public/landing", async (req, res) => {
-  try {
-    const settings = await prisma.landingPageSettings.findUnique({
-      where: { id: "singleton" }
-    });
-    const plans = await prisma.plan.findMany();
-    res.json({ settings, plans });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
+// (Rotas /api/stats/dashboard e /api/public/landing definidas mais abaixo com implementação completa)
 
 app.get("/api/public/webchat/:tenantId", async (req, res) => {
   try {
@@ -367,22 +331,7 @@ app.post("/api/bulk-send", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post("/api/public/chat", async (req, res) => {
-  const { sdrId, message, history } = req.body;
-  try {
-    const sdr = await prisma.sdrBot.findUnique({ where: { id: sdrId } });
-    if (!sdr) return res.status(404).json({ error: "SDR not found" });
-
-    // Aqui integraríamos com Gemini/OpenAI
-    // Por enquanto, vamos enviar uma resposta simulada baseada no nome do SDR
-    const response = `Olá! Sou o ${sdr.name}. Vi sua mensagem: "${message}". Como posso ajudar com o AutoSales?`;
-    
-    // Opcional: Salvar conversa no banco como um Lead 'Public' ou anônimo
-    res.json({ response });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
+// (Rota /api/public/chat definida mais abaixo com integração Gemini real)
 
 // --- SDRs ---
 app.get("/api/sdrs", async (req, res) => {

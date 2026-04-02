@@ -1,198 +1,718 @@
 import { PrismaClient } from "@prisma/client";
 import { WhatsAppManager } from "./whatsapp.js";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const prisma = new PrismaClient();
+const MAX_STEPS = 100;
 
 class AutomationEngine {
   constructor() {
-    this.checkInterval = setInterval(() => this.processPendingProgressions(), 30 * 1000);
+    this.checkInterval = setInterval(() => this.processPendingDelays(), 30 * 1000);
     this.routineInterval = setInterval(() => this.processGlobalRoutines(), 5 * 60 * 1000);
+    this.inactivityInterval = setInterval(() => this.processInactivityTriggers(), 5 * 60 * 1000);
+    console.log("[AutoEngine] ✅ Engine iniciado com DAG executor, variáveis e condições.");
   }
 
-  async sendMessage(phone, content, tenantId) {
-    // Agora centralizado no WhatsAppManager que suporta tanto Baileys quanto Meta Official
-    await WhatsAppManager.sendMessage(tenantId, phone, content);
+  // ========== VARIABLE RESOLUTION ==========
+
+  resolveTemplate(template, context) {
+    if (!template || typeof template !== "string") return template || "";
+    return template.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
+      const keys = path.trim().split(".");
+      let val = context?.variables;
+      for (const k of keys) {
+        if (val == null) return match;
+        val = val[k];
+      }
+      return val != null ? String(val) : match;
+    });
   }
 
-  // --- 1. PROCESSAMENTO DE WORKFLOWS VISUAIS ---
-  async processPendingProgressions() {
+  async buildContext(lead, tenantId) {
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    const conv = await prisma.conversation.findFirst({
+      where: { leadId: lead.id },
+      include: { messages: { orderBy: { createdAt: "desc" }, take: 5 } }
+    });
+    const appt = await prisma.appointment.findFirst({
+      where: { leadId: lead.id },
+      orderBy: { date: "desc" }
+    });
+
     const now = new Date();
-    try {
-      const pendings = await prisma.automationProgress.findMany({
-        where: {
-          status: "WAITING_DELAY",
-          nextRun: { lte: now }
+    const days = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+
+    return {
+      variables: {
+        lead: {
+          id: lead.id,
+          name: lead.name || "",
+          phone: lead.phone || "",
+          email: lead.email || "",
+          status: lead.status || "NEW",
+          source: lead.source || "",
+          notes: lead.notes || ""
         },
-        include: { automation: true, lead: true }
-      });
-
-      for (const progress of pendings) {
-        await this.continueFlow(progress);
+        tenant: { name: tenant?.name || "", id: tenantId },
+        conversation: {
+          last_message: conv?.messages?.[0]?.content || "",
+          count: conv?.messages?.length || 0
+        },
+        appointment: {
+          date: appt ? appt.date.toLocaleDateString("pt-BR") : "",
+          time: appt ? appt.date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "",
+          title: appt?.title || "",
+          status: appt?.status || ""
+        },
+        current: {
+          date: now.toLocaleDateString("pt-BR"),
+          time: now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+          day_of_week: days[now.getDay()]
+        },
+        input: {},
+        ai: { response: "" },
+        http: { response: "" },
+        custom: {}
       }
-    } catch (e) {
-      console.error("[AutomationEngine] Erro no scheduler:", e);
-    }
+    };
   }
 
-  // --- 2. ROTINAS GLOBAIS SDR (AUDIO REQUIREMENTS) ---
-  async processGlobalRoutines() {
-    console.log("[SDR-Routine] 🔍 Iniciando processamento de rotinas proativas...");
-    const now = new Date();
-    
-    try {
-      const configs = await prisma.automationConfig.findMany();
-      
-      for (const config of configs) {
-        const tenantId = config.tenantId;
+  async updateExecutionContext(executionId, path, value) {
+    const exec = await prisma.automationExecution.findUnique({ where: { id: executionId } });
+    const ctx = JSON.parse(exec?.context || '{"variables":{}}');
+    const keys = path.split(".");
+    let obj = ctx.variables;
+    for (let i = 0; i < keys.length - 1; i++) {
+      if (!obj[keys[i]]) obj[keys[i]] = {};
+      obj = obj[keys[i]];
+    }
+    obj[keys[keys.length - 1]] = value;
+    await prisma.automationExecution.update({
+      where: { id: executionId },
+      data: { context: JSON.stringify(ctx) }
+    });
+    return ctx;
+  }
 
-        // A. PRÉ-CONFIRMAÇÃO (Noite Anterior)
-        const tomorrow = new Date(now);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        
-        const appointmentsToConfirm = await prisma.appointment.findMany({
-          where: {
-            tenantId,
-            status: "SCHEDULED",
-            date: {
-              gte: new Date(tomorrow.setHours(0,0,0,0)),
-              lte: new Date(tomorrow.setHours(23,59,59,999))
+  // ========== DAG NAVIGATION ==========
+
+  getNextNodes(currentNodeId, edges, sourceHandle) {
+    if (!edges || !currentNodeId) return [];
+    return edges
+      .filter(e => e.source === currentNodeId && (!sourceHandle || e.sourceHandle === sourceHandle))
+      .map(e => e.target);
+  }
+
+  findStartNode(nodes, edges) {
+    if (!nodes?.length) return null;
+    const targets = new Set((edges || []).map(e => e.target));
+    const start = nodes.find(n => !targets.has(n.id));
+    return start || nodes[0];
+  }
+
+  // ========== CONDITION EVALUATOR ==========
+
+  evaluateCondition(rules, logic, context) {
+    if (!rules?.length) return true;
+
+    const results = rules.map(rule => {
+      const fieldVal = this.resolveTemplate(rule.field, context);
+      const compareVal = this.resolveTemplate(rule.value || "", context);
+
+      switch (rule.operator) {
+        case "equals": return fieldVal === compareVal;
+        case "not_equals": return fieldVal !== compareVal;
+        case "contains": return String(fieldVal).toLowerCase().includes(String(compareVal).toLowerCase());
+        case "not_contains": return !String(fieldVal).toLowerCase().includes(String(compareVal).toLowerCase());
+        case "starts_with": return String(fieldVal).toLowerCase().startsWith(String(compareVal).toLowerCase());
+        case "ends_with": return String(fieldVal).toLowerCase().endsWith(String(compareVal).toLowerCase());
+        case "gt": return parseFloat(fieldVal) > parseFloat(compareVal);
+        case "lt": return parseFloat(fieldVal) < parseFloat(compareVal);
+        case "gte": return parseFloat(fieldVal) >= parseFloat(compareVal);
+        case "lte": return parseFloat(fieldVal) <= parseFloat(compareVal);
+        case "empty": return !fieldVal || fieldVal === "";
+        case "not_empty": return !!fieldVal && fieldVal !== "";
+        case "regex":
+          try { return new RegExp(compareVal, "i").test(fieldVal); }
+          catch { return false; }
+        case "in": {
+          const list = String(compareVal).split(",").map(s => s.trim().toLowerCase());
+          return list.includes(String(fieldVal).toLowerCase());
+        }
+        default: return fieldVal === compareVal;
+      }
+    });
+
+    return logic === "OR" ? results.some(Boolean) : results.every(Boolean);
+  }
+
+  // ========== NODE PROCESSORS ==========
+
+  async executeNode(node, execution, lead, tenant) {
+    const config = node.data?.config || {};
+    const ctx = JSON.parse(execution.context || '{"variables":{}}');
+    const startTime = Date.now();
+    let result = { success: true, output: null, nextHandle: null };
+
+    try {
+      switch (node.type) {
+        case "SEND_MSG": {
+          const msg = this.resolveTemplate(config.message || node.data?.label || "Olá!", ctx);
+          await WhatsAppManager.sendMessage(lead.tenantId, lead.phone, msg);
+          result.output = { message: msg };
+          break;
+        }
+
+        case "WAIT": {
+          const delayMs = this.calculateDelay(config.value || 1, config.unit || "hour");
+          await prisma.automationExecution.update({
+            where: { id: execution.id },
+            data: {
+              status: "WAITING_DELAY",
+              currentNodeId: node.id,
+              resumeAt: new Date(Date.now() + delayMs)
             }
-          },
-          include: { lead: true }
-        });
-
-        for (const appt of appointmentsToConfirm) {
-           const timeStr = appt.date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-           const template = config.confirmMsgTemplate || "Olá {name}! Passando para confirmar seu atendimento de amanhã às {time}.";
-           const msg = template.replace("{name}", appt.lead.name).replace("{time}", timeStr);
-           
-           await this.sendMessage(appt.lead.phone, msg, tenantId);
-           await prisma.appointment.update({ where: { id: appt.id }, data: { status: "CONFIRM_SENT" } });
+          });
+          result.output = { delay: `${config.value} ${config.unit}`, resumeAt: new Date(Date.now() + delayMs) };
+          result.pause = true;
+          break;
         }
 
-        // B. NO-SHOW (Alerta de Atraso)
-        const graceMinutes = config.lateToleranceMin || 15;
-        const delayedLimit = new Date(now.getTime() - (graceMinutes * 60 * 1000));
-        
-        const delayedAppts = await prisma.appointment.findMany({
-          where: {
-            tenantId,
-            status: "CONFIRM_SENT", 
-            date: { lte: delayedLimit, gte: new Date(now.setHours(0,0,0,0)) }
-          },
-          include: { lead: true }
-        });
-
-        for (const appt of delayedAppts) {
-           const timeStr = appt.date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-           const template = config.lateMsgTemplate || "Oi {name}! Notamos que você ainda não chegou para o seu horário das {time}. Está tudo bem?";
-           const msg = template.replace("{name}", appt.lead.name).replace("{time}", timeStr);
-           
-           await this.sendMessage(appt.lead.phone, msg, tenantId);
-           await prisma.appointment.update({ where: { id: appt.id }, data: { status: "LATE_NOTIFIED" } });
+        case "CONDITION": {
+          const condResult = this.evaluateCondition(config.rules || [], config.logic || "AND", ctx);
+          result.nextHandle = condResult ? "true" : "false";
+          result.output = { conditionResult: condResult, rules: config.rules?.length || 0 };
+          break;
         }
 
-        // C. PÓS-VENDA (Feedback 24h)
-        const postCheckHours = config.postServiceHours || 24;
-        const postLimit = new Date(now.getTime() - (postCheckHours * 60 * 1000));
-        
-        const completedAppts = await prisma.appointment.findMany({
-          where: {
-            tenantId,
-            status: "COMPLETED",
-            updatedAt: { lte: postLimit }
-          },
-          include: { lead: true }
-        });
-
-        for (const appt of completedAppts) {
-           const template = config.postServiceMsgTemplate || "Oi {name}! Esperamos que tenha gostado do atendimento! ✨ Como foi sua experiência?";
-           const msg = template.replace("{name}", appt.lead.name);
-           
-           await this.sendMessage(appt.lead.phone, msg, tenantId);
-           await prisma.appointment.update({ where: { id: appt.id }, data: { status: "FEEDBACK_SENT" } });
+        case "COLLECT_INPUT": {
+          const prompt = this.resolveTemplate(config.prompt || "Por favor, responda:", ctx);
+          await WhatsAppManager.sendMessage(lead.tenantId, lead.phone, prompt);
+          await prisma.automationExecution.update({
+            where: { id: execution.id },
+            data: {
+              status: "WAITING_INPUT",
+              currentNodeId: node.id,
+              waitingForInput: true,
+              inputVariable: config.variable || "resposta"
+            }
+          });
+          result.output = { prompt, variable: config.variable };
+          result.pause = true;
+          break;
         }
+
+        case "AI_RESPONSE": {
+          const aiPrompt = this.resolveTemplate(config.prompt || "", ctx);
+          const aiResponse = await this.callAI(aiPrompt, lead, ctx);
+          await this.updateExecutionContext(execution.id, "ai.response", aiResponse);
+          if (config.sendToLead !== false) {
+            await WhatsAppManager.sendMessage(lead.tenantId, lead.phone, aiResponse);
+          }
+          result.output = { response: aiResponse.substring(0, 200) };
+          break;
+        }
+
+        case "ADD_TAG": {
+          const tagName = this.resolveTemplate(config.tag || "", ctx);
+          if (tagName) {
+            let tag = await prisma.tag.findFirst({ where: { name: tagName } });
+            if (!tag) tag = await prisma.tag.create({ data: { name: tagName } });
+            await prisma.lead.update({
+              where: { id: lead.id },
+              data: { tags: { connect: { id: tag.id } } }
+            });
+          }
+          result.output = { tag: tagName };
+          break;
+        }
+
+        case "MOVE_STAGE": {
+          const stageName = this.resolveTemplate(config.stageName || "", ctx);
+          const stageId = config.stageId;
+          let stage = null;
+          if (stageId) {
+            stage = await prisma.pipelineStage.findUnique({ where: { id: stageId } });
+          } else if (stageName) {
+            stage = await prisma.pipelineStage.findFirst({
+              where: { name: { contains: stageName }, tenantId: lead.tenantId }
+            });
+          }
+          if (stage) {
+            await prisma.lead.update({ where: { id: lead.id }, data: { stageId: stage.id } });
+          }
+          result.output = { stage: stage?.name || stageName };
+          break;
+        }
+
+        case "TRANSFER_HUMAN": {
+          const msg = this.resolveTemplate(
+            config.message || "Transferindo para atendimento humano...", ctx
+          );
+          await prisma.conversation.updateMany({
+            where: { leadId: lead.id },
+            data: { botActive: false }
+          });
+          await WhatsAppManager.sendMessage(lead.tenantId, lead.phone, msg);
+          result.output = { transferred: true };
+          break;
+        }
+
+        case "SCHEDULE_APPOINTMENT": {
+          const title = this.resolveTemplate(config.title || "Agendamento automático", ctx);
+          const dateStr = this.resolveTemplate(config.date || "", ctx);
+          if (dateStr) {
+            const appt = await prisma.appointment.create({
+              data: {
+                leadId: lead.id,
+                tenantId: lead.tenantId,
+                title,
+                date: new Date(dateStr),
+                status: "SCHEDULED"
+              }
+            });
+            result.output = { appointmentId: appt.id, title, date: dateStr };
+          } else {
+            result.output = { error: "Data não fornecida" };
+            result.success = false;
+          }
+          break;
+        }
+
+        case "UPDATE_LEAD": {
+          const updates = {};
+          if (config.name) updates.name = this.resolveTemplate(config.name, ctx);
+          if (config.email) updates.email = this.resolveTemplate(config.email, ctx);
+          if (config.notes) updates.notes = this.resolveTemplate(config.notes, ctx);
+          if (config.source) updates.source = this.resolveTemplate(config.source, ctx);
+          if (Object.keys(updates).length > 0) {
+            await prisma.lead.update({ where: { id: lead.id }, data: updates });
+          }
+          result.output = { updated: Object.keys(updates) };
+          break;
+        }
+
+        case "HTTP_REQUEST": {
+          const url = this.resolveTemplate(config.url || "", ctx);
+          const method = (config.method || "GET").toUpperCase();
+          const headers = { "Content-Type": "application/json" };
+          const body = config.body ? this.resolveTemplate(config.body, ctx) : undefined;
+          try {
+            const resp = await fetch(url, {
+              method, headers,
+              body: method !== "GET" ? body : undefined
+            });
+            const data = await resp.text();
+            await this.updateExecutionContext(execution.id, "http.response", data);
+            result.output = { status: resp.status, body: data.substring(0, 500) };
+          } catch (e) {
+            result.output = { error: e.message };
+            result.success = false;
+          }
+          break;
+        }
+
+        case "END": {
+          result.output = { ended: true };
+          // Will be caught by empty nextNodeIds below
+          break;
+        }
+
+        default:
+          console.log(`[AutoEngine] Tipo de nó desconhecido: ${node.type}`);
+          result.output = { skipped: true };
       }
-    } catch (e) {
-      console.error("[SDR-Routine] Erro nas rotinas:", e);
+    } catch (err) {
+      console.error(`[AutoEngine] Erro ao executar ${node.type}:`, err);
+      result.success = false;
+      result.output = { error: err.message };
     }
+
+    // Log the step
+    await prisma.automationStepLog.create({
+      data: {
+        executionId: execution.id,
+        nodeId: node.id,
+        nodeType: node.type,
+        status: result.success ? "SUCCESS" : "FAILED",
+        input: JSON.stringify(config),
+        output: JSON.stringify(result.output),
+        duration: Date.now() - startTime
+      }
+    });
+
+    return result;
   }
 
-  // --- 3. LÓGICA DE WORKFLOWS ---
-  async trigger(lead, triggerType) {
+  // ========== AI CALLER ==========
+
+  async callAI(customPrompt, lead, context) {
     try {
-      const automations = await prisma.automation.findMany({
-        where: { trigger: triggerType, active: true, tenantId: lead.tenantId }
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) return "IA não configurada. Configure GEMINI_API_KEY.";
+
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+      const sdr = await prisma.sdrBot.findFirst({
+        where: { tenantId: lead.tenantId, active: true }
       });
 
-      for (const auto of automations) {
-        await prisma.automationProgress.upsert({
-          where: { automationId_leadId: { automationId: auto.id, leadId: lead.id } },
-          create: { automationId: auto.id, leadId: lead.id, status: "RUNNING", currentStepId: null },
-          update: { status: "RUNNING", currentStepId: null, nextRun: null }
-        });
-        const progress = await prisma.automationProgress.findUnique({
-           where: { automationId_leadId: { automationId: auto.id, leadId: lead.id } },
-           include: { automation: true, lead: true }
-        });
-        await this.continueFlow(progress);
-      }
+      const systemPrompt = customPrompt || sdr?.prompt || "Você é um SDR profissional. Qualifique o lead e ajude-o.";
+      const kb = sdr?.knowledgeBase || "";
+
+      const fullPrompt = `${systemPrompt}
+
+Base de conhecimento:
+${kb}
+
+Dados do lead:
+- Nome: ${lead.name}
+- Telefone: ${lead.phone}
+- Status: ${lead.status}
+
+Histórico recente: ${context?.variables?.conversation?.last_message || "Nenhum"}
+
+Responda de forma profissional e objetiva.`;
+
+      const result = await model.generateContent(fullPrompt);
+      return result.response.text();
     } catch (e) {
-      console.error("[AutomationEngine] Erro no trigger:", e);
+      console.error("[AutoEngine] Erro na IA:", e);
+      return "Desculpe, tive um problema técnico. Pode repetir?";
     }
   }
 
-  async continueFlow(progress) {
-    if (!progress.automation.nodes) return;
-    const nodes = JSON.parse(progress.automation.nodes || "[]");
-    const currentIndex = nodes.findIndex(n => n.id === progress.currentStepId);
-    const nextIndex = currentIndex + 1;
+  // ========== FLOW EXECUTION ==========
 
-    if (nextIndex >= nodes.length) {
-      await prisma.automationProgress.update({
-        where: { id: progress.id },
-        data: { status: "COMPLETED", currentStepId: null }
+  async startExecution(automation, lead) {
+    const nodes = JSON.parse(automation.nodes || "[]");
+    const edges = JSON.parse(automation.edges || "[]");
+    if (!nodes.length) return;
+
+    const context = await this.buildContext(lead, automation.tenantId);
+
+    const execution = await prisma.automationExecution.create({
+      data: {
+        automationId: automation.id,
+        leadId: lead.id,
+        status: "RUNNING",
+        context: JSON.stringify(context)
+      }
+    });
+
+    await prisma.automation.update({
+      where: { id: automation.id },
+      data: {
+        totalExecutions: { increment: 1 },
+        lastExecutedAt: new Date()
+      }
+    });
+
+    console.log(`[AutoEngine] ▶ Execução ${execution.id} do fluxo "${automation.name}" para lead ${lead.name}`);
+
+    const startNode = this.findStartNode(nodes, edges);
+    if (startNode) {
+      await this.runNode(startNode.id, execution.id, nodes, edges, lead, 0);
+    }
+  }
+
+  async runNode(nodeId, executionId, nodes, edges, lead, stepCount) {
+    if (stepCount >= MAX_STEPS) {
+      console.error(`[AutoEngine] Max steps (${MAX_STEPS}) alcançado para execução ${executionId}`);
+      await prisma.automationExecution.update({
+        where: { id: executionId },
+        data: { status: "FAILED", error: "Max steps exceeded", completedAt: new Date() }
       });
       return;
     }
 
-    const nextNode = nodes[nextIndex];
-    
-    try {
-      switch (nextNode.type) {
-        case "SEND_MSG":
-          await this.sendMessage(progress.lead.phone, nextNode.label || "Olá!", progress.lead.tenantId);
-          await this.advance(progress, nextNode.id);
-          break;
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node) {
+      await prisma.automationExecution.update({
+        where: { id: executionId },
+        data: { status: "COMPLETED", completedAt: new Date() }
+      });
+      return;
+    }
 
-        case "WAIT":
-          const delayMs = this.calculateDelay(nextNode.config?.value || 1, nextNode.config?.unit || "hour");
-          await prisma.automationProgress.update({
-            where: { id: progress.id },
-            data: { 
-              status: "WAITING_DELAY", 
-              currentStepId: nextNode.id,
-              nextRun: new Date(Date.now() + delayMs)
-            }
-          });
-          break;
+    const execution = await prisma.automationExecution.findUnique({ where: { id: executionId } });
+    if (!execution || execution.status === "CANCELLED" || execution.status === "FAILED") return;
 
-        default:
-          await this.advance(progress, nextNode.id);
-      }
-    } catch (err) {
-      console.error(`[AutomationEngine] Erro ao processar ${nextNode.type}:`, err);
+    await prisma.automationExecution.update({
+      where: { id: executionId },
+      data: { currentNodeId: nodeId, status: "RUNNING" }
+    });
+
+    const result = await this.executeNode(node, execution, lead, null);
+
+    // If paused (WAIT or COLLECT_INPUT), stop and let scheduler resume
+    if (result.pause) return;
+
+    if (!result.success) {
+      await prisma.automationExecution.update({
+        where: { id: executionId },
+        data: { status: "FAILED", error: JSON.stringify(result.output), completedAt: new Date() }
+      });
+      return;
+    }
+
+    // Follow edges to next node(s)
+    const nextNodeIds = this.getNextNodes(nodeId, edges, result.nextHandle);
+
+    if (nextNodeIds.length === 0) {
+      await prisma.automationExecution.update({
+        where: { id: executionId },
+        data: { status: "COMPLETED", completedAt: new Date() }
+      });
+      return;
+    }
+
+    // Execute next nodes (for conditions, might have single path)
+    for (const nextId of nextNodeIds) {
+      await this.runNode(nextId, executionId, nodes, edges, lead, stepCount + 1);
     }
   }
 
-  async advance(progress, stepId) {
-    const updated = await prisma.automationProgress.update({
-      where: { id: progress.id },
-      data: { currentStepId: stepId, status: "RUNNING" },
-      include: { automation: true, lead: true }
-    });
-    await this.continueFlow(updated);
+  // ========== TRIGGER DISPATCHER ==========
+
+  async dispatchTrigger(triggerType, data) {
+    const { lead, tenantId } = data;
+    if (!lead || !tenantId) return;
+
+    try {
+      const automations = await prisma.automation.findMany({
+        where: { tenantId, active: true, trigger: triggerType }
+      });
+
+      for (const auto of automations) {
+        // For KEYWORD trigger, check if message matches
+        if (triggerType === "KEYWORD" && data.message) {
+          const config = JSON.parse(auto.triggerConfig || "{}");
+          const keywords = config.keywords || [];
+          const msgLower = data.message.toLowerCase();
+          if (!keywords.some(k => msgLower.includes(k.toLowerCase()))) continue;
+        }
+
+        // Check if already running for this lead
+        const existing = await prisma.automationExecution.findFirst({
+          where: {
+            automationId: auto.id,
+            leadId: lead.id,
+            status: { in: ["RUNNING", "WAITING_DELAY", "WAITING_INPUT"] }
+          }
+        });
+        if (existing) continue;
+
+        await this.startExecution(auto, lead);
+      }
+    } catch (e) {
+      console.error(`[AutoEngine] Erro no dispatchTrigger(${triggerType}):`, e);
+    }
   }
+
+  // ========== SCHEDULERS ==========
+
+  async processPendingDelays() {
+    try {
+      const now = new Date();
+      const pendings = await prisma.automationExecution.findMany({
+        where: { status: "WAITING_DELAY", resumeAt: { lte: now } },
+        include: { automation: true, lead: true }
+      });
+
+      for (const exec of pendings) {
+        const nodes = JSON.parse(exec.automation.nodes || "[]");
+        const edges = JSON.parse(exec.automation.edges || "[]");
+        const nextNodeIds = this.getNextNodes(exec.currentNodeId, edges);
+
+        if (nextNodeIds.length > 0) {
+          await prisma.automationExecution.update({
+            where: { id: exec.id },
+            data: { status: "RUNNING", resumeAt: null }
+          });
+          for (const nextId of nextNodeIds) {
+            await this.runNode(nextId, exec.id, nodes, edges, exec.lead, 0);
+          }
+        } else {
+          await prisma.automationExecution.update({
+            where: { id: exec.id },
+            data: { status: "COMPLETED", completedAt: new Date() }
+          });
+        }
+      }
+    } catch (e) {
+      console.error("[AutoEngine] Erro no processPendingDelays:", e);
+    }
+  }
+
+  async processInactivityTriggers() {
+    try {
+      const automations = await prisma.automation.findMany({
+        where: { trigger: "INACTIVITY", active: true }
+      });
+
+      for (const auto of automations) {
+        const config = JSON.parse(auto.triggerConfig || "{}");
+        const minutes = config.inactivityMinutes || 1440; // default 24h
+        const cutoff = new Date(Date.now() - minutes * 60 * 1000);
+
+        const inactiveLeads = await prisma.lead.findMany({
+          where: {
+            tenantId: auto.tenantId,
+            conversations: {
+              some: {
+                messages: { every: { createdAt: { lt: cutoff } } }
+              }
+            }
+          },
+          take: 50
+        });
+
+        for (const lead of inactiveLeads) {
+          const existing = await prisma.automationExecution.findFirst({
+            where: {
+              automationId: auto.id,
+              leadId: lead.id,
+              status: { in: ["RUNNING", "WAITING_DELAY", "WAITING_INPUT", "COMPLETED"] }
+            }
+          });
+          if (existing) continue;
+          await this.startExecution(auto, lead);
+        }
+      }
+    } catch (e) {
+      console.error("[AutoEngine] Erro no processInactivityTriggers:", e);
+    }
+  }
+
+  // ========== INCOMING MESSAGE HANDLER ==========
+
+  async handleIncoming(phone, text, tenantId) {
+    const lead = await prisma.lead.findFirst({ where: { phone, tenantId } });
+    if (!lead) return false;
+
+    // A. TRIAGEM DE CRISE (Handoff Humano)
+    const config = await prisma.automationConfig.findUnique({ where: { tenantId } });
+    if (config?.humanHandoffTags) {
+      const keywords = config.humanHandoffTags.split(",").map(k => k.trim().toLowerCase());
+      if (keywords.some(k => text.toLowerCase().includes(k))) {
+        console.log(`[AutoEngine] ⚠️ Crise detectada para ${phone}. Handoff humano.`);
+        await prisma.conversation.upsert({
+          where: { leadId: lead.id },
+          update: { botActive: false },
+          create: { leadId: lead.id, tenantId, botActive: false }
+        });
+        await WhatsAppManager.sendMessage(tenantId, phone,
+          "Entendi perfeitamente. Vou conectar você com nossa equipe agora! 🙏"
+        );
+        return true;
+      }
+    }
+
+    // B. CHECK WAITING_INPUT executions
+    const waitingExec = await prisma.automationExecution.findFirst({
+      where: { leadId: lead.id, status: "WAITING_INPUT", waitingForInput: true },
+      include: { automation: true }
+    });
+
+    if (waitingExec) {
+      const varName = waitingExec.inputVariable || "resposta";
+      await this.updateExecutionContext(waitingExec.id, `input.${varName}`, text);
+
+      await prisma.automationExecution.update({
+        where: { id: waitingExec.id },
+        data: { status: "RUNNING", waitingForInput: false, inputVariable: null }
+      });
+
+      const nodes = JSON.parse(waitingExec.automation.nodes || "[]");
+      const edges = JSON.parse(waitingExec.automation.edges || "[]");
+      const nextNodeIds = this.getNextNodes(waitingExec.currentNodeId, edges);
+
+      for (const nextId of nextNodeIds) {
+        await this.runNode(nextId, waitingExec.id, nodes, edges, lead, 0);
+      }
+      return true;
+    }
+
+    // C. KEYWORD triggers
+    await this.dispatchTrigger("KEYWORD", { lead, tenantId, message: text });
+
+    // D. NEW_MSG triggers
+    await this.dispatchTrigger("NEW_MSG", { lead, tenantId, message: text });
+
+    return false;
+  }
+
+  // ========== GLOBAL ROUTINES (appointment lifecycle) ==========
+
+  async processGlobalRoutines() {
+    const now = new Date();
+    try {
+      const configs = await prisma.automationConfig.findMany();
+
+      for (const config of configs) {
+        const tenantId = config.tenantId;
+
+        // A. PRÉ-CONFIRMAÇÃO
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tStart = new Date(tomorrow); tStart.setHours(0, 0, 0, 0);
+        const tEnd = new Date(tomorrow); tEnd.setHours(23, 59, 59, 999);
+
+        const toConfirm = await prisma.appointment.findMany({
+          where: { tenantId, status: "SCHEDULED", date: { gte: tStart, lte: tEnd } },
+          include: { lead: true }
+        });
+
+        for (const appt of toConfirm) {
+          const timeStr = appt.date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          const template = config.confirmMsgTemplate || "Olá {name}! Confirmando seu atendimento amanhã às {time}. ✅";
+          const msg = template.replace("{name}", appt.lead.name).replace("{time}", timeStr);
+          await WhatsAppManager.sendMessage(tenantId, appt.lead.phone, msg);
+          await prisma.appointment.update({ where: { id: appt.id }, data: { status: "CONFIRM_SENT" } });
+        }
+
+        // B. NO-SHOW
+        const grace = config.lateToleranceMin || 15;
+        const delayLimit = new Date(now.getTime() - grace * 60 * 1000);
+        const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
+
+        const delayed = await prisma.appointment.findMany({
+          where: { tenantId, status: "CONFIRM_SENT", date: { lte: delayLimit, gte: todayStart } },
+          include: { lead: true }
+        });
+
+        for (const appt of delayed) {
+          const timeStr = appt.date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          const template = config.lateMsgTemplate || "Oi {name}! Notamos que você ainda não chegou para as {time}. Tudo bem?";
+          const msg = template.replace("{name}", appt.lead.name).replace("{time}", timeStr);
+          await WhatsAppManager.sendMessage(tenantId, appt.lead.phone, msg);
+          await prisma.appointment.update({ where: { id: appt.id }, data: { status: "LATE_NOTIFIED" } });
+        }
+
+        // C. PÓS-VENDA (corrigido: usa horas, não minutos)
+        const postHours = config.postServiceHours || 24;
+        const postLimit = new Date(now.getTime() - postHours * 60 * 60 * 1000);
+
+        const completed = await prisma.appointment.findMany({
+          where: { tenantId, status: "COMPLETED", updatedAt: { lte: postLimit } },
+          include: { lead: true }
+        });
+
+        for (const appt of completed) {
+          const template = config.postServiceMsgTemplate || "Oi {name}! Como foi sua experiência? ✨";
+          const msg = template.replace("{name}", appt.lead.name);
+          await WhatsAppManager.sendMessage(tenantId, appt.lead.phone, msg);
+          await prisma.appointment.update({ where: { id: appt.id }, data: { status: "FEEDBACK_SENT" } });
+        }
+      }
+    } catch (e) {
+      console.error("[AutoEngine] Erro nas rotinas globais:", e);
+    }
+  }
+
+  // ========== UTILS ==========
 
   calculateDelay(val, unit) {
     const base = 60 * 1000;
@@ -202,45 +722,8 @@ class AutomationEngine {
     return 5000;
   }
 
-  async handleIncoming(phone, text, tenantId) {
-    const lead = await prisma.lead.findFirst({ where: { phone, tenantId } });
-    if (!lead) return false;
-
-    // A. TRIAGEM DE CRISE E TRANSBORDO (Audio Requirement)
-    const config = await prisma.automationConfig.findUnique({ where: { tenantId } });
-    if (config?.humanHandoffTags) {
-       const keywords = config.humanHandoffTags.split(",").map(k => k.trim().toLowerCase());
-       const matched = keywords.some(k => text.toLowerCase().includes(k));
-       
-       if (matched) {
-          console.log(`[SDR-Alert] ⚠️ Crise detectada para lead ${phone}. Pausando robô.`);
-          // Pausa a IA para o lead
-          await prisma.conversation.upsert({
-            where: { leadId: lead.id },
-            update: { botActive: false },
-            create: { leadId: lead.id, botActive: false }
-          });
-          await this.sendMessage(phone, "Entendi perfeitamente sua situação. Vou conectar você com nossa equipe agora mesmo para te dar total atenção! 🙏", tenantId);
-          return true;
-       }
-    }
-
-    // B. PROCESSAMENTO DE RESPOSTA EM WORKFLOWS
-    const waitingProgress = await prisma.automationProgress.findFirst({
-      where: { leadId: lead.id, status: "WAITING_CONDITION" },
-      include: { automation: true, lead: true }
-    });
-
-    if (waitingProgress) {
-        const nodes = JSON.parse(waitingProgress.automation.nodes || "[]");
-        const node = nodes.find(n => n.id === waitingProgress.currentStepId);
-        if (node && text.toLowerCase().includes((node.config?.conditionValue || "").toLowerCase())) {
-            await this.advance(waitingProgress, node.id);
-            return true;
-        }
-    }
-
-    return false;
+  async sendMessage(phone, content, tenantId) {
+    await WhatsAppManager.sendMessage(tenantId, phone, content);
   }
 }
 
