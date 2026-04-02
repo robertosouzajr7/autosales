@@ -8,7 +8,7 @@ import {
   Inbox, Clock, Tag, MoveRight, Users, Calendar, FileEdit,
   StopCircle, Copy, Search, Send, ChevronRight, Layers, Map,
   Sparkles, Brain, GitBranch, Shuffle, BarChart3, Wrench, ScanText,
-  Image, Workflow
+  Image, Workflow, Lock
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
@@ -291,6 +291,7 @@ export default function Automations() {
   const [newAuto, setNewAuto] = useState({ name: "", trigger: "NEW_LEAD", description: "", triggerConfig: "{}" });
   const [execStats, setExecStats] = useState<any>(null);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [tenantLimits, setTenantLimits] = useState<any>({ aiEnabled: false, webhookEnabled: false });
 
   // ReactFlow state
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -327,7 +328,17 @@ export default function Automations() {
     } catch { }
   };
 
-  useEffect(() => { fetchData(); fetchStats(); }, []);
+  const fetchLimits = async () => {
+    try {
+      const res = await fetch("/api/tenant/current");
+      if (res.ok) {
+        const data = await res.json();
+        setTenantLimits(data.planFeatures);
+      }
+    } catch { }
+  };
+
+  useEffect(() => { fetchData(); fetchStats(); fetchLimits(); }, []);
 
   // -------- CRUD --------
   const handleCreateAuto = async () => {
@@ -340,8 +351,11 @@ export default function Automations() {
       if (res.ok) {
         toast({ title: "✅ Workflow Criado!" }); setIsAddModalOpen(false);
         setNewAuto({ name: "", trigger: "NEW_LEAD", description: "", triggerConfig: "{}" }); fetchData();
+      } else {
+        const err = await res.json();
+        toast({ title: "Atenção", description: err.error || "Falha ao criar", variant: "destructive" });
       }
-    } catch (e) { toast({ title: "Falha ao criar", variant: "destructive" }); }
+    } catch (e) { toast({ title: "Falha conexão", variant: "destructive" }); }
   };
 
   const createFromTemplate = async (template: typeof FLOW_TEMPLATES[0]) => {
@@ -359,8 +373,11 @@ export default function Automations() {
       });
       if (res.ok) {
         toast({ title: `✅ Template "${template.name}" criado!` }); setShowTemplates(false); fetchData();
+      } else {
+        const err = await res.json();
+        toast({ title: "Bloqueado", description: err.error || "Erro", variant: "destructive" });
       }
-    } catch { toast({ title: "Erro", variant: "destructive" }); }
+    } catch { toast({ title: "Falha conexão", variant: "destructive" }); }
   };
 
   const toggleAuto = async (id: string, current: boolean) => {
@@ -377,8 +394,15 @@ export default function Automations() {
   };
 
   const duplicateAuto = async (id: string) => {
-    await fetch(`/api/automations/${id}/duplicate`, { method: "POST" });
-    toast({ title: "📋 Duplicado" }); fetchData();
+    try {
+      const res = await fetch(`/api/automations/${id}/duplicate`, { method: "POST" });
+      if (res.ok) {
+        toast({ title: "📋 Duplicado" }); fetchData();
+      } else {
+        const err = await res.json();
+        toast({ title: "Opa!", description: err.error, variant: "destructive" });
+      }
+    } catch { toast({ title: "Erdro", variant: "destructive" }); }
   };
 
   // -------- BUILDER --------
@@ -433,6 +457,15 @@ export default function Automations() {
       if (!typeId) return;
 
       const typeDef = NODE_TYPES_DEF.find(t => t.id === typeId);
+      if (typeDef?.category === 'ai' && !tenantLimits.aiEnabled) {
+         toast({ title: "Plano Inicial", description: "Faça Upgrade para liberar a Inteligência Artificial avançada.", variant: "destructive" });
+         return;
+      }
+      if (typeId === 'HTTP_REQUEST' && !tenantLimits.webhookEnabled) {
+         toast({ title: "Plano Inicial", description: "Faça Upgrade para liberar integrações e Webhooks externos.", variant: "destructive" });
+         return;
+      }
+
       const reactFlowBounds = document.querySelector(".react-flow")?.getBoundingClientRect();
       if (!reactFlowBounds) return;
 
@@ -699,7 +732,10 @@ export default function Automations() {
                   className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-slate-50 active:scale-95 transition-all cursor-grab active:cursor-grabbing border border-transparent hover:border-slate-100"
                 >
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-md shrink-0" style={{ backgroundColor: st.color }}>{st.icon}</div>
-                  <span className="text-[9px] font-black uppercase text-slate-600 tracking-tight">{st.label}</span>
+                  <div className="flex flex-1 items-center justify-between">
+                     <span className="text-[9px] font-black uppercase text-slate-600 tracking-tight">{st.label}</span>
+                     {(st.id === "HTTP_REQUEST" && !tenantLimits.webhookEnabled) && <Lock className="w-3 h-3 text-red-400" />}
+                  </div>
                 </div>
               ))}
               <h4 className="text-[8px] font-black text-purple-400 uppercase tracking-widest px-2 mt-2">⚡ IA Avançada</h4>
@@ -712,7 +748,10 @@ export default function Automations() {
                   className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-purple-50 active:scale-95 transition-all cursor-grab active:cursor-grabbing border border-transparent hover:border-purple-100"
                 >
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-md shrink-0" style={{ backgroundColor: st.color }}>{st.icon}</div>
-                  <span className="text-[9px] font-black uppercase text-slate-600 tracking-tight">{st.label}</span>
+                  <div className="flex flex-1 items-center justify-between">
+                    <span className="text-[9px] font-black uppercase text-slate-600 tracking-tight">{st.label}</span>
+                    {!tenantLimits.aiEnabled && <Lock className="w-3 h-3 text-red-400" />}
+                  </div>
                 </div>
               ))}
               <h4 className="text-[8px] font-black text-slate-300 uppercase tracking-widest px-2 mt-2">Lógica</h4>

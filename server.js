@@ -549,6 +549,31 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
+// --- Current Tenant & Plan Limits ---
+app.get("/api/tenant/current", async (req, res) => {
+  try {
+    const tenant = await prisma.tenant.findFirst({
+      include: { plan: true }
+    });
+    if (!tenant) return res.status(404).json({ error: "No tenant found" });
+    
+    let planFeatures = {
+      aiEnabled: false,
+      webhookEnabled: false,
+      maxAutomations: 3,
+      maxExecutions: 1000
+    };
+
+    if (tenant.plan && tenant.plan.features) {
+       try {
+         planFeatures = { ...planFeatures, ...JSON.parse(tenant.plan.features) };
+       } catch (e) {}
+    }
+    
+    res.json({ id: tenant.id, name: tenant.name, planFeatures });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // --- Automations ---
 app.get("/api/automations", async (req, res) => {
   try {
@@ -564,8 +589,29 @@ app.get("/api/automations", async (req, res) => {
 
 app.post("/api/automations", async (req, res) => {
   try {
-    const tenant = await prisma.tenant.findFirst();
+    const tenant = await prisma.tenant.findFirst({
+      include: { automations: true, plan: true }
+    });
     if (!tenant) return res.status(400).json({ error: "No tenant found" });
+
+    // --- Monetization Check: Max Automations ---
+    let maxAutomations = 3; // default for free/basic
+    if (tenant.plan && tenant.plan.features) {
+       try {
+         const planFeatures = JSON.parse(tenant.plan.features);
+         if (planFeatures.maxAutomations !== undefined) {
+           maxAutomations = planFeatures.maxAutomations;
+         }
+       } catch(e) {}
+    }
+    
+    // -1 signifies unlimited
+    if (maxAutomations !== -1 && tenant.automations.length >= maxAutomations) {
+      return res.status(403).json({ 
+        error: "Limite de automações atingido. Faça upgrade do seu plano para criar mais automações."
+      });
+    }
+
     const { name, trigger, triggerConfig, description, nodes, edges } = req.body;
     const aut = await prisma.automation.create({
       data: { name, trigger, triggerConfig, description, nodes, edges, tenantId: tenant.id }
@@ -592,8 +638,21 @@ app.put("/api/automations/:id", async (req, res) => {
 
 app.post("/api/automations/:id/duplicate", async (req, res) => {
   try {
-    const original = await prisma.automation.findUnique({ where: { id: req.params.id } });
+    const original = await prisma.automation.findUnique({ where: { id: req.params.id }, include: { tenant: { include: { automations: true, plan: true } } } });
     if (!original) return res.status(404).json({ error: "Not found" });
+
+    // --- Monetization Check ---
+    let maxAutomations = 3;
+    if (original.tenant.plan && original.tenant.plan.features) {
+       try {
+         const planFeatures = JSON.parse(original.tenant.plan.features);
+         if (planFeatures.maxAutomations !== undefined) maxAutomations = planFeatures.maxAutomations;
+       } catch(e) {}
+    }
+    if (maxAutomations !== -1 && original.tenant.automations.length >= maxAutomations) {
+      return res.status(403).json({ error: "Limite de automações atingido. Faça upgrade." });
+    }
+
     const copy = await prisma.automation.create({
       data: {
         name: `${original.name} (cópia)`,
@@ -690,6 +749,16 @@ app.post("/api/automations/config", async (req, res) => {
 app.post("/api/webhook/:tenantId/:automationId", async (req, res) => {
   try {
     const { tenantId, automationId } = req.params;
+
+    // --- Monetization Check: Webhooks ---
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, include: { plan: true } });
+    if (!tenant) return res.status(404).json({ error: "Tenant não encontrado" });
+    let webhookEnabled = false;
+    if (tenant.plan && tenant.plan.features) {
+       try { webhookEnabled = JSON.parse(tenant.plan.features).webhookEnabled === true; } catch(e){}
+    }
+    if (!webhookEnabled) return res.status(403).json({ error: "O plano atual do Tenant não permite Webhooks. Faça upgrade." });
+
     const { leadId, phone, data: webhookData } = req.body;
     const automation = await prisma.automation.findFirst({ where: { id: automationId, tenantId, active: true } });
     if (!automation) return res.status(404).json({ error: "Automação não encontrada" });

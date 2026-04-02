@@ -802,6 +802,38 @@ Retorne APENAS um JSON com: { "score": 0-100, "reasoning": "explicação de 2-3 
     const edges = JSON.parse(automation.edges || "[]");
     if (!nodes.length) return;
 
+    // --- Monetization Check: Max Executions / Month ---
+    try {
+      const tenant = await prisma.tenant.findUnique({ where: { id: automation.tenantId }, include: { plan: true } });
+      if (tenant && tenant.plan && tenant.plan.features) {
+         let maxExecutions = 1000;
+         try {
+           const features = JSON.parse(tenant.plan.features);
+           if (features.maxExecutions !== undefined) maxExecutions = features.maxExecutions;
+         } catch(e){}
+
+         if (maxExecutions !== -1) {
+            const startOfMonth = new Date();
+            startOfMonth.setDate(1);
+            startOfMonth.setHours(0,0,0,0);
+            
+            const currentExecutions = await prisma.automationExecution.count({
+              where: {
+                automation: { tenantId: automation.tenantId },
+                createdAt: { gte: startOfMonth }
+              }
+            });
+
+            if (currentExecutions >= maxExecutions) {
+              console.log(`[AutoEngine] 🛑 Blocked: Tenant ${tenant.id} exceeded monthly executions limit (${maxExecutions})`);
+              return;
+            }
+         }
+      }
+    } catch (e) {
+      console.error("[AutoEngine] Erro ao validar limites de monetização:", e);
+    }
+
     const context = await this.buildContext(lead, automation.tenantId);
 
     const execution = await prisma.automationExecution.create({
