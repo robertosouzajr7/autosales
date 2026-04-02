@@ -283,7 +283,7 @@ export default function LandingPage() {
               )}
               {chatHistory.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                   <div className={`max-w-[80%] p-4 rounded-3xl text-sm font-bold ${msg.role === 'user' ? 'bg-primary text-white' : 'bg-white border border-slate-100 text-slate-800'}`}>
+                   <div className={`max-w-[80%] p-4 rounded-3xl text-sm font-bold whitespace-pre-wrap leading-relaxed ${msg.role === 'user' ? 'bg-primary text-white' : 'bg-white border border-slate-100 text-slate-800'}`}>
                       {msg.content}
                    </div>
                 </div>

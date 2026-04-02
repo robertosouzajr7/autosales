@@ -1166,7 +1166,18 @@ async function generateSdrResponse(tenantId, phone, leadName, userMessage, sdrId
           }
         });
 
-        return { status: "SUCCESS", message: "Agendamento criado com sucesso no banco de dados!", id: appointment.id };
+        // Mover Lead para a etapa de Agendados (se existir)
+        const stage = await prisma.pipelineStage.findFirst({
+          where: { tenantId, name: { contains: "Agendado", mode: 'insensitive' } }
+        });
+        if (stage) {
+          await prisma.lead.update({
+             where: { id: lead.id },
+             data: { pipelineStageId: stage.id }
+          });
+        }
+
+        return { status: "SUCCESS", message: "Agendamento criado com sucesso no banco de dados. Confirme ao usuário com entusiasmo!", id: appointment.id };
       },
       get_account_details: async () => {
         const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, include: { plan: true } });
@@ -1400,6 +1411,17 @@ app.post("/api/public/book", async (req, res) => {
         status: "SCHEDULED"
       }
     });
+
+    // 2.5 Mover Lead para fase de "Agendados"
+    const stage = await prisma.pipelineStage.findFirst({
+      where: { tenantId, name: { contains: "Agendado", mode: 'insensitive' } }
+    });
+    if (stage) {
+      await prisma.lead.update({
+         where: { id: lead.id },
+         data: { pipelineStageId: stage.id }
+      });
+    }
 
     // 3. (EXTRA) Enviar Confirmação Pró-ativa no WhatsApp via Jarvis
     const formattedDate = new Date(date).toLocaleString('pt-BR', { 
