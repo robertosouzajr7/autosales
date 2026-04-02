@@ -312,9 +312,95 @@ class AutomationEngine {
           break;
         }
 
+        case "AI_TOOLS": {
+          const aiPrompt = this.resolveTemplate(config.prompt || "", ctx);
+          const toolsConfig = config.tools || ["search_leads", "create_appointment", "move_stage"];
+          const aiResult = await this.callAIWithTools(aiPrompt, lead, ctx, toolsConfig);
+          await this.updateExecutionContext(execution.id, "ai.response", aiResult.text);
+          await this.updateExecutionContext(execution.id, "ai.tool_calls", JSON.stringify(aiResult.toolCalls));
+          if (config.sendToLead !== false && aiResult.text) {
+            await WhatsAppManager.sendMessage(lead.tenantId, lead.phone, aiResult.text);
+          }
+          result.output = { response: aiResult.text?.substring(0, 200), toolCalls: aiResult.toolCalls };
+          break;
+        }
+
+        case "EXTRACT_DATA": {
+          const fields = config.fields || ["nome", "empresa", "cargo", "email", "telefone", "interesse"];
+          const sourceText = this.resolveTemplate(config.sourceText || "{{conversation.last_message}}", ctx);
+          const extracted = await this.extractStructuredData(sourceText, fields, lead);
+          // Save each field to context
+          for (const [key, value] of Object.entries(extracted)) {
+            await this.updateExecutionContext(execution.id, `extracted.${key}`, value);
+          }
+          // Persist to Lead.extractedData
+          const existingData = JSON.parse(lead.extractedData || "{}");
+          const merged = { ...existingData, ...extracted };
+          await prisma.lead.update({
+            where: { id: lead.id },
+            data: { extractedData: JSON.stringify(merged) }
+          });
+          result.output = { extracted };
+          break;
+        }
+
+        case "CLASSIFY_INTENT": {
+          const intents = config.intents || [
+            { id: "comprar", description: "Lead quer comprar ou contratar" },
+            { id: "duvida", description: "Lead tem dúvidas sobre o produto" },
+            { id: "suporte", description: "Lead precisa de suporte técnico" },
+            { id: "cancelar", description: "Lead quer cancelar" },
+            { id: "outro", description: "Nenhuma das anteriores" }
+          ];
+          const textToClassify = this.resolveTemplate(config.sourceText || "{{conversation.last_message}}", ctx);
+          const classification = await this.classifyIntent(textToClassify, intents, lead);
+          await this.updateExecutionContext(execution.id, "ai.intent", classification.intent);
+          await this.updateExecutionContext(execution.id, "ai.confidence", String(classification.confidence));
+          await prisma.lead.update({
+            where: { id: lead.id },
+            data: { lastIntentClassification: classification.intent }
+          });
+          // Route by intent: use sourceHandle = intent id
+          result.nextHandle = classification.intent;
+          result.output = { intent: classification.intent, confidence: classification.confidence, reasoning: classification.reasoning };
+          break;
+        }
+
+        case "AB_TEST": {
+          const variants = config.variants || [
+            { id: "A", message: "Versão A da mensagem" },
+            { id: "B", message: "Versão B da mensagem" }
+          ];
+          // Weighted random or pure random
+          const selected = variants[Math.floor(Math.random() * variants.length)];
+          const resolvedMsg = this.resolveTemplate(selected.message, ctx);
+          await WhatsAppManager.sendMessage(lead.tenantId, lead.phone, resolvedMsg);
+          await this.updateExecutionContext(execution.id, "ab.variant", selected.id);
+          await this.updateExecutionContext(execution.id, "ab.message", resolvedMsg);
+          // Log variant for analytics
+          result.output = { variant: selected.id, message: resolvedMsg, totalVariants: variants.length };
+          break;
+        }
+
+        case "AI_SCORE": {
+          const criteria = config.criteria || "Avalie o lead com base em: interesse demonstrado, urgência de compra, fit com o produto, engajamento na conversa.";
+          const scoreResult = await this.scoreLeadQualification(lead, ctx, criteria);
+          await this.updateExecutionContext(execution.id, "ai.score", String(scoreResult.score));
+          await this.updateExecutionContext(execution.id, "ai.score_reasoning", scoreResult.reasoning);
+          await prisma.lead.update({
+            where: { id: lead.id },
+            data: { qualificationScore: scoreResult.score }
+          });
+          // Route by score range: "hot" (>= 70), "warm" (40-69), "cold" (< 40)
+          if (scoreResult.score >= 70) result.nextHandle = "hot";
+          else if (scoreResult.score >= 40) result.nextHandle = "warm";
+          else result.nextHandle = "cold";
+          result.output = { score: scoreResult.score, reasoning: scoreResult.reasoning, category: result.nextHandle };
+          break;
+        }
+
         case "END": {
           result.output = { ended: true };
-          // Will be caught by empty nextNodeIds below
           break;
         }
 
@@ -344,22 +430,33 @@ class AutomationEngine {
     return result;
   }
 
-  // ========== AI CALLER ==========
+  // ========== AI METHODS ==========
+
+  _getAIModel() {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error("GEMINI_API_KEY não configurada");
+    const genAI = new GoogleGenerativeAI(apiKey);
+    return genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  }
+
+  async _getLeadFullContext(lead, context) {
+    const sdr = await prisma.sdrBot.findFirst({ where: { tenantId: lead.tenantId, active: true } });
+    const conv = await prisma.conversation.findFirst({
+      where: { leadId: lead.id },
+      include: { messages: { orderBy: { createdAt: "desc" }, take: 15 } }
+    });
+    const history = conv?.messages?.reverse()?.map(m =>
+      `${m.role === "USER" ? "LEAD" : "SDR"}: ${m.content}`
+    ).join("\n") || "Sem histórico";
+
+    return { sdr, history, kb: sdr?.knowledgeBase || "" };
+  }
 
   async callAI(customPrompt, lead, context) {
     try {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) return "IA não configurada. Configure GEMINI_API_KEY.";
-
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
-      const sdr = await prisma.sdrBot.findFirst({
-        where: { tenantId: lead.tenantId, active: true }
-      });
-
-      const systemPrompt = customPrompt || sdr?.prompt || "Você é um SDR profissional. Qualifique o lead e ajude-o.";
-      const kb = sdr?.knowledgeBase || "";
+      const model = this._getAIModel();
+      const { sdr, history, kb } = await this._getLeadFullContext(lead, context);
+      const systemPrompt = customPrompt || sdr?.prompt || "Você é um SDR profissional.";
 
       const fullPrompt = `${systemPrompt}
 
@@ -370,8 +467,10 @@ Dados do lead:
 - Nome: ${lead.name}
 - Telefone: ${lead.phone}
 - Status: ${lead.status}
+- Score: ${lead.qualificationScore || "N/A"}
 
-Histórico recente: ${context?.variables?.conversation?.last_message || "Nenhum"}
+Histórico da conversa:
+${history}
 
 Responda de forma profissional e objetiva.`;
 
@@ -380,6 +479,241 @@ Responda de forma profissional e objetiva.`;
     } catch (e) {
       console.error("[AutoEngine] Erro na IA:", e);
       return "Desculpe, tive um problema técnico. Pode repetir?";
+    }
+  }
+
+  // IA COM TOOL USE (Function Calling)
+  async callAIWithTools(customPrompt, lead, context, enabledTools) {
+    try {
+      const model = this._getAIModel();
+      const { sdr, history, kb } = await this._getLeadFullContext(lead, context);
+
+      const toolDeclarations = [
+        {
+          name: "search_leads",
+          description: "Busca leads no CRM por nome, telefone ou email.",
+          parameters: {
+            type: "object",
+            properties: { query: { type: "string", description: "Termo de busca" } },
+            required: ["query"]
+          }
+        },
+        {
+          name: "create_appointment",
+          description: "Cria um agendamento para o lead atual.",
+          parameters: {
+            type: "object",
+            properties: {
+              title: { type: "string", description: "Título do agendamento" },
+              iso_date: { type: "string", description: "Data e hora em ISO 8601" }
+            },
+            required: ["title", "iso_date"]
+          }
+        },
+        {
+          name: "move_lead_stage",
+          description: "Move o lead para outra etapa do pipeline de vendas.",
+          parameters: {
+            type: "object",
+            properties: { stage_name: { type: "string", description: "Nome da etapa destino" } },
+            required: ["stage_name"]
+          }
+        },
+        {
+          name: "add_tag",
+          description: "Adiciona uma tag ao lead para segmentação.",
+          parameters: {
+            type: "object",
+            properties: { tag_name: { type: "string", description: "Nome da tag" } },
+            required: ["tag_name"]
+          }
+        },
+        {
+          name: "get_availability",
+          description: "Consulta horários disponíveis na agenda.",
+          parameters: { type: "object", properties: {} }
+        }
+      ].filter(t => enabledTools.includes(t.name));
+
+      const systemPrompt = customPrompt || sdr?.prompt || "Você é um SDR inteligente com acesso a ferramentas do CRM.";
+
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      const toolModel = genAI.getGenerativeModel({
+        model: "gemini-2.0-flash",
+        tools: [{ functionDeclarations: toolDeclarations }]
+      });
+
+      const fullPrompt = `${systemPrompt}\n\nBase de conhecimento:\n${kb}\n\nDados do lead:\n- Nome: ${lead.name}\n- Telefone: ${lead.phone}\n- Status: ${lead.status}\n\nHistórico:\n${history}\n\nUse as ferramentas quando necessário para atender o lead.`;
+
+      const chat = toolModel.startChat();
+      const result = await chat.sendMessage(fullPrompt);
+      const response = result.response;
+
+      const toolCalls = [];
+      const parts = response.candidates?.[0]?.content?.parts || [];
+
+      for (const part of parts) {
+        if (part.functionCall) {
+          const fc = part.functionCall;
+          let toolResult = {};
+          try {
+            toolResult = await this._executeTool(fc.name, fc.args, lead);
+          } catch (e) { toolResult = { error: e.message }; }
+          toolCalls.push({ name: fc.name, args: fc.args, result: toolResult });
+        }
+      }
+
+      // If there were tool calls, send results back to get final response
+      let finalText = response.text?.() || "";
+      if (toolCalls.length > 0) {
+        const toolResponses = toolCalls.map(tc => ({
+          functionResponse: { name: tc.name, response: tc.result }
+        }));
+        const followUp = await chat.sendMessage(toolResponses);
+        finalText = followUp.response.text?.() || finalText;
+      }
+
+      return { text: finalText, toolCalls };
+    } catch (e) {
+      console.error("[AutoEngine] Erro AI_TOOLS:", e);
+      return { text: "Desculpe, tive um problema técnico.", toolCalls: [] };
+    }
+  }
+
+  async _executeTool(name, args, lead) {
+    switch (name) {
+      case "search_leads": {
+        const leads = await prisma.lead.findMany({
+          where: { tenantId: lead.tenantId, OR: [{ name: { contains: args.query } }, { phone: { contains: args.query } }, { email: { contains: args.query } }] },
+          take: 5
+        });
+        return { leads: leads.map(l => ({ name: l.name, phone: l.phone, status: l.status })) };
+      }
+      case "create_appointment": {
+        const appt = await prisma.appointment.create({
+          data: { leadId: lead.id, tenantId: lead.tenantId, title: args.title, date: new Date(args.iso_date), status: "SCHEDULED" }
+        });
+        return { success: true, appointmentId: appt.id, date: args.iso_date };
+      }
+      case "move_lead_stage": {
+        const stage = await prisma.pipelineStage.findFirst({ where: { name: { contains: args.stage_name }, tenantId: lead.tenantId } });
+        if (stage) await prisma.lead.update({ where: { id: lead.id }, data: { stageId: stage.id } });
+        return { success: !!stage, stage: stage?.name || args.stage_name };
+      }
+      case "add_tag": {
+        let tag = await prisma.tag.findFirst({ where: { name: args.tag_name } });
+        if (!tag) tag = await prisma.tag.create({ data: { name: args.tag_name } });
+        await prisma.lead.update({ where: { id: lead.id }, data: { tags: { connect: { id: tag.id } } } });
+        return { success: true, tag: args.tag_name };
+      }
+      case "get_availability": {
+        const now = new Date();
+        const slots = [];
+        for (let i = 1; i <= 5; i++) {
+          const d = new Date(now); d.setDate(d.getDate() + i); d.setHours(9 + Math.floor(Math.random() * 8), 0, 0, 0);
+          slots.push({ id: String(i), date: d.toISOString(), label: d.toLocaleString("pt-BR") });
+        }
+        return { slots };
+      }
+      default: return { error: `Tool ${name} not found` };
+    }
+  }
+
+  // EXTRAÇÃO DE DADOS (NER)
+  async extractStructuredData(text, fields, lead) {
+    try {
+      const model = this._getAIModel();
+      const prompt = `Extraia os seguintes dados do texto abaixo. Retorne APENAS um JSON válido com as chaves solicitadas. Se um dado não estiver presente, use null.
+
+Campos para extrair: ${JSON.stringify(fields)}
+
+Texto:
+"${text}"
+
+Contexto adicional:
+- Lead atual: ${lead.name} (${lead.phone})
+
+Retorne apenas o JSON, sem markdown, sem explicação.`;
+
+      const result = await model.generateContent(prompt);
+      const responseText = result.response.text().trim();
+      // Clean markdown code blocks if present
+      const cleaned = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      return JSON.parse(cleaned);
+    } catch (e) {
+      console.error("[AutoEngine] Erro NER:", e);
+      return fields.reduce((acc, f) => ({ ...acc, [f]: null }), {});
+    }
+  }
+
+  // CLASSIFICAÇÃO DE INTENT
+  async classifyIntent(text, intents, lead) {
+    try {
+      const model = this._getAIModel();
+      const prompt = `Classifique a intenção da mensagem abaixo em uma das categorias listadas.
+
+Categorias:
+${intents.map(i => `- "${i.id}": ${i.description}`).join("\n")}
+
+Mensagem do lead:
+"${text}"
+
+Contexto: Lead ${lead.name}, status ${lead.status}
+
+Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0, "reasoning": "explicação breve" }`;
+
+      const result = await model.generateContent(prompt);
+      const responseText = result.response.text().trim();
+      const cleaned = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      const parsed = JSON.parse(cleaned);
+      return {
+        intent: parsed.intent || intents[intents.length - 1].id,
+        confidence: parsed.confidence || 0.5,
+        reasoning: parsed.reasoning || ""
+      };
+    } catch (e) {
+      console.error("[AutoEngine] Erro classifyIntent:", e);
+      return { intent: intents[intents.length - 1].id, confidence: 0, reasoning: "Erro na classificação" };
+    }
+  }
+
+  // SCORE DE QUALIFICAÇÃO
+  async scoreLeadQualification(lead, context, criteria) {
+    try {
+      const model = this._getAIModel();
+      const { history } = await this._getLeadFullContext(lead, context);
+
+      const prompt = `Você é um especialista em qualificação de leads B2B. Avalie o lead abaixo e dê uma nota de 0 a 100.
+
+Critérios de avaliação:
+${criteria}
+
+Dados do lead:
+- Nome: ${lead.name}
+- Telefone: ${lead.phone || "N/A"}
+- Email: ${lead.email || "N/A"}
+- Status: ${lead.status}
+- Fonte: ${lead.source || "N/A"}
+- Tags: ${lead.tags?.map(t => t.name).join(", ") || "Nenhuma"}
+- Dados extraídos: ${lead.extractedData || "N/A"}
+
+Histórico da conversa:
+${history}
+
+Retorne APENAS um JSON com: { "score": 0-100, "reasoning": "explicação de 2-3 linhas", "signals": ["sinal positivo 1", "sinal negativo 1"] }`;
+
+      const result = await model.generateContent(prompt);
+      const responseText = result.response.text().trim();
+      const cleaned = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      const parsed = JSON.parse(cleaned);
+      return {
+        score: Math.min(100, Math.max(0, parseInt(parsed.score) || 50)),
+        reasoning: parsed.reasoning || "",
+        signals: parsed.signals || []
+      };
+    } catch (e) {
+      console.error("[AutoEngine] Erro AI_SCORE:", e);
+      return { score: 50, reasoning: "Erro na pontuação - score padrão", signals: [] };
     }
   }
 

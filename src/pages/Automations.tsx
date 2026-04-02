@@ -6,7 +6,8 @@ import {
   Zap, Plus, Trash2, Play, ArrowRight, Save, X, UserPlus,
   MessageSquare, Target, MessageCircle, Timer, Split, Globe, Bot,
   Inbox, Clock, Tag, MoveRight, Users, Calendar, FileEdit,
-  StopCircle, Copy, Search, Send, ChevronRight, Layers, Map
+  StopCircle, Copy, Search, Send, ChevronRight, Layers, Map,
+  Sparkles, Brain, GitBranch, Shuffle, BarChart3, Wrench, ScanText
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
@@ -62,6 +63,13 @@ const NODE_TYPES_DEF: NodeTypeDef[] = [
   { id: "SCHEDULE_APPOINTMENT", label: "Agendar Reunião", icon: <Calendar className="w-4 h-4" />, color: "#14b8a6", category: "action" },
   { id: "UPDATE_LEAD", label: "Atualizar Lead", icon: <FileEdit className="w-4 h-4" />, color: "#0284c7", category: "action" },
   { id: "HTTP_REQUEST", label: "Webhook / API", icon: <Globe className="w-4 h-4" />, color: "#334155", category: "action" },
+  // Fase 3 — IA Avançada
+  { id: "AI_TOOLS", label: "IA + Ferramentas", icon: <Wrench className="w-4 h-4" />, color: "#9333ea", category: "ai" },
+  { id: "EXTRACT_DATA", label: "Extrair Dados (NER)", icon: <ScanText className="w-4 h-4" />, color: "#0891b2", category: "ai" },
+  { id: "CLASSIFY_INTENT", label: "Classificar Intent", icon: <GitBranch className="w-4 h-4" />, color: "#c026d3", category: "ai" },
+  { id: "AB_TEST", label: "Teste A/B", icon: <Shuffle className="w-4 h-4" />, color: "#ea580c", category: "ai" },
+  { id: "AI_SCORE", label: "Score IA", icon: <BarChart3 className="w-4 h-4" />, color: "#16a34a", category: "ai" },
+  // Lógica
   { id: "CONDITION", label: "Condição IF/ELSE", icon: <Split className="w-4 h-4" />, color: "#f97316", category: "logic" },
   { id: "END", label: "Fim do Fluxo", icon: <StopCircle className="w-4 h-4" />, color: "#94a3b8", category: "logic" },
 ];
@@ -79,7 +87,10 @@ const VARIABLE_HINTS = [
   "{{lead.name}}", "{{lead.phone}}", "{{lead.email}}", "{{lead.status}}",
   "{{lead.source}}", "{{tenant.name}}", "{{conversation.last_message}}",
   "{{appointment.date}}", "{{appointment.time}}", "{{input.resposta}}",
-  "{{ai.response}}", "{{current.date}}", "{{current.time}}", "{{current.day_of_week}}"
+  "{{ai.response}}", "{{ai.intent}}", "{{ai.confidence}}", "{{ai.score}}",
+  "{{ai.score_reasoning}}", "{{ai.tool_calls}}", "{{ab.variant}}",
+  "{{extracted.nome}}", "{{extracted.empresa}}", "{{extracted.cargo}}",
+  "{{current.date}}", "{{current.time}}", "{{current.day_of_week}}"
 ];
 
 // =================== TEMPLATES ===================
@@ -160,6 +171,10 @@ function AutomationNode({ data, selected, id }: any) {
   const typeDef = NODE_TYPES_DEF.find(t => t.id === data.nodeType);
   const isCondition = data.nodeType === "CONDITION";
   const isEnd = data.nodeType === "END";
+  const isClassifyIntent = data.nodeType === "CLASSIFY_INTENT";
+  const isAIScore = data.nodeType === "AI_SCORE";
+  const isABTest = data.nodeType === "AB_TEST";
+  const hasMultipleOutputs = isCondition || isClassifyIntent || isAIScore;
 
   return (
     <div className={`relative transition-all duration-200 ${selected ? 'scale-105' : ''}`}>
@@ -184,7 +199,7 @@ function AutomationNode({ data, selected, id }: any) {
           </div>
         )}
 
-        {data.config?.prompt && data.nodeType !== "SEND_MSG" && (
+        {data.config?.prompt && !['SEND_MSG', 'AB_TEST'].includes(data.nodeType) && (
           <div className="px-4 pb-3">
             <p className="text-[9px] text-violet-400 bg-violet-50 rounded-lg p-2 truncate font-medium">
               🤖 {data.config.prompt.substring(0, 50)}...
@@ -198,9 +213,33 @@ function AutomationNode({ data, selected, id }: any) {
             <div className="text-center p-1.5 rounded-lg text-[8px] font-black uppercase bg-red-50 text-red-500">❌ NÃO</div>
           </div>
         )}
+
+        {isClassifyIntent && (
+          <div className="px-4 pb-3">
+            <div className="flex flex-wrap gap-1">
+              {(data.config?.intents || [{id:'comprar'},{id:'duvida'},{id:'outro'}]).slice(0, 4).map((i: any) => (
+                <span key={i.id} className="text-[7px] bg-violet-50 text-violet-600 px-1.5 py-0.5 rounded-full font-black uppercase">{i.id}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {isAIScore && (
+          <div className="px-4 pb-3 grid grid-cols-3 gap-1">
+            <div className="text-center p-1 rounded-lg text-[7px] font-black uppercase bg-red-50 text-red-500">🥶 Frio</div>
+            <div className="text-center p-1 rounded-lg text-[7px] font-black uppercase bg-amber-50 text-amber-600">☀️ Morno</div>
+            <div className="text-center p-1 rounded-lg text-[7px] font-black uppercase bg-emerald-50 text-emerald-600">🔥 Quente</div>
+          </div>
+        )}
+
+        {isABTest && data.config?.variants && (
+          <div className="px-4 pb-3">
+            <p className="text-[8px] text-orange-500 font-bold">{data.config.variants.length} variantes</p>
+          </div>
+        )}
       </div>
 
-      {!isEnd && !isCondition && (
+      {!isEnd && !hasMultipleOutputs && (
         <Handle type="source" position={Position.Bottom} className="!w-3 !h-3 !bg-emerald-400 !border-2 !border-white" />
       )}
 
@@ -208,6 +247,29 @@ function AutomationNode({ data, selected, id }: any) {
         <>
           <Handle type="source" position={Position.Bottom} id="true" className="!w-3 !h-3 !bg-emerald-500 !border-2 !border-white" style={{ left: "30%" }} />
           <Handle type="source" position={Position.Bottom} id="false" className="!w-3 !h-3 !bg-red-500 !border-2 !border-white" style={{ left: "70%" }} />
+        </>
+      )}
+
+      {isClassifyIntent && (
+        <>
+          {(data.config?.intents || [{id:'comprar'},{id:'duvida'},{id:'suporte'},{id:'cancelar'},{id:'outro'}]).map((intent: any, idx: number, arr: any[]) => (
+            <Handle
+              key={intent.id}
+              type="source"
+              position={Position.Bottom}
+              id={intent.id}
+              className="!w-2.5 !h-2.5 !bg-violet-500 !border-2 !border-white"
+              style={{ left: `${((idx + 1) / (arr.length + 1)) * 100}%` }}
+            />
+          ))}
+        </>
+      )}
+
+      {isAIScore && (
+        <>
+          <Handle type="source" position={Position.Bottom} id="cold" className="!w-3 !h-3 !bg-blue-400 !border-2 !border-white" style={{ left: "20%" }} />
+          <Handle type="source" position={Position.Bottom} id="warm" className="!w-3 !h-3 !bg-amber-400 !border-2 !border-white" style={{ left: "50%" }} />
+          <Handle type="source" position={Position.Bottom} id="hot" className="!w-3 !h-3 !bg-red-500 !border-2 !border-white" style={{ left: "80%" }} />
         </>
       )}
     </div>
@@ -636,6 +698,19 @@ export default function Automations() {
                   <span className="text-[9px] font-black uppercase text-slate-600 tracking-tight">{st.label}</span>
                 </div>
               ))}
+              <h4 className="text-[8px] font-black text-purple-400 uppercase tracking-widest px-2 mt-2">⚡ IA Avançada</h4>
+              {NODE_TYPES_DEF.filter(t => t.category === "ai").map(st => (
+                <div
+                  key={st.id}
+                  draggable
+                  onDragStart={e => onDragStart(e, st.id)}
+                  onClick={() => addNodeClick(st.id)}
+                  className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-purple-50 active:scale-95 transition-all cursor-grab active:cursor-grabbing border border-transparent hover:border-purple-100"
+                >
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-md shrink-0" style={{ backgroundColor: st.color }}>{st.icon}</div>
+                  <span className="text-[9px] font-black uppercase text-slate-600 tracking-tight">{st.label}</span>
+                </div>
+              ))}
               <h4 className="text-[8px] font-black text-slate-300 uppercase tracking-widest px-2 mt-2">Lógica</h4>
               {NODE_TYPES_DEF.filter(t => t.category === "logic").map(st => (
                 <div
@@ -653,7 +728,7 @@ export default function Automations() {
               <div className="mt-auto p-3 bg-violet-50 border border-violet-100 rounded-xl">
                 <p className="text-[8px] font-black text-violet-700 uppercase tracking-widest mb-2">Variáveis</p>
                 <div className="flex flex-wrap gap-1">
-                  {VARIABLE_HINTS.slice(0, 6).map(v => (
+                  {VARIABLE_HINTS.slice(0, 10).map(v => (
                     <span key={v} className="text-[7px] bg-violet-100 text-violet-600 px-1.5 py-0.5 rounded-full font-bold cursor-pointer hover:bg-violet-200" onClick={() => navigator.clipboard.writeText(v)}>
                       {v}
                     </span>
@@ -836,6 +911,142 @@ export default function Automations() {
                     <>
                       <div className="space-y-2"><Label className="text-[8px] font-black uppercase text-slate-400">Nome</Label><Input value={selectedNodeData.config?.name || ""} onChange={e => updateNodeConfig(selectedNode.id, "name", e.target.value)} className="h-9 rounded-lg text-xs" /></div>
                       <div className="space-y-2"><Label className="text-[8px] font-black uppercase text-slate-400">Email</Label><Input value={selectedNodeData.config?.email || ""} onChange={e => updateNodeConfig(selectedNode.id, "email", e.target.value)} className="h-9 rounded-lg text-xs" /></div>
+                    </>
+                  )}
+
+                  {/* ===== FASE 3 — IA AVANÇADA ===== */}
+
+                  {selectedNodeData.nodeType === "AI_TOOLS" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Prompt IA</Label>
+                        <Textarea value={selectedNodeData.config?.prompt || ""} onChange={e => updateNodeConfig(selectedNode.id, "prompt", e.target.value)} className="min-h-[80px] rounded-xl text-xs" placeholder="Atenda o lead usando as ferramentas do CRM..." />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Ferramentas Habilitadas</Label>
+                        {["search_leads", "create_appointment", "move_lead_stage", "add_tag", "get_availability"].map(tool => (
+                          <div key={tool} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg">
+                            <span className="text-[8px] font-bold text-slate-600 font-mono">{tool}</span>
+                            <Switch
+                              checked={(selectedNodeData.config?.tools || ["search_leads", "create_appointment"]).includes(tool)}
+                              onCheckedChange={v => {
+                                const current = selectedNodeData.config?.tools || ["search_leads", "create_appointment"];
+                                const updated = v ? [...current, tool] : current.filter((t: string) => t !== tool);
+                                updateNodeConfig(selectedNode.id, "tools", updated);
+                              }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex items-center justify-between p-2 bg-slate-50 rounded-lg">
+                        <span className="text-[8px] font-black uppercase text-slate-500">Enviar ao lead</span>
+                        <Switch checked={selectedNodeData.config?.sendToLead !== false} onCheckedChange={v => updateNodeConfig(selectedNode.id, "sendToLead", v)} />
+                      </div>
+                      <p className="text-[7px] text-purple-400 font-bold">Resultado: {"{{ai.response}}"} · Tools: {"{{ai.tool_calls}}"}</p>
+                    </>
+                  )}
+
+                  {selectedNodeData.nodeType === "EXTRACT_DATA" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Texto Fonte</Label>
+                        <Input value={selectedNodeData.config?.sourceText || "{{conversation.last_message}}"} onChange={e => updateNodeConfig(selectedNode.id, "sourceText", e.target.value)} className="h-9 rounded-lg text-xs" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Campos para Extrair</Label>
+                        <Textarea
+                          value={(selectedNodeData.config?.fields || ["nome", "empresa", "cargo", "email", "telefone", "interesse"]).join(", ")}
+                          onChange={e => updateNodeConfig(selectedNode.id, "fields", e.target.value.split(",").map((f: string) => f.trim()).filter(Boolean))}
+                          className="min-h-[60px] rounded-xl text-xs"
+                          placeholder="nome, empresa, cargo, email, interesse"
+                        />
+                        <p className="text-[7px] text-cyan-500 font-bold">Dados salvos em {"{{extracted.campo}}"} e no Lead.extractedData</p>
+                      </div>
+                    </>
+                  )}
+
+                  {selectedNodeData.nodeType === "CLASSIFY_INTENT" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Texto para Classificar</Label>
+                        <Input value={selectedNodeData.config?.sourceText || "{{conversation.last_message}}"} onChange={e => updateNodeConfig(selectedNode.id, "sourceText", e.target.value)} className="h-9 rounded-lg text-xs" />
+                      </div>
+                      <div className="space-y-3">
+                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Intents (categorias)</Label>
+                        {(selectedNodeData.config?.intents || []).map((intent: any, idx: number) => (
+                          <div key={idx} className="p-2 bg-violet-50 rounded-lg space-y-1.5">
+                            <Input value={intent.id} placeholder="ID (ex: comprar)" onChange={e => {
+                              const intents = [...(selectedNodeData.config?.intents || [])];
+                              intents[idx] = { ...intents[idx], id: e.target.value };
+                              updateNodeConfig(selectedNode.id, "intents", intents);
+                            }} className="h-8 rounded-md text-[10px] font-mono" />
+                            <Input value={intent.description} placeholder="Lead quer comprar..." onChange={e => {
+                              const intents = [...(selectedNodeData.config?.intents || [])];
+                              intents[idx] = { ...intents[idx], description: e.target.value };
+                              updateNodeConfig(selectedNode.id, "intents", intents);
+                            }} className="h-8 rounded-md text-[10px]" />
+                            <Button variant="ghost" size="sm" className="text-red-400 text-[8px] p-0 h-5" onClick={() => {
+                              updateNodeConfig(selectedNode.id, "intents", (selectedNodeData.config?.intents || []).filter((_: any, i: number) => i !== idx));
+                            }}><Trash2 className="w-3 h-3 mr-1" /> Remover</Button>
+                          </div>
+                        ))}
+                        <Button variant="outline" size="sm" className="w-full rounded-lg text-[8px] font-black uppercase" onClick={() => {
+                          updateNodeConfig(selectedNode.id, "intents", [...(selectedNodeData.config?.intents || []), { id: "", description: "" }]);
+                        }}><Plus className="w-3 h-3 mr-1" /> Intent</Button>
+                      </div>
+                      <p className="text-[7px] text-violet-400 font-bold">Roteamento automático: cada intent gera uma saída. Resultado em {"{{ai.intent}}"}</p>
+                    </>
+                  )}
+
+                  {selectedNodeData.nodeType === "AB_TEST" && (
+                    <>
+                      <div className="space-y-3">
+                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Variantes de Mensagem</Label>
+                        {(selectedNodeData.config?.variants || []).map((variant: any, idx: number) => (
+                          <div key={idx} className="p-2 bg-orange-50 rounded-lg space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[9px] font-black text-orange-600">Variante {variant.id || String.fromCharCode(65 + idx)}</span>
+                              <Button variant="ghost" size="sm" className="text-red-400 text-[8px] p-0 h-5" onClick={() => {
+                                updateNodeConfig(selectedNode.id, "variants", (selectedNodeData.config?.variants || []).filter((_: any, i: number) => i !== idx));
+                              }}><Trash2 className="w-3 h-3" /></Button>
+                            </div>
+                            <Input value={variant.id} placeholder="A" onChange={e => {
+                              const variants = [...(selectedNodeData.config?.variants || [])];
+                              variants[idx] = { ...variants[idx], id: e.target.value };
+                              updateNodeConfig(selectedNode.id, "variants", variants);
+                            }} className="h-7 rounded-md text-[10px] font-mono" />
+                            <Textarea value={variant.message} placeholder="Olá {{lead.name}}! Versão A..." onChange={e => {
+                              const variants = [...(selectedNodeData.config?.variants || [])];
+                              variants[idx] = { ...variants[idx], message: e.target.value };
+                              updateNodeConfig(selectedNode.id, "variants", variants);
+                            }} className="min-h-[50px] rounded-md text-[10px]" />
+                          </div>
+                        ))}
+                        <Button variant="outline" size="sm" className="w-full rounded-lg text-[8px] font-black uppercase" onClick={() => {
+                          const variants = selectedNodeData.config?.variants || [];
+                          updateNodeConfig(selectedNode.id, "variants", [...variants, { id: String.fromCharCode(65 + variants.length), message: "" }]);
+                        }}><Plus className="w-3 h-3 mr-1" /> Variante</Button>
+                      </div>
+                      <p className="text-[7px] text-orange-400 font-bold">Variante selecionada salva em {"{{ab.variant}}"}</p>
+                    </>
+                  )}
+
+                  {selectedNodeData.nodeType === "AI_SCORE" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Critérios de Qualificação</Label>
+                        <Textarea
+                          value={selectedNodeData.config?.criteria || "Avalie com base em: interesse, urgência, fit com produto, engajamento."}
+                          onChange={e => updateNodeConfig(selectedNode.id, "criteria", e.target.value)}
+                          className="min-h-[100px] rounded-xl text-xs"
+                          placeholder="Descreva os critérios de pontuação..."
+                        />
+                      </div>
+                      <div className="p-3 bg-emerald-50 rounded-xl space-y-1">
+                        <p className="text-[8px] font-black text-emerald-700 uppercase">Roteamento por Score</p>
+                        <p className="text-[7px] text-emerald-600 font-medium">🔥 Quente: ≥ 70 · ☀️ Morno: 40-69 · 🥶 Frio: &lt; 40</p>
+                      </div>
+                      <p className="text-[7px] text-emerald-500 font-bold">Score salvo em {"{{ai.score}}"} e no Lead.qualificationScore</p>
                     </>
                   )}
                 </div>

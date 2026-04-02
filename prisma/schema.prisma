@@ -91,6 +91,11 @@ model Lead {
   
   isToEnrich Boolean @default(false) 
   
+  // Fase 3 — IA Avançada
+  qualificationScore Int?      // 0-100 score via IA
+  extractedData      String?   // JSON com dados extraídos via NER (nome, empresa, cargo, etc.)
+  lastIntentClassification String? // Última intent classificada pela IA
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
