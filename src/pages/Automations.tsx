@@ -47,7 +47,7 @@ const TRIGGERS = [
   { id: "PIPELINE_MOVE", label: "Mudança de Etapa", icon: <Target className="w-4 h-4" />, color: "#8b5cf6" },
   { id: "INACTIVITY", label: "Inatividade", icon: <Clock className="w-4 h-4" />, color: "#ef4444" },
   { id: "APPOINTMENT_CREATED", label: "Novo Agendamento", icon: <Calendar className="w-4 h-4" />, color: "#6366f1" },
-  { id: "SCHEDULE", label: "Agendamento Recorrente", icon: <Timer className="w-4 h-4" />, color: "#0d9488" },
+  { id: "SCHEDULE", label: "Agendador Recorrente (Cron)", icon: <Timer className="w-4 h-4" />, color: "#ec4899" },
 ];
 
 interface NodeTypeDef {
@@ -651,7 +651,7 @@ export default function Automations() {
               </div>
             )}
             {newAuto.trigger === "SCHEDULE" && (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label className="font-bold text-xs uppercase tracking-widest">Frequência</Label>
                   <Select defaultValue="daily_9" onValueChange={v => {
@@ -664,10 +664,10 @@ export default function Automations() {
                       "custom": ""
                     };
                     const prev = JSON.parse(newAuto.triggerConfig || "{}");
-                    setNewAuto({ ...newAuto, triggerConfig: JSON.stringify({ ...prev, cronExpression: presets[v], preset: v }) });
+                    setNewAuto({ ...newAuto, triggerConfig: JSON.stringify({ ...prev, schedule: presets[v], preset: v }) });
                   }}>
-                    <SelectTrigger className="h-12 rounded-2xl border-2 border-slate-50"><SelectValue /></SelectTrigger>
-                    <SelectContent>
+                    <SelectTrigger className="h-12 rounded-2xl border-2 border-slate-50 font-bold"><SelectValue placeholder="Diário às 9h" /></SelectTrigger>
+                    <SelectContent className="rounded-2xl shadow-xl">
                       <SelectItem value="every_hour">A cada hora</SelectItem>
                       <SelectItem value="daily_9">Diário às 9h</SelectItem>
                       <SelectItem value="daily_14">Diário às 14h</SelectItem>
@@ -682,34 +682,28 @@ export default function Automations() {
                     <Label className="font-bold text-xs uppercase tracking-widest">Expressão Cron</Label>
                     <Input placeholder="0 9 * * 1-5" onChange={e => {
                       const prev = JSON.parse(newAuto.triggerConfig || "{}");
-                      setNewAuto({ ...newAuto, triggerConfig: JSON.stringify({ ...prev, cronExpression: e.target.value }) });
-                    }} className="h-12 rounded-2xl border-2 border-slate-50 font-mono" />
-                    <p className="text-xs text-slate-400">Formato: minuto hora dia mês dia_semana</p>
+                      setNewAuto({ ...newAuto, triggerConfig: JSON.stringify({ ...prev, schedule: e.target.value }) });
+                    }} className="h-12 rounded-2xl border-2 border-slate-50 font-mono tracking-widest" />
+                    <p className="text-[10px] font-bold text-slate-400">Formato: minuto hora dia mês dia_semana</p>
                   </div>
                 )}
                 <div className="space-y-2">
-                  <Label className="font-bold text-xs uppercase tracking-widest">Filtro de Leads (status)</Label>
-                  <Select defaultValue="all" onValueChange={v => {
-                    const prev = JSON.parse(newAuto.triggerConfig || "{}");
-                    setNewAuto({ ...newAuto, triggerConfig: JSON.stringify({ ...prev, targetFilter: { ...prev.targetFilter, status: v === "all" ? undefined : v } }) });
+                  <Label className="font-bold text-xs uppercase tracking-widest">Filtro Alvo (Aplicar para:)</Label>
+                  <Select onValueChange={v => {
+                      let cfg: any = { schedule: "0 9 * * *", targetFilter: { status: "NEW" }, preset: "daily_9" };
+                      try { cfg = JSON.parse(newAuto.triggerConfig || "{}"); } catch(err){}
+                      cfg.targetFilter = { status: v };
+                      setNewAuto({ ...newAuto, triggerConfig: JSON.stringify(cfg) });
                   }}>
-                    <SelectTrigger className="h-12 rounded-2xl border-2 border-slate-50"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos os leads</SelectItem>
-                      <SelectItem value="new">Novos</SelectItem>
-                      <SelectItem value="contacted">Contactados</SelectItem>
-                      <SelectItem value="qualified">Qualificados</SelectItem>
-                      <SelectItem value="proposal">Proposta</SelectItem>
-                      <SelectItem value="inactive">Inativos</SelectItem>
+                    <SelectTrigger className="h-12 rounded-2xl border-2 border-slate-50 font-bold">
+                      <SelectValue placeholder="Selecione o filtro dos leads..." />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl shadow-xl">
+                      <SelectItem value="NEW" className="font-bold">Leads Novos (Sem atendimento)</SelectItem>
+                      <SelectItem value="INACTIVE_7_DAYS" className="font-bold">Leads Inativos (Últimos 7 dias)</SelectItem>
+                      <SelectItem value="ALL" className="font-bold">Todos os Leads da Conta</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="font-bold text-xs uppercase tracking-widest">Máximo de leads por execução</Label>
-                  <Input type="number" defaultValue={50} onChange={e => {
-                    const prev = JSON.parse(newAuto.triggerConfig || "{}");
-                    setNewAuto({ ...newAuto, triggerConfig: JSON.stringify({ ...prev, maxLeadsPerRun: parseInt(e.target.value) || 50 }) });
-                  }} className="h-12 rounded-2xl border-2 border-slate-50" />
                 </div>
               </div>
             )}

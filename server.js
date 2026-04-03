@@ -616,6 +616,7 @@ app.post("/api/automations", async (req, res) => {
     const aut = await prisma.automation.create({
       data: { name, trigger, triggerConfig, description, nodes, edges, tenantId: tenant.id }
     });
+    AutomationEngine.reloadSchedulers().catch(console.error);
     res.json(aut);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -632,6 +633,7 @@ app.put("/api/automations/:id", async (req, res) => {
     if (edges !== undefined) data.edges = edges;
     if (active !== undefined) data.active = active;
     const aut = await prisma.automation.update({ where: { id: req.params.id }, data });
+    AutomationEngine.reloadSchedulers().catch(console.error);
     res.json(aut);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -664,6 +666,7 @@ app.post("/api/automations/:id/duplicate", async (req, res) => {
         tenantId: original.tenantId
       }
     });
+    AutomationEngine.reloadSchedulers().catch(console.error);
     res.json(copy);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -677,6 +680,7 @@ app.delete("/api/automations/:id", async (req, res) => {
     await prisma.automationExecution.deleteMany({ where: { automationId: req.params.id } });
     await prisma.automationProgress.deleteMany({ where: { automationId: req.params.id } });
     await prisma.automation.delete({ where: { id: req.params.id } });
+    AutomationEngine.reloadSchedulers().catch(console.error);
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
