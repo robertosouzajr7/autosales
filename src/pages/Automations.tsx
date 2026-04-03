@@ -47,6 +47,7 @@ const TRIGGERS = [
   { id: "PIPELINE_MOVE", label: "Mudança de Etapa", icon: <Target className="w-4 h-4" />, color: "#8b5cf6" },
   { id: "INACTIVITY", label: "Inatividade", icon: <Clock className="w-4 h-4" />, color: "#ef4444" },
   { id: "APPOINTMENT_CREATED", label: "Novo Agendamento", icon: <Calendar className="w-4 h-4" />, color: "#6366f1" },
+  { id: "SCHEDULE", label: "Agendamento Recorrente", icon: <Timer className="w-4 h-4" />, color: "#0d9488" },
 ];
 
 interface NodeTypeDef {
@@ -647,6 +648,69 @@ export default function Automations() {
               <div className="space-y-2">
                 <Label className="font-bold text-xs uppercase tracking-widest">Minutos de Inatividade</Label>
                 <Input type="number" defaultValue={1440} onChange={e => setNewAuto({ ...newAuto, triggerConfig: JSON.stringify({ inactivityMinutes: parseInt(e.target.value) }) })} className="h-12 rounded-2xl border-2 border-slate-50" />
+              </div>
+            )}
+            {newAuto.trigger === "SCHEDULE" && (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label className="font-bold text-xs uppercase tracking-widest">Frequência</Label>
+                  <Select defaultValue="daily_9" onValueChange={v => {
+                    const presets: Record<string, string> = {
+                      "every_hour": "0 * * * *",
+                      "daily_9": "0 9 * * *",
+                      "daily_14": "0 14 * * *",
+                      "weekdays_9": "0 9 * * 1-5",
+                      "monday_9": "0 9 * * 1",
+                      "custom": ""
+                    };
+                    const prev = JSON.parse(newAuto.triggerConfig || "{}");
+                    setNewAuto({ ...newAuto, triggerConfig: JSON.stringify({ ...prev, cronExpression: presets[v], preset: v }) });
+                  }}>
+                    <SelectTrigger className="h-12 rounded-2xl border-2 border-slate-50"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="every_hour">A cada hora</SelectItem>
+                      <SelectItem value="daily_9">Diário às 9h</SelectItem>
+                      <SelectItem value="daily_14">Diário às 14h</SelectItem>
+                      <SelectItem value="weekdays_9">Dias úteis às 9h</SelectItem>
+                      <SelectItem value="monday_9">Segundas às 9h</SelectItem>
+                      <SelectItem value="custom">Personalizado (cron)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {(() => { try { return JSON.parse(newAuto.triggerConfig || "{}").preset === "custom"; } catch { return false; } })() && (
+                  <div className="space-y-2">
+                    <Label className="font-bold text-xs uppercase tracking-widest">Expressão Cron</Label>
+                    <Input placeholder="0 9 * * 1-5" onChange={e => {
+                      const prev = JSON.parse(newAuto.triggerConfig || "{}");
+                      setNewAuto({ ...newAuto, triggerConfig: JSON.stringify({ ...prev, cronExpression: e.target.value }) });
+                    }} className="h-12 rounded-2xl border-2 border-slate-50 font-mono" />
+                    <p className="text-xs text-slate-400">Formato: minuto hora dia mês dia_semana</p>
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <Label className="font-bold text-xs uppercase tracking-widest">Filtro de Leads (status)</Label>
+                  <Select defaultValue="all" onValueChange={v => {
+                    const prev = JSON.parse(newAuto.triggerConfig || "{}");
+                    setNewAuto({ ...newAuto, triggerConfig: JSON.stringify({ ...prev, targetFilter: { ...prev.targetFilter, status: v === "all" ? undefined : v } }) });
+                  }}>
+                    <SelectTrigger className="h-12 rounded-2xl border-2 border-slate-50"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os leads</SelectItem>
+                      <SelectItem value="new">Novos</SelectItem>
+                      <SelectItem value="contacted">Contactados</SelectItem>
+                      <SelectItem value="qualified">Qualificados</SelectItem>
+                      <SelectItem value="proposal">Proposta</SelectItem>
+                      <SelectItem value="inactive">Inativos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="font-bold text-xs uppercase tracking-widest">Máximo de leads por execução</Label>
+                  <Input type="number" defaultValue={50} onChange={e => {
+                    const prev = JSON.parse(newAuto.triggerConfig || "{}");
+                    setNewAuto({ ...newAuto, triggerConfig: JSON.stringify({ ...prev, maxLeadsPerRun: parseInt(e.target.value) || 50 }) });
+                  }} className="h-12 rounded-2xl border-2 border-slate-50" />
+                </div>
               </div>
             )}
             <div className="space-y-2">

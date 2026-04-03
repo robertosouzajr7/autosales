@@ -20,7 +20,9 @@ class AutomationEngine {
     this.checkInterval = setInterval(() => this.processPendingDelays(), 30 * 1000);
     this.routineInterval = setInterval(() => this.processGlobalRoutines(), 5 * 60 * 1000);
     this.inactivityInterval = setInterval(() => this.processInactivityTriggers(), 5 * 60 * 1000);
+    this.scheduleInterval = setInterval(() => this.processScheduleTriggers(), 60 * 1000); // check every minute
     this.queueInterval = setInterval(() => this.processQueue(), 1000);
+    this._lastScheduleCheck = new Map(); // automationId -> lastRunMinute (prevents double-fire)
     console.log(`[AutoEngine] ✅ Engine iniciado (concurrency: ${MAX_CONCURRENT_EXECUTIONS}, rate: ${RATE_LIMIT_PER_MINUTE} msg/min).`);
   }
 
@@ -1028,6 +1030,123 @@ Retorne APENAS um JSON com: { "score": 0-100, "reasoning": "explicação de 2-3 
       }
     } catch (e) {
       console.error("[AutoEngine] Erro no processInactivityTriggers:", e);
+    }
+  }
+
+  // ========== SCHEDULE (CRON) TRIGGER ==========
+
+  /**
+   * Lightweight cron matcher. Supports: minute hour dayOfMonth month dayOfWeek
+   * Values: number, * (any), */N (every N), comma-separated lists
+   * Examples: "0 9 * * *" (daily 9am), "0 9 * * 1" (mondays 9am), "*/30 * * * *" (every 30min)
+   */
+  cronMatches(cronExpr, date) {
+    const parts = cronExpr.trim().split(/\s+/);
+    if (parts.length !== 5) return false;
+
+    const fields = [
+      date.getMinutes(),    // 0
+      date.getHours(),      // 1
+      date.getDate(),       // 2
+      date.getMonth() + 1,  // 3
+      date.getDay()         // 4 (0=Sunday)
+    ];
+
+    for (let i = 0; i < 5; i++) {
+      if (!this._cronFieldMatches(parts[i], fields[i])) return false;
+    }
+    return true;
+  }
+
+  _cronFieldMatches(field, value) {
+    if (field === "*") return true;
+
+    // */N — every N
+    if (field.startsWith("*/")) {
+      const step = parseInt(field.slice(2));
+      return step > 0 && value % step === 0;
+    }
+
+    // comma-separated: 1,5,10
+    const values = field.split(",");
+    for (const v of values) {
+      // range: 1-5
+      if (v.includes("-")) {
+        const [min, max] = v.split("-").map(Number);
+        if (value >= min && value <= max) return true;
+      } else {
+        if (parseInt(v) === value) return true;
+      }
+    }
+    return false;
+  }
+
+  async processScheduleTriggers() {
+    try {
+      const now = new Date();
+      const currentMinuteKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}`;
+
+      const automations = await prisma.automation.findMany({
+        where: { trigger: "SCHEDULE", active: true }
+      });
+
+      for (const auto of automations) {
+        // Prevent double-fire in the same minute
+        const lastRun = this._lastScheduleCheck.get(auto.id);
+        if (lastRun === currentMinuteKey) continue;
+
+        const config = JSON.parse(auto.triggerConfig || "{}");
+        const schedule = config.schedule;
+        if (!schedule) continue;
+
+        if (!this.cronMatches(schedule, now)) continue;
+
+        // Mark as fired for this minute
+        this._lastScheduleCheck.set(auto.id, currentMinuteKey);
+
+        console.log(`[AutoEngine] ⏰ SCHEDULE trigger disparado: "${auto.name}" (${schedule})`);
+
+        // Build target filter
+        const filter = config.targetFilter || {};
+        const where = { tenantId: auto.tenantId };
+
+        if (filter.status) where.status = filter.status;
+        if (filter.source) where.source = filter.source;
+        if (filter.hasTag) {
+          where.tags = { some: { name: filter.hasTag } };
+        }
+        if (filter.inactiveDays) {
+          const cutoff = new Date(Date.now() - filter.inactiveDays * 24 * 60 * 60 * 1000);
+          where.updatedAt = { lt: cutoff };
+        }
+
+        const maxLeads = config.maxLeadsPerRun || 50;
+        const leads = await prisma.lead.findMany({ where, take: maxLeads });
+
+        console.log(`[AutoEngine] ⏰ SCHEDULE "${auto.name}": ${leads.length} leads encontrados`);
+
+        for (const lead of leads) {
+          // Don't re-run if already executed today for this lead
+          const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
+          const alreadyRan = await prisma.automationExecution.findFirst({
+            where: {
+              automationId: auto.id,
+              leadId: lead.id,
+              startedAt: { gte: todayStart }
+            }
+          });
+          if (alreadyRan) continue;
+
+          this.enqueueExecution(auto, lead);
+        }
+      }
+
+      // Clean old entries from _lastScheduleCheck (keep only last hour)
+      if (this._lastScheduleCheck.size > 1000) {
+        this._lastScheduleCheck.clear();
+      }
+    } catch (e) {
+      console.error("[AutoEngine] Erro no processScheduleTriggers:", e);
     }
   }
 
