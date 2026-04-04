@@ -575,7 +575,7 @@ class AutomationEngine {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new Error("GEMINI_API_KEY não configurada");
     const genAI = new GoogleGenerativeAI(apiKey);
-    return genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    return genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
   }
 
   async _getLeadFullContext(lead, context) {
@@ -678,7 +678,7 @@ Responda de forma profissional e objetiva.`;
 
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
       const toolModel = genAI.getGenerativeModel({
-        model: "gemini-2.0-flash",
+        model: "gemini-1.5-flash",
         tools: [{ functionDeclarations: toolDeclarations }]
       });
 

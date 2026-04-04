@@ -199,9 +199,17 @@ app.post("/api/contacts/import-csv", upload.single("file"), async (req, res) => 
 app.get("/api/messages/:leadId", async (req, res) => {
   try {
     const tenant = await prisma.tenant.findFirst();
+    const conversation = await prisma.conversation.findUnique({
+      where: { leadId: req.params.leadId }
+    });
+    
+    if (!conversation) {
+      return res.json([]);
+    }
+
     const messages = await prisma.message.findMany({
       where: {
-        leadId: req.params.leadId,
+        conversationId: conversation.id,
         tenantId: tenant.id
       },
       orderBy: { createdAt: "asc" }
@@ -216,16 +224,35 @@ app.post("/api/messages", async (req, res) => {
   const { leadId, content, role } = req.body;
   try {
     const tenant = await prisma.tenant.findFirst();
+
+    // Ensure conversation exists for lead
+    let conversation = await prisma.conversation.findUnique({ where: { leadId } });
+    if (!conversation) {
+       conversation = await prisma.conversation.create({
+         data: { leadId, tenantId: tenant.id }
+       });
+    }
+
     const msg = await prisma.message.create({
       data: {
         content,
         role: role || "SDR",
-        leadId,
+        conversationId: conversation.id,
         tenantId: tenant.id
       }
     });
+
+    // Optionally notify automation engine of manual message (stop bot)
+    if (role === "SDR") {
+        await prisma.conversation.update({
+           where: { id: conversation.id },
+           data: { botActive: false }
+        });
+    }
+
     res.json(msg);
   } catch (e) {
+    console.error(e);
     res.status(500).json({ error: "Falha ao enviar mensagem" });
   }
 });
@@ -1357,7 +1384,7 @@ app.post("/api/webhook/whatsapp", async (req, res) => {
     const conv = await prisma.conversation.upsert({
       where: { leadId: lead.id },
       update: {},
-      create: { leadId: lead.id, botActive: true }
+      create: { leadId: lead.id, botActive: true, tenantId }
     });
 
     if (!conv.botActive) {
@@ -1370,12 +1397,12 @@ app.post("/api/webhook/whatsapp", async (req, res) => {
     
     // 5. Registrar Mensagens
     await prisma.message.create({
-      data: { conversationId: conv.id, content, role: "USER" }
+      data: { conversationId: conv.id, content, role: "USER", tenantId }
     });
     
     if (aiResponse) {
       await prisma.message.create({
-        data: { conversationId: conv.id, content: aiResponse, role: "ASSISTANT" }
+        data: { conversationId: conv.id, content: aiResponse, role: "ASSISTANT", tenantId }
       });
       return res.json({ success: true, ai_response: aiResponse });
     }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,15 @@ export default function Conversations() {
   const [messages, setMessages] = useState<any[]>([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const fetchData = async () => {
     try {
@@ -101,10 +110,12 @@ export default function Conversations() {
                     <div className="flex-1 min-w-0">
                        <div className="flex justify-between items-center mb-0.5">
                           <p className="font-black text-sm truncate">{chat.name}</p>
-                          <span className={`text-[8px] font-bold uppercase ${selectedChat?.id === chat.id ? 'text-white/40' : 'text-slate-300'}`}>10:30</span>
+                          <span className={`text-[8px] font-bold uppercase ${selectedChat?.id === chat.id ? 'text-white/40' : 'text-slate-300'}`}>
+                            {chat.conversations?.[0]?.messages?.slice(-1)[0]?.createdAt ? new Date(chat.conversations[0].messages.slice(-1)[0].createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
+                          </span>
                        </div>
                        <p className={`text-[10px] font-bold truncate ${selectedChat?.id === chat.id ? 'text-white/50' : 'text-slate-400'}`}>
-                         Última mensagem do lead aqui...
+                         {chat.conversations?.[0]?.messages?.slice(-1)[0]?.content || "Nenhuma mensagem iniciada"}
                        </p>
                     </div>
                   </div>
@@ -156,6 +167,7 @@ export default function Conversations() {
                          Nenhuma mensagem trocada ainda
                       </div>
                     )}
+                    <div ref={messagesEndRef} />
                  </div>
               </ScrollArea>
 
