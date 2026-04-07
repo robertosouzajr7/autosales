@@ -434,6 +434,8 @@ model IcpProfile {
   
   // Automação
   isAutoHunterEnabled Boolean @default(false)
+  isProspectingActive Boolean @default(false) // Novo campo
+  isActive            Boolean @default(true)  // Novo campo
   dailyLimit      Int      @default(200)
   
   tenantId        String
