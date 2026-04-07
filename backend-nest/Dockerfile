@@ -22,4 +22,5 @@ COPY --from=build /app/prisma ./prisma
 RUN npx prisma generate
 
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node dist/main"]
+EXPOSE 3000
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss && (npm run start:prod || (echo 'ERRO: Pasta dist/main nao encontrada! Estudo do diretorio:' && ls -R dist && exit 1))"]
