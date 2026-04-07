@@ -1,0 +1,76 @@
+services:
+  # --- Frontend (React/Vite) ---
+  venda-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=development
+    networks:
+      - vend-network
+
+  # --- Backend Original (Express - server.js) ---
+  venda-api-express:
+    build:
+      context: .
+      dockerfile: Dockerfile.api-express
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - baileys-auth:/app/auth_info_baileys
+    env_file:
+      - .env
+    environment:
+      - PORT=3000
+    networks:
+      - vend-network
+
+  # --- Backend Novo (NestJS) ---
+  venda-api-nest:
+    build:
+      context: ./backend-nest
+    ports:
+      - "3333:3333" # Alterado para não conflitar com o Express
+    volumes:
+      - ./backend-nest:/app
+      - /app/node_modules
+    env_file:
+      - .env
+    environment:
+      - PORT=3333
+      - DATABASE_URL=file:/app/prisma/dev.db
+    # Adiciona comando específico caso precise rodar migrations/seed antes de iniciar
+    command: sh -c "npx prisma generate && npm run start:dev"
+    networks:
+      - vend-network
+
+  # --- Banco de Dados PostgreSQL (Opcional, pronto para migração) ---
+  # db:
+  #   image: postgres:15-alpine
+  #   environment:
+  #     POSTGRES_USER: user
+  #     POSTGRES_PASSWORD: password
+  #     POSTGRES_DB: vendai
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #   networks:
+  #     - vend-network
+
+networks:
+  vend-network:
+    driver: bridge
+
+volumes:
+  baileys-auth:
+  # postgres-data:

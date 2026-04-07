@@ -1,0 +1,12 @@
+node_modules
+dist
+.git
+.env
+*.db
+*.log
+auth_info_baileys
+uploads
+audio
+instances
+tmp
+coverage

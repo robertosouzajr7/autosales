@@ -1,0 +1,25 @@
+# Dockerfile para o Backend Express (server.js) em Produção
+FROM node:20-alpine
+
+# Instala bibliotecas necessárias para o Chromium (usado pelo Baileys/WhatsApp)
+RUN apk add --no-cache \
+      chromium \
+      nss \
+      freetype \
+      harfbuzz \
+      ca-certificates \
+      ttf-freefont
+
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+WORKDIR /app
+COPY package*.json ./
+# Instala apenas dependências de produção
+RUN npm install --omit=dev
+
+COPY . .
+RUN npx prisma generate
+
+EXPOSE 3000
+CMD ["node", "server.js"]
