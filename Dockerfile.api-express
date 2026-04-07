@@ -1,19 +1,28 @@
 # Dockerfile para o Backend Express (server.js) em Produção
-FROM node:20-alpine
+FROM node:20-slim
 
-# Instala bibliotecas necessárias para o Chromium (usado pelo Baileys/WhatsApp)
-RUN apk add --no-cache \
-      chromium \
-      nss \
-      freetype \
-      harfbuzz \
-      ca-certificates \
-      ttf-freefont \
-      openssl1.1-compat \
-      gcompat
+# Instala bibliotecas necessárias para o Chromium (usado pelo Baileys/WhatsApp) e OpenSSL no Debian
+RUN apt-get update && apt-get install -y \
+    chromium \
+    libnss3 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2 \
+    libpangocairo-1.0-0 \
+    libxss1 \
+    libgtk-3-0 \
+    openssl \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 WORKDIR /app
 COPY package*.json ./

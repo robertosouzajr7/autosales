@@ -1,5 +1,5 @@
 # Etapa de Build
-FROM node:20-alpine AS build
+FROM node:20 AS build
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
@@ -8,8 +8,8 @@ RUN npx prisma generate
 RUN npm run build
 
 # Etapa de Produção
-FROM node:20-alpine
-RUN apk add --no-cache openssl1.1-compat gcompat
+FROM node:20-slim
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /app/package*.json ./
 COPY --from=build /app/node_modules ./node_modules
