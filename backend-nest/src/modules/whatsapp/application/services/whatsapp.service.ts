@@ -5,7 +5,7 @@ import makeWASocket, {
   fetchLatestBaileysVersion, 
   makeCacheableSignalKeyStore 
 } from '@whiskeysockets/baileys';
-import { PrismaService } from '../../../shared/prisma/prisma.service';
+import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { pino } from 'pino';
 import { Boom } from '@hapi/boom';
 
