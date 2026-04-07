@@ -1,9 +1,12 @@
 # Etapa de Build
 FROM node:20 AS build
 WORKDIR /app
-COPY package*.json ./
+# Copia apenas os arquivos do subprojeto NestJS
+COPY backend-nest/package*.json ./
 RUN npm install
-COPY . .
+COPY backend-nest/ .
+# Copia o schema do Nest especificamente
+COPY backend-nest/prisma ./prisma
 RUN npx prisma generate
 RUN npm run build
 
@@ -19,4 +22,4 @@ COPY --from=build /app/prisma ./prisma
 RUN npx prisma generate
 
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node dist/src/main.js"]
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node dist/main"]
