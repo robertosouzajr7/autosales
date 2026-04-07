@@ -9,6 +9,7 @@ RUN npm run build
 
 # Etapa de Produção
 FROM node:20-alpine
+RUN apk add --no-cache openssl1.1-compat gcompat
 WORKDIR /app
 COPY --from=build /app/package*.json ./
 COPY --from=build /app/node_modules ./node_modules
