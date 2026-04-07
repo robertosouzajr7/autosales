@@ -55,6 +55,7 @@ interface NodeTypeDef {
 }
 
 const NODE_TYPES_DEF: NodeTypeDef[] = [
+  { id: "PROSPECT_LEAD", label: "Prospecção Inteligente", icon: <Target className="w-4 h-4" />, color: "#0ea5e9", category: "action" },
   { id: "SEND_MSG", label: "Enviar Texto", icon: <MessageCircle className="w-4 h-4" />, color: "#10b981", category: "action" },
   { id: "AI_RESPONSE", label: "Chamar IA", icon: <Bot className="w-4 h-4" />, color: "#7c3aed", category: "action" },
   { id: "COLLECT_INPUT", label: "Coletar Resposta", icon: <Inbox className="w-4 h-4" />, color: "#06b6d4", category: "action" },
@@ -172,14 +173,20 @@ const FLOW_TEMPLATES = [
 
 // =================== CUSTOM NODE COMPONENT ===================
 
-function AutomationNode({ data, selected, id }: any) {
-  const typeDef = NODE_TYPES_DEF.find(t => t.id === data.nodeType);
-  const isCondition = data.nodeType === "CONDITION";
-  const isEnd = data.nodeType === "END";
-  const isClassifyIntent = data.nodeType === "CLASSIFY_INTENT";
-  const isAIScore = data.nodeType === "AI_SCORE";
-  const isABTest = data.nodeType === "AB_TEST";
+function AutomationNode({ data, selected }: any) {
+  if (!data) return <div className="p-4 border-2 border-red-500 bg-red-50 rounded-xl font-bold uppercase text-[10px] text-red-600">Erro de Dado</div>;
+
+  const typeDef = NODE_TYPES_DEF.find(t => t.id === (data.nodeType || "SEND_MSG"));
+  const nodeType = data.nodeType || "SEND_MSG";
+  
+  const isCondition = nodeType === "CONDITION";
+  const isEnd = nodeType === "END";
+  const isClassifyIntent = nodeType === "CLASSIFY_INTENT";
+  const isAIScore = nodeType === "AI_SCORE";
+  const isABTest = nodeType === "AB_TEST";
   const hasMultipleOutputs = isCondition || isClassifyIntent || isAIScore;
+
+  const config = data.config || {};
 
   return (
     <div className={`relative transition-all duration-200 ${selected ? 'scale-105' : ''}`}>
@@ -188,26 +195,26 @@ function AutomationNode({ data, selected, id }: any) {
       <div className={`min-w-[220px] max-w-[280px] rounded-2xl bg-white shadow-xl border-2 transition-all ${selected ? 'border-emerald-400 shadow-emerald-500/20' : 'border-slate-100 hover:border-slate-300'}`}>
         <div className="flex items-center gap-3 p-4">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg shrink-0" style={{ backgroundColor: typeDef?.color || "#64748b" }}>
-            {typeDef?.icon}
+            {typeDef?.icon || <Zap className="w-4 h-4" />}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{data.nodeType}</p>
-            <p className="text-[11px] font-black text-slate-900 truncate">{data.label}</p>
+            <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{nodeType}</p>
+            <p className="text-[11px] font-black text-slate-900 truncate">{data.label || typeDef?.label || "Bloco"}</p>
           </div>
         </div>
 
-        {data.config?.message && (
+        {config.message && (
           <div className="px-4 pb-3">
             <p className="text-[9px] text-slate-400 bg-slate-50 rounded-lg p-2 truncate font-medium">
-              💬 {data.config.message.substring(0, 50)}...
+              💬 {String(config.message).substring(0, 50)}...
             </p>
           </div>
         )}
 
-        {data.config?.prompt && !['SEND_MSG', 'AB_TEST'].includes(data.nodeType) && (
+        {config.prompt && !['SEND_MSG', 'AB_TEST'].includes(nodeType) && (
           <div className="px-4 pb-3">
             <p className="text-[9px] text-violet-400 bg-violet-50 rounded-lg p-2 truncate font-medium">
-              🤖 {data.config.prompt.substring(0, 50)}...
+              🤖 {String(config.prompt).substring(0, 50)}...
             </p>
           </div>
         )}
@@ -222,8 +229,8 @@ function AutomationNode({ data, selected, id }: any) {
         {isClassifyIntent && (
           <div className="px-4 pb-3">
             <div className="flex flex-wrap gap-1">
-              {(data.config?.intents || [{id:'comprar'},{id:'duvida'},{id:'outro'}]).slice(0, 4).map((i: any) => (
-                <span key={i.id} className="text-[7px] bg-violet-50 text-violet-600 px-1.5 py-0.5 rounded-full font-black uppercase">{i.id}</span>
+              {(config.intents || [{id:'comprar'},{id:'duvida'},{id:'outro'}]).slice(0, 4).map((i: any) => (
+                <span key={i?.id || Math.random()} className="text-[7px] bg-violet-50 text-violet-600 px-1.5 py-0.5 rounded-full font-black uppercase">{i?.id || "OUTRO"}</span>
               ))}
             </div>
           </div>
@@ -237,9 +244,9 @@ function AutomationNode({ data, selected, id }: any) {
           </div>
         )}
 
-        {isABTest && data.config?.variants && (
+        {isABTest && config.variants && (
           <div className="px-4 pb-3">
-            <p className="text-[8px] text-orange-500 font-bold">{data.config.variants.length} variantes</p>
+            <p className="text-[8px] text-orange-500 font-bold">{Array.isArray(config.variants) ? config.variants.length : 0} variantes</p>
           </div>
         )}
       </div>
@@ -257,12 +264,12 @@ function AutomationNode({ data, selected, id }: any) {
 
       {isClassifyIntent && (
         <>
-          {(data.config?.intents || [{id:'comprar'},{id:'duvida'},{id:'suporte'},{id:'cancelar'},{id:'outro'}]).map((intent: any, idx: number, arr: any[]) => (
+          {(config.intents || [{id:'comprar'},{id:'duvida'},{id:'suporte'},{id:'cancelar'},{id:'outro'}]).map((intent: any, idx: number, arr: any[]) => (
             <Handle
-              key={intent.id}
+              key={intent?.id || idx}
               type="source"
               position={Position.Bottom}
-              id={intent.id}
+              id={intent?.id || `out_${idx}`}
               className="!w-2.5 !h-2.5 !bg-violet-500 !border-2 !border-white"
               style={{ left: `${((idx + 1) / (arr.length + 1)) * 100}%` }}
             />
@@ -334,7 +341,7 @@ export default function Automations() {
       const res = await fetch("/api/tenant/current");
       if (res.ok) {
         const data = await res.json();
-        setTenantLimits(data.planFeatures);
+        setTenantLimits(data.planFeatures || { aiEnabled: false, webhookEnabled: false });
       }
     } catch { }
   };
@@ -411,13 +418,25 @@ export default function Automations() {
     setSelectedAuto(auto);
     try {
       const parsedNodes = JSON.parse(auto.nodes || "[]");
-      const rfNodes = parsedNodes.map((n: any) => ({
-        id: n.id, type: "automationNode", position: n.position || { x: 250, y: 0 },
-        data: { ...n.data, nodeType: n.type },
+      const rfNodes = (Array.isArray(parsedNodes) ? parsedNodes : []).map((n: any) => ({
+        id: n.id || `node_${Math.random()}`, 
+        type: "automationNode", 
+        position: n.position || { x: 250, y: 0 },
+        data: { ...(n.data || {}), nodeType: n.type || "SEND_MSG" },
       }));
       setNodes(rfNodes);
-    } catch { setNodes([]); }
-    try { setEdges(JSON.parse(auto.edges || "[]")); } catch { setEdges([]); }
+    } catch (e) { 
+      console.error("Erro nodes:", e);
+      setNodes([]); 
+    }
+    
+    try { 
+      const parsedEdges = JSON.parse(auto.edges || "[]");
+      setEdges(Array.isArray(parsedEdges) ? parsedEdges : []); 
+    } catch { 
+      setEdges([]); 
+    }
+    
     setSelectedNodeId(null);
     setIsBuilderOpen(true);
   };
@@ -458,11 +477,11 @@ export default function Automations() {
       if (!typeId) return;
 
       const typeDef = NODE_TYPES_DEF.find(t => t.id === typeId);
-      if (typeDef?.category === 'ai' && !tenantLimits.aiEnabled) {
+      if (typeDef?.category === 'ai' && !tenantLimits?.aiEnabled) {
          toast({ title: "Plano Inicial", description: "Faça Upgrade para liberar a Inteligência Artificial avançada.", variant: "destructive" });
          return;
       }
-      if (typeId === 'HTTP_REQUEST' && !tenantLimits.webhookEnabled) {
+      if (typeId === 'HTTP_REQUEST' && !tenantLimits?.webhookEnabled) {
          toast({ title: "Plano Inicial", description: "Faça Upgrade para liberar integrações e Webhooks externos.", variant: "destructive" });
          return;
       }
@@ -792,7 +811,7 @@ export default function Automations() {
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-md shrink-0" style={{ backgroundColor: st.color }}>{st.icon}</div>
                   <div className="flex flex-1 items-center justify-between">
                      <span className="text-[9px] font-black uppercase text-slate-600 tracking-tight">{st.label}</span>
-                     {(st.id === "HTTP_REQUEST" && !tenantLimits.webhookEnabled) && <Lock className="w-3 h-3 text-red-400" />}
+                     {(st.id === "HTTP_REQUEST" && !tenantLimits?.webhookEnabled) && <Lock className="w-3 h-3 text-red-400" />}
                   </div>
                 </div>
               ))}

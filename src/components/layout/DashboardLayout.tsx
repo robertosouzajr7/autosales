@@ -23,6 +23,7 @@ import {
   Target,
   Smartphone,
   ShieldCheck,
+  BookOpen,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,7 @@ const navItems: NavItem[] = [
   { label: "Prospecção", icon: Target, href: "/prospecting" },
   { label: "Time de SDRs", icon: Bot, href: "/sdrs" },
   { label: "Automações", icon: Zap, href: "/automations" },
+  { label: "Documentação", icon: BookOpen, href: "/docs" },
   { label: "Disparos", icon: Send, href: "/disparos" },
   { label: "Conexões", icon: Smartphone, href: "/connections" },
   { label: "Configurações", icon: Settings, href: "/settings" },

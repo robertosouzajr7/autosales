@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
-  Bot, Plus, Trash2, Brain, Zap, Globe, Save, RefreshCw, Sliders, User, ShieldCheck, Clock, CheckCircle2, MessageSquare, Upload, FileText, FileJson
+  Bot, Plus, Trash2, Brain, Zap, Globe, Save, RefreshCw, Sliders, User, ShieldCheck, Clock, CheckCircle2, MessageSquare, Upload, FileText, FileJson, Power
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
@@ -149,6 +149,22 @@ export default function SdrManagement() {
     toast({ title: "🗑️ Removido" });
   };
 
+  const toggleSdrActive = async (sdr: any) => {
+    try {
+      const res = await fetch(`/api/sdrs/${sdr.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...sdr, active: !sdr.active })
+      });
+      if (res.ok) {
+        toast({ title: !sdr.active ? "🟢 Robô Ativado" : "🔴 Robô Desativado" });
+        fetchData();
+      }
+    } catch (e) {
+      toast({ title: "Erro", variant: "destructive" });
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-10 p-6 lg:p-10 max-w-screen-2xl mx-auto">
@@ -190,9 +206,19 @@ export default function SdrManagement() {
                          <Badge className="bg-emerald-500/10 text-emerald-600 font-black text-[8px] mt-1 uppercase border-none">{sdr.role}</Badge>
                       </div>
                    </div>
-                   <Button variant="ghost" size="icon" className="w-10 h-10 rounded-xl hover:bg-red-50 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all" onClick={(e) => { e.stopPropagation(); deleteSdr(sdr.id); }}>
-                      <Trash2 className="w-5 h-5" />
-                   </Button>
+                   <div className="flex items-center gap-3">
+                      <div 
+                        onClick={(e) => { e.stopPropagation(); toggleSdrActive(sdr); }}
+                        className={`flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded-full border transition-all ${sdr.active ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/20' : 'bg-slate-800/50 border-slate-700 hover:bg-slate-700 text-slate-400 group-hover:bg-slate-800'}`}
+                        title={sdr.active ? "Desativar SDR" : "Ativar SDR"}
+                      >
+                         <Power className={`w-4 h-4 ${sdr.active ? 'text-emerald-500' : 'text-slate-400'}`} />
+                         <span className="text-[9px] font-black uppercase tracking-widest leading-none">{sdr.active ? 'ON' : 'OFF'}</span>
+                      </div>
+                      <Button variant="ghost" size="icon" className="w-10 h-10 rounded-xl hover:bg-red-50 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all" onClick={(e) => { e.stopPropagation(); deleteSdr(sdr.id); }}>
+                         <Trash2 className="w-5 h-5" />
+                      </Button>
+                   </div>
                 </div>
                 
                 <div className="p-8 space-y-6">

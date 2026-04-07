@@ -26,7 +26,14 @@ model Tenant {
   webChatUrl   String?
   openAiKey String?
   systemPrompt String?
-  googleRefreshToken String? 
+  googleRefreshToken String?
+  aiProvider   String?  @default("GEMINI")
+  aiApiKey     String?
+  
+  // Lead Discovery Integrations
+  apolloApiKey String?
+  snovClientId String?
+  snovClientSecret String?
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -48,6 +55,8 @@ model Tenant {
   
   conversations Conversation[]
   messages      Message[]
+  products      Product[]
+  icpProfiles   IcpProfile[]
 }
 
 model PipelineStage {
@@ -247,6 +256,7 @@ model User {
   name      String
   email     String   @unique
   password  String
+  phone     String?  // WhatsApp do admin para Modo Comando
   role      String   @default("ADMIN") // ADMIN, AGENT, OWNER, SUPERADMIN
   tenantId String
   createdAt DateTime @default(now())
@@ -394,4 +404,41 @@ model LandingPageSettings {
   
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  type        String   @default("PRODUCT") // PRODUCT, SERVICE
+  description String?
+  price       Float?
+  size        String?  // P, M, G ou dimensões
+  buyUrl      String?  @default("https://")
+  isActive    Boolean  @default(true)
+  
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model IcpProfile {
+  id              String   @id @default(uuid())
+  name            String   // Ex: Donos de Restaurantes em SP
+  
+  // Critérios de Busca
+  niche           String?  // Ex: Restaurantes, Academias
+  role            String?  // Ex: CEO, Dono, Gerente Comercial
+  location        String?  // Ex: São Paulo, Brasil
+  
+  // Automação
+  isAutoHunterEnabled Boolean @default(false)
+  dailyLimit      Int      @default(200)
+  
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }

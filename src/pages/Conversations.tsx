@@ -19,6 +19,7 @@ export default function Conversations() {
   const [messages, setMessages] = useState<any[]>([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [sdrTyping, setSdrTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -31,7 +32,10 @@ export default function Conversations() {
 
   const fetchData = async () => {
     try {
-      const res = await fetch("/api/leads");
+      const tenantId = localStorage.getItem("tenantId");
+      const res = await fetch("/api/leads", {
+        headers: { "x-tenant-id": tenantId || "" }
+      });
       const data = await res.json();
       setChats(Array.isArray(data) ? data : []);
     } catch (e) {}
@@ -40,21 +44,57 @@ export default function Conversations() {
 
   const fetchMessages = async (leadId: string) => {
     if (!leadId) return;
+    const tenantId = localStorage.getItem("tenantId");
     try {
-      const res = await fetch(`/api/messages/${leadId}`);
+      const res = await fetch(`/api/messages/${leadId}`, {
+        headers: { "x-tenant-id": tenantId || "" }
+      });
       const data = await res.json();
       setMessages(Array.isArray(data) ? data : []);
     } catch (e) {}
+  };
+
+  const toggleBot = async () => {
+    if (!selectedChat) return;
+    const tenantId = localStorage.getItem("tenantId");
+    const currentStatus = selectedChat.conversations?.[0]?.botActive ?? true;
+    const newStatus = !currentStatus;
+    
+    try {
+      const res = await fetch(`/api/conversations/${selectedChat.id}/bot`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-tenant-id": tenantId || ""
+        },
+        body: JSON.stringify({ botActive: newStatus })
+      });
+      if (res.ok) {
+        // Update local state by re-fetching
+        fetchData();
+        // Update current selected object manually to react instantly
+        setSelectedChat((prev: any) => ({
+           ...prev,
+           conversations: [{ ...(prev.conversations?.[0] || {}), botActive: newStatus }]
+        }));
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleSend = async () => {
     if (!message.trim() || !selectedChat) return;
     const content = message;
     setMessage("");
+    const tenantId = localStorage.getItem("tenantId");
     try {
       const res = await fetch("/api/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-tenant-id": tenantId || ""
+        },
         body: JSON.stringify({ leadId: selectedChat.id, content, role: "SDR" })
       });
       if (res.ok) {
@@ -65,15 +105,43 @@ export default function Conversations() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 10000);
-    return () => clearInterval(interval);
+    
+    // Configurar SSE para tempo real
+    const tenantId = localStorage.getItem("tenantId"); // Assumindo que está no localStorage
+    if (!tenantId) return;
+
+    const eventSource = new EventSource(`/api/events?tenantId=${tenantId}`);
+    
+    eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      
+      if (data.type === "new_message") {
+        // Se for o chat selecionado, adiciona ao estado
+        if (selectedChatRef.current && selectedChatRef.current.id === data.leadId) {
+          setMessages(prev => [...prev.filter(m => m.id !== data.message.id), data.message]);
+        }
+        // Atualiza a lista de chats para mostrar o preview
+        fetchData();
+      } else if (data.type === "new_lead") {
+        fetchData();
+      } else if (data.type === "sdr_action") {
+        if (selectedChatRef.current && (selectedChatRef.current.id === data.leadId || selectedChatRef.current.phone === data.leadPhone)) {
+          setSdrTyping(data.action === "typing");
+        }
+      }
+    };
+
+    return () => {
+      eventSource.close();
+    };
   }, []);
 
+  // Use ref para acessar selectedChat dentro do useEffect do SSE
+  const selectedChatRef = useRef(selectedChat);
   useEffect(() => {
+    selectedChatRef.current = selectedChat;
     if (selectedChat) {
       fetchMessages(selectedChat.id);
-      const interval = setInterval(() => fetchMessages(selectedChat.id), 3000);
-      return () => clearInterval(interval);
     }
   }, [selectedChat]);
 
@@ -139,11 +207,22 @@ export default function Conversations() {
                     <div>
                        <p className="font-black text-slate-800 leading-none">{selectedChat.name}</p>
                        <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-1.5 flex items-center gap-1.5">
-                         <Circle className="w-2 h-2 fill-emerald-500" /> Atendimento via IA
+                         {selectedChat.conversations?.[0]?.botActive !== false ? (
+                            <><Circle className="w-2 h-2 fill-emerald-500" /> Atendimento via IA</>
+                         ) : (
+                            <><Circle className="w-2 h-2 fill-amber-500" /> IA Pausada (Transbordo Humano)</>
+                         )}
                        </p>
                     </div>
                  </div>
                  <div className="flex gap-2">
+                    <Button 
+                      onClick={toggleBot} 
+                      variant="outline" 
+                      className={`rounded-xl border-slate-100 font-bold text-xs ${selectedChat.conversations?.[0]?.botActive !== false ? 'hover:bg-slate-50' : 'bg-emerald-50 border-emerald-100 text-emerald-600 hover:bg-emerald-100'}`}
+                    >
+                      {selectedChat.conversations?.[0]?.botActive !== false ? "Pausar SDR" : "Retomar SDR"}
+                    </Button>
                     <Button variant="outline" size="icon" className="rounded-xl border-slate-100 hover:bg-slate-50"><Phone className="w-4 h-4 text-slate-400" /></Button>
                     <Button variant="outline" size="icon" className="rounded-xl border-slate-100 hover:bg-slate-50"><MoreVertical className="w-4 h-4 text-slate-400" /></Button>
                  </div>
@@ -162,7 +241,23 @@ export default function Conversations() {
                          </div>
                       </div>
                     ))}
-                    {messages.length === 0 && (
+                    
+                    {sdrTyping && (
+                      <div className="flex justify-start">
+                         <div className="max-w-[70%] p-5 rounded-3xl text-sm font-medium shadow-sm bg-slate-900 text-white rounded-tl-none">
+                            <span className="flex items-center gap-2">
+                               🤖 SDR está digitando
+                               <span className="flex space-x-1">
+                                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce"></span>
+                                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+                               </span>
+                            </span>
+                         </div>
+                      </div>
+                    )}
+
+                    {messages.length === 0 && !sdrTyping && (
                       <div className="py-20 text-center text-slate-300 font-black uppercase text-[10px] tracking-[0.2em]">
                          Nenhuma mensagem trocada ainda
                       </div>

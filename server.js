@@ -18,12 +18,57 @@ const pdf = require("pdf-parse");
 const mammoth = require("mammoth");
 import fs from "fs";
 import bcrypt from "bcryptjs";
+import axios from "axios";
+import nodemailer from "nodemailer";
+import cron from "node-cron";
+import { CommandCenter } from "./command_center.js";
 
 const upload = multer({ dest: "uploads/" });
+import { EventEmitter } from "events";
+const eventEmitter = new EventEmitter();
+
+// --- In-memory verification codes store ---
+const verificationCodes = new Map(); // email -> { code, expiresAt }
+
+// --- Connect AutomationEngine to events ---
+AutomationEngine.setEventEmitter(eventEmitter);
+
+// --- Email transporter (uses Ethereal for dev, configure SMTP for production) ---
+let emailTransporter = null;
+async function getEmailTransporter() {
+  if (emailTransporter) return emailTransporter;
+  
+  if (process.env.SMTP_HOST && process.env.SMTP_USER) {
+    emailTransporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT || 587,
+      secure: process.env.SMTP_SECURE === "true", // true for 465, false for other ports
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+      }
+    });
+    console.log(`📧 Conectado ao servidor SMTP: ${process.env.SMTP_HOST}`);
+  } else {
+    // Use Ethereal for development (free test SMTP)
+    const testAccount = await nodemailer.createTestAccount();
+    emailTransporter = nodemailer.createTransport({
+      host: "smtp.ethereal.email",
+      port: 587,
+      secure: false,
+      auth: { user: testAccount.user, pass: testAccount.pass }
+    });
+    console.log(`📧 Email test account (Ethereal): ${testAccount.user}`);
+  }
+  return emailTransporter;
+}
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+app.use(express.json());
 const prisma = new PrismaClient();
+
 const PORT = process.env.PORT || 3000;
 
 // --- Database Auto-Initialization ---
@@ -112,25 +157,89 @@ app.use((req, res, next) => {
   next();
 });
 
+// --- Tenant Isolation Middleware ---
+app.use("/api", (req, res, next) => {
+  // Skip public routes
+  const publicPaths = ["/api/auth/", "/api/public/", "/api/webhook/", "/api/ping"];
+  if (publicPaths.some(p => req.path.startsWith(p))) return next();
+  const tenantId = req.headers["x-tenant-id"];
+  if (tenantId) {
+    req.tenantId = tenantId;
+  }
+  next();
+});
+
 // --- Leads / CRM ---
 app.get("/api/leads", async (req, res) => {
   try {
-    const tenant = await prisma.tenant.findFirst();
-    if (!tenant) return res.json([]);
+    const tenantId = req.tenantId;
+    if (!tenantId) return res.json([]);
     const leads = await prisma.lead.findMany({
-      where: { tenantId: tenant.id },
+      where: { tenantId },
       include: { conversations: { include: { messages: true } } }
     });
-    res.json(leads);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+    res.status(200).json(leads);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-app.post("/api/leads", async (req, res) => {
+app.post("/api/contacts/import-bulk", async (req, res) => {
+  const { contacts, startInactive } = req.body;
+  const tenantId = req.headers["x-tenant-id"];
+  
+  if (!tenantId) return res.status(400).json({ error: "Tenant ID missing" });
+  if (!Array.isArray(contacts)) return res.status(400).json({ error: "Invalid contacts list" });
+
+  let created = 0;
   try {
-    const tenant = await prisma.tenant.findFirst();
-    if (!tenant) return res.status(400).json({ error: "No tenant found" });
+    for (const c of contacts) {
+      if (!c.phone || !c.name) continue;
+
+      // Upsert Lead
+      const lead = await prisma.lead.upsert({
+        where: { id: "never-match-id" }, // Using create fallback via upsert or just create
+        create: {
+          name: c.name,
+          phone: c.phone,
+          email: c.email || null,
+          tenantId
+        },
+        update: {
+          name: c.name,
+          email: c.email || null
+        }
+      });
+
+      // Garantir que a conversa comece DESATIVADA se solicitado
+      if (startInactive) {
+        await prisma.conversation.upsert({
+          where: { leadId: lead.id },
+          create: {
+            leadId: lead.id,
+            tenantId,
+            botActive: false // 🔒 PROTEÇÃO: IA começa desligada
+          },
+          update: {
+            botActive: false
+          }
+        });
+      }
+      created++;
+    }
+    
+    res.json({ success: true, created });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/contacts/bulk-delete", async (req, res) => {
+  try {
+    const tenantId = req.tenantId;
+    if (!tenantId) return res.status(400).json({ error: "No tenant found" });
     const lead = await prisma.lead.create({
-      data: { ...req.body, tenantId: tenant.id }
+      data: { ...req.body, tenantId }
     });
     res.json(lead);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -170,35 +279,88 @@ app.post("/api/contacts/bulk-delete", async (req, res) => {
 
 app.post("/api/contacts/import-csv", upload.single("file"), async (req, res) => {
   try {
-    const tenant = await prisma.tenant.findFirst();
+    const tenantId = req.headers["x-tenant-id"] || req.tenantId;
     const file = req.file;
-    if (!file) return res.status(400).json({ error: "No file provided" });
+    if (!file) return res.status(400).json({ error: "Nenhum arquivo enviado" });
+    if (!tenantId) return res.status(401).json({ error: "Tenant não identificado" });
     
-    const content = fs.readFileSync(file.path, "utf-8");
-    fs.unlinkSync(file.path);
+    let rows = [];
+    const ext = file.originalname?.split('.').pop()?.toLowerCase();
     
-    // Parse CSV extremamente simples (Nome, Telefone, Email)
-    const lines = content.split("\n").filter(l => l.trim() !== "");
-    const header = lines.shift(); 
-    
-    let created = 0;
-    for (const line of lines) {
-      const [name, phone, email] = line.split(",").map(s => s?.trim());
-      if (name && phone) {
-        await prisma.lead.create({
-          data: { name, phone: phone.replace(/\D/g, ""), email, tenantId: tenant.id }
-        });
-        created++;
+    if (ext === 'xlsx' || ext === 'xls') {
+      // Importação XLSX/XLS
+      const XLSX = (await import('xlsx')).default;
+      const workbook = XLSX.readFile(file.path);
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+    } else {
+      // Importação CSV
+      const content = fs.readFileSync(file.path, "utf-8");
+      const lines = content.split("\n").filter(l => l.trim() !== "");
+      const headerLine = lines.shift();
+      const headers = headerLine.split(",").map(h => h.trim().toLowerCase().replace(/"/g, ""));
+      
+      for (const line of lines) {
+        const values = line.split(",").map(s => s?.trim().replace(/"/g, ""));
+        const row = {};
+        headers.forEach((h, i) => { row[h] = values[i] || ""; });
+        rows.push(row);
       }
     }
-    res.json({ success: true, created });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+    
+    fs.unlinkSync(file.path);
+    
+    // Auto-detect de colunas (flexível)
+    const colMap = { name: null, phone: null, email: null, company: null };
+    if (rows.length > 0) {
+      const keys = Object.keys(rows[0]).map(k => k.toLowerCase());
+      colMap.name = keys.find(k => /nome|name|razao|raz[aã]o/i.test(k));
+      colMap.phone = keys.find(k => /telefone|phone|fone|celular|whatsapp|tel/i.test(k));
+      colMap.email = keys.find(k => /email|e-mail|mail/i.test(k));
+      colMap.company = keys.find(k => /empresa|company|org|companhia|raz[aã]o.?social/i.test(k));
+    }
+    
+    let created = 0, duplicated = 0, errors = 0;
+    
+    for (const row of rows) {
+      try {
+        const rawName = colMap.name ? row[colMap.name] || row[Object.keys(row).find(k => k.toLowerCase() === colMap.name)] : "";
+        const rawPhone = colMap.phone ? row[colMap.phone] || row[Object.keys(row).find(k => k.toLowerCase() === colMap.phone)] : "";
+        const rawEmail = colMap.email ? row[colMap.email] || row[Object.keys(row).find(k => k.toLowerCase() === colMap.email)] : "";
+        
+        const name = (rawName || "Sem Nome").toString().trim();
+        const phone = rawPhone?.toString().replace(/\D/g, "");
+        const email = rawEmail?.toString().trim();
+        
+        if (!phone || phone.length < 8) { errors++; continue; }
+        
+        // Deduplicação por telefone
+        const existing = await prisma.lead.findFirst({ where: { phone, tenantId } });
+        if (existing) { duplicated++; continue; }
+        
+        const newLead = await prisma.lead.create({
+          data: { name, phone, email: email || null, tenantId }
+        });
+        eventEmitter.emit("new_lead", { tenantId, lead: newLead });
+        created++;
+      } catch (rowErr) {
+        errors++;
+      }
+    }
+    
+    console.log(`[Import] 📋 Tenant ${tenantId}: ${created} criados, ${duplicated} duplicados, ${errors} erros de ${rows.length} linhas`);
+    res.json({ success: true, created, duplicated, errors, total: rows.length });
+  } catch (e) { 
+    console.error("[Import] Erro:", e);
+    res.status(500).json({ error: e.message }); 
+  }
 });
+
 
 // --- MESSAGES & CONVERSATIONS ---
 app.get("/api/messages/:leadId", async (req, res) => {
   try {
-    const tenant = await prisma.tenant.findFirst();
+    const tenantId = req.tenantId;
     const conversation = await prisma.conversation.findUnique({
       where: { leadId: req.params.leadId }
     });
@@ -210,7 +372,7 @@ app.get("/api/messages/:leadId", async (req, res) => {
     const messages = await prisma.message.findMany({
       where: {
         conversationId: conversation.id,
-        tenantId: tenant.id
+        tenantId
       },
       orderBy: { createdAt: "asc" }
     });
@@ -220,16 +382,35 @@ app.get("/api/messages/:leadId", async (req, res) => {
   }
 });
 
+// Toggle bot Active for a conversation
+app.put("/api/conversations/:leadId/bot", async (req, res) => {
+  try {
+    const { leadId } = req.params;
+    const { botActive } = req.body;
+    const tenantId = req.tenantId || req.headers["x-tenant-id"];
+
+    const conv = await prisma.conversation.upsert({
+      where: { leadId },
+      update: { botActive },
+      create: { leadId, tenantId, botActive }
+    });
+    
+    res.json({ success: true, botActive: conv.botActive });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post("/api/messages", async (req, res) => {
   const { leadId, content, role } = req.body;
   try {
-    const tenant = await prisma.tenant.findFirst();
+    const tenantId = req.tenantId;
 
     // Ensure conversation exists for lead
     let conversation = await prisma.conversation.findUnique({ where: { leadId } });
     if (!conversation) {
        conversation = await prisma.conversation.create({
-         data: { leadId, tenantId: tenant.id }
+         data: { leadId, tenantId }
        });
     }
 
@@ -238,9 +419,11 @@ app.post("/api/messages", async (req, res) => {
         content,
         role: role || "SDR",
         conversationId: conversation.id,
-        tenantId: tenant.id
+        tenantId
       }
     });
+
+    eventEmitter.emit("new_message", { tenantId, leadId, message: msg });
 
     // Optionally notify automation engine of manual message (stop bot)
     if (role === "SDR") {
@@ -260,10 +443,10 @@ app.post("/api/messages", async (req, res) => {
 // --- Pipeline Stages ---
 app.get("/api/pipeline-stages", async (req, res) => {
   try {
-    const tenant = await prisma.tenant.findFirst();
-    if (!tenant) return res.json([]);
+    const tenantId = req.tenantId;
+    if (!tenantId) return res.json([]);
     const stages = await prisma.pipelineStage.findMany({ 
-      where: { tenantId: tenant.id },
+      where: { tenantId },
       orderBy: { order: "asc" }
     });
     res.json(stages);
@@ -272,8 +455,8 @@ app.get("/api/pipeline-stages", async (req, res) => {
 
 app.post("/api/pipeline-stages", async (req, res) => {
   try {
-    const tenant = await prisma.tenant.findFirst();
-    const stage = await prisma.pipelineStage.create({ data: { ...req.body, tenantId: tenant.id } });
+    const tenantId = req.tenantId;
+    const stage = await prisma.pipelineStage.create({ data: { ...req.body, tenantId } });
     res.json(stage);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -289,10 +472,74 @@ app.delete("/api/pipeline-stages/:id", async (req, res) => {
   try {
     await prisma.pipelineStage.delete({ where: { id: req.params.id } });
     res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// --- Catalog (Products / Services) ---
+app.get("/api/products", async (req, res) => {
+  try {
+    const tenantId = req.tenantId || req.headers["x-tenant-id"];
+    const items = await prisma.product.findMany({ where: { tenantId } });
+    res.json(items);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// --- Dashboard Stats ---
+app.post("/api/products", async (req, res) => {
+  try {
+    const tenantId = req.tenantId || req.headers["x-tenant-id"];
+    const item = await prisma.product.create({ data: { ...req.body, tenantId } });
+    res.json(item);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put("/api/products/:id", async (req, res) => {
+  try {
+    const item = await prisma.product.update({ where: { id: req.params.id }, data: req.body });
+    res.json(item);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete("/api/products/:id", async (req, res) => {
+  try {
+    await prisma.product.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- ICP Profiles ---
+app.get("/api/icp-profiles", async (req, res) => {
+  try {
+    const tenantId = req.tenantId || req.headers["x-tenant-id"];
+    const items = await prisma.icpProfile.findMany({ where: { tenantId } });
+    res.json(items);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/icp-profiles", async (req, res) => {
+  try {
+    const tenantId = req.tenantId || req.headers["x-tenant-id"];
+    const item = await prisma.icpProfile.create({ data: { ...req.body, tenantId } });
+    res.json(item);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put("/api/icp-profiles/:id", async (req, res) => {
+  try {
+    const item = await prisma.icpProfile.update({ where: { id: req.params.id }, data: req.body });
+    res.json(item);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete("/api/icp-profiles/:id", async (req, res) => {
+  try {
+    await prisma.icpProfile.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- Public Access endpoints ---
 // (Rotas /api/stats/dashboard e /api/public/landing definidas mais abaixo com implementação completa)
 
 app.get("/api/public/webchat/:tenantId", async (req, res) => {
@@ -321,27 +568,24 @@ app.get("/api/public/webchat/:tenantId", async (req, res) => {
 app.post("/api/bulk-send", async (req, res) => {
   try {
     const { leadIds, message, channel } = req.body;
-    const tenant = await prisma.tenant.findFirst();
-    if (!tenant) return res.status(400).json({ error: "Tenant not found" });
+    const tenantId = req.tenantId;
+    if (!tenantId) return res.status(400).json({ error: "Tenant not found" });
 
-    // 1. Criar Campanha
     const campaign = await prisma.campaign.create({
       data: {
         name: `Campanha via ${channel} - ${new Date().toLocaleDateString()}`,
         status: "RUNNING",
-        template: { create: { name: "Bulk Message Template", content: message, tenantId: tenant.id } },
-        tenantId: tenant.id,
+        template: { create: { name: "Bulk Message Template", content: message, tenantId } },
+        tenantId,
         sentCount: leadIds.length
       }
     });
 
-    // 2. Registrar mensagens no histórico de cada lead
-    // Em um cenário real, aqui dispararíamos os webhooks para WhatsApp ou E-mail
     for (const leadId of leadIds) {
       const conversation = await prisma.conversation.upsert({
         where: { leadId },
         update: {},
-        create: { leadId, tenantId: tenant.id }
+        create: { leadId, tenantId }
       });
 
       await prisma.message.create({
@@ -349,7 +593,7 @@ app.post("/api/bulk-send", async (req, res) => {
           conversationId: conversation.id,
           content: message,
           role: "SDR",
-          tenantId: tenant.id
+          tenantId
         }
       });
     }
@@ -363,18 +607,18 @@ app.post("/api/bulk-send", async (req, res) => {
 // --- SDRs ---
 app.get("/api/sdrs", async (req, res) => {
   try {
-    const tenant = await prisma.tenant.findFirst();
-    if (!tenant) return res.json([]);
-    const sdrs = await prisma.sdrBot.findMany({ where: { tenantId: tenant.id } });
+    const tenantId = req.tenantId;
+    if (!tenantId) return res.json([]);
+    const sdrs = await prisma.sdrBot.findMany({ where: { tenantId } });
     res.json(sdrs);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post("/api/sdrs", async (req, res) => {
   try {
-    const tenant = await prisma.tenant.findFirst();
-    if (!tenant) return res.status(400).json({ error: "No tenant found" });
-    const sdr = await prisma.sdrBot.create({ data: { ...req.body, tenantId: tenant.id, active: true } });
+    const tenantId = req.tenantId;
+    if (!tenantId) return res.status(400).json({ error: "No tenant found" });
+    const sdr = await prisma.sdrBot.create({ data: { ...req.body, tenantId, active: true } });
     res.json(sdr);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -444,21 +688,21 @@ app.post("/api/sdrs/:id/training", upload.single("file"), async (req, res) => {
 // --- WhatsApp Accounts (Requirement 6) ---
 app.get("/api/whatsapp/accounts", async (req, res) => {
   try {
-    const tenant = await prisma.tenant.findFirst();
-    if (!tenant) return res.json([]);
-    const accs = await prisma.whatsAppAccount.findMany({ where: { tenantId: tenant.id } });
+    const tenantId = req.tenantId;
+    if (!tenantId) return res.json([]);
+    const accs = await prisma.whatsAppAccount.findMany({ where: { tenantId } });
     res.json(accs);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post("/api/whatsapp/accounts", async (req, res) => {
-  console.log("📥 [WhatsApp Account] Criando nova conexão...");
+  console.log("\ud83d\udce5 [WhatsApp Account] Criando nova conex\u00e3o...");
   try {
-    const tenant = await prisma.tenant.findFirst();
-    if (!tenant) return res.status(400).json({ error: "No tenant found" });
+    const tenantId = req.tenantId;
+    if (!tenantId) return res.status(400).json({ error: "No tenant found" });
     const { name } = req.body;
     const account = await prisma.whatsAppAccount.create({
-      data: { name, tenantId: tenant.id, status: "DISCONNECTED" }
+      data: { name, tenantId, status: "DISCONNECTED" }
     });
     res.json(account);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -513,13 +757,20 @@ app.get("/api/whatsapp/qr/:id", (req, res) => {
 
 // --- Auth / Register ---
 app.post("/api/auth/register", async (req, res) => {
-  const { name, email, password, companyName, plan } = req.body;
+  const { name, email, password, companyName, plan, phone } = req.body;
   
+  if (!name || !email || !password || !companyName || !phone) {
+    return res.status(400).json({ error: "Todos os campos são obrigatórios (nome, email, senha, empresa, telefone)." });
+  }
+
   try {
+    // Check if email already exists
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) return res.status(409).json({ error: "E-mail já cadastrado." });
+
     // 1. Criar o Plano se não existir (ou buscar por nome)
     let planObj = await prisma.plan.findFirst({ where: { name: plan } });
     if (!planObj) {
-        // Fallback pra criar um plano básico se não houver no banco
         planObj = await prisma.plan.create({
             data: { name: plan, priceMonthly: plan === 'PRO' ? 497 : 197, priceYearly: 0, maxLeads: 1000, maxSdrs: 2 }
         });
@@ -530,6 +781,7 @@ app.post("/api/auth/register", async (req, res) => {
       data: {
         name: companyName,
         email: email,
+        phone: phone,
         planId: planObj.id,
         subscriptionStatus: "TRIAL",
         trialEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
@@ -547,16 +799,67 @@ app.post("/api/auth/register", async (req, res) => {
       }
     });
 
+    // 3. Pipeline Stages iniciais
+    await prisma.pipelineStage.createMany({
+      data: [
+        { name: "Novos", color: "#3b82f6", order: 0, tenantId: tenant.id },
+        { name: "Qualificando", color: "#f59e0b", order: 1, tenantId: tenant.id },
+        { name: "Interessados", color: "#10b981", order: 2, tenantId: tenant.id },
+        { name: "Agendados", color: "#8b5cf6", order: 3, tenantId: tenant.id },
+        { name: "Convertidos", color: "#0f172a", order: 4, tenantId: tenant.id }
+      ]
+    });
+
     // 4. Criar Configuração de Automação Inicial
     await prisma.automationConfig.create({
       data: { tenantId: tenant.id }
     });
 
-    res.json({ success: true, tenant, user });
+    res.json({ success: true, tenant: { ...tenant, plan: planObj }, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
   } catch (e) {
     console.error("[Register Error]", e);
     res.status(500).json({ error: e.message });
   }
+});
+
+// --- Email Verification ---
+app.post("/api/auth/send-code", async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: "E-mail é obrigatório" });
+  try {
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    verificationCodes.set(email, { code, expiresAt: Date.now() + 10 * 60 * 1000 });
+
+    const transporter = await getEmailTransporter();
+    const info = await transporter.sendMail({
+      from: '"VendAi" <noreply@vendai.com.br>',
+      to: email,
+      subject: "Seu código de verificação VendAi",
+      html: `<div style="font-family:sans-serif;text-align:center;padding:40px">
+        <h2>Código de Verificação</h2>
+        <p style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#10b981">${code}</p>
+        <p>Este código expira em 10 minutos.</p>
+      </div>`
+    });
+    console.log(`📧 Código ${code} enviado para ${email} | Preview: ${nodemailer.getTestMessageUrl(info)}`);
+    res.json({ success: true, previewUrl: nodemailer.getTestMessageUrl(info) });
+  } catch (e) {
+    console.error("[Send Code Error]", e);
+    res.status(500).json({ error: "Falha ao enviar código." });
+  }
+});
+
+app.post("/api/auth/verify-code", async (req, res) => {
+  const { email, code } = req.body;
+  const stored = verificationCodes.get(email);
+  if (!stored) return res.status(400).json({ error: "Nenhum código enviado para este e-mail." });
+  if (Date.now() > stored.expiresAt) {
+    verificationCodes.delete(email);
+    return res.status(400).json({ error: "Código expirado. Solicite um novo." });
+  }
+  if (stored.code !== code) return res.status(400).json({ error: "Código inválido." });
+  verificationCodes.delete(email);
+  res.json({ success: true, verified: true });
 });
 
 app.post("/api/auth/login", async (req, res) => {
@@ -576,8 +879,173 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
+// --- Current User Profile ---
+app.get("/api/auth/me", async (req, res) => {
+  try {
+    const tenantId = req.headers["x-tenant-id"];
+    const userId = req.headers["x-user-id"];
+    if (!tenantId) return res.status(401).json({ error: "Não autenticado" });
+
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      include: { plan: true }
+    });
+    if (!tenant) return res.status(404).json({ error: "Tenant não encontrado" });
+
+    let user = null;
+    if (userId) {
+      user = await prisma.user.findUnique({ where: { id: userId } });
+    } else {
+      user = await prisma.user.findFirst({ where: { tenantId } });
+    }
+
+    const leadsCount = await prisma.lead.count({ where: { tenantId } });
+    const sdrsCount = await prisma.sdrBot.count({ where: { tenantId } });
+
+    res.json({
+      user: user ? { id: user.id, name: user.name, email: user.email, role: user.role, phone: user.phone } : null,
+      tenant: {
+        id: tenant.id, name: tenant.name, email: tenant.email, phone: tenant.phone,
+        subscriptionStatus: tenant.subscriptionStatus, trialEnd: tenant.trialEnd, createdAt: tenant.createdAt,
+        aiProvider: tenant.aiProvider, googleRefreshToken: tenant.googleRefreshToken
+      },
+      plan: tenant.plan ? {
+        id: tenant.plan.id, name: tenant.plan.name, priceMonthly: tenant.plan.priceMonthly,
+        maxLeads: tenant.plan.maxLeads, maxSdrs: tenant.plan.maxSdrs
+      } : null,
+      usage: { leads: leadsCount, sdrs: sdrsCount }
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- Atualizar telefone do admin (WhatsApp Command Center) ---
+app.put("/api/user/phone", async (req, res) => {
+  try {
+    const tenantId = req.headers["x-tenant-id"];
+    const userId = req.headers["x-user-id"];
+    const { phone } = req.body;
+    
+    if (!tenantId) return res.status(401).json({ error: "Não autenticado" });
+    
+    let user;
+    if (userId) {
+      user = await prisma.user.update({ where: { id: userId }, data: { phone } });
+    } else {
+      user = await prisma.user.findFirst({ where: { tenantId } });
+      if (user) {
+        user = await prisma.user.update({ where: { id: user.id }, data: { phone } });
+      }
+    }
+    
+    console.log(`[CommandCenter] 📱 Admin ${user?.name} registrou WhatsApp: ${phone}`);
+    res.json({ success: true, phone: user?.phone });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- Salvar configurações de IA do tenant ---
+app.put("/api/tenant/ai-settings", async (req, res) => {
+  try {
+    const tenantId = req.headers["x-tenant-id"];
+    const { aiProvider, aiApiKey } = req.body;
+    if (!tenantId) return res.status(401).json({ error: "Não autenticado" });
+    
+    const updated = await prisma.tenant.update({
+      where: { id: tenantId },
+      data: { aiProvider, aiApiKey }
+    });
+    res.json({ success: true, aiProvider: updated.aiProvider });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+
 // --- Current Tenant & Plan Limits ---
 app.get("/api/tenant/current", async (req, res) => {
+  try {
+    const tenantId = req.headers["x-tenant-id"];
+    if (!tenantId) return res.status(401).json({ error: "Missing tenant header" });
+
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      include: { plan: true }
+    });
+    if (!tenant) return res.status(404).json({ error: "Tenant not found" });
+
+    const leadsCount = await prisma.lead.count({ where: { tenantId } });
+    const sdrsCount = await prisma.sdrBot.count({ where: { tenantId } });
+
+    res.json({
+      tenant: {
+        id: tenant.id, name: tenant.name, email: tenant.email, phone: tenant.phone,
+        subscriptionStatus: tenant.subscriptionStatus, trialEnd: tenant.trialEnd, createdAt: tenant.createdAt
+      },
+      plan: tenant.plan ? {
+        id: tenant.plan.id, name: tenant.plan.name, priceMonthly: tenant.plan.priceMonthly,
+        maxLeads: tenant.plan.maxLeads, maxSdrs: tenant.plan.maxSdrs
+      } : null,
+      usage: { leads: leadsCount, sdrs: sdrsCount }
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+const oauth2Client = new google.auth.OAuth2(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  process.env.GOOGLE_REDIRECT_URI
+);
+
+
+app.get("/api/auth/google", (req, res) => {
+  const tenantId = req.query.tenantId;
+  if (!tenantId) return res.status(400).send("Tenant ID obrigatório");
+
+  const scopes = [
+    'https://www.googleapis.com/auth/calendar.events',
+    'https://www.googleapis.com/auth/calendar.readonly',
+    'https://www.googleapis.com/auth/userinfo.email'
+  ];
+
+  const url = oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    scope: scopes,
+    state: tenantId,
+    prompt: 'consent'
+  });
+
+  res.redirect(url);
+});
+
+app.get("/api/auth/google/callback", async (req, res) => {
+  const { code, state: tenantId } = req.query;
+  try {
+    const { tokens } = await oauth2Client.getToken(code);
+    
+    if (tokens.refresh_token) {
+      await prisma.tenant.update({
+        where: { id: tenantId },
+        data: { googleRefreshToken: tokens.refresh_token }
+      });
+    }
+
+    res.send(`
+      <html>
+        <head><title>Conectado</title></head>
+        <body style="font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; flex-direction: column;">
+          <h1 style="color: #10b981;">Calendário Conectado com Sucesso!</h1>
+          <p>Você já pode fechar esta aba e voltar para o AutoSales.</p>
+          <script>
+            setTimeout(() => window.close(), 3000);
+          </script>
+        </body>
+      </html>
+    `);
+  } catch (err) {
+    console.error("Google Auth Error:", err);
+    res.status(500).send("Erro ao sincronizar calendário.");
+  }
+});
+
+app.put("/api/tenant/settings", async (req, res) => {
+
   try {
     const tenant = await prisma.tenant.findFirst({
       include: { plan: true }
@@ -604,10 +1072,10 @@ app.get("/api/tenant/current", async (req, res) => {
 // --- Automations ---
 app.get("/api/automations", async (req, res) => {
   try {
-    const tenant = await prisma.tenant.findFirst();
-    if (!tenant) return res.json([]);
+    const tenantId = req.tenantId;
+    if (!tenantId) return res.json([]);
     const auts = await prisma.automation.findMany({
-      where: { tenantId: tenant.id },
+      where: { tenantId: tenantId },
       orderBy: { createdAt: "desc" }
     });
     res.json(auts);
@@ -616,7 +1084,8 @@ app.get("/api/automations", async (req, res) => {
 
 app.post("/api/automations", async (req, res) => {
   try {
-    const tenant = await prisma.tenant.findFirst({
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
       include: { automations: true, plan: true }
     });
     if (!tenant) return res.status(400).json({ error: "No tenant found" });
@@ -641,7 +1110,7 @@ app.post("/api/automations", async (req, res) => {
 
     const { name, trigger, triggerConfig, description, nodes, edges } = req.body;
     const aut = await prisma.automation.create({
-      data: { name, trigger, triggerConfig, description, nodes, edges, tenantId: tenant.id }
+      data: { name, trigger, triggerConfig, description, nodes, edges, tenantId: tenantId }
     });
     AutomationEngine.reloadSchedulers().catch(console.error);
     res.json(aut);
@@ -727,25 +1196,25 @@ app.get("/api/automations/:id/executions", async (req, res) => {
 
 app.get("/api/automations/executions/stats", async (req, res) => {
   try {
-    const tenant = await prisma.tenant.findFirst();
-    if (!tenant) return res.json({});
+    const tenantId = req.tenantId;
+    if (!tenantId) return res.json({});
     const total = await prisma.automationExecution.count({
-      where: { automation: { tenantId: tenant.id } }
+      where: { automation: { tenantId: tenantId } }
     });
     const running = await prisma.automationExecution.count({
-      where: { automation: { tenantId: tenant.id }, status: "RUNNING" }
+      where: { automation: { tenantId: tenantId }, status: "RUNNING" }
     });
     const completed = await prisma.automationExecution.count({
-      where: { automation: { tenantId: tenant.id }, status: "COMPLETED" }
+      where: { automation: { tenantId: tenantId }, status: "COMPLETED" }
     });
     const failed = await prisma.automationExecution.count({
-      where: { automation: { tenantId: tenant.id }, status: "FAILED" }
+      where: { automation: { tenantId: tenantId }, status: "FAILED" }
     });
     const activeAutomations = await prisma.automation.count({
-      where: { tenantId: tenant.id, active: true }
+      where: { tenantId: tenantId, active: true }
     });
     const draftAutomations = await prisma.automation.count({
-      where: { tenantId: tenant.id, active: false }
+      where: { tenantId: tenantId, active: false }
     });
     res.json({ total, running, completed, failed, activeAutomations, draftAutomations });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -754,11 +1223,11 @@ app.get("/api/automations/executions/stats", async (req, res) => {
 // --- Automation Global Config ---
 app.get("/api/automations/config", async (req, res) => {
   try {
-    const tenant = await prisma.tenant.findFirst();
-    if (!tenant) return res.json({});
-    let config = await prisma.automationConfig.findUnique({ where: { tenantId: tenant.id } });
+    const tenantId = req.tenantId;
+    if (!tenantId) return res.json({});
+    let config = await prisma.automationConfig.findUnique({ where: { tenantId: tenantId } });
     if (!config) {
-      config = await prisma.automationConfig.create({ data: { tenantId: tenant.id } });
+      config = await prisma.automationConfig.create({ data: { tenantId: tenantId } });
     }
     res.json(config);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -766,11 +1235,11 @@ app.get("/api/automations/config", async (req, res) => {
 
 app.post("/api/automations/config", async (req, res) => {
   try {
-    const tenant = await prisma.tenant.findFirst();
+    const tenantId = req.tenantId;
     const config = await prisma.automationConfig.upsert({
-      where: { tenantId: tenant.id },
+      where: { tenantId },
       update: req.body,
-      create: { ...req.body, tenantId: tenant.id }
+      create: { ...req.body, tenantId }
     });
     res.json(config);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -865,18 +1334,32 @@ app.post("/api/prospect", async (req, res) => {
 // --- Dashboard & Analytics ---
 app.get("/api/stats/dashboard", async (req, res) => {
   try {
-    const tenant = await prisma.tenant.findFirst();
-    if (!tenant) return res.status(404).json({ error: "Tenant not found" });
+    const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+    if (!tenantId) return res.status(404).json({ error: "Tenant not found" });
 
-    const totalLeads = await prisma.lead.count({ where: { tenantId: tenant.id } });
-    const appointments = await prisma.appointment.count({ where: { tenantId: tenant.id } });
-    const activeSdrs = await prisma.sdrBot.count({ where: { tenantId: tenant.id, active: true } });
+    const totalLeads = await prisma.lead.count({ where: { tenantId } });
+    const appointments = await prisma.appointment.count({ where: { tenantId } });
+    const activeSdrs = await prisma.sdrBot.count({ where: { tenantId, active: true } });
     
+    // Métricas de Prospecção (Fase 1 e 2)
+    const emailsSent = await prisma.message.count({
+      where: { tenantId, role: "ASSISTANT", content: { contains: "📧 [EMAIL ENVIADO]" } }
+    });
+
+    const whatsappFollowups = await prisma.message.count({
+      where: { 
+        tenantId, 
+        role: "ASSISTANT", 
+        content: { not: { contains: "📧 [EMAIL ENVIADO]" } },
+        conversation: { lead: { createdAt: { lt: new Date(Date.now() - 3600000) } } } // Simplificação: msgs para leads com mais de 1h
+      }
+    });
+
     // Calcula conversão com base em leads que chegaram nas etapas finais
     const convertedLeads = await prisma.lead.count({
       where: { 
-        tenantId: tenant.id,
-        stage: { name: { in: ["Convertidos", "Agendados"] } }
+        tenantId,
+        stage: { name: { in: ["Convertidos", "Agendados", "CONVERTED", "APPOINTMENT"] } }
       }
     });
     
@@ -884,7 +1367,7 @@ app.get("/api/stats/dashboard", async (req, res) => {
 
     // Dados do Funil (Pipeline Stages)
     const stages = await prisma.pipelineStage.findMany({
-      where: { tenantId: tenant.id },
+      where: { tenantId },
       include: { _count: { select: { leads: true } } },
       orderBy: { order: "asc" }
     });
@@ -895,9 +1378,16 @@ app.get("/api/stats/dashboard", async (req, res) => {
     }));
 
     res.json({ 
-      stats: { totalLeads, appointments, activeSdrs, conversionRate },
+      stats: { 
+        totalLeads, 
+        appointments, 
+        activeSdrs, 
+        conversionRate,
+        emailsSent,
+        whatsappFollowups
+      },
       funnelData,
-      activityHistory: [] // Pode ser implementado com log de eventos no futuro
+      activityHistory: [] 
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -907,22 +1397,22 @@ app.get("/api/stats/dashboard", async (req, res) => {
 // --- Appointments ---
 app.get("/api/appointments", async (req, res) => {
   try {
-    const tenant = await prisma.tenant.findFirst();
-    const appts = await prisma.appointment.findMany({ where: { tenantId: tenant.id }, include: { lead: true } });
+    const tenantId = req.tenantId;
+    const appts = await prisma.appointment.findMany({ where: { tenantId }, include: { lead: true } });
     res.json(appts);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post("/api/appointments", async (req, res) => {
   try {
-    const tenant = await prisma.tenant.findFirst();
+    const tenantId = req.tenantId;
     const appt = await prisma.appointment.create({
       data: {
         title: req.body.title,
         date: new Date(req.body.date),
         notes: req.body.notes,
         leadId: req.body.leadId,
-        tenantId: tenant.id
+        tenantId
       },
       include: { lead: true }
     });
@@ -956,15 +1446,18 @@ app.delete("/api/appointments/:id", async (req, res) => {
 // --- Settings ---
 app.get("/api/settings", async (req, res) => {
   try {
-    const tenant = await prisma.tenant.findFirst();
+    const tenantId = req.tenantId;
+    if (!tenantId) return res.status(401).json({ error: "Não autenticado" });
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, include: { plan: true } });
     res.json(tenant);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post("/api/settings", async (req, res) => {
   try {
-    const tenant = await prisma.tenant.findFirst();
-    const updated = await prisma.tenant.update({ where: { id: tenant.id }, data: req.body });
+    const tenantId = req.tenantId;
+    if (!tenantId) return res.status(401).json({ error: "Não autenticado" });
+    const updated = await prisma.tenant.update({ where: { id: tenantId }, data: req.body });
     res.json(updated);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1113,15 +1606,20 @@ app.post("/api/public/chat", async (req, res) => {
 async function generateSdrResponse(tenantId, phone, leadName, userMessage, sdrId = null) {
   try {
     const sdr = sdrId 
-      ? await prisma.sdrBot.findUnique({ where: { id: sdrId }})
+      ? await prisma.sdrBot.findFirst({ where: { id: sdrId, active: true }})
       : await prisma.sdrBot.findFirst({ where: { tenantId, active: true } });
-    if (!sdr) return null;
+    
+    if (!sdr) {
+      console.log(`[SDR] Nenhum SDR ativo encontrado para o tenant ${tenantId}. Ignorando resposta.`);
+      return null;
+    }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
     // 🧠 BUSCAR HISTÓRICO DA CONVERSA PARA DAR MEMÓRIA AO ROBÔ
     const lead = await prisma.lead.findFirst({ where: { phone, tenantId } });
     let historyText = "Nenhuma mensagem anterior.";
+    let longTermMemory = lead?.aiContactSummary || "Este lead é novo, ainda não temos um perfil comportamental traçado.";
     
     if (lead) {
       const conv = await prisma.conversation.findUnique({
@@ -1167,7 +1665,6 @@ async function generateSdrResponse(tenantId, phone, leadName, userMessage, sdrId
     // Implementação real das funções que acessam o Prisma
     const executableTools = {
       get_calendar_availability: async () => {
-        // Gerador de Slots Numerados
         const slots = [
           { id: "1", label: "Quarta-feira (Amanhã) às 10:30", iso: "2026-04-01T10:30:00Z" },
           { id: "2", label: "Quarta-feira (Amanhã) às 15:00", iso: "2026-04-01T15:00:00Z" },
@@ -1197,14 +1694,13 @@ async function generateSdrResponse(tenantId, phone, leadName, userMessage, sdrId
           }
         });
 
-        // Mover Lead para a etapa de Agendados (se existir)
         const stage = await prisma.pipelineStage.findFirst({
-          where: { tenantId, name: { contains: "Agendado", mode: 'insensitive' } }
+          where: { tenantId, name: { contains: "Agendado" } }
         });
         if (stage) {
           await prisma.lead.update({
              where: { id: lead.id },
-             data: { pipelineStageId: stage.id }
+             data: { stageId: stage.id }
           });
         }
 
@@ -1212,15 +1708,36 @@ async function generateSdrResponse(tenantId, phone, leadName, userMessage, sdrId
       },
       get_account_details: async () => {
         const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, include: { plan: true } });
-        return { company_name: tenant.name, plan: tenant.plan?.name };
+        return { company_name: tenant?.name, plan: tenant?.plan?.name };
       }
     };
 
-    // Usamos a geração mais estável e moderna disponível (2.5 Flash) 🦾
-    const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.5-flash",
-      tools: tools
-    });
+
+    // 🛍️ BUSCAR CATÁLOGO DE PRODUTOS E SERVIÇOS DO TENANT
+    let catalogText = "Nenhum produto cadastrado no momento.";
+    try {
+      if (prisma.product) {
+        const products = await prisma.product.findMany({ where: { tenantId, isActive: true } });
+        if (products.length > 0) {
+          catalogText = products.map(p => `- [${p.type}] ${p.name}: R$ ${p.price || 'Sob Consulta'} | Tamanho/Detalhes: ${p.size || p.description || ''} | Comprar: ${p.buyUrl || 'Indisponível'}`).join("\n");
+        }
+      }
+    } catch (e) {
+      console.warn(`[PRISMA] Tabela 'Product' indisponível localmente: ${e.message}`);
+      // Fallback para manter o SDR online
+    }
+
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    const provider = tenant?.aiProvider || "GEMINI";
+    const apiKey = tenant?.aiApiKey || process.env.GEMINI_API_KEY;
+
+    if (!apiKey) throw new Error("Chave de API de IA não configurada para este tenant.");
+
+    // 🔥 Emitindo evento em tempo real para o Front-end (Iniciando Digitação/Processamento)
+    eventEmitter.emit("sdr_action", { tenantId, action: "typing", leadPhone: phone, leadName, timestamp: Date.now() });
+
+    const isOngoingConversation = historyText !== "Nenhuma mensagem anterior." && historyText.split("\n").length > 2;
+
 
     const systemPrompt = `
       # IDENTIDADE E PERSONALIDADE
@@ -1237,52 +1754,131 @@ async function generateSdrResponse(tenantId, phone, leadName, userMessage, sdrId
       ${sdr.prompt}
       
       # REGRAS DE CONTEXTO (EXTREMA IMPORTÂNCIA):
-      1. NÃO SE APRESENTE: Se houver mais de 2 mensagens no histórico, você já é conhecido. Pule a saudação. Vá direto ao ponto.
+      1. NÃO REPITA SAUDAÇÕES EM CONVERSAS EM ANDAMENTO: Avalie o Histórico da Conversa. O histórico demonstra que esta é uma conversa ativa? STATUS_CONVERSA_ATIVA: ${isOngoingConversation}. Se for verdadeiro, NUNCA inicie mensagens com "Olá Fulano", "Oi de novo", "Bom dia". Simplesmente continue a conversa de onde parou respondendo à pergunta diretamente de forma natural. Somente faça saudação se for o começo da interação com um lead novo.
       2. WORKFLOW DE AGENDAMENTO: 
          - Se o cliente demonstrar interesse em agendar, NÃO peça horários nem sugira datas.
          - ENVIE IMEDIATAMENTE este link ÚNICO de agendamento: http://localhost:8080/p/${tenantId}/book
          - Diga algo como: "Para facilitar, você pode escolher o melhor dia e horário diretamente em nosso calendário oficial aqui: [LINK]"
-      3. OBJETIVIDADE: Suas mensagens devem ser curtas, diretas e focadas em converter o lead para o agendamento via link.
+      3. OBJETIVIDADE E FLUÍDEZ: Seja conversacional mas conciso.
       
+      # CATÁLOGO DE PRODUTOS/SERVIÇOS:
+      Você pode apresentar e sugerir estes itens do nosso catálogo oficial caso o cliente pergunte:
+      ${catalogText}
+
       # BASE DE CONHECIMENTO (ESTRITAMENTE USE ISSO):
       ${sdr.knowledgeBase}
+
+      # MEMÓRIA DE LONGO PRAZO (PERFIL DO LEAD):
+      Use este resumo para entender quem é o lead e o que já foi conversado anteriormente:
+      ${longTermMemory}
       
-      # HISTÓRICO DA CONVERSA (MEMÓRIA):
+      # HISTÓRICO DA CONVERSA (ÚLTIMAS 10 MENSAGENS):
       ${historyText}
 
       # DADOS DO LEAD ATUAL:
       Nome: ${leadName}
-      Nova Mensagem do Lead: ${userMessage}
+      Nova Mensagem (Texto ou Áudio transcrito): ${userMessage}
     `;
 
-    // Inicia o Chat com o modelo 2.5 que suporta Tools e Conversão Neural
-    const chat = model.startChat();
-    let result;
-    try {
-      result = await chat.sendMessage(systemPrompt);
-    } catch (chatErr) {
-      console.warn("[SDR-AI] Falha no 2.5 Flash, tentando 2.5 Pro...");
-      const fallbackModel = genAI.getGenerativeModel({ model: "gemini-2.5-pro", tools });
-      const fallbackChat = fallbackModel.startChat();
-      result = await fallbackChat.sendMessage(systemPrompt);
-    }
-    let response = result.response;
+    let finalResponse = "";
 
-    // Loop para lidar com Tool Calls (o robô decide usar o banco)
-    while (response.candidates[0].content.parts.some(p => p.functionCall)) {
-      const call = response.candidates[0].content.parts.find(p => p.functionCall);
-      const toolResponse = await executableTools[call.functionCall.name](call.functionCall.args);
+    if (provider === "GEMINI") {
+      const customGenAI = new GoogleGenerativeAI(apiKey);
+      const modelName = "gemini-1.5-flash";
+      const targetAiModel = customGenAI.getGenerativeModel({ model: modelName, tools });
       
-      result = await chat.sendMessage([{
-        functionResponse: {
-          name: call.functionCall.name,
-          response: { content: toolResponse }
+      const chat = targetAiModel.startChat({
+        history: [ { role: "user", parts: [{ text: "Considere as regras e memórias abaixo antes de prosseguir:\n" + systemPrompt }] } ]
+      });
+
+      let result = await chat.sendMessage(userMessage);
+      let responseBody = result.response;
+
+      // Loop para Tool Calls (Gemini Nativo)
+      while (responseBody.candidates[0].content.parts.some(p => p.functionCall)) {
+        const call = responseBody.candidates[0].content.parts.find(p => p.functionCall);
+        const toolResponse = await executableTools[call.functionCall.name](call.functionCall.args);
+        
+        result = await chat.sendMessage([{
+          functionResponse: {
+            name: call.functionCall.name,
+            response: { content: toolResponse }
+          }
+        }]);
+        responseBody = result.response;
+      }
+      finalResponse = responseBody.text();
+
+    } else {
+      // 🚀 IMPLEMENTAÇÃO PARA OPENAI, CLAUDE, DEEPSEEK, QWEN (OpenAI Compatible Format)
+      const baseUrlMap = {
+        "OPENAI": "https://api.openai.com/v1/chat/completions",
+        "DEEPSEEK": "https://api.deepseek.com/chat/completions",
+        "QWEN": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+        "CLAUDE": "https://api.anthropic.com/v1/messages" // Anthropic uses different structure
+      };
+
+      const modelMap = {
+        "OPENAI": "gpt-4o",
+        "DEEPSEEK": "deepseek-chat",
+        "QWEN": "qwen-max",
+        "CLAUDE": "claude-3-5-sonnet-20240620"
+      };
+
+      // Simplificação do SDK forçado via Axios para manter compatibilidade máxima
+      const aiResponse = await axios.post(baseUrlMap[provider] || baseUrlMap["OPENAI"], {
+        model: modelMap[provider] || "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userMessage }
+        ],
+        temperature: 0.7
+      }, {
+        headers: { 
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey // For Anthropic/Claude
         }
-      }]);
-      response = result.response;
+      });
+
+      finalResponse = aiResponse.data.choices?.[0]?.message?.content || aiResponse.data.content?.[0]?.text || "Erro na IA";
+    }
+
+    // 🔥 Emitindo evento de conclusão para o Front-end
+    eventEmitter.emit("sdr_action", { tenantId, action: "idle", leadPhone: phone, timestamp: Date.now() });
+
+
+    // 🧠 ATUALIZAÇÃO ASSÍNCRONA DA MEMÓRIA DE LONGO PRAZO 
+    // (A memória é atualizada em background para não travar a resposta do WhatsApp)
+    if (lead) {
+      (async () => {
+        try {
+          const messageCount = historyText.split("\n").length;
+          // Atualiza se for a primeira vez ou a cada 5 interações (econômico)
+          if (!lead.aiContactSummary || messageCount % 5 === 0) {
+            const summaryModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            const summaryPrompt = `
+              Analise esta conversa curta e o resumo anterior e gere um NOVO resumo conciso (máximo 3 frases) do perfil deste lead.
+              RESUMO ANTERIOR: ${lead.aiContactSummary || "Vazio"}
+              ÚLTIMAS MENSAGENS: ${historyText}\nSDR: ${finalResponse}
+              Foque em: Intenção de compra, dores, cargo/empresa e objeções.
+            `;
+            const summaryResult = await summaryModel.generateContent(summaryPrompt);
+            const newSummary = summaryResult.response.text();
+            
+            await prisma.lead.update({
+              where: { id: lead.id },
+              data: { aiContactSummary: newSummary }
+            });
+            console.log(`[MEMÓRIA] Contexto do lead ${lead.name} atualizado com sucesso.`);
+          }
+        } catch (sumErr) {
+          console.error("Erro ao atualizar sumário do lead:", sumErr);
+        }
+      })();
     }
     
-    return response.text();
+    return finalResponse;
   } catch (e) {
     console.error("[SDR-AI] Erro ao gerar resposta:", e);
     return "Desculpe, tive um pequeno problema técnico. Pode repetir?";
@@ -1291,19 +1887,23 @@ async function generateSdrResponse(tenantId, phone, leadName, userMessage, sdrId
 
 // --- External / Webhooks ---
 // --- Official Meta WhatsApp Cloud API Webhooks ---
-app.get("/api/webhook/whatsapp/meta", (req, res) => {
+app.get("/api/webhook/whatsapp/meta", async (req, res) => {
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
 
   if (mode && token) {
-    if (mode === "subscribe" && token === process.env.META_VERIFY_TOKEN) {
-      console.log("💎 Meta Webhook Verificado!");
-      res.status(200).send(challenge);
-    } else {
-      res.sendStatus(403);
+    if (mode === "subscribe") {
+      // 🕵️ Busca se algum canal no banco usa esse token de verificação
+      const account = await prisma.whatsAppAccount.findFirst({ where: { verifyToken: token } });
+      
+      if (account || token === process.env.META_VERIFY_TOKEN) {
+        console.log(`💎 Meta Webhook Verificado para conta: ${account?.name || 'Sistema (Global)'}`);
+        return res.status(200).send(challenge);
+      }
     }
   }
+  res.sendStatus(403);
 });
 
 app.post("/api/webhook/whatsapp/meta", async (req, res) => {
@@ -1334,9 +1934,9 @@ app.post("/api/webhook/whatsapp/meta", async (req, res) => {
 });
 
 app.post("/api/whatsapp/accounts/meta", async (req, res) => {
-  const { name, phoneId, accessToken, wabaId, phone } = req.body;
+  const { name, phoneId, accessToken, wabaId, phone, verifyToken } = req.body;
   try {
-    const tenant = await prisma.tenant.findFirst();
+    const tenantId = req.tenantId || req.headers["x-tenant-id"];
     const account = await prisma.whatsAppAccount.create({
       data: {
         name,
@@ -1344,8 +1944,9 @@ app.post("/api/whatsapp/accounts/meta", async (req, res) => {
         accessToken,
         wabaId,
         phone,
+        verifyToken,
         status: "CONNECTED", // Meta conta-se como conectado se configurada
-        tenantId: tenant.id
+        tenantId: tenantId
       }
     });
     res.json(account);
@@ -1367,8 +1968,9 @@ app.post("/api/webhook/whatsapp", async (req, res) => {
       isNewLead = true;
     }
 
-    // 2a. Dispatch NEW_LEAD trigger if lead was just created
-    if (isNewLead) {
+    // 2a. Dispatch NEW_LEAD trigger if lead was just created AND not in direct chat mode
+    const { skipNewLeadTrigger } = req.body;
+    if (isNewLead && !skipNewLeadTrigger) {
       AutomationEngine.dispatchTrigger("NEW_LEAD", { lead, tenantId }).catch(e =>
         console.error("[Webhook] NEW_LEAD trigger error:", e)
       );
@@ -1396,15 +1998,20 @@ app.post("/api/webhook/whatsapp", async (req, res) => {
     const aiResponse = await generateSdrResponse(tenantId, phone, name, content);
     
     // 5. Registrar Mensagens
-    await prisma.message.create({
+    const userMsg = await prisma.message.create({
       data: { conversationId: conv.id, content, role: "USER", tenantId }
     });
+    eventEmitter.emit("new_message", { tenantId, leadId: lead.id, message: userMsg });
     
     if (aiResponse) {
-      await prisma.message.create({
+      const assistantMsg = await prisma.message.create({
         data: { conversationId: conv.id, content: aiResponse, role: "ASSISTANT", tenantId }
       });
-      return res.json({ success: true, ai_response: aiResponse });
+      eventEmitter.emit("new_message", { tenantId, leadId: lead.id, message: assistantMsg });
+      
+      // ⚡ Otimização: A resposta já vai para o robô, o resto (Score, etc) fica em background
+      res.json({ success: true, ai_response: aiResponse });
+      return;
     }
 
     res.json({ success: true });
@@ -1445,12 +2052,12 @@ app.post("/api/public/book", async (req, res) => {
 
     // 2.5 Mover Lead para fase de "Agendados"
     const stage = await prisma.pipelineStage.findFirst({
-      where: { tenantId, name: { contains: "Agendado", mode: 'insensitive' } }
+      where: { tenantId, name: { contains: "Agendado" } }
     });
     if (stage) {
       await prisma.lead.update({
          where: { id: lead.id },
-         data: { pipelineStageId: stage.id }
+         data: { stageId: stage.id }
       });
     }
 
@@ -1459,7 +2066,7 @@ app.post("/api/public/book", async (req, res) => {
         day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' 
     });
     
-    const confirmationText = `Olá, ${name}! ✨ Vi que você acaba de reservar seu horário para o dia **${formattedDate}**. Já está registrado aqui em nosso sistema! Mal posso esperar para conversarmos. Até breve! 🚀`;
+    const confirmationText = `Opa ${name}, vi que vc conseguiu fazer o agendamento pro dia ${formattedDate}, tudo certo.. agendamento confirmado! ✅`;
 
     // Dispara no WhatsApp e no Banco (Memória do SDR)
     // Usando as instâncias já carregadas no topo do arquivo
@@ -1477,7 +2084,7 @@ app.post("/api/public/book", async (req, res) => {
         }
         
         await prisma.message.create({
-          data: { conversationId: conv.id, content: confirmationText, role: "SDR", tenantId }
+          data: { conversationId: conv.id, content: confirmationText, role: "ASSISTANT", tenantId }
         });
         
         await WhatsAppManager.sendMessage(tenantId, jid, confirmationText);
@@ -1487,6 +2094,444 @@ app.post("/api/public/book", async (req, res) => {
     res.json({ success: true, id: appointment.id });
   } catch (e) {
     console.error("[Public Book] Erro:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// --- Real-time Events (SSE) ---
+app.get("/api/events", (req, res) => {
+  const tenantId = req.query.tenantId;
+  if (!tenantId) return res.status(400).end();
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  const onNewMessage = (data) => {
+    if (data.tenantId === tenantId) {
+      res.write(`data: ${JSON.stringify({ type: "new_message", ...data })}\n\n`);
+    }
+  };
+
+  const onNewLead = (data) => {
+    if (data.tenantId === tenantId) {
+      res.write(`data: ${JSON.stringify({ type: "new_lead", ...data })}\n\n`);
+    }
+  };
+
+  const onSdrAction = (data) => {
+    if (data.tenantId === tenantId) {
+      res.write(`data: ${JSON.stringify({ type: "sdr_action", ...data })}\n\n`);
+    }
+  };
+
+  eventEmitter.on("new_message", onNewMessage);
+  eventEmitter.on("new_lead", onNewLead);
+  eventEmitter.on("sdr_action", onSdrAction);
+
+  req.on("close", () => {
+    eventEmitter.off("new_message", onNewMessage);
+    eventEmitter.off("new_lead", onNewLead);
+    eventEmitter.off("sdr_action", onSdrAction);
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 🕕 RELATÓRIO DIÁRIO AUTOMÁTICO (Cron 18h)
+// ═══════════════════════════════════════════════
+cron.schedule('0 18 * * *', async () => {
+  console.log('[DailyReport] 📊 Gerando relatórios diários...');
+  try {
+    const tenants = await prisma.tenant.findMany({ where: { active: true } });
+    
+    for (const tenant of tenants) {
+      // Buscar admin com telefone cadastrado
+      const admin = await prisma.user.findFirst({
+        where: { tenantId: tenant.id, phone: { not: null }, role: { in: ['ADMIN', 'OWNER'] } }
+      });
+      
+      if (!admin || !admin.phone) continue;
+      
+      // Gerar relatório
+      const report = await CommandCenter.generateDailyReport(tenant.id);
+      if (!report) continue;
+      
+      // Encontrar sessão WhatsApp ativa para esse tenant
+      const sessions = Array.from(whatsappSessions.entries())
+        .filter(([_, s]) => s.tenantId === tenant.id && s.status === 'CONNECTED');
+      
+      if (sessions.length === 0) continue;
+      
+      const [_, session] = sessions[0];
+      const jid = `${admin.phone}@s.whatsapp.net`;
+      
+      try {
+        await session.sock.sendMessage(jid, { text: report });
+        console.log(`[DailyReport] ✅ Relatório enviado para ${admin.name} (${tenant.name})`);
+      } catch (sendErr) {
+        console.error(`[DailyReport] ❌ Erro ao enviar para ${admin.phone}:`, sendErr.message);
+      }
+    }
+  } catch (err) {
+    console.error('[DailyReport] Erro geral:', err);
+  }
+}, { timezone: 'America/Sao_Paulo' });
+
+console.log('[DailyReport] ⏰ Cron agendado: relatório diário às 18h (America/Sao_Paulo)');
+
+// ═══════════════════════════════════════════════
+// 🔔 ENDPOINT: Forçar relatório (para testar)
+// ═══════════════════════════════════════════════
+app.post("/api/report/daily", async (req, res) => {
+  try {
+    const tenantId = req.headers["x-tenant-id"];
+    if (!tenantId) return res.status(401).json({ error: "Não autenticado" });
+    
+    const report = await CommandCenter.generateDailyReport(tenantId);
+    if (!report) return res.status(500).json({ error: "Erro ao gerar relatório" });
+    
+    // Tentar enviar via WhatsApp
+    const admin = await prisma.user.findFirst({
+      where: { tenantId, phone: { not: null }, role: { in: ['ADMIN', 'OWNER'] } }
+    });
+    
+    if (admin?.phone) {
+      const sessions = Array.from(whatsappSessions.entries())
+        .filter(([_, s]) => s.tenantId === tenantId && s.status === 'CONNECTED');
+      
+      if (sessions.length > 0) {
+        const [_, session] = sessions[0];
+        await session.sock.sendMessage(`${admin.phone}@s.whatsapp.net`, { text: report });
+      }
+    }
+    
+    res.json({ success: true, report });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 🚀 INTEGRATION: APOLLO.IO SEARCH PROXY
+app.post("/api/apollo/search", async (req, res) => {
+  const { query, location, title, limit } = req.body;
+  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  
+  console.log(`[Apollo] 🔍 Busca para Tenant: ${tenantId}`);
+
+  if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
+
+  try {
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    console.log(`[Apollo] 🔑 Key encontrada: ${tenant?.apolloApiKey ? 'SIM ✅' : 'NÃO ❌'}`);
+    if (!tenant?.apolloApiKey) {
+      return res.status(400).json({ error: "Apollo API Key não configurada. Vá em Configurações > Integrações." });
+    }
+
+    // Chamada oficial para o Apollo.io (Nova Regra: API Key via Header)
+    const response = await axios.post('https://api.apollo.io/v1/people/search', {
+      q_keywords: query || "",
+      person_locations: location ? [location] : [],
+      person_titles: title ? [title] : [],
+      page: 1,
+      display_mode: "regular"
+    }, {
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Content-Type': 'application/json',
+        'X-Api-Key': tenant.apolloApiKey
+      }
+    });
+
+    // Mapear para o formato AutoSales
+    const leads = response.data.people.map((p) => ({
+      name: p.name,
+      phone: p.phone_numbers?.[0]?.sanitized_number || p.organization?.primary_phone?.sanitized_number || "",
+      email: p.email,
+      title: p.title,
+      company: p.organization?.name || "",
+      source: "Apollo.io",
+      id: `ap-${p.id}`
+    }));
+
+    res.json(leads);
+  } catch (error) {
+    console.error("Apollo Error:", error.response?.data || error.message);
+    res.status(500).json({ error: "Erro na base Apollo. Verifique sua chave API no menu Configurações." });
+  }
+});
+
+// 🦁 SEARCH: LINKEDIN PROFILE MINER (VIA GOOGLE HACK)
+app.post("/api/prospect/linkedin", async (req, res) => {
+  const { title, location } = req.body;
+  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+
+  if (!title) return res.status(400).json({ error: "O cargo é obrigatório para a busca no LinkedIn." });
+
+  try {
+    const query = `site:linkedin.com/in "${title}" "${location || ''}"`;
+    const serperKey = process.env.SERPER_API_KEY || "SEM_CHAVE";
+
+    if (serperKey !== "SEM_CHAVE") {
+      console.log(`[LinkedIn Miner] 🔎 BUSCA REAL: ${query}`);
+      const response = await axios.post('https://google.serper.dev/search', {
+        q: query,
+        num: 15
+      }, {
+        headers: { 'X-API-KEY': serperKey, 'Content-Type': 'application/json' }
+      });
+
+      const leads = response.data.organic
+        .filter((item) => item.link.includes('linkedin.com/in/'))
+        .map((item, index) => ({
+          id: `li-real-${index}`,
+          name: item.title.split(' - ')[0].split(' | ')[0],
+          title: item.snippet.split('...')[0] || title,
+          displayPhone: 'Aguardando Enriquecimento',
+          phone: '',
+          source: 'LinkedIn Pro',
+          url: item.link
+        }));
+
+      return res.json(leads);
+    }
+
+    // 🔄 MOCK DINÂMICO (Variar resultados quando sem chave)
+    const variations = ["Santos", "Oliveira", "Costa", "Almeida", "Rodrigues", "Pereira"];
+    const mockProfiles = variations.map((name, i) => ({
+      id: `li-mock-${i}-${Date.now()}`, 
+      name: `${name} ${variations[(i+2) % variations.length]}`,
+      title: `${title} na ${variations[(i+1)%variations.length]} Corp`,
+      displayPhone: 'Aguardando Enriquecimento',
+      phone: '',
+      source: 'LinkedIn Search',
+      url: `https://linkedin.com/in/perfil-${i}`
+    }));
+
+    res.json(mockProfiles);
+  } catch (error) {
+    console.error("LinkedIn Search Error:", error.message);
+    res.status(500).json({ error: "Ocorreu um erro na varredura do LinkedIn." });
+  }
+});
+
+// ✨ ENRICH: FIND CONTACT INFO BY LINKEDIN PROFILE (APOLLO + SNOV.IO FALLBACK)
+app.post("/api/prospect/enrich", async (req, res) => {
+  const { url } = req.body;
+  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+
+  if (!url) return res.status(400).json({ error: "URL do LinkedIn necessária para enriquecimento." });
+
+  try {
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    
+    // 🟠 TENTA 1: APOLLO.IO
+    if (tenant?.apolloApiKey) {
+      try {
+        console.log(`[Enrich] 🚀 Tentando Apollo para: ${url}`);
+        const response = await axios.post('https://api.apollo.io/v1/people/match', {
+           linkedin_url: url
+        }, {
+           headers: { 'X-Api-Key': tenant.apolloApiKey, 'Content-Type': 'application/json' }
+        });
+
+        const person = response.data.person;
+        if (person?.email || person?.phone_numbers?.length > 0) {
+          return res.json({
+            phone: person?.phone_numbers?.[0]?.sanitized_number || person?.organization?.primary_phone?.sanitized_number || "",
+            email: person?.email || "",
+            company: person?.organization?.name || "",
+            success: true,
+            provider: 'Apollo'
+          });
+        }
+      } catch (err) {
+        console.warn("[Enrich] Apollo failed or restricted.");
+      }
+    }
+
+    // 🔵 TENTA 2: SNOV.IO (FALLBACK SE CONFIGURADO)
+    const snovId = process.env.SNOV_CLIENT_ID;
+    const snovSecret = process.env.SNOV_CLIENT_SECRET;
+
+    if (snovId && snovSecret) {
+      try {
+        console.log(`[Enrich] 🛡️ Tentando Snov.io para: ${url}`);
+        
+        // 1. Obter Token do Snov (OAuth2)
+        const tokenRes = await axios.post('https://api.snov.io/v1/oauth/access_token', {
+          grant_type: 'client_credentials',
+          client_id: snovId,
+          client_secret: snovSecret
+        });
+        const accessToken = tokenRes.data.access_token;
+
+        // 2. Buscar e-mails pela URL do LinkedIn
+        const snovRes = await axios.post('https://api.snov.io/v1/get-emails-from-url', {
+          url: url
+        }, {
+          headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
+        });
+
+        if (snovRes.data.success && snovRes.data.data) {
+          const lead = snovRes.data.data;
+          return res.json({
+            phone: lead.phones?.[0]?.phone || "",
+            email: lead.emails?.[0]?.email || "",
+            company: lead.currentJobs?.[0]?.companyName || "",
+            success: true,
+            provider: 'Snov.io'
+          });
+        }
+      } catch (err) {
+        console.error("[Enrich] Snov.io Error:", err.response?.data || err.message);
+      }
+    }
+
+    res.status(400).json({ 
+      error: "Não foi possível encontrar dados reais com os planos atuais de Apollo e Snov.io.",
+      success: false 
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: "Erro no motor de enriquecimento." });
+  }
+});
+
+// 🦁 THE HUNTER ROUTINE: AUTOMATED DAILY PROSPECTING
+cron.schedule('0 3 * * *', async () => {
+  console.log("[Hunter Routine] 🚀 Iniciando prospecção automática diária...");
+  
+  try {
+    const activeIcps = await prisma.icpProfile.findMany({
+      where: { isAutoHunterEnabled: true },
+      include: { tenant: true }
+    });
+
+    for (const icp of activeIcps) {
+      console.log(`[Hunter] 🎯 Processando ICP: ${icp.name} (Tenant: ${icp.tenantId})`);
+      
+      const query = `site:linkedin.com/in "${icp.role}" "${icp.location}"`;
+      const serperKey = process.env.SERPER_API_KEY;
+
+      if (!serperKey) continue;
+
+      try {
+        // 1. Busca real
+        const response = await axios.post('https://google.serper.dev/search', {
+          q: query,
+          num: icp.dailyLimit || 200
+        }, {
+          headers: { 'X-API-KEY': serperKey, 'Content-Type': 'application/json' }
+        });
+
+        const profiles = response.data.organic.filter((item) => item.link.includes('linkedin.com/in/'));
+        
+        let importedCount = 0;
+        for (const profile of profiles) {
+           // 2. Tentar Enriquecimento Automático
+           // (Lógica similar ao /api/prospect/enrich)
+           // Para fins de rotina automática, focaremos em quem já tem dados ou buscar via Apollo/Snov se tiver chaves.
+           
+           // Se tiver dados válidos, importar para o Lead
+           const name = profile.title.split(' - ')[0].split(' | ')[0];
+           
+           const newLead = await prisma.lead.create({
+              data: {
+                name,
+                source: "AUTO_HUNTER",
+                tenantId: icp.tenantId,
+                status: "NEW",
+                notes: `Linkedin: ${profile.link}`
+              }
+           });
+
+           // 3. SE O WHATSAPP FOR IDENTIFICADO -> DISPARAR AUTOMAÇÃO
+           // TODO: Lógica de verificação de número real via API
+           importedCount++;
+        }
+        
+        console.log(`[Hunter] ✅ Sucesso! ${importedCount} leads proscpectados para ${icp.tenantId}`);
+      } catch (e) {
+        console.error(`[Hunter] Falha na busca para ${icp.name}:`, e.message);
+      }
+    }
+  } catch (err) {
+    console.error("[Hunter Routine] Critical Failure:", err.message);
+  }
+});
+
+// 🎯 ICP PROFILES: CRUD
+app.get("/api/icp-profiles", async (req, res) => {
+  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const profiles = await prisma.icpProfile.findMany({ where: { tenantId } });
+  res.json(profiles);
+});
+
+app.post("/api/icp-profiles", async (req, res) => {
+  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const { name, niche, role, location, isAutoHunterEnabled, dailyLimit } = req.body;
+  
+  const profile = await prisma.icpProfile.create({
+    data: { name, niche, role, location, isAutoHunterEnabled, dailyLimit, tenantId }
+  });
+  res.json(profile);
+});
+
+app.put("/api/icp-profiles/:id", async (req, res) => {
+  const { name, niche, role, location, isAutoHunterEnabled, dailyLimit } = req.body;
+  const profile = await prisma.icpProfile.update({
+    where: { id: req.params.id },
+    data: { name, niche, role, location, isAutoHunterEnabled, dailyLimit }
+  });
+  res.json(profile);
+});
+
+app.delete("/api/icp-profiles/:id", async (req, res) => {
+  await prisma.icpProfile.delete({ where: { id: req.params.id } });
+  res.json({ success: true });
+});
+
+// ⚙️ SETTINGS: GET & SAVE
+app.get("/api/settings", async (req, res) => {
+  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
+
+  try {
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId }
+    });
+    res.json({
+      companyName: tenant?.name,
+      phone: tenant?.phone,
+      aiProvider: tenant?.aiProvider,
+      aiApiKey: tenant?.aiApiKey,
+      apolloApiKey: tenant?.apolloApiKey
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put("/api/settings", async (req, res) => {
+  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const { name, phone, aiProvider, aiApiKey, apolloApiKey } = req.body;
+  
+  console.log(`[Settings] 💾 Salvando para Tenant: ${tenantId}, ApolloKey: ${apolloApiKey ? 'Informada' : 'Vazia'}`);
+
+  if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
+
+  try {
+    const tenant = await prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        name,
+        phone,
+        aiProvider,
+        aiApiKey,
+        apolloApiKey
+      }
+    });
+    res.json(tenant);
+  } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });

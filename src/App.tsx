@@ -18,6 +18,7 @@ import AutomationConfig from "@/pages/AutomationConfig";
 import BulkMessaging from "@/pages/BulkMessaging";
 import PublicBooking from "@/pages/PublicBooking";
 import PublicWebchat from "@/pages/PublicWebchat";
+import Docs from "@/pages/Docs";
 import { Toaster } from "@/components/ui/toaster";
 
 function App() {
@@ -28,7 +29,7 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/p/:tenantId/book" element={<PublicBooking />} />
+        <Route path="/b/:tenantId" element={<PublicBooking />} />
         <Route path="/chat/:tenantId" element={<PublicWebchat />} />
 
         {/* CLIENTE SaaS */}
@@ -41,6 +42,7 @@ function App() {
         <Route path="/sdrs" element={<SdrManagement />} />
         <Route path="/automations" element={<Automations />} />
         <Route path="/automations/config" element={<AutomationConfig />} />
+        <Route path="/docs" element={<Docs />} />
         <Route path="/connections" element={<Connections />} />
         <Route path="/disparos" element={<BulkMessaging />} />
         <Route path="/settings" element={<Settings />} />

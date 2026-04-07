@@ -30,10 +30,11 @@ export default function CRM() {
 
   const fetchData = async () => {
     setLoading(true);
+    const tenantId = localStorage.getItem("tenantId");
     try {
       const [lRes, sRes] = await Promise.all([
-        fetch("/api/leads"),
-        fetch("/api/pipeline-stages")
+        fetch("/api/leads", { headers: { "x-tenant-id": tenantId || "" } }),
+        fetch("/api/pipeline-stages", { headers: { "x-tenant-id": tenantId || "" } })
       ]);
       const leadsData = await lRes.json();
       const stagesData = await sRes.json();
@@ -50,10 +51,14 @@ export default function CRM() {
 
   const handleCreateLead = async () => {
     if (!newLead.name || !newLead.phone) return toast({ title: "Preencha Nome e Telefone", variant: "destructive" });
+    const tenantId = localStorage.getItem("tenantId");
     try {
       const res = await fetch("/api/leads", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-tenant-id": tenantId || ""
+        },
         body: JSON.stringify(newLead)
       });
       if (res.ok) {
@@ -67,11 +72,22 @@ export default function CRM() {
 
   const handleUpdateLead = async () => {
     if (!selectedLead) return;
+    const tenantId = localStorage.getItem("tenantId");
     try {
       const res = await fetch(`/api/leads/${selectedLead.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(selectedLead)
+        headers: { 
+          "Content-Type": "application/json",
+          "x-tenant-id": tenantId || ""
+        },
+        body: JSON.stringify({
+          name: selectedLead.name,
+          phone: selectedLead.phone,
+          email: selectedLead.email,
+          stageId: selectedLead.stageId,
+          notes: selectedLead.notes,
+          source: selectedLead.source
+        })
       });
       if (res.ok) {
         toast({ title: "Lead atualizado!" });
@@ -83,8 +99,12 @@ export default function CRM() {
 
   const handleDeleteLead = async (id: string) => {
     if (!confirm("Remover este lead permanentemente?")) return;
+    const tenantId = localStorage.getItem("tenantId");
     try {
-      const res = await fetch(`/api/leads/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/leads/${id}`, { 
+        method: "DELETE",
+        headers: { "x-tenant-id": tenantId || "" }
+      });
       if (res.ok) {
         toast({ title: "Lead removido." });
         setSelectedLead(null);
@@ -100,28 +120,54 @@ export default function CRM() {
   const onDrop = async (e: any, newStageId: string) => {
     const leadId = e.dataTransfer.getData("leadId");
     const lead = leads.find(l => l.id === leadId);
+    
     if (lead && lead.stageId !== newStageId) {
+      // 🚀 Atualização Otimista (Move o card visualmente antes da API responder)
+      const updatedLeads = leads.map(l => l.id === leadId ? { ...l, stageId: newStageId } : l);
+      setLeads(updatedLeads);
+
       try {
+        const tenantId = localStorage.getItem("tenantId");
         const res = await fetch(`/api/leads/${leadId}`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...lead, stageId: newStageId })
+          headers: { 
+            "Content-Type": "application/json",
+            "x-tenant-id": tenantId || ""
+          },
+          // Enviar apenas os campos necessários para evitar erros de validação
+          body: JSON.stringify({
+            name: lead.name,
+            phone: lead.phone,
+            email: lead.email,
+            stageId: newStageId,
+            notes: lead.notes,
+            source: lead.source
+          })
         });
-        if (res.ok) {
-          toast({ title: `🚀 Lead movido com sucesso!` });
-          fetchData();
+        if (!res.ok) {
+          fetchData(); // Se falhou na API, volta o card pro lugar original
+          toast({ title: "Erro ao sincronizar com servidor", variant: "destructive" });
+        } else {
+          toast({ title: `🚀 Lead movido!` });
         }
-      } catch (e) { toast({ title: "Erro ao mover lead", variant: "destructive" }); }
+      } catch (e) { 
+        fetchData(); 
+        toast({ title: "Erro de conexão", variant: "destructive" }); 
+      }
     }
   };
 
   const handleAddStage = async () => {
     const name = prompt("Nome do novo pipeline:");
     if (!name) return;
+    const tenantId = localStorage.getItem("tenantId");
     try {
       await fetch("/api/pipeline-stages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-tenant-id": tenantId || ""
+        },
         body: JSON.stringify({ name, order: stages.length })
       });
       fetchData();
@@ -305,17 +351,25 @@ export default function CRM() {
                       const newStages = [...stages];
                       newStages[idx].name = e.target.value;
                       setStages(newStages);
+                      const tenantId = localStorage.getItem("tenantId");
                       await fetch(`/api/pipeline-stages/${s.id}`, {
                         method: "PUT",
-                        headers: { "Content-Type": "application/json" },
+                        headers: { 
+                          "Content-Type": "application/json",
+                          "x-tenant-id": tenantId || ""
+                        },
                         body: JSON.stringify({ name: e.target.value })
                       });
                     }}
                     className="border-none bg-transparent font-bold text-xs" 
                   />
                   <Button variant="ghost" size="icon" onClick={async () => {
+                    const tenantId = localStorage.getItem("tenantId");
                     if (confirm("Deletar stage? Todos os leads nela ficarão órfãos.")) {
-                       await fetch(`/api/pipeline-stages/${s.id}`, { method: "DELETE" });
+                       await fetch(`/api/pipeline-stages/${s.id}`, { 
+                         method: "DELETE",
+                         headers: { "x-tenant-id": tenantId || "" }
+                       });
                        fetchData();
                     }
                   }}>

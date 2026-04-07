@@ -1,5 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { WhatsAppManager } from "./whatsapp.js";
+import { EmailService } from "./email_service.js";
+import CalendarService from "./calendar_service.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import cron from "node-cron";
 
@@ -22,9 +24,32 @@ class AutomationEngine {
     this.routineInterval = setInterval(() => this.processGlobalRoutines(), 5 * 60 * 1000);
     this.inactivityInterval = setInterval(() => this.processInactivityTriggers(), 5 * 60 * 1000);
     this.queueInterval = setInterval(() => this.processQueue(), 1000);
+    this.prospectingInterval = setInterval(() => this.processProspectingRoutines(), 10 * 60 * 1000); // 10 min
     console.log(`[AutoEngine] ✅ Engine iniciado (concurrency: ${MAX_CONCURRENT_EXECUTIONS}, rate: ${RATE_LIMIT_PER_MINUTE} msg/min).`);
     this.cronJobs = new Map();
     setTimeout(() => this.bootSchedulers(), 2000); // Startup delay
+  }
+
+  setEventEmitter(ee) {
+    this.ee = ee;
+    this.ee.on("new_lead", async ({ tenantId, lead }) => {
+       console.log(`[AutoEngine] 🆕 Novo lead detectado: ${lead.name} (${tenantId}). Buscando automações...`);
+       await this.executeEventAutomation("NEW_LEAD", lead);
+    });
+  }
+
+  async executeEventAutomation(trigger, lead) {
+    try {
+      const auts = await prisma.automation.findMany({
+        where: { tenantId: lead.tenantId, trigger: trigger, active: true }
+      });
+      for (const aut of auts) {
+        console.log(`[AutoEngine] ⚡ Disparando automação '${aut.name}' para o lead ${lead.name}`);
+        this.enqueueExecution(aut, lead);
+      }
+    } catch (err) {
+      console.error(`[AutoEngine] Erro ao disparar evento ${trigger}:`, err);
+    }
   }
 
   // ========== CRON SCHEDULERS ==========
@@ -271,6 +296,16 @@ class AutomationEngine {
     const startTime = Date.now();
     let result = { success: true, output: null, nextHandle: null };
 
+    // 🚦 Segurança: Interromper envio de mensagens se o bot estiver pausado para este lead (Handoff Humano)
+    const conv = await prisma.conversation.findUnique({ where: { leadId: lead.id } });
+    if (conv && !conv.botActive) {
+      const messagingNodes = ["SEND_MSG", "AI_RESPONSE", "COLLECT_INPUT", "AI_TOOLS"];
+      if (messagingNodes.includes(node.type)) {
+        console.log(`[AutoEngine] 🤖 Bot pausado para o lead ${lead.phone}. Pulando nó de mensagem/IA.`);
+        return { success: true, skip: true };
+      }
+    }
+
     try {
       switch (node.type) {
         case "SEND_MSG": {
@@ -322,9 +357,13 @@ class AutomationEngine {
         case "AI_RESPONSE": {
           const aiPrompt = this.resolveTemplate(config.prompt || "", ctx);
           const aiResponse = await this.callAI(aiPrompt, lead, ctx);
+          if (!aiResponse) {
+             result.output = { skipped: "No active SDR or null AI response" };
+             break;
+          }
           await this.updateExecutionContext(execution.id, "ai.response", aiResponse);
           if (config.sendToLead !== false) {
-            await this.rateLimitedSend(lead.tenantId, lead.phone, aiResponse);
+             await this.rateLimitedSend(lead.tenantId, lead.phone, aiResponse);
           }
           result.output = { response: aiResponse.substring(0, 200) };
           break;
@@ -429,6 +468,33 @@ class AutomationEngine {
           break;
         }
 
+        case "SEND_EMAIL": {
+          const resEmail = await EmailService.sendProspectingEmail(lead, lead.tenantId);
+          result.output = { success: resEmail?.success, messageId: resEmail?.messageId, error: resEmail?.error };
+          break;
+        }
+
+        case "PROSPECT_LEAD": {
+           // Lógica de Prospecção (E-mail primeiro, depois WhatsApp se não houver e-mail)
+           if (lead.email) {
+              const resEmail = await EmailService.sendProspectingEmail(lead, lead.tenantId);
+              result.output = { channel: 'EMAIL', success: resEmail?.success };
+           } else {
+              // Fallback para WhatsApp se o lead não tiver e-mail cadastrado
+              const sdr = await prisma.sdrBot.findFirst({ where: { tenantId: lead.tenantId, active: true } });
+              if (sdr) {
+                 const { model } = await this._getAIModel(lead.tenantId);
+                 const icp = await prisma.icpProfile.findFirst({ where: { tenantId: lead.tenantId } });
+                 const prompt = `Você é um SDR e deve iniciar um contato a frio pelo WhatsApp com ${lead.name}. Use o ICP: ${icp?.name || 'Geral'} como base. Seja curto e direto.`;
+                 const resultAi = await model.generateContent(prompt);
+                 const text = resultAi.response.text();
+                 await WhatsAppManager.sendMessage(lead.tenantId, lead.phone, text);
+                 result.output = { channel: 'WHATSAPP', text: text.substring(0, 50) };
+              }
+           }
+           break;
+        }
+
         case "AI_TOOLS": {
           const aiPrompt = this.resolveTemplate(config.prompt || "", ctx);
           const toolsConfig = config.tools || ["search_leads", "create_appointment", "move_stage"];
@@ -504,16 +570,57 @@ class AutomationEngine {
           const scoreResult = await this.scoreLeadQualification(lead, ctx, criteria);
           await this.updateExecutionContext(execution.id, "ai.score", String(scoreResult.score));
           await this.updateExecutionContext(execution.id, "ai.score_reasoning", scoreResult.reasoning);
+          
           await prisma.lead.update({
             where: { id: lead.id },
             data: { qualificationScore: scoreResult.score }
           });
-          // Route by score range: "hot" (>= 70), "warm" (40-69), "cold" (< 40)
-          if (scoreResult.score >= 70) result.nextHandle = "hot";
+
+          // AÇÃO EXTRA FASE 3: Alerta de Lead Quente (Modo Comando)
+          if (scoreResult.score >= 80) {
+            const alert = await CommandCenter.sendLeadAlert(lead.tenantId, lead, scoreResult.reasoning);
+            if (alert) {
+               const sessions = Array.from(whatsappSessions.entries()).filter(([_, s]) => s.tenantId === lead.tenantId);
+               if (sessions.length > 0) {
+                  const [_, session] = sessions[0];
+                  await session.sock.sendMessage(`${alert.adminPhone}@s.whatsapp.net`, { text: alert.alertText });
+               }
+            }
+          }
+
+          // Route by score range: "hot" (>= 75), "warm" (40-74), "cold" (< 40)
+          if (scoreResult.score >= 75) result.nextHandle = "hot";
           else if (scoreResult.score >= 40) result.nextHandle = "warm";
           else result.nextHandle = "cold";
-          result.output = { score: scoreResult.score, reasoning: scoreResult.reasoning, category: result.nextHandle };
+          
+          result.output = { score: scoreResult.score, reasoning: scoreResult.reasoning, category: result.nextHandle, bant: scoreResult.bant };
           break;
+        }
+
+        case "LIST_CALENDAR": {
+           const slots = await CalendarService.listAvailableSlots(lead.tenantId);
+           const text = slots.length > 0 
+             ? `Olá ${lead.name}! Tenho estes horários livres:\n${slots.slice(0,3).map(s => `- ${s.toLocaleString()}`).join('\n')}\nQual fica melhor para você?`
+             : "Infelizmente estamos com a agenda lotada para hoje. Posso sugerir amanhã?";
+           
+           await WhatsAppManager.sendMessage(lead.tenantId, lead.phone, text);
+           result.output = { slots: slots.length, text };
+           break;
+        }
+
+        case "BOOK_CALENDAR": {
+           const dateStr = this.resolveTemplate(config.date || "", ctx);
+           if (!dateStr) { result.output = { error: "Data não fornecida" }; break; }
+           
+           try {
+             const appt = await CalendarService.createAppointment(lead.tenantId, lead, new Date(dateStr));
+             await WhatsAppManager.sendMessage(lead.tenantId, lead.phone, `Confirmado! ✅ Agendei nosso papo para ${new Date(dateStr).toLocaleString()}. Te vejo lá! 🚀`);
+             result.output = { success: true, eventId: appt.id };
+           } catch (e) {
+             result.output = { error: e.message };
+             result.success = false;
+           }
+           break;
         }
 
         case "END": {
@@ -571,15 +678,46 @@ class AutomationEngine {
 
   // ========== AI METHODS ==========
 
-  _getAIModel() {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error("GEMINI_API_KEY não configurada");
-    const genAI = new GoogleGenerativeAI(apiKey);
-    return genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  async _getAIModel(tenantId) {
+    // 1. Buscar configurações do Tenant no banco
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { aiProvider: true, aiApiKey: true, openAiKey: true }
+    });
+
+    const provider = tenant?.aiProvider || "GEMINI";
+    const apiKey = tenant?.aiApiKey || tenant?.openAiKey || process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY;
+
+    if (!apiKey) {
+      console.warn(`[AutoEngine] ⚠️ Nenhuma API Key configurada para o tenant ${tenantId}. Usando fallback Gemini (env).`);
+    }
+
+    // 2. Retornar modelo baseado no provedor (Foco no Gemini conforme solicitado)
+    if (provider === "GEMINI") {
+      const genAI = new GoogleGenerativeAI(apiKey || process.env.GEMINI_API_KEY);
+      return { 
+        provider: "GEMINI", 
+        model: genAI.getGenerativeModel({ model: "gemini-1.5-flash" }) 
+      };
+    }
+
+    if (provider === "OPENAI") {
+       // Implementação simplificada se quiser suportar OpenAI futuramente no mesmo motor
+       return { provider: "OPENAI", apiKey };
+    }
+
+    // Fallback padrão se der erro: Gemini
+    const defaultAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    return { provider: "GEMINI", model: defaultAI.getGenerativeModel({ model: "gemini-1.5-flash" }) };
   }
 
   async _getLeadFullContext(lead, context) {
     const sdr = await prisma.sdrBot.findFirst({ where: { tenantId: lead.tenantId, active: true } });
+    if (!sdr) {
+      console.log(`[AutoEngine] ⚠️ Nenhum SDR ativo para o tenant ${lead.tenantId}. Ignorando IA.`);
+      return { sdr: null, history: "Sem histórico", kb: "" };
+    }
+
     const conv = await prisma.conversation.findFirst({
       where: { leadId: lead.id },
       include: { messages: { orderBy: { createdAt: "desc" }, take: 15 } }
@@ -593,9 +731,14 @@ class AutomationEngine {
 
   async callAI(customPrompt, lead, context) {
     try {
-      const model = this._getAIModel();
+      const { model } = await this._getAIModel(lead.tenantId);
       const { sdr, history, kb } = await this._getLeadFullContext(lead, context);
-      const systemPrompt = customPrompt || sdr?.prompt || "Você é um SDR profissional.";
+      if (!sdr) {
+          console.log(`[AutoEngine] SDR is globally disabled for tenant ${lead.tenantId}. Skipping AI Node.`);
+          return null;
+      }
+      
+      const systemPrompt = customPrompt || sdr.prompt || "Você é um SDR profissional.";
 
       const fullPrompt = `${systemPrompt}
 
@@ -624,8 +767,9 @@ Responda de forma profissional e objetiva.`;
   // IA COM TOOL USE (Function Calling)
   async callAIWithTools(customPrompt, lead, context, enabledTools) {
     try {
-      const model = this._getAIModel();
+      const { model } = await this._getAIModel(lead.tenantId);
       const { sdr, history, kb } = await this._getLeadFullContext(lead, context);
+      if (!sdr) return { text: null, toolCalls: [] };
 
       const toolDeclarations = [
         {
@@ -761,7 +905,7 @@ Responda de forma profissional e objetiva.`;
   // EXTRAÇÃO DE DADOS (NER)
   async extractStructuredData(text, fields, lead) {
     try {
-      const model = this._getAIModel();
+      const { model } = await this._getAIModel(lead.tenantId);
       const prompt = `Extraia os seguintes dados do texto abaixo. Retorne APENAS um JSON válido com as chaves solicitadas. Se um dado não estiver presente, use null.
 
 Campos para extrair: ${JSON.stringify(fields)}
@@ -788,7 +932,7 @@ Retorne apenas o JSON, sem markdown, sem explicação.`;
   // CLASSIFICAÇÃO DE INTENT
   async classifyIntent(text, intents, lead) {
     try {
-      const model = this._getAIModel();
+      const { model } = await this._getAIModel(lead.tenantId);
       const prompt = `Classifique a intenção da mensagem abaixo em uma das categorias listadas.
 
 Categorias:
@@ -819,35 +963,52 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
   // SCORE DE QUALIFICAÇÃO
   async scoreLeadQualification(lead, context, criteria) {
     try {
-      const model = this._getAIModel();
+      const { model } = await this._getAIModel(lead.tenantId);
       const { history } = await this._getLeadFullContext(lead, context);
 
-      const prompt = `Você é um especialista em qualificação de leads B2B. Avalie o lead abaixo e dê uma nota de 0 a 100.
+      const prompt = `Você é um CRO (Chief Revenue Officer) especialista em qualificação de leads B2B e B2C. 
+      Sua tarefa é avaliar a conversa abaixo e dar uma nota de 0 a 100 baseada no potencial de fechamento imediato.
 
-Critérios de avaliação:
-${criteria}
+      USE O MÉTODO BANT PARA AVALIAÇÃO:
+      1. BUDGET (Orçamento): O lead demonstrou condições financeiras ou perguntou sobre preço de forma qualificada?
+      2. AUTHORITY (Autoridade): O lead é o decisor ou tem influência na compra?
+      3. NEED (Necessidade): O problema que o lead tem é resolvido pela nossa solução?
+      4. TIMELINE (Prazo): O lead tem urgência em resolver?
 
-Dados do lead:
-- Nome: ${lead.name}
-- Telefone: ${lead.phone || "N/A"}
-- Email: ${lead.email || "N/A"}
-- Status: ${lead.status}
-- Fonte: ${lead.source || "N/A"}
-- Tags: ${lead.tags?.map(t => t.name).join(", ") || "Nenhuma"}
-- Dados extraídos: ${lead.extractedData || "N/A"}
+      Critérios adicionais do negócio:
+      ${criteria}
 
-Histórico da conversa:
-${history}
+      Dados do lead:
+      - Nome: ${lead.name}
+      - Status: ${lead.status}
+      - Dados extraídos: ${lead.extractedData || "N/A"}
 
-Retorne APENAS um JSON com: { "score": 0-100, "reasoning": "explicação de 2-3 linhas", "signals": ["sinal positivo 1", "sinal negativo 1"] }`;
+      Histórico da conversa:
+      ${history}
+
+      REGRAS DE RESPOSTA:
+      - Retorne APENAS um JSON válido.
+      - "score": 0-100 (Sendo 100 o lead pronto para comprar agora).
+      - "reasoning": 2-3 linhas explicando a nota.
+      - "bant": { "budget": 0-5, "authority": 0-5, "need": 0-5, "timeline": 0-5 } (Sendo 5 o máximo).
+      - "signals": ["sinal 1", "sinal 2"]
+
+      JSON:`;
 
       const result = await model.generateContent(prompt);
       const responseText = result.response.text().trim();
       const cleaned = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       const parsed = JSON.parse(cleaned);
+
+      // Se o score for muito alto, sinalizar para alerta humano
+      if (parsed.score >= 80) {
+        console.log(`[AutoEngine] 🔥 LEAD QUENTE DETECTADO: ${lead.name} (Score: ${parsed.score})`);
+      }
+
       return {
         score: Math.min(100, Math.max(0, parseInt(parsed.score) || 50)),
         reasoning: parsed.reasoning || "",
+        bant: parsed.bant || {},
         signals: parsed.signals || []
       };
     } catch (e) {
@@ -1152,6 +1313,102 @@ Retorne APENAS um JSON com: { "score": 0-100, "reasoning": "explicação de 2-3 
   }
 
   // ========== GLOBAL ROUTINES (appointment lifecycle) ==========
+  // --- SDR PROSPECTING ROUTINE ---
+  async processProspectingRoutines() {
+    try {
+      // Find all active ICP profiles meant for prospecting
+      const activeIcps = await prisma.icpProfile.findMany({
+        where: { isActive: true, isProspectingActive: true }
+      });
+
+      for (const icp of activeIcps) {
+        const tenantId = icp.tenantId;
+
+        // Verify if there is an active SDR for this tenant
+        const sdr = icp.sdrId ? await prisma.sdrBot.findFirst({ where: { id: icp.sdrId, active: true } }) : await prisma.sdrBot.findFirst({ where: { tenantId, active: true } });
+        if (!sdr) continue; // SDR paused locally
+
+        // Find leads without conversations (purely new leads ready for cold outreach)
+        const coldLeads = await prisma.lead.findMany({
+          where: {
+             tenantId,
+             status: "NEW", // Must be fresh
+             conversations: { none: {} } // No prior chat
+          },
+          take: 5 // Process in small batches to avoid rate limits
+        });
+
+        for (const lead of coldLeads) {
+           console.log(`[Prospecting] Iniciando contato com lead ${lead.name} (${lead.phone}) baseado no ICP: ${icp.name}`);
+           
+           // Generate specific prospecting first message via AI
+           const { model } = await this._getAIModel(lead.tenantId);
+           const icpContext = `O Público Alvo (ICP) deste contato é:
+           Indústria: ${icp.industry || 'Geral'}
+           Tamanho da Empresa: ${icp.companySize || 'Qualquer'}
+           Cargo do Contato: ${icp.role || 'Geral'}
+           Dores do Cliente: ${icp.painPoints || 'Não especificado'}
+           Objetivo do Cliente: ${icp.goals || 'Não especificado'}`;
+
+           const prompt = `
+             # IDENTIDADE
+             NOME DO AGENTE: ${sdr.name}
+             FUNÇÃO: ${sdr.role}
+             TOM DE VOZ: ${sdr.voiceTone}
+             
+             # OBJETIVO DA MENSAGEM
+             Você é um SDR e deve iniciar um contato a frio (Cold Outreach) pelo WhatsApp com o lead abaixo.
+             O objetivo é "quebrar o gelo", conectar com a dor do perfil dele e gerar uma resposta inicial.
+             Seja extremamente curto, casual e humano. Como uma mensagem real de WhatsApp. 
+             Não mande "textão". NÃO SE DESPEÇA.
+             
+             ${icpContext}
+             
+             # DADOS DO LEAD
+             Nome do Lead: ${lead.name}
+             
+             Crie a mensagem de introdução perfeita.
+           `;
+
+           try {
+             const result = await model.generateContent(prompt);
+             const aiMsg = result.response.text();
+             
+             if (aiMsg && lead.phone) {
+                // Ensure conversation marked as botActive=true exists
+                const conv = await prisma.conversation.upsert({
+                  where: { leadId: lead.id },
+                  update: { botActive: true },
+                  create: { leadId: lead.id, botActive: true, tenantId }
+                });
+
+                // Fill AI summary with prospecting context
+                 await prisma.lead.update({
+                    where: { id: lead.id },
+                    data: { 
+                      aiContactSummary: `Lead em prospecção fria via ICP: ${icp.name}. Alvo: ${icp.role}. Objetivo abordado: ${icp.goals}`,
+                      status: "PROSPECTING"
+                    }
+                 });
+
+                 await this.sendMessage(tenantId, lead.phone, aiMsg);
+
+                // Save in DB
+                await prisma.message.create({
+                  data: { conversationId: conv.id, content: aiMsg, role: "ASSISTANT", tenantId }
+                });
+             }
+           } catch(e) {
+              console.error("[Prospecting] Erro na IA para lead " + lead.id, e);
+           }
+        }
+      }
+    } catch(err) {
+       console.error("[Prospecting] Erro geraleoutine:", err);
+    }
+  }
+
+  // ========== GLOBAL ROUTINES (appointment lifecycle) ==========
 
   async processGlobalRoutines() {
     const now = new Date();
@@ -1229,7 +1486,7 @@ Retorne APENAS um JSON com: { "score": 0-100, "reasoning": "explicação de 2-3 
     return 5000;
   }
 
-  async sendMessage(phone, content, tenantId) {
+  async sendMessage(tenantId, phone, content) {
     await WhatsAppManager.sendMessage(tenantId, phone, content);
   }
 }

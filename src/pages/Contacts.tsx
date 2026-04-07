@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
@@ -39,6 +40,8 @@ export default function Contacts() {
   const [newContact, setNewContact] = useState({ name: "", phone: "", email: "" });
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [importPreview, setImportPreview] = useState<{name: string, phone: string, email?: string}[]>([]);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -104,26 +107,71 @@ export default function Contacts() {
     toast({ title: "📥 Exportação Iniciada" });
   };
 
-  const handleImport = async (e: any) => {
+  const handleImportClick = (e: any) => {
     const file = e.target.files[0];
     if (!file) return;
-    
-    const formData = new FormData();
-    formData.append("file", file);
 
+    const reader = new FileReader();
+    reader.onload = (event: any) => {
+      const text = event.target.result;
+      const lines = text.split("\n");
+      const result: any[] = [];
+      
+      // Simples CSV Parser (Assume Nome, Telefone, Email)
+      lines.forEach((line: string, idx: number) => {
+        if (idx === 0 || !line.trim()) return; // Pula header ou linhas vazias
+        const parts = line.split(/[,;]/);
+        if (parts.length >= 2) {
+          result.push({
+            name: parts[0].trim(),
+            phone: parts[1].trim().replace(/\D/g, ""), // Limpa fones
+            email: parts[2]?.trim() || ""
+          });
+        }
+      });
+      
+      setImportPreview(result);
+      setIsImportModalOpen(true);
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const confirmImport = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/contacts/import-csv", {
+      const res = await fetch("/api/contacts/import-bulk", {
         method: "POST",
-        body: formData
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          contacts: importPreview,
+          startInactive: true // Nova flag de segurança
+        })
       });
+      
       if (res.ok) {
-        const result = await res.json();
-        toast({ title: "📤 Importação Concluída", description: `${result.created} contatos adicionados.` });
+        toast({ title: "✅ Importação concluída!", description: `${importPreview.length} contatos adicionados com a IA desativada por segurança.` });
+        setIsImportModalOpen(false);
+        setImportPreview([]);
         fetchData();
       }
-    } catch (e) { toast({ title: "Erro na importação", variant: "destructive" }); }
+    } catch (e) {
+      toast({ title: "Erro ao importar", variant: "destructive" });
+    }
     setLoading(false);
+  };
+
+  const handleSelectAll = () => {
+    const filtered = contacts.filter(c => 
+      c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      c.phone.includes(searchTerm)
+    );
+    
+    if (selectedIds.size === filtered.length && filtered.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map(c => c.id)));
+    }
   };
 
   const toggleSelect = (id: string, e: any) => {
@@ -165,12 +213,12 @@ export default function Contacts() {
            
             <div className="flex gap-4">
                <div className="flex gap-2">
-                 <input 
+                  <input 
                     type="file" 
                     id="csvImport" 
                     className="hidden" 
                     accept=".csv" 
-                    onChange={handleImport} 
+                    onChange={handleImportClick} 
                  />
                  <Button variant="outline" size="icon" onClick={handleExport} className="h-12 w-12 rounded-2xl border-2"><Download className="w-4 h-4" /></Button>
                  <Button variant="outline" size="icon" onClick={() => document.getElementById('csvImport')?.click()} className="h-12 w-12 rounded-2xl border-2"><UserPlus className="w-4 h-4" /></Button>
@@ -195,6 +243,16 @@ export default function Contacts() {
 
         {/* BUSCA RAPIDA */}
         <Card className="border-none shadow-2xl rounded-[35px] bg-white p-6 flex flex-col md:flex-row items-center gap-6">
+            <div 
+              onClick={handleSelectAll}
+              className={`flex-none w-14 h-14 rounded-2xl border-2 cursor-pointer flex items-center justify-center transition-all ${
+                selectedIds.size > 0 && selectedIds.size === contacts.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.phone.includes(searchTerm)).length
+                ? 'bg-emerald-500 border-emerald-500 text-white' 
+                : 'bg-slate-50 border-slate-100 text-slate-300'
+              }`}
+            >
+               <CheckCircle2 className="w-6 h-6" />
+            </div>
             <div className="flex-1 w-full relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
               <Input 
@@ -205,7 +263,7 @@ export default function Contacts() {
               />
             </div>
            <Badge className="h-14 px-8 rounded-2xl bg-emerald-50 text-emerald-600 border-none flex items-center gap-2 font-black text-[10px] uppercase tracking-widest">
-             {contacts.length} Entradas na Base
+             {selectedIds.size > 0 ? `${selectedIds.size} Selecionados` : `${contacts.length} Na Base`}
            </Badge>
         </Card>
 
@@ -378,6 +436,61 @@ export default function Contacts() {
                  </Button>
                  <Button onClick={() => handleDeleteContact(selectedContact.id)} variant="outline" className="flex-1 h-16 border-2 border-red-50 text-red-500 hover:bg-red-50 hover:text-red-600 font-black rounded-2xl uppercase tracking-widest transition-all">
                     <Trash2 className="w-5 h-5" />
+                 </Button>
+              </div>
+           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL DE CONFIRMAÇÃO DE IMPORTAÇÃO (PREVIEW) */}
+      <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>
+        <DialogContent className="max-w-3xl p-0 overflow-hidden border-none shadow-3xl rounded-[40px]">
+           <div className="bg-slate-900 p-10 text-white flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-black uppercase tracking-tighter">Revisar Importação</h2>
+                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
+                  Encontramos {importPreview.length} contatos no seu arquivo
+                </p>
+              </div>
+              <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-2xl">
+                 <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Proteção Ativa</p>
+                 <p className="text-[9px] text-white/60 font-medium">IA iniciará desativada</p>
+              </div>
+           </div>
+
+           <div className="p-8 space-y-6 bg-white">
+              <ScrollArea className="h-[350px] pr-4">
+                 <div className="space-y-2">
+                    {importPreview.map((p, i) => (
+                      <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                         <div className="flex items-center gap-4">
+                            <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-black text-slate-500">
+                               {i + 1}
+                            </div>
+                            <div>
+                               <p className="text-sm font-black text-slate-800 uppercase">{p.name}</p>
+                               <p className="text-[11px] font-bold text-slate-400">{p.phone}</p>
+                            </div>
+                         </div>
+                         <Badge variant="outline" className="text-[9px] font-black border-slate-200 text-slate-400 uppercase">Pendente</Badge>
+                      </div>
+                    ))}
+                 </div>
+              </ScrollArea>
+
+              <div className="flex gap-4 pt-4">
+                 <Button 
+                   variant="ghost" 
+                   onClick={() => setIsImportModalOpen(false)}
+                   className="flex-1 h-16 font-black uppercase text-xs tracking-widest text-slate-400 hover:text-slate-900"
+                 >
+                    Cancelar
+                 </Button>
+                 <Button 
+                   onClick={confirmImport} 
+                   className="flex-[2] h-16 bg-slate-900 hover:bg-black text-white font-black rounded-2xl uppercase tracking-widest shadow-2xl transition-all"
+                 >
+                    <Save className="w-5 h-5 mr-3 text-emerald-500" /> Confirmar e Salvar
                  </Button>
               </div>
            </div>

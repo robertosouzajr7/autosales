@@ -280,6 +280,11 @@ export default function Connections() {
                   <input type="text" id="meta-phone" placeholder="Seu Número (ex: 5511999999999)" className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-xl font-bold text-sm" />
                   <input type="text" id="meta-phoneid" placeholder="Phone Number ID" className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-xl font-bold text-sm" />
                   <input type="text" id="meta-waba" placeholder="WABA (Business Account ID)" className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-xl font-bold text-sm" />
+                  <input type="text" id="meta-verify" placeholder="Verify Token (Escolha uma Senha p/ Webhook)" className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-xl font-bold text-sm" />
+                  <div className="p-4 bg-slate-900 rounded-xl space-y-2">
+                     <p className="text-[10px] text-white/50 font-black uppercase tracking-widest">Webhook URL p/ Colar no Facebook:</p>
+                     <p className="text-[11px] text-primary font-mono font-bold break-all">{window.location.origin}/api/webhook/whatsapp/meta</p>
+                  </div>
                   <textarea id="meta-token" placeholder="Access Token Permanente (Bearer)" className="w-full h-24 px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl font-bold text-xs" />
                </div>
                <Button 
@@ -290,6 +295,7 @@ export default function Connections() {
                     phone: (document.getElementById("meta-phone") as HTMLInputElement).value,
                     phoneId: (document.getElementById("meta-phoneid") as HTMLInputElement).value,
                     wabaId: (document.getElementById("meta-waba") as HTMLInputElement).value,
+                    verifyToken: (document.getElementById("meta-verify") as HTMLInputElement).value,
                     accessToken: (document.getElementById("meta-token") as HTMLTextAreaElement).value,
                   };
                   try {

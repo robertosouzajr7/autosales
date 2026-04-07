@@ -3,6 +3,7 @@ import pino from 'pino';
 import fs from 'fs';
 import path from 'path';
 import { PrismaClient } from '@prisma/client';
+import { CommandCenter } from './command_center.js';
 
 const prisma = new PrismaClient();
 
@@ -154,11 +155,38 @@ export class WhatsAppManager {
             if (!content || !phone || !remoteJid) return;
             if (remoteJid.includes('@g.us') || remoteJid === 'status@broadcast') return;
 
+            // 🚫 Prevenção de Loop: Ignorar se a mensagem for para o próprio número do robô
+            const myNumber = sock.user?.id?.split(':')[0];
+            if (phone === myNumber) {
+                // console.log(`[WhatsApp] Ignorando mensagem do próprio número para evitar loop.`);
+                return;
+            }
+
             // Usa o tenantId REAL (do Tenant), não o accountId
             const session = whatsappSessions.get(accountId);
             const webhookTenantId = session?.tenantId || realTenantId;
 
             try {
+                // 🎛️ DUAL-MODE: Verificar se é o DONO (Modo Comando) ou um LEAD (Modo SDR)
+                const adminUser = await CommandCenter.isAdminPhone(phone, webhookTenantId);
+                
+                if (adminUser) {
+                    // ═══ MODO COMANDO (estilo Eesier) ═══
+                    console.log(`[CommandCenter] 🎛️ Admin ${adminUser.name} enviou: ${content.substring(0, 50)}...`);
+                    const commandResponse = await CommandCenter.handleOwnerCommand(phone, content, webhookTenantId, adminUser);
+                    
+                    if (commandResponse) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        await sock.readMessages([msg.key]);
+                        await sock.sendPresenceUpdate('composing', remoteJid);
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        await sock.sendPresenceUpdate('paused', remoteJid);
+                        await sock.sendMessage(remoteJid, { text: commandResponse });
+                    }
+                    return; // Não envia para o webhook de leads
+                }
+
+                // ═══ MODO SDR (fluxo original para leads) ═══
                 const response = await fetch('http://localhost:3000/api/webhook/whatsapp', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -167,7 +195,8 @@ export class WhatsAppManager {
                         phone,
                         name,
                         content,
-                        source: 'WhatsApp'
+                        source: 'WhatsApp',
+                        skipNewLeadTrigger: true // ⚡ FASE 2/4: Evitar disparo duplo de prospecção em chat direto
                     })
                 });
                 const data = await response.json();
@@ -179,9 +208,27 @@ export class WhatsAppManager {
                     await new Promise(resolve => setTimeout(resolve, 1000));
                     await sock.sendPresenceUpdate('paused', remoteJid);
                     await sock.sendMessage(remoteJid, { text: data.ai_response });
+                    
+                    // 🔔 ALERTA & QUALIFICAÇÃO (Assíncrono - Não trava a resposta)
+                    setImmediate(async () => {
+                        try {
+                            const lead = await prisma.lead.findFirst({ where: { phone, tenantId: webhookTenantId } });
+                            if (lead && (lead.qualificationScore >= 70 || content.toLowerCase().includes('interesse') || content.toLowerCase().includes('quero'))) {
+                                const alert = await CommandCenter.sendLeadAlert(webhookTenantId, lead, content);
+                                if (alert) {
+                                    const adminJid = `${alert.adminPhone}@s.whatsapp.net`;
+                                    if (adminJid !== remoteJid && alert.adminPhone !== myNumber) {
+                                        await sock.sendMessage(adminJid, { text: alert.alertText });
+                                    }
+                                }
+                            }
+                        } catch (alertErr) {
+                            // Erro silencioso em background
+                        }
+                    });
                 }
             } catch (error) {
-                console.error(`[WhatsApp SaaS ${accountId}] Erro no processamento de IA:`, error);
+                console.error(`[WhatsApp SaaS ${accountId}] Erro no processamento:`, error);
             }
         });
 

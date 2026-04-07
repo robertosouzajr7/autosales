@@ -6,7 +6,7 @@ import {
   Users, Target, Calendar, MessageSquare, TrendingUp, 
   ArrowUpRight, ArrowDownRight, Bot, Zap, Clock,
   MoreHorizontal, ChevronRight, BarChart3, PieChart as PieChartIcon,
-  ShieldCheck, CheckCircle2, AlertCircle, Phone, Search
+  ShieldCheck, CheckCircle2, AlertCircle, Phone, Search, Mail
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
@@ -22,6 +22,8 @@ export default function Dashboard() {
     appointments: 0,
     activeSdrs: 0,
     conversionRate: 0,
+    emailsSent: 0,
+    whatsappFollowups: 0,
     funnel: []
   });
   const [recentLeads, setRecentLeads] = useState<any[]>([]);
@@ -49,6 +51,8 @@ export default function Dashboard() {
         appointments: dashboard.stats.appointments || 0,
         activeSdrs: dashboard.stats.activeSdrs || 0,
         conversionRate: dashboard.stats.conversionRate || 0,
+        emailsSent: dashboard.stats.emailsSent || 0,
+        whatsappFollowups: dashboard.stats.whatsappFollowups || 0,
         funnel: fData.map((f: any) => ({ label: f.name, value: f.value })),
         openOpportunities: fData.slice(1).reduce((acc: number, curr: any) => acc + curr.value, 0)
       });
@@ -134,6 +138,47 @@ export default function Dashboard() {
               up={true}
               icon={<TrendingUp className="text-orange-500 w-6 h-6" />} 
            />
+        </div>
+
+        {/* PROSPECTING STATS (FASE 1 & 2) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+           <Card className="border-none shadow-3xl rounded-[45px] bg-slate-900 overflow-hidden group transition-all duration-500 hover:shadow-2xl relative">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-[60px] rounded-full translate-x-1/2 -translate-y-1/2" />
+              <CardContent className="p-10 flex items-center justify-between relative z-10">
+                <div className="space-y-2">
+                   <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.25em] mb-2 flex items-center gap-2">
+                      <Mail className="w-3 h-3 text-blue-400" /> Abordagem (Fase 1)
+                   </p>
+                   <div className="flex items-baseline gap-4">
+                      <p className="text-6xl font-black text-white tracking-tighter italic">{stats.emailsSent}</p>
+                      <span className="text-white/30 font-bold text-xs uppercase tracking-widest">E-mails Enviados</span>
+                   </div>
+                </div>
+                <div className="h-24 w-1 bg-white/5 mx-6" />
+                <div className="p-8 bg-white/5 rounded-[35px] border border-white/5 group-hover:bg-blue-600 group-hover:border-blue-500 transition-all duration-500">
+                   <Mail className="w-10 h-10 text-white" />
+                </div>
+              </CardContent>
+           </Card>
+
+           <Card className="border-none shadow-3xl rounded-[45px] bg-slate-900 overflow-hidden group transition-all duration-500 hover:shadow-2xl relative">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[60px] rounded-full translate-x-1/2 -translate-y-1/2" />
+              <CardContent className="p-10 flex items-center justify-between relative z-10">
+                <div className="space-y-2">
+                   <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.25em] mb-2 flex items-center gap-2">
+                      <Phone className="w-3 h-3 text-emerald-400" /> Reengajamento (Fase 2)
+                   </p>
+                   <div className="flex items-baseline gap-4">
+                      <p className="text-6xl font-black text-white tracking-tighter italic">{stats.whatsappFollowups}</p>
+                      <span className="text-white/30 font-bold text-xs uppercase tracking-widest">Wpp Follow-ups</span>
+                   </div>
+                </div>
+                <div className="h-24 w-1 bg-white/5 mx-6" />
+                <div className="p-8 bg-white/5 rounded-[35px] border border-white/5 group-hover:bg-emerald-600 group-hover:border-emerald-500 transition-all duration-500">
+                   <Phone className="w-10 h-10 text-white" />
+                </div>
+              </CardContent>
+           </Card>
         </div>
 
         {/* ANALYTICS SECTION */}
