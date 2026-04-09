@@ -737,6 +737,26 @@ class AutomationEngine {
           console.log(`[AutoEngine] SDR is globally disabled for tenant ${lead.tenantId}. Skipping AI Node.`);
           return null;
       }
+
+      // Check Plan Feature: AI
+      const tenantUsage = await prisma.tenant.findUnique({
+        where: { id: lead.tenantId },
+        include: { plan: true }
+      });
+      let aiEnabled = false;
+      if (tenantUsage && tenantUsage.plan && tenantUsage.plan.features) {
+         try { aiEnabled = JSON.parse(tenantUsage.plan.features).aiEnabled === true; } catch(e){}
+      }
+      if (!aiEnabled) {
+        console.log(`[AutoEngine] 🛑 Recurso de IA desabilitado para o tenant ${lead.tenantId}.`);
+        return "Serviço de IA não disponível neste plano.";
+      }
+      
+      // Check Token Limit
+      if (tenantUsage && tenantUsage.plan && tenantUsage.usedTokens >= tenantUsage.plan.maxTokens) {
+        console.log(`[AutoEngine] 🛑 Limite de tokens atingido para o tenant ${lead.tenantId}.`);
+        return "Desculpe, meu limite de processamento mensal foi atingido. Entre em contato com o suporte.";
+      }
       
       const systemPrompt = customPrompt || sdr.prompt || "Você é um SDR profissional.";
 
@@ -757,7 +777,16 @@ ${history}
 Responda de forma profissional e objetiva.`;
 
       const result = await model.generateContent(fullPrompt);
-      return result.response.text();
+      const text = result.response.text();
+
+      // Track usage
+      const tokens = Math.ceil((fullPrompt.length + text.length) / 4); // Estimativa fallback
+      await prisma.tenant.update({
+        where: { id: lead.tenantId },
+        data: { usedTokens: { increment: tokens } }
+      });
+
+      return text;
     } catch (e) {
       console.error("[AutoEngine] Erro na IA:", e);
       return "Desculpe, tive um problema técnico. Pode repetir?";
@@ -770,6 +799,17 @@ Responda de forma profissional e objetiva.`;
       const { model } = await this._getAIModel(lead.tenantId);
       const { sdr, history, kb } = await this._getLeadFullContext(lead, context);
       if (!sdr) return { text: null, toolCalls: [] };
+
+      // Check Plan Feature: AI
+      const tenantUsage = await prisma.tenant.findUnique({
+        where: { id: lead.tenantId },
+        include: { plan: true }
+      });
+      let aiEnabled = false;
+      if (tenantUsage && tenantUsage.plan && tenantUsage.plan.features) {
+         try { aiEnabled = JSON.parse(tenantUsage.plan.features).aiEnabled === true; } catch(e){}
+      }
+      if (!aiEnabled) return { text: "IA Desabilitada no Plano", toolCalls: [] };
 
       const toolDeclarations = [
         {
@@ -828,9 +868,18 @@ Responda de forma profissional e objetiva.`;
 
       const fullPrompt = `${systemPrompt}\n\nBase de conhecimento:\n${kb}\n\nDados do lead:\n- Nome: ${lead.name}\n- Telefone: ${lead.phone}\n- Status: ${lead.status}\n\nHistórico:\n${history}\n\nUse as ferramentas quando necessário para atender o lead.`;
 
+      // Check Token Limit
+      if (tenantUsage && tenantUsage.plan && tenantUsage.usedTokens >= tenantUsage.plan.maxTokens) {
+        console.log(`[AutoEngine] 🛑 Limite de tokens atingido para o tenant ${lead.tenantId}.`);
+        return { text: "Limite de processamento atingido.", toolCalls: [] };
+      }
+
       const chat = toolModel.startChat();
       const result = await chat.sendMessage(fullPrompt);
       const response = result.response;
+
+      // Track initial tokens
+      let totalTokens = Math.ceil((fullPrompt.length + (response.text?.() || "").length) / 4);
 
       const toolCalls = [];
       const parts = response.candidates?.[0]?.content?.parts || [];
@@ -843,6 +892,7 @@ Responda de forma profissional e objetiva.`;
             toolResult = await this._executeTool(fc.name, fc.args, lead);
           } catch (e) { toolResult = { error: e.message }; }
           toolCalls.push({ name: fc.name, args: fc.args, result: toolResult });
+          totalTokens += Math.ceil(JSON.stringify(toolResult).length / 4);
         }
       }
 
@@ -854,7 +904,14 @@ Responda de forma profissional e objetiva.`;
         }));
         const followUp = await chat.sendMessage(toolResponses);
         finalText = followUp.response.text?.() || finalText;
+        totalTokens += Math.ceil(finalText.length / 4);
       }
+
+      // Track DB usage
+      await prisma.tenant.update({
+        where: { id: lead.tenantId },
+        data: { usedTokens: { increment: totalTokens } }
+      });
 
       return { text: finalText, toolCalls };
     } catch (e) {
@@ -905,6 +962,14 @@ Responda de forma profissional e objetiva.`;
   // EXTRAÇÃO DE DADOS (NER)
   async extractStructuredData(text, fields, lead) {
     try {
+      // Check Plan Feature: AI
+      const tenantUsage = await prisma.tenant.findUnique({ where: { id: lead.tenantId }, include: { plan: true } });
+      let aiEnabled = false;
+      if (tenantUsage?.plan?.features) {
+         try { aiEnabled = JSON.parse(tenantUsage.plan.features).aiEnabled === true; } catch(e){}
+      }
+      if (!aiEnabled) return fields.reduce((acc, f) => ({ ...acc, [f]: null }), {});
+
       const { model } = await this._getAIModel(lead.tenantId);
       const prompt = `Extraia os seguintes dados do texto abaixo. Retorne APENAS um JSON válido com as chaves solicitadas. Se um dado não estiver presente, use null.
 
@@ -920,6 +985,14 @@ Retorne apenas o JSON, sem markdown, sem explicação.`;
 
       const result = await model.generateContent(prompt);
       const responseText = result.response.text().trim();
+
+      // Track tokens
+      const tokens = Math.ceil((prompt.length + responseText.length) / 4);
+      await prisma.tenant.update({
+        where: { id: lead.tenantId },
+        data: { usedTokens: { increment: tokens } }
+      });
+
       // Clean markdown code blocks if present
       const cleaned = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       return JSON.parse(cleaned);
@@ -932,6 +1005,14 @@ Retorne apenas o JSON, sem markdown, sem explicação.`;
   // CLASSIFICAÇÃO DE INTENT
   async classifyIntent(text, intents, lead) {
     try {
+      // Check Plan Feature: AI
+      const tenantUsage = await prisma.tenant.findUnique({ where: { id: lead.tenantId }, include: { plan: true } });
+      let aiEnabled = false;
+      if (tenantUsage?.plan?.features) {
+         try { aiEnabled = JSON.parse(tenantUsage.plan.features).aiEnabled === true; } catch(e){}
+      }
+      if (!aiEnabled) return { intent: intents[intents.length - 1].id, confidence: 0, reasoning: "IA Desabilitada" };
+
       const { model } = await this._getAIModel(lead.tenantId);
       const prompt = `Classifique a intenção da mensagem abaixo em uma das categorias listadas.
 
@@ -947,6 +1028,14 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
 
       const result = await model.generateContent(prompt);
       const responseText = result.response.text().trim();
+
+      // Track tokens
+      const tokens = Math.ceil((prompt.length + responseText.length) / 4);
+      await prisma.tenant.update({
+        where: { id: lead.tenantId },
+        data: { usedTokens: { increment: tokens } }
+      });
+
       const cleaned = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       const parsed = JSON.parse(cleaned);
       return {
@@ -963,6 +1052,14 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
   // SCORE DE QUALIFICAÇÃO
   async scoreLeadQualification(lead, context, criteria) {
     try {
+      // Check Plan Feature: AI
+      const tenantUsage = await prisma.tenant.findUnique({ where: { id: lead.tenantId }, include: { plan: true } });
+      let aiEnabled = false;
+      if (tenantUsage?.plan?.features) {
+         try { aiEnabled = JSON.parse(tenantUsage.plan.features).aiEnabled === true; } catch(e){}
+      }
+      if (!aiEnabled) return { score: 50, reasoning: "IA Desabilitada no Plano", bant: {}, signals: [] };
+
       const { model } = await this._getAIModel(lead.tenantId);
       const { history } = await this._getLeadFullContext(lead, context);
 
@@ -997,6 +1094,14 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
 
       const result = await model.generateContent(prompt);
       const responseText = result.response.text().trim();
+
+      // Track tokens
+      const tokens = Math.ceil((prompt.length + responseText.length) / 4);
+      await prisma.tenant.update({
+        where: { id: lead.tenantId },
+        data: { usedTokens: { increment: tokens } }
+      });
+
       const cleaned = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       const parsed = JSON.parse(cleaned);
 

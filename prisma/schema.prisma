@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -35,6 +35,11 @@ model Tenant {
   snovClientId String?
   snovClientSecret String?
   
+  // Consumption Tracking
+  usedTokens        Int      @default(0)
+  qualifiedLeadsCount Int    @default(0)
+  lastUsageReset    DateTime @default(now())
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
@@ -159,6 +164,7 @@ model Plan {
   priceYearly     Float
   maxLeads        Int
   maxSdrs         Int
+  maxTokens       Int      @default(100000) // Default limit
   features        String?  // JSON list of features
   active          Boolean  @default(true)
   

@@ -4,6 +4,7 @@ import { PrismaClient } from "@prisma/client";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { google } from "googleapis";
 import dotenv from "dotenv";
+import bcrypt from "bcryptjs";
 import { WhatsAppManager, whatsappSessions } from "./whatsapp.js";
 import { MetaManager } from "./meta.js";
 import AutomationEngine from "./automation_engine.js";
@@ -17,7 +18,6 @@ const require = createRequire(import.meta.url);
 const pdf = require("pdf-parse");
 const mammoth = require("mammoth");
 import fs from "fs";
-import bcrypt from "bcryptjs";
 import axios from "axios";
 import nodemailer from "nodemailer";
 import cron from "node-cron";
@@ -80,8 +80,9 @@ async function initDB() {
       await prisma.plan.createMany({
         data: [
           { name: "BASIC", priceMonthly: 197, priceYearly: 0, maxLeads: 300, maxSdrs: 1 },
-          { name: "PRO", priceMonthly: 497, priceYearly: 0, maxLeads: 10000, maxSdrs: 5 },
-          { name: "ENTERPRISE", priceMonthly: 997, priceYearly: 0, maxLeads: 999999, maxSdrs: 20 }
+          { name: "PRO", priceMonthly: 797, priceYearly: 0, maxLeads: 10000, maxSdrs: 5 },
+          { name: "ENTERPRISE", priceMonthly: 997, priceYearly: 0, maxLeads: 999999, maxSdrs: 20 },
+          { name: "VITALICIO", priceMonthly: 0, priceYearly: 0, maxLeads: 999999, maxSdrs: 100, features: JSON.stringify({ aiEnabled: true, webhookEnabled: true, bulkMessaging: true, calendar: true, crmIntegration: true, maxAutomations: -1, maxExecutions: -1 }) }
         ]
       });
       console.log("💎 Planos iniciais criados.");
@@ -92,10 +93,11 @@ async function initDB() {
     const hashedPassword = await bcrypt.hash("admin", 10);
     
     if (!superAdmin) {
+      const vitalicioPlan = await prisma.plan.findFirst({ where: { name: "VITALICIO" } });
       const systemTenant = await prisma.tenant.upsert({
         where: { email: "admin@autosales.ai" },
-        update: {},
-        create: { name: "AutoSales Global", email: "admin@autosales.ai" }
+        update: { planId: vitalicioPlan?.id },
+        create: { name: "AutoSales Global", email: "admin@autosales.ai", planId: vitalicioPlan?.id }
       });
 
       await prisma.user.create({
@@ -252,6 +254,18 @@ app.put("/api/leads/:id", async (req, res) => {
     const lead = await prisma.lead.update({ where: { id: req.params.id }, data: req.body });
 
     if (oldLead && req.body.stageId && oldLead.stageId !== req.body.stageId) {
+      // Check if the new stage is a "Qualified" state (Interessados, Agendados, Convertidos)
+      const stage = await prisma.pipelineStage.findUnique({ where: { id: req.body.stageId } });
+      const qualifiedNames = ["interessados", "agendados", "convertidos", "qualificado", "appointment", "converted"];
+      
+      if (stage && qualifiedNames.some(name => stage.name.toLowerCase().includes(name))) {
+        await prisma.tenant.update({
+          where: { id: lead.tenantId },
+          data: { qualifiedLeadsCount: { increment: 1 } }
+        });
+        console.log(`[Leads] 🎯 Lead qualificado detectado! Contador incrementado para o tenant ${lead.tenantId}`);
+      }
+
       AutomationEngine.dispatchTrigger("PIPELINE_MOVE", {
         lead, tenantId: lead.tenantId,
         oldStageId: oldLead.stageId, newStageId: req.body.stageId
@@ -618,6 +632,19 @@ app.post("/api/sdrs", async (req, res) => {
   try {
     const tenantId = req.tenantId;
     if (!tenantId) return res.status(400).json({ error: "No tenant found" });
+
+    // --- Monetization Check: Max SDRs ---
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      include: { plan: true, sdrs: { where: { active: true } } }
+    });
+
+    if (tenant && tenant.plan && tenant.sdrs.length >= tenant.plan.maxSdrs) {
+      return res.status(403).json({ 
+        error: `Limite de SDRs atingido para o seu plano (${tenant.plan.name}). Máximo: ${tenant.plan.maxSdrs}` 
+      });
+    }
+
     const sdr = await prisma.sdrBot.create({ data: { ...req.body, tenantId, active: true } });
     res.json(sdr);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -1084,6 +1111,7 @@ app.get("/api/automations", async (req, res) => {
 
 app.post("/api/automations", async (req, res) => {
   try {
+    const tenantId = req.tenantId || req.headers["x-tenant-id"];
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
       include: { automations: true, plan: true }
@@ -1091,7 +1119,7 @@ app.post("/api/automations", async (req, res) => {
     if (!tenant) return res.status(400).json({ error: "No tenant found" });
 
     // --- Monetization Check: Max Automations ---
-    let maxAutomations = 3; // default for free/basic
+    let maxAutomations = 3; 
     if (tenant.plan && tenant.plan.features) {
        try {
          const planFeatures = JSON.parse(tenant.plan.features);
@@ -1101,7 +1129,6 @@ app.post("/api/automations", async (req, res) => {
        } catch(e) {}
     }
     
-    // -1 signifies unlimited
     if (maxAutomations !== -1 && tenant.automations.length >= maxAutomations) {
       return res.status(403).json({ 
         error: "Limite de automações atingido. Faça upgrade do seu plano para criar mais automações."
@@ -1114,6 +1141,39 @@ app.post("/api/automations", async (req, res) => {
     });
     AutomationEngine.reloadSchedulers().catch(console.error);
     res.json(aut);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- Bulk Messaging (Enforcement) ---
+app.post("/api/bulk-send", async (req, res) => {
+  try {
+    const tenantId = req.tenantId || req.headers["x-tenant-id"];
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, include: { plan: true } });
+    if (!tenant) return res.status(404).json({ error: "Tenant not found" });
+
+    let bulkEnabled = false;
+    if (tenant.plan && tenant.plan.features) {
+       try { bulkEnabled = JSON.parse(tenant.plan.features).bulkMessaging === true; } catch(e){}
+    }
+    if (!bulkEnabled) return res.status(403).json({ error: "O plano atual não permite disparos em massa. Faça upgrade para o Pro." });
+
+    const { leadIds, message, channel } = req.body;
+    console.log(`[BulkSend] 🚀 Iniciando disparo para ${leadIds.length} leads via ${channel} (Tenant: ${tenantId})`);
+    
+    // Implementação simplificada (v1)
+    for (const leadId of leadIds) {
+      const lead = await prisma.lead.findUnique({ where: { id: leadId } });
+      if (lead && lead.phone) {
+        if (channel === "WHATSAPP") {
+          await WhatsAppManager.sendMessage(tenantId, lead.phone, message.replace("[nome]", lead.name));
+        } else {
+          // Placeholder para e-mail
+          console.log(`[Bulk] E-mail simulado para ${lead.email}`);
+        }
+      }
+    }
+
+    res.json({ success: true, count: leadIds.length });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -1377,6 +1437,11 @@ app.get("/api/stats/dashboard", async (req, res) => {
       value: s._count.leads
     }));
 
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      include: { plan: true }
+    });
+
     res.json({ 
       stats: { 
         totalLeads, 
@@ -1384,7 +1449,13 @@ app.get("/api/stats/dashboard", async (req, res) => {
         activeSdrs, 
         conversionRate,
         emailsSent,
-        whatsappFollowups
+        whatsappFollowups,
+        // Consumption Stats
+        usedTokens: tenant?.usedTokens || 0,
+        qualifiedLeadsCount: tenant?.qualifiedLeadsCount || 0,
+        maxTokens: tenant?.plan?.maxTokens || 0,
+        maxSdrs: tenant?.plan?.maxSdrs || 0,
+        planName: tenant?.plan?.name || "Nenhum"
       },
       funnelData,
       activityHistory: [] 
@@ -1444,9 +1515,35 @@ app.delete("/api/appointments/:id", async (req, res) => {
 });
 
 // --- Settings ---
+app.get("/api/tenant/settings", async (req, res) => {
+  try {
+    const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+    if (!tenantId) return res.status(401).json({ error: "Não autenticado" });
+    const tenant = await prisma.tenant.findUnique({ 
+      where: { id: tenantId }, 
+      include: { plan: true } 
+    });
+    
+    let planFeatures = {};
+    if (tenant?.plan?.features) {
+       try { planFeatures = JSON.parse(tenant.plan.features); } catch(e){}
+    }
+    
+    res.json({
+      id: tenant?.id,
+      name: tenant?.name,
+      email: tenant?.email,
+      usedTokens: tenant?.usedTokens || 0,
+      qualifiedLeadsCount: tenant?.qualifiedLeadsCount || 0,
+      plan: tenant?.plan || { name: "Básico", maxTokens: 1000 },
+      planFeatures
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get("/api/settings", async (req, res) => {
   try {
-    const tenantId = req.tenantId;
+    const tenantId = req.headers["x-tenant-id"] || req.tenantId;
     if (!tenantId) return res.status(401).json({ error: "Não autenticado" });
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, include: { plan: true } });
     res.json(tenant);
@@ -1477,6 +1574,17 @@ app.post("/api/admin/plans", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+app.put("/api/admin/plans/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const plan = await prisma.plan.update({
+      where: { id },
+      data: req.body
+    });
+    res.json(plan);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.delete("/api/admin/plans/:id", async (req, res) => {
   try {
     await prisma.plan.delete({ where: { id: req.params.id } });
@@ -1486,9 +1594,66 @@ app.delete("/api/admin/plans/:id", async (req, res) => {
 
 app.get("/api/admin/tenants", async (req, res) => {
   try {
-    const tenants = await prisma.tenant.findMany({ include: { plan: true } });
+    const tenants = await prisma.tenant.findMany({ 
+      include: { 
+        plan: true,
+        users: { select: { id: true, name: true, email: true, role: true } }
+      } 
+    });
     res.json(tenants);
   } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get("/api/admin/tenants/:id", async (req, res) => {
+  try {
+    const tenant = await prisma.tenant.findUnique({ 
+      where: { id: req.params.id },
+      include: { 
+        plan: true,
+        users: { select: { id: true, name: true, email: true, role: true } }
+      } 
+    });
+    res.json(tenant);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put("/api/admin/tenants/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email, planId, subscriptionStatus, active, maxTokensExtra, maxLeadsExtra, address, phone, cnpj } = req.body;
+    
+    const tenant = await prisma.tenant.update({
+      where: { id },
+      data: {
+        name,
+        email,
+        planId,
+        subscriptionStatus,
+        active: active !== undefined ? active : undefined,
+        address,
+        phone,
+        cnpj
+      }
+    });
+    res.json(tenant);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete("/api/admin/tenants/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Deletar relações que podem não ter cascade configurado ou precisam de limpeza manual
+    try {
+      await prisma.automationConfig.deleteMany({ where: { tenantId: id } });
+    } catch (e) { console.warn("Erro ao deletar automationConfig:", e.message); }
+
+    await prisma.tenant.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (e) { 
+    console.error("Erro ao deletar tenant:", e);
+    res.status(500).json({ error: e.message }); 
+  }
 });
 
 app.post("/api/admin/tenants", async (req, res) => {
@@ -1530,6 +1695,92 @@ app.post("/api/admin/tenants", async (req, res) => {
     console.error("Erro criando tenant:", e);
     res.status(500).json({ error: e.message }); 
   }
+});
+
+// --- User Management (Admin Side) ---
+app.post("/api/admin/tenants/:tenantId/users", async (req, res) => {
+  try {
+    const { name, email, password, role } = req.body;
+    const { tenantId } = req.params;
+    console.log(`[Admin] Criando usuário para tenant ${tenantId}: ${email}`);
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await prisma.user.create({
+      data: { name, email, password: hashedPassword, role, tenantId }
+    });
+    res.json(user);
+  } catch (e) { 
+    console.error("Erro ao criar usuário (admin):", e);
+    res.status(500).json({ error: e.message }); 
+  }
+});
+
+app.put("/api/admin/tenants/:tenantId/users/:userId", async (req, res) => {
+  try {
+    const { name, email, password, role } = req.body;
+    const { userId } = req.params;
+    const data = { name, email, role };
+    if (password) {
+      data.password = await bcrypt.hash(password, 10);
+    }
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data
+    });
+    res.json(user);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete("/api/admin/tenants/:tenantId/users/:userId", async (req, res) => {
+  try {
+    await prisma.user.delete({ where: { id: req.params.userId } });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- User Management (Tenant Side) ---
+app.get("/api/users", async (req, res) => {
+  try {
+    const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+    const users = await prisma.user.findMany({ 
+      where: { tenantId },
+      select: { id: true, name: true, email: true, role: true, createdAt: true }
+    });
+    res.json(users);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/users", async (req, res) => {
+  try {
+    const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+    const { name, email, password, role } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await prisma.user.create({
+      data: { name, email, password: hashedPassword, role, tenantId }
+    });
+    res.json(user);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put("/api/users/:id", async (req, res) => {
+  try {
+    const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+    const { name, email, password, role } = req.body;
+    const data = { name, email, role };
+    if (password) data.password = await bcrypt.hash(password, 10);
+    const user = await prisma.user.update({
+      where: { id: req.params.id, tenantId },
+      data
+    });
+    res.json(user);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete("/api/users/:id", async (req, res) => {
+  try {
+    const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+    await prisma.user.delete({ where: { id: req.params.id, tenantId } });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.delete("/api/admin/tenants/:id", async (req, res) => {
@@ -1809,6 +2060,13 @@ async function generateSdrResponse(tenantId, phone, leadName, userMessage, sdrId
       }
       finalResponse = responseBody.text();
 
+      // Track usage
+      const tokens = Math.ceil((userMessage.length + finalResponse.length + 1000) / 4); // +1000 for prompt context
+      await prisma.tenant.update({
+        where: { id: tenantId },
+        data: { usedTokens: { increment: tokens } }
+      });
+
     } else {
       // 🚀 IMPLEMENTAÇÃO PARA OPENAI, CLAUDE, DEEPSEEK, QWEN (OpenAI Compatible Format)
       const baseUrlMap = {
@@ -2025,6 +2283,14 @@ app.post("/api/webhook/whatsapp", async (req, res) => {
 app.post("/api/public/book", async (req, res) => {
   let { tenantId, name, phone, date, title } = req.body;
   if (!tenantId || !date) return res.status(400).json({ error: "Dados incompletos" });
+
+  // --- Monetization Check: Calendar ---
+  const tenantObj = await prisma.tenant.findUnique({ where: { id: tenantId }, include: { plan: true } });
+  let calendarEnabled = false;
+  if (tenantObj?.plan?.features) {
+     try { calendarEnabled = JSON.parse(tenantObj.plan.features).calendar === true; } catch(e){}
+  }
+  if (!calendarEnabled) return res.status(403).json({ error: "Recurso de agendamento não disponível neste plano." });
 
   // Normalização de Telefone (Somente números e prefixo 55)
   phone = phone.replace(/\D/g, '');

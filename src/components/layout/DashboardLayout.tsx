@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -55,6 +55,7 @@ interface NavItem {
   icon: React.ElementType;
   href: string;
   adminOnly?: boolean;
+  feature?: string;
 }
 
 const navItems: NavItem[] = [
@@ -62,12 +63,11 @@ const navItems: NavItem[] = [
   { label: "Conversas", icon: MessageSquare, href: "/conversations" },
   { label: "CRM / Leads", icon: Users, href: "/crm" },
   { label: "Contatos", icon: BookUser, href: "/contacts" },
-  { label: "Agendamentos", icon: Calendar, href: "/appointments" },
+  { label: "Agendamentos", icon: Calendar, href: "/appointments", feature: "calendar" },
   { label: "Prospecção", icon: Target, href: "/prospecting" },
   { label: "Time de SDRs", icon: Bot, href: "/sdrs" },
   { label: "Automações", icon: Zap, href: "/automations" },
-  { label: "Documentação", icon: BookOpen, href: "/docs" },
-  { label: "Disparos", icon: Send, href: "/disparos" },
+  { label: "Disparos", icon: Send, href: "/disparos", feature: "bulkMessaging" },
   { label: "Conexões", icon: Smartphone, href: "/connections" },
   { label: "Configurações", icon: Settings, href: "/settings" },
   { label: "Admin SaaS", icon: ShieldCheck, href: "/admin", adminOnly: true },
@@ -78,15 +78,17 @@ interface SidebarNavProps {
   onNavClick?: () => void;
 }
 
-function SidebarNav({ collapsed, onNavClick }: SidebarNavProps) {
+function SidebarNav({ collapsed, onNavClick, features }: SidebarNavProps & { features: any }) {
   const location = useLocation();
 
   return (
     <nav className="flex flex-col gap-1 px-3">
       {navItems.map((item) => {
-  const userRole = localStorage.getItem("userRole") || "OWNER";
-  const isAdmin = userRole === "SUPERADMIN";
-  if (item.adminOnly && !isAdmin) return null;
+        const userRole = localStorage.getItem("userRole") || "OWNER";
+        const isAdmin = userRole === "SUPERADMIN";
+        
+        if (item.adminOnly && !isAdmin) return null;
+        if (item.feature && features && features[item.feature] === false) return null;
 
         const Icon = item.icon;
         const isActive =
@@ -149,9 +151,13 @@ function SidebarContent({
   onToggleCollapse,
   onNavClick,
   showCollapseButton = true,
-}: SidebarContentProps) {
+  features,
+  planName,
+  planData,
+  navigate
+}: SidebarContentProps & { features: any, planName: string, planData: any, navigate: any }) {
   return (
-    <div className="flex h-full flex-col bg-slate-900">
+    <div className="flex h-full flex-col bg-slate-900 font-sans">
       {/* Logo */}
       <div
         className={cn(
@@ -163,8 +169,8 @@ function SidebarContent({
           <Bot className="h-5 w-5 text-white" />
         </div>
         {!collapsed && (
-          <span className="text-lg font-bold tracking-tight text-white">
-            AutoSales
+          <span className="text-xl font-black tracking-tighter uppercase text-white">
+            Vend<span className="text-emerald-500 italic">Ai</span>
           </span>
         )}
         {!collapsed && showCollapseButton && (
@@ -177,36 +183,33 @@ function SidebarContent({
             <ChevronLeft className="h-4 w-4" />
           </Button>
         )}
-        {collapsed && showCollapseButton && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onToggleCollapse}
-            className="absolute -right-3 top-[4.5rem] z-10 h-6 w-6 rounded-full border border-slate-600 bg-slate-800 text-slate-400 shadow-md hover:bg-slate-700 hover:text-white"
-          >
-            <ChevronRight className="h-3 w-3" />
-          </Button>
-        )}
       </div>
 
       {/* Nav items */}
       <div className="flex-1 overflow-y-auto py-2">
-        <SidebarNav collapsed={collapsed} onNavClick={onNavClick} />
+        <SidebarNav collapsed={collapsed} onNavClick={onNavClick} features={features} />
       </div>
 
       {/* PLAN STATUS IN SIDEBAR */}
       {!collapsed && (
         <div className="px-6 py-6 border-t border-slate-800">
-          <div className="p-4 bg-slate-800 rounded-2xl space-y-3">
+          <div className="p-4 bg-slate-800/50 rounded-2xl space-y-3">
             <div className="flex justify-between items-center">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Plano Atual</p>
-              <Badge className="bg-emerald-500/10 text-emerald-400 border-none text-[8px] font-black uppercase tracking-tighter leading-normal">
-                {localStorage.getItem("userPlan") || "BASIC"}
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Plano Ativo</p>
+              <Badge className="bg-emerald-500 text-slate-900 border-none text-[8px] font-black uppercase tracking-tighter leading-normal px-2">
+                {planName || "Básico"}
               </Badge>
             </div>
             <div className="flex items-center gap-2">
-              <Zap className="w-4 h-4 text-emerald-400 animate-pulse" />
-              <p className="text-xs font-black text-slate-200">60% de uso</p>
+               <div className="flex-1 h-1 bg-slate-700 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-emerald-500 transition-all duration-1000" 
+                    style={{ width: `${Math.min(100, (localStorage.getItem("usedTokens") ? parseInt(localStorage.getItem("usedTokens") || "0") : 0) / (planData.maxTokens || 1) * 100)}%` }}
+                  />
+               </div>
+               <p className="text-[10px] font-black text-slate-400 uppercase">
+                 {Math.round((localStorage.getItem("usedTokens") ? parseInt(localStorage.getItem("usedTokens") || "0") : 0) / (planData.maxTokens || 1) * 100)}%
+               </p>
             </div>
           </div>
         </div>
@@ -214,45 +217,47 @@ function SidebarContent({
 
       {/* Bottom user section */}
       <div className="border-t border-slate-700/60 p-3">
-        {collapsed ? (
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <button className="flex w-full items-center justify-center rounded-lg p-2 transition-colors hover:bg-white/10">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src="" />
-                  <AvatarFallback className="bg-emerald-600 text-xs font-semibold text-white">
-                    ME
-                  </AvatarFallback>
-                </Avatar>
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right">Minha Empresa</TooltipContent>
-          </Tooltip>
-        ) : (
-          <div className="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-white/5">
-            <Avatar className="h-8 w-8 shrink-0">
-              <AvatarImage src="" />
-              <AvatarFallback className="bg-emerald-600 text-xs font-semibold text-white">
-                ME
-              </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-white">
-                Minha Empresa
-              </p>
-              <p className="truncate text-xs text-slate-400">Plano Pro</p>
-            </div>
-            <Link to="/settings">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 shrink-0 text-slate-400 hover:bg-slate-700 hover:text-white"
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
-            </Link>
+          <div className={cn("flex items-center gap-3 rounded-2xl px-2 py-2 transition-colors hover:bg-white/5", collapsed && "justify-center")}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-3 w-full outline-none">
+                  <Avatar className="h-8 w-8 shrink-0 border border-slate-700">
+                    <AvatarFallback className="bg-emerald-600 text-[10px] font-black text-white uppercase">
+                      {localStorage.getItem("userName")?.charAt(0) || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                  {!collapsed && (
+                    <div className="min-w-0 flex-1 text-left">
+                      <p className="truncate text-xs font-black uppercase tracking-wider text-white">
+                        {localStorage.getItem("companyName") || "Minha Empresa"}
+                      </p>
+                      <p className="truncate text-[9px] font-bold uppercase text-slate-500 tracking-widest">{planName}</p>
+                    </div>
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side={collapsed ? "right" : "top"} align="start" className="w-52 bg-slate-900 border-slate-800 text-white rounded-2xl p-2 shadow-2xl">
+                 <DropdownMenuLabel className="p-3 text-[10px] font-black uppercase text-slate-500 tracking-widest">Opções da Conta</DropdownMenuLabel>
+                 <DropdownMenuSeparator className="bg-slate-800" />
+                 <DropdownMenuItem onClick={() => navigate("/settings")} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/10 cursor-pointer text-xs font-bold uppercase">
+                    <User className="w-4 h-4 text-emerald-400" /> Perfil & Empresa
+                 </DropdownMenuItem>
+                 <DropdownMenuItem onClick={() => navigate("/settings")} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/10 cursor-pointer text-xs font-bold uppercase">
+                    <Settings className="w-4 h-4 text-emerald-400" /> Configurações
+                 </DropdownMenuItem>
+                 <DropdownMenuSeparator className="bg-slate-800" />
+                 <DropdownMenuItem 
+                   onClick={() => {
+                     localStorage.clear();
+                     navigate("/login");
+                   }} 
+                   className="flex items-center gap-3 p-3 rounded-xl hover:bg-red-500/10 text-red-400 cursor-pointer text-xs font-bold uppercase"
+                 >
+                    <LogOut className="w-4 h-4" /> Sair da Conta
+                 </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-        )}
       </div>
     </div>
   );
@@ -266,7 +271,21 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [planData, setPlanData] = useState<any>({ features: {}, name: "Básico", maxTokens: 1 });
   const location = useLocation();
+
+  useEffect(() => {
+    fetch("/api/tenant/settings")
+      .then(res => res.json())
+      .then(data => {
+        if (data.planFeatures) {
+          setPlanData({ features: data.planFeatures, name: data.plan?.name || "Básico", maxTokens: data.plan?.maxTokens || 1 });
+          localStorage.setItem("usedTokens", data.usedTokens || "0");
+          localStorage.setItem("companyName", data.name || "Minha Empresa");
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("userToken");
@@ -296,6 +315,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           collapsed={collapsed}
           onToggleCollapse={() => setCollapsed((prev) => !prev)}
           showCollapseButton={true}
+          features={planData.features}
+          planName={planData.name}
+          planData={planData}
+          navigate={navigate}
         />
       </aside>
 
@@ -310,6 +333,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             collapsed={false}
             showCollapseButton={false}
             onNavClick={() => setMobileOpen(false)}
+            features={planData.features}
+            planName={planData.name}
+            planData={planData}
+            navigate={navigate}
           />
         </SheetContent>
       </Sheet>

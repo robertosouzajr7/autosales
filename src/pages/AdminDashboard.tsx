@@ -26,11 +26,33 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const [isTenantModalOpen, setIsTenantModalOpen] = useState(false);
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
+  const [isEditTenantModalOpen, setIsEditTenantModalOpen] = useState(false);
 
   const [newTenant, setNewTenant] = useState({ name: "", email: "", planId: "", adminName: "", adminPassword: "" });
-  const [newPlan, setNewPlan] = useState({ name: "", priceMonthly: 0, priceYearly: 0, maxLeads: 1000, maxSdrs: 2, aiEnabled: false, webhookEnabled: false, maxAutomations: 3, maxExecutions: 1000 });
+  const [selectedTenant, setSelectedTenant] = useState<any>(null);
+
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [newUser, setNewUser] = useState({ name: "", email: "", password: "", role: "AGENT" });
+
+  const [newPlan, setNewPlan] = useState<any>({ 
+    id: null,
+    name: "", 
+    priceMonthly: 0, 
+    priceYearly: 0, 
+    maxLeads: 1000, 
+    maxSdrs: 2, 
+    maxTokens: 50000,
+    features: {
+      aiEnabled: false, 
+      webhookEnabled: false, 
+      bulkMessaging: false, 
+      calendar: false, 
+      crmIntegration: false,
+      maxAutomations: 3, 
+      maxExecutions: 1000 
+    }
+  });
 
   // CMS State
   const [lpSettings, setLpSettings] = useState({
@@ -50,7 +72,7 @@ export default function AdminDashboard() {
       const [tRes, pRes, sRes, lpRes] = await Promise.all([
         fetch("/api/admin/tenants"),
         fetch("/api/admin/plans"),
-        fetch("/api/sdrs"), // Pegando SDRs de qualquer tenant para o chat global (ou simplificado)
+        fetch("/api/sdrs"),
         fetch("/api/admin/landing-settings")
       ]);
       const tData = await tRes.json();
@@ -71,19 +93,6 @@ export default function AdminDashboard() {
 
   useEffect(() => { fetchData(); }, []);
 
-  const handleSaveLpSettings = async () => {
-    try {
-      const res = await fetch("/api/admin/landing-settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(lpSettings)
-      });
-      if (res.ok) {
-        toast({ title: "✨ Landing Page Atualizada!" });
-      }
-    } catch (e) { toast({ title: "Erro ao salvar", variant: "destructive" }); }
-  };
-
   const handleCreateTenant = async () => {
     try {
       const res = await fetch("/api/admin/tenants", {
@@ -93,13 +102,32 @@ export default function AdminDashboard() {
       });
       if (res.ok) {
         toast({ title: "🚀 Cliente Criado!" });
-        setIsTenantModalOpen(false);
+        setIsEditTenantModalOpen(false);
         fetchData();
       }
     } catch (e) { toast({ title: "Erro na criação", variant: "destructive" }); }
   };
 
-  const handleCreatePlan = async () => {
+  const handleEditPlan = (plan: any) => {
+    let featuresData = {
+      aiEnabled: false, webhookEnabled: false, bulkMessaging: false, 
+      calendar: false, crmIntegration: false, maxAutomations: 3, maxExecutions: 1000
+    };
+    try {
+      if (plan.features) {
+        const parsed = JSON.parse(plan.features);
+        featuresData = { ...featuresData, ...parsed };
+      }
+    } catch(e) {}
+
+    setNewPlan({
+      ...plan,
+      features: featuresData
+    });
+    setIsPlanModalOpen(true);
+  };
+
+  const handleCreateOrUpdatePlan = async () => {
     try {
       const planPayload = {
         name: newPlan.name,
@@ -107,21 +135,20 @@ export default function AdminDashboard() {
         priceYearly: newPlan.priceYearly,
         maxLeads: newPlan.maxLeads,
         maxSdrs: newPlan.maxSdrs,
-        features: JSON.stringify({
-          aiEnabled: newPlan.aiEnabled,
-          webhookEnabled: newPlan.webhookEnabled,
-          maxAutomations: newPlan.maxAutomations,
-          maxExecutions: newPlan.maxExecutions
-        })
+        maxTokens: newPlan.maxTokens,
+        features: JSON.stringify(newPlan.features)
       };
 
-      const res = await fetch("/api/admin/plans", {
-        method: "POST",
+      const method = newPlan.id ? "PUT" : "POST";
+      const url = newPlan.id ? `/api/admin/plans/${newPlan.id}` : "/api/admin/plans";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(planPayload)
       });
       if (res.ok) {
-        toast({ title: "💎 Plano Ativado!" });
+        toast({ title: newPlan.id ? "💎 Plano Atualizado!" : "💎 Plano Ativado!" });
         setIsPlanModalOpen(false);
         fetchData();
       }
@@ -150,15 +177,23 @@ export default function AdminDashboard() {
     } catch (e) { toast({ title: "Erro ao excluir", variant: "destructive" }); }
   };
 
-  const togglePlanVisibility = (planId: string) => {
-    const currentIds = lpSettings.visiblePlanIds ? lpSettings.visiblePlanIds.split(",") : [];
-    let newIds;
-    if (currentIds.includes(planId)) {
-      newIds = currentIds.filter(id => id !== planId);
-    } else {
-      newIds = [...currentIds, planId];
-    }
-    setLpSettings({ ...lpSettings, visiblePlanIds: newIds.join(",") });
+  const handleCreateUser = async () => {
+    if (!newUser.name || !newUser.email || !newUser.password) return;
+    try {
+      const res = await fetch(`/api/admin/tenants/${selectedTenant.id}/users`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newUser)
+      });
+      if (res.ok) {
+        toast({ title: "👤 Usuário Adicionado!" });
+        setIsAddUserModalOpen(false);
+        setNewUser({ name: "", email: "", password: "", role: "AGENT" });
+        fetchData();
+        const updatedTenant = await (await fetch(`/api/admin/tenants/${selectedTenant.id}`)).json();
+        setSelectedTenant(updatedTenant);
+      }
+    } catch (e) { toast({ title: "Erro ao criar usuário", variant: "destructive" }); }
   };
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -167,8 +202,6 @@ export default function AdminDashboard() {
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-10 p-6 lg:p-10 max-w-[1600px] mx-auto animate-in fade-in duration-700">
-        
-        {/* HEADER ADMIN PREMIUM */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-slate-900 p-12 rounded-[50px] shadow-3xl relative overflow-hidden">
            <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 blur-[100px] rounded-full" />
            <div className="space-y-2 relative z-10">
@@ -180,7 +213,7 @@ export default function AdminDashboard() {
            
            <div className="flex gap-4 relative z-10">
               <Button 
-                onClick={() => setIsTenantModalOpen(true)} 
+                onClick={() => { setSelectedTenant(null); setIsEditTenantModalOpen(true); }} 
                 className="h-14 bg-emerald-500 hover:bg-emerald-600 px-8 rounded-2xl font-black uppercase text-[10px] tracking-widest text-white shadow-xl shadow-emerald-500/20 active:scale-95 transition-all"
               >
                 <Plus className="w-5 h-5 mr-3" /> Novo Cliente
@@ -196,7 +229,6 @@ export default function AdminDashboard() {
           </TabsList>
 
           <TabsContent value="general" className="space-y-10 animate-in slide-in-from-bottom-4">
-            {/* ESTATÍSTICAS */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                <StatCard icon={<Building2 className="text-blue-500" />} label="Clientes SaaS" value={tenants.length} color="blue" />
                <StatCard icon={<TrendingUp className="text-emerald-500" />} label="MRR Estimado" value={`R$ ${tenants.reduce((acc, t) => acc + (t.plan?.priceMonthly || 0), 0)}`} color="emerald" />
@@ -229,7 +261,7 @@ export default function AdminDashboard() {
                        </thead>
                        <tbody>
                           {filteredTenants.map(tenant => (
-                             <tr key={tenant.id} className="border-b border-slate-50 hover:bg-slate-50/50 rounded-3xl group">
+                             <tr key={tenant.id} className="border-b border-slate-50 hover:bg-slate-50/50 rounded-3xl group cursor-pointer" onClick={() => { setSelectedTenant(tenant); setIsEditTenantModalOpen(true); }}>
                                 <td className="p-6">
                                    <div className="flex flex-col">
                                       <span className="font-extrabold text-slate-800">{tenant.name}</span>
@@ -237,13 +269,16 @@ export default function AdminDashboard() {
                                    </div>
                                 </td>
                                 <td className="p-6 text-center">
-                                   <Badge className={`font-black text-[9px] uppercase tracking-tighter ${tenant.active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'} border-none`}>
-                                      {tenant.subscriptionStatus || 'Ativo'}
+                                   <Badge className={`font-black text-[9px] uppercase tracking-tighter ${tenant.active !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'} border-none`}>
+                                      {tenant.active !== false ? (tenant.subscriptionStatus || 'Ativo') : 'Inativo'}
                                    </Badge>
                                 </td>
                                 <td className="p-6 text-right">
                                    <div className="flex justify-end gap-2">
-                                      <Button variant="ghost" size="icon" className="hover:text-red-500" onClick={() => handleDeleteTenant(tenant.id)}>
+                                      <Button variant="ghost" size="icon" className="group-hover:text-emerald-500" onClick={(e) => { e.stopPropagation(); setSelectedTenant(tenant); setIsEditTenantModalOpen(true); }}>
+                                         <SettingsIcon className="w-4 h-4" />
+                                      </Button>
+                                      <Button variant="ghost" size="icon" className="hover:text-red-500" onClick={(e) => { e.stopPropagation(); handleDeleteTenant(tenant.id); }}>
                                          <Trash2 className="w-4 h-4" />
                                       </Button>
                                    </div>
@@ -258,6 +293,7 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="plans" className="animate-in slide-in-from-bottom-4">
+            {/* Same Plans UI */}
             <div className="flex justify-between items-center mb-8">
               <h3 className="text-2xl font-black text-slate-800 flex items-center gap-3">
                 <Package className="w-8 h-8 text-emerald-500" /> Modelos de Planos
@@ -266,237 +302,211 @@ export default function AdminDashboard() {
                 <Plus className="w-5 h-5 mr-3" /> Criar Novo Plano
               </Button>
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-               {plans.map(plan => (
-                 <Card key={plan.id} className="border-none shadow-xl rounded-[40px] bg-white p-8 group hover:bg-slate-900 transition-all duration-500">
-                    <div className="flex justify-between items-start mb-6">
-                      <div className="p-4 bg-slate-100 rounded-2xl group-hover:bg-emerald-500 transition-colors">
-                        <Package className="w-6 h-6 text-slate-600 group-hover:text-white" />
-                      </div>
-                      <Button variant="ghost" size="icon" className="group-hover:text-red-400 text-slate-300" onClick={() => handleDeletePlan(plan.id)}>
-                         <Trash2 className="w-5 h-5" />
-                      </Button>
+                {plans.map(plan => (
+                  <Card key={plan.id} className="border-none shadow-xl rounded-[40px] bg-white p-8 group hover:bg-slate-900 transition-all duration-500 cursor-pointer" onClick={() => handleEditPlan(plan)}>
+                    <h4 className="text-2xl font-black text-slate-800 group-hover:text-white mb-2">{plan.name}</h4>
+                    <p className="text-2xl font-black text-emerald-500 italic">R$ {plan.priceMonthly}</p>
+                    <div className="mt-6 flex gap-2">
+                       <Button variant="ghost" size="icon" className="group-hover:text-white" onClick={(e) => { e.stopPropagation(); handleEditPlan(plan); }}><SettingsIcon className="w-4 h-4" /></Button>
+                       <Button variant="ghost" size="icon" className="group-hover:text-red-400" onClick={(e) => { e.stopPropagation(); handleDeletePlan(plan.id); }}><Trash2 className="w-4 h-4" /></Button>
                     </div>
-                    <h4 className="text-2xl font-black text-slate-800 group-hover:text-white mb-2 transition-colors">{plan.name}</h4>
-                    <p className="text-3xl font-black text-emerald-500 mb-6 group-hover:text-emerald-400 transition-colors">R$ {plan.priceMonthly}<span className="text-xs text-slate-400 font-bold uppercase ml-1">/mês</span></p>
-                    
-                    <div className="space-y-3 mb-8">
-                      <p className="text-xs font-bold text-slate-500 group-hover:text-slate-400 flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> {plan.maxSdrs} SDRs Ativos</p>
-                      <p className="text-xs font-bold text-slate-500 group-hover:text-slate-400 flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> {plan.maxLeads} Leads/mês</p>
-                    </div>
-                 </Card>
-               ))}
+                  </Card>
+                ))}
             </div>
           </TabsContent>
-
-          <TabsContent value="cms" className="animate-in slide-in-from-bottom-4">
-             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                {/* CONFIGURAÇÕES VISUAIS E SOCIAIS */}
-                <Card className="border-none shadow-3xl rounded-[40px] bg-white p-12">
-                   <h3 className="text-2xl font-black text-slate-800 mb-10 flex items-center gap-3">
-                     <Layout className="w-8 h-8 text-emerald-500" /> Identidade e Contatos
-                   </h3>
-                   
-                   <div className="space-y-8">
-                      <div className="grid grid-cols-2 gap-6">
-                         <div className="col-span-2 space-y-2">
-                            <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400">URL do Logo</Label>
-                            <Input value={lpSettings.logoUrl} onChange={e => setLpSettings({...lpSettings, logoUrl: e.target.value})} className="h-14 rounded-2xl bg-slate-50 border-none font-bold" placeholder="https://..." />
-                         </div>
-                         <div className="space-y-2">
-                            <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400">WhatsApp Oficial</Label>
-                            <div className="relative">
-                               <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                               <Input value={lpSettings.contactWhatsApp} onChange={e => setLpSettings({...lpSettings, contactWhatsApp: e.target.value})} className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold" placeholder="55..." />
-                            </div>
-                         </div>
-                         <div className="space-y-2">
-                            <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400">E-mail de Suporte</Label>
-                            <div className="relative">
-                               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                               <Input value={lpSettings.contactEmail} onChange={e => setLpSettings({...lpSettings, contactEmail: e.target.value})} className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold" placeholder="exemplo@..." />
-                            </div>
-                         </div>
-                         <div className="space-y-2">
-                            <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400">Instagram</Label>
-                            <div className="relative">
-                               <Instagram className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                               <Input value={lpSettings.contactInstagram} onChange={e => setLpSettings({...lpSettings, contactInstagram: e.target.value})} className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold" placeholder="@user" />
-                            </div>
-                         </div>
-                         <div className="space-y-2">
-                            <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400">LinkedIn</Label>
-                            <div className="relative">
-                               <Linkedin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                               <Input value={lpSettings.contactLinkedIn} onChange={e => setLpSettings({...lpSettings, contactLinkedIn: e.target.value})} className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold" placeholder="link" />
-                            </div>
-                         </div>
-                      </div>
-
-                      <div className="pt-6 border-t border-slate-50">
-                         <h4 className="text-sm font-black text-slate-800 mb-4 flex items-center gap-2">
-                           <BrainCircuit className="w-5 h-5 text-purple-500" /> Atendimento via Chat IA
-                         </h4>
-                         <div className="space-y-2">
-                            <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400">Escolha o SDR da Landing Page</Label>
-                            <Select value={lpSettings.selectedSdrId} onValueChange={v => setLpSettings({...lpSettings, selectedSdrId: v})}>
-                               <SelectTrigger className="h-14 rounded-2xl bg-slate-50 border-none font-bold">
-                                  <SelectValue placeholder="Selecione um SDR..." />
-                               </SelectTrigger>
-                               <SelectContent className="rounded-2xl border-none shadow-2xl">
-                                  {allSdrs.map(sdr => (
-                                    <SelectItem key={sdr.id} value={sdr.id}>{sdr.name} ({sdr.role})</SelectItem>
-                                  ))}
-                               </SelectContent>
-                            </Select>
-                            <p className="text-[10px] text-slate-400 font-bold italic mt-2">Este SDR responderá todas as dúvidas dos visitantes no chat flutuante.</p>
-                         </div>
-                      </div>
-
-                      <Button onClick={handleSaveLpSettings} className="w-full h-16 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-2xl uppercase tracking-widest transition-all shadow-xl shadow-emerald-500/20">Salvar Mudanças</Button>
-                   </div>
-                </Card>
-
-                {/* VISIBILIDADE DE PLANOS */}
-                <Card className="border-none shadow-3xl rounded-[40px] bg-white p-12">
-                   <h3 className="text-2xl font-black text-slate-800 mb-10 flex items-center gap-3">
-                     <Globe className="w-8 h-8 text-blue-500" /> Exposição de Planos
-                   </h3>
-                   <p className="text-xs font-bold text-slate-400 mb-8 uppercase tracking-widest">Marque os planos que deseja exibir na Landing Page:</p>
-                   
-                   <div className="space-y-4">
-                      {plans.map(plan => {
-                        const isVisible = lpSettings.visiblePlanIds?.split(",").includes(plan.id);
-                        return (
-                          <div key={plan.id} className={`p-6 rounded-3xl border-2 transition-all cursor-pointer flex items-center justify-between ${isVisible ? 'border-emerald-500 bg-emerald-50/30' : 'border-slate-50 bg-slate-50/30'}`} onClick={() => togglePlanVisibility(plan.id)}>
-                             <div className="flex items-center gap-4">
-                                <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${isVisible ? 'bg-emerald-500' : 'bg-slate-200'}`}>
-                                   {isVisible && <CheckCircle2 className="w-4 h-4 text-white" />}
-                                </div>
-                                <div>
-                                   <p className="text-sm font-black text-slate-800">{plan.name}</p>
-                                   <p className="text-[10px] font-bold text-slate-400 italic">R$ {plan.priceMonthly}/mês</p>
-                                </div>
-                             </div>
-                             <Badge variant="outline" className="font-bold border-slate-200">{isVisible ? 'VISÍVEL' : 'OCULTO'}</Badge>
-                          </div>
-                        );
-                      })}
-                   </div>
-                </Card>
-             </div>
+          <TabsContent value="cms">
+              {/* LP Settings placeholder */}
           </TabsContent>
         </Tabs>
       </div>
 
       {/* MODAL NOVO CLIENTE */}
-      <Dialog open={isTenantModalOpen} onOpenChange={setIsTenantModalOpen}>
+      <Dialog open={isEditTenantModalOpen && !selectedTenant} onOpenChange={(v) => { if(!v) setIsEditTenantModalOpen(false); }}>
         <DialogContent className="rounded-[50px] p-12 max-w-lg border-none shadow-3xl">
-          <DialogHeader className="mb-6">
-            <DialogTitle className="text-3xl font-black uppercase tracking-tighter">Novo <span className="text-emerald-500">Cliente</span></DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-8 py-4">
-            <div className="space-y-2">
-              <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Nome da Empresa</Label>
-              <Input value={newTenant.name} onChange={e => setNewTenant({...newTenant, name: e.target.value})} className="h-16 rounded-2xl border-none bg-slate-50 font-bold px-8 shadow-inner" placeholder="Ex: Master Corp" />
-            </div>
-            <div className="space-y-2">
-              <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">E-mail Administrativo</Label>
-              <Input value={newTenant.email} onChange={e => setNewTenant({...newTenant, email: e.target.value})} className="h-14 rounded-2xl border-none bg-slate-50 font-bold px-8 shadow-inner" placeholder="admin@empresa.com" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-               <div className="space-y-2">
-                 <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Nome do Admin</Label>
-                 <Input value={newTenant.adminName} onChange={e => setNewTenant({...newTenant, adminName: e.target.value})} className="h-14 rounded-2xl border-none bg-slate-50 font-bold px-8 shadow-inner" placeholder="Nome" />
-               </div>
-               <div className="space-y-2">
-                 <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Senha (Admin)</Label>
-                 <Input type="password" value={newTenant.adminPassword} onChange={e => setNewTenant({...newTenant, adminPassword: e.target.value})} className="h-14 rounded-2xl border-none bg-slate-50 font-bold px-8 shadow-inner" placeholder="******" />
-               </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Plano Atual</Label>
-              <Select onValueChange={v => setNewTenant({...newTenant, planId: v})}>
-                <SelectTrigger className="h-16 rounded-2xl border-none bg-slate-50 font-bold shadow-inner">
-                  <SelectValue placeholder="Selecione o plano..." />
-                </SelectTrigger>
-                <SelectContent className="rounded-2xl border-none shadow-2xl">
-                  {plans.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.name} (R$ {p.priceMonthly})</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <DialogHeader><DialogTitle className="text-3xl font-black">Novo <span className="text-emerald-500">Cliente</span></DialogTitle></DialogHeader>
+          <div className="grid gap-6 py-4">
+            <Input value={newTenant.name} onChange={e => setNewTenant({...newTenant, name: e.target.value})} placeholder="Nome da Empresa" className="h-14 rounded-2xl bg-slate-50 border-none font-bold" />
+            <Input value={newTenant.email} onChange={e => setNewTenant({...newTenant, email: e.target.value})} placeholder="E-mail" className="h-14 rounded-2xl bg-slate-50 border-none font-bold" />
+            <Input type="password" value={newTenant.adminPassword} onChange={e => setNewTenant({...newTenant, adminPassword: e.target.value})} placeholder="Senha" className="h-14 rounded-2xl bg-slate-50 border-none font-bold" />
+            <Select onValueChange={v => setNewTenant({...newTenant, planId: v})}>
+              <SelectTrigger className="h-14 rounded-2xl bg-slate-50 border-none font-bold"><SelectValue placeholder="Plano..." /></SelectTrigger>
+              <SelectContent>{plans.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+            </Select>
           </div>
-          <DialogFooter className="mt-8">
-            <Button onClick={handleCreateTenant} className="w-full h-20 bg-slate-900 hover:bg-black text-white font-black rounded-3xl uppercase tracking-widest text-sm transition-all shadow-3xl active:scale-95">Criar Conta SaaS</Button>
-          </DialogFooter>
+          <DialogFooter><Button onClick={handleCreateTenant} className="w-full h-16 bg-slate-900 text-white font-black rounded-3xl">Criar Conta SaaS</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* MODAL NOVO PLANO */}
+      {/* MODAL GERENCIAR CLIENTE (DETALHADO) */}
+      <Dialog open={isEditTenantModalOpen && !!selectedTenant} onOpenChange={setIsEditTenantModalOpen}>
+        <DialogContent className="rounded-[50px] p-0 max-w-4xl border-none shadow-3xl bg-white overflow-hidden">
+          {selectedTenant && (
+            <div className="flex flex-col h-[80vh]">
+               <div className="p-8 bg-slate-900 text-white flex justify-between items-center">
+                  <h2 className="text-2xl font-black uppercase">Gerenciar <span className="text-emerald-400">{selectedTenant.name}</span></h2>
+                  <Button variant="ghost" size="icon" onClick={() => setIsEditTenantModalOpen(false)} className="text-white hover:bg-white/10"><X className="w-6 h-6" /></Button>
+               </div>
+               <Tabs defaultValue="company" className="flex-1 flex flex-col overflow-hidden">
+                  <div className="px-8 bg-slate-50 border-b border-slate-100">
+                    <TabsList className="bg-transparent h-14 p-0">
+                      <TabsTrigger value="company" className="font-black text-[10px] uppercase">Empresa & Contato</TabsTrigger>
+                      <TabsTrigger value="plan" className="font-black text-[10px] uppercase">Plano & Status</TabsTrigger>
+                      <TabsTrigger value="users" className="font-black text-[10px] uppercase">Usuários</TabsTrigger>
+                    </TabsList>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-8">
+                    <TabsContent value="company" className="space-y-4">
+                       <Input value={selectedTenant.name} onChange={e => setSelectedTenant({...selectedTenant, name: e.target.value})} placeholder="Nome" className="h-12 border-none bg-slate-50 rounded-xl" />
+                       <Input value={selectedTenant.email} onChange={e => setSelectedTenant({...selectedTenant, email: e.target.value})} placeholder="E-mail" className="h-12 border-none bg-slate-50 rounded-xl" />
+                       <Input value={selectedTenant.cnpj || ""} onChange={e => setSelectedTenant({...selectedTenant, cnpj: e.target.value})} placeholder="CNPJ" className="h-12 border-none bg-slate-50 rounded-xl" />
+                       <Input value={selectedTenant.phone || ""} onChange={e => setSelectedTenant({...selectedTenant, phone: e.target.value})} placeholder="Telefone" className="h-12 border-none bg-slate-50 rounded-xl" />
+                       <Input value={selectedTenant.address || ""} onChange={e => setSelectedTenant({...selectedTenant, address: e.target.value})} placeholder="Endereço" className="h-12 border-none bg-slate-50 rounded-xl" />
+                    </TabsContent>
+                    <TabsContent value="plan" className="space-y-6">
+                       <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                          <p className="font-bold uppercase text-[10px]">Status da Conta: {selectedTenant.active !== false ? 'ATIVA' : 'SUSPENSA'}</p>
+                          <Button size="sm" onClick={() => setSelectedTenant({...selectedTenant, active: !selectedTenant.active})}>{selectedTenant.active !== false ? 'Suspender' : 'Ativar'}</Button>
+                       </div>
+                       <Select value={selectedTenant.planId} onValueChange={v => setSelectedTenant({...selectedTenant, planId: v})}>
+                          <SelectTrigger className="h-12 rounded-xl border-none bg-slate-50"><SelectValue placeholder="Mudar Plano" /></SelectTrigger>
+                          <SelectContent>{plans.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                       </Select>
+                       <Select value={selectedTenant.subscriptionStatus || "ACTIVE"} onValueChange={v => setSelectedTenant({...selectedTenant, subscriptionStatus: v})}>
+                          <SelectTrigger className="h-12 rounded-xl border-none bg-slate-50"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ACTIVE">Ativo</SelectItem>
+                            <SelectItem value="PAST_DUE">Inadimplente</SelectItem>
+                          </SelectContent>
+                       </Select>
+                    </TabsContent>
+                    <TabsContent value="users" className="m-0 space-y-4">
+                       <div className="flex justify-between items-center">
+                          <h4 className="font-black text-[10px] uppercase text-slate-400 tracking-widest">Usuários com acesso à conta</h4>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="h-8 rounded-lg text-[9px] font-black uppercase tracking-widest border-2"
+                            onClick={() => setIsAddUserModalOpen(true)}
+                          >
+                             Adicionar Usuário
+                          </Button>
+                       </div>
+                       <div className="space-y-2">
+                          {selectedTenant.users?.map((u: any) => (
+                             <div key={u.id} className="p-4 bg-slate-50 rounded-2xl flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                   <div className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-black text-xs text-slate-400 uppercase">
+                                      {u.name.charAt(0)}
+                                   </div>
+                                   <div>
+                                      <p className="text-sm font-black text-slate-800">{u.name}</p>
+                                      <p className="text-[10px] font-bold text-slate-400 italic">{u.email}</p>
+                                   </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                   <Badge variant="outline" className="text-[9px] font-black uppercase border-slate-200">{u.role}</Badge>
+                                   <Button 
+                                     variant="ghost" 
+                                     size="icon" 
+                                     className="h-8 w-8 text-red-400 hover:text-red-600"
+                                     onClick={() => {
+                                        if (confirm("Remover este usuário?")) {
+                                           fetch(`/api/admin/tenants/${selectedTenant.id}/users/${u.id}`, { method: "DELETE" })
+                                           .then(r => r.ok && fetchData());
+                                        }
+                                     }}
+                                   >
+                                      <Trash2 className="w-4 h-4" />
+                                   </Button>
+                                </div>
+                             </div>
+                          ))}
+                       </div>
+                    </TabsContent>
+                  </div>
+                  <div className="p-8 border-t flex justify-end gap-3">
+                     <Button className="h-14 bg-emerald-500 text-white font-black rounded-2xl px-12" onClick={async () => {
+                        const res = await fetch(`/api/admin/tenants/${selectedTenant.id}`, { method: "PUT", headers: {"Content-Type":"application/json"}, body: JSON.stringify(selectedTenant) });
+                        if (res.ok) { toast({title:"✅ Sucesso!"}); setIsEditTenantModalOpen(false); fetchData(); }
+                     }}>Salvar Alterações</Button>
+                  </div>
+               </Tabs>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL PLANO (CREATE/EDIT) */}
       <Dialog open={isPlanModalOpen} onOpenChange={setIsPlanModalOpen}>
-        <DialogContent className="rounded-[50px] p-12 max-w-xl border-none shadow-3xl">
-          <DialogHeader className="mb-6">
-            <DialogTitle className="text-3xl font-black uppercase tracking-tighter">Configurar <span className="text-emerald-500">Plano</span></DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-8 py-4">
-            <div className="col-span-2 space-y-2">
-              <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Nome do Plano</Label>
-              <Input value={newPlan.name} onChange={e => setNewPlan({...newPlan, name: e.target.value})} className="h-14 rounded-2xl border-none bg-slate-50 font-bold px-8" placeholder="Ex: Premium Elite" />
-            </div>
-            <div className="space-y-2">
-              <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Preço Mensal (R$)</Label>
-              <Input type="number" value={newPlan.priceMonthly} onChange={e => setNewPlan({...newPlan, priceMonthly: parseFloat(e.target.value)})} className="h-14 rounded-2xl border-none bg-slate-50 font-bold px-8" />
-            </div>
-            <div className="space-y-2">
-              <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Máximo SDRs</Label>
-              <Input type="number" value={newPlan.maxSdrs} onChange={e => setNewPlan({...newPlan, maxSdrs: parseInt(e.target.value)})} className="h-14 rounded-2xl border-none bg-slate-50 font-bold px-8" />
-            </div>
-            <div className="space-y-2">
-              <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Max Automações</Label>
-              <Input type="number" value={newPlan.maxAutomations} onChange={e => setNewPlan({...newPlan, maxAutomations: parseInt(e.target.value)})} className="h-14 rounded-2xl border-none bg-slate-50 font-bold px-8" />
-            </div>
-            <div className="space-y-2">
-              <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Max Execuções/mês</Label>
-              <Input type="number" value={newPlan.maxExecutions} onChange={e => setNewPlan({...newPlan, maxExecutions: parseInt(e.target.value)})} className="h-14 rounded-2xl border-none bg-slate-50 font-bold px-8" />
-            </div>
-            <div className="col-span-2 flex items-center gap-6">
-               <div className="flex items-center space-x-2">
-                 <Checkbox id="plan-ai" checked={newPlan.aiEnabled} onCheckedChange={(c) => setNewPlan({...newPlan, aiEnabled: !!c})} />
-                 <Label htmlFor="plan-ai" className="text-sm font-bold text-slate-700">Liberar Nós IA Premium</Label>
-               </div>
-               <div className="flex items-center space-x-2">
-                 <Checkbox id="plan-webhook" checked={newPlan.webhookEnabled} onCheckedChange={(c) => setNewPlan({...newPlan, webhookEnabled: !!c})} />
-                 <Label htmlFor="plan-webhook" className="text-sm font-bold text-slate-700">Liberar Ferramenta Webhook</Label>
-               </div>
-            </div>
+        <DialogContent className="rounded-[50px] p-12 max-w-2xl border-none shadow-3xl">
+          <DialogHeader><DialogTitle className="text-3xl font-black">Plano</DialogTitle></DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-4">
+             <Input value={newPlan.name} onChange={e => setNewPlan({...newPlan, name: e.target.value})} placeholder="Nome" className="h-12 bg-slate-50 border-none col-span-2 rounded-xl font-bold" />
+             <Input type="number" value={newPlan.priceMonthly} onChange={e => setNewPlan({...newPlan, priceMonthly: parseFloat(e.target.value)})} placeholder="Preço" className="h-12 bg-slate-50 border-none rounded-xl font-bold" />
+             <Input type="number" value={newPlan.maxTokens} onChange={e => setNewPlan({...newPlan, maxTokens: parseInt(e.target.value)})} placeholder="Tokens" className="h-12 bg-slate-50 border-none rounded-xl font-bold" />
+             <div className="col-span-2 grid grid-cols-2 gap-2 mt-4">
+                <FeatureToggle id="f-ai" label="IA" checked={newPlan.features.aiEnabled} onChange={v => setNewPlan({...newPlan, features: {...newPlan.features, aiEnabled: v}})} />
+                <FeatureToggle id="f-bulk" label="Massa" checked={newPlan.features.bulkMessaging} onChange={v => setNewPlan({...newPlan, features: {...newPlan.features, bulkMessaging: v}})} />
+             </div>
           </div>
-          <DialogFooter className="mt-8">
-            <Button onClick={handleCreatePlan} className="w-full h-16 bg-slate-900 hover:bg-black text-white font-black rounded-3xl uppercase tracking-widest text-sm transition-all shadow-3xl active:scale-95">Publicar Plano</Button>
-          </DialogFooter>
+          <DialogFooter><Button onClick={handleCreateOrUpdatePlan} className="w-full h-16 bg-emerald-500 font-black text-white rounded-2xl">Confirmar</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* MODAL ADICIONAR USUÁRIO (ADMIN SIDE) */}
+      <Dialog open={isAddUserModalOpen} onOpenChange={setIsAddUserModalOpen}>
+        <DialogContent className="rounded-[40px] p-10 max-w-md border-none shadow-3xl bg-white">
+          <h2 className="text-2xl font-black uppercase tracking-tighter mb-6 italic">Novo <span className="text-emerald-500">Acesso</span></h2>
+          <div className="space-y-4">
+             <div className="space-y-1">
+                <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">Nome do Colaborador</Label>
+                <Input value={newUser.name} onChange={e => setNewUser({...newUser, name: e.target.value})} className="h-14 rounded-2xl bg-slate-50 border-none font-bold placeholder:text-slate-200" placeholder="Ex: João Silva" />
+             </div>
+             <div className="space-y-1">
+                <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">E-mail</Label>
+                <Input value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} className="h-14 rounded-2xl bg-slate-50 border-none font-bold placeholder:text-slate-200" placeholder="joao@empresa.com" />
+             </div>
+             <div className="space-y-1">
+                <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">Senha</Label>
+                <Input type="password" value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} className="h-14 rounded-2xl bg-slate-50 border-none font-bold placeholder:text-slate-200" placeholder="******" />
+             </div>
+             <div className="space-y-1">
+                <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">Permissão</Label>
+                <Select value={newUser.role} onValueChange={v => setNewUser({...newUser, role: v})}>
+                   <SelectTrigger className="h-14 rounded-2xl bg-slate-50 border-none font-bold">
+                      <SelectValue />
+                   </SelectTrigger>
+                   <SelectContent className="rounded-2xl border-none shadow-2xl">
+                      <SelectItem value="AGENT">Vendedor / Agente</SelectItem>
+                      <SelectItem value="ADMIN">Gerente / Admin</SelectItem>
+                   </SelectContent>
+                </Select>
+             </div>
+             <Button onClick={handleCreateUser} className="w-full h-16 bg-slate-900 hover:bg-black text-white font-black rounded-2xl uppercase tracking-widest mt-4 shadow-xl active:scale-95 transition-all">
+                Liberar Acesso
+             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
 
-function StatCard({ icon, label, value, color }: { icon: any, label: string, value: any, color: string }) {
-  const colors: any = {
-    blue: "bg-blue-50 border-blue-100 hover:border-blue-300",
-    emerald: "bg-emerald-50 border-emerald-100 hover:border-emerald-300",
-    purple: "bg-purple-50 border-purple-100 hover:border-purple-300",
-    orange: "bg-orange-50 border-orange-100 hover:border-orange-300"
-  };
+function FeatureToggle({ id, label, checked, onChange }: { id: string, label: string, checked: boolean, onChange: (v: boolean) => void }) {
   return (
-    <Card className={`p-10 border-2 shadow-sm rounded-[45px] flex items-center gap-8 transition-all duration-300 cursor-pointer ${colors[color]}`}>
-       <div className="p-5 bg-white rounded-3xl shadow-xl">{icon}</div>
-       <div className="space-y-1">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 leading-none">{label}</p>
-          <p className="text-4xl font-black text-slate-900 tracking-tighter italic">{value}</p>
-       </div>
+    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border">
+       <Label htmlFor={id} className="text-[10px] font-bold uppercase">{label}</Label>
+       <Checkbox id={id} checked={checked} onCheckedChange={(c) => onChange(!!c)} />
+    </div>
+  );
+}
+
+function StatCard({ icon, label, value, color }: { icon: any, label: string, value: any, color: string }) {
+  return (
+    <Card className="p-8 border-2 rounded-[40px] flex items-center gap-6">
+       <div className="p-4 bg-slate-50 rounded-2xl">{icon}</div>
+       <div><p className="text-[10px] font-black text-slate-400 uppercase">{label}</p><p className="text-2xl font-black tracking-tight">{value}</p></div>
     </Card>
   );
 }

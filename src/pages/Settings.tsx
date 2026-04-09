@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface IcpProfile {
   id: string;
@@ -35,6 +36,10 @@ export default function Settings() {
       name: "", niche: "", role: "", location: "Brasil", isAutoHunterEnabled: false, dailyLimit: 200
   });
   
+  const [users, setUsers] = useState<any[]>([]);
+  const [isNewUserModalOpen, setIsNewUserModalOpen] = useState(false);
+  const [newUser, setNewUser] = useState({ name: "", email: "", password: "", role: "AGENT" });
+
   const [aiConfig, setAiConfig] = useState({
     openaiKey: "",
     geminiKey: "",
@@ -64,10 +69,15 @@ export default function Settings() {
     setLoading(true);
     const tenantId = localStorage.getItem("tenantId");
     try {
-      const resSettings = await fetch("/api/settings", {
-        headers: { "x-tenant-id": tenantId || "" }
-      });
+      const [resSettings, resIcp, resUsers] = await Promise.all([
+        fetch("/api/settings", { headers: { "x-tenant-id": tenantId || "" } }),
+        fetch("/api/icp-profiles", { headers: { "x-tenant-id": tenantId || "" } }),
+        fetch("/api/users", { headers: { "x-tenant-id": tenantId || "" } })
+      ]);
+      
       const dataSettings = await resSettings.json();
+      const dataIcp = await resIcp.json();
+      const dataUsers = await resUsers.json();
       
       setAiConfig({
         openaiKey: dataSettings.openAiKey || "",
@@ -81,12 +91,8 @@ export default function Settings() {
         language: "pt-BR"
       });
 
-      // Perfil ICP
-      const resIcp = await fetch("/api/icp-profiles", {
-        headers: { "x-tenant-id": tenantId || "" }
-      });
-      const dataIcp = await resIcp.json();
       setIcpProfiles(dataIcp);
+      setUsers(Array.isArray(dataUsers) ? dataUsers : []);
 
     } catch (e) {
       toast({ title: "Erro ao carregar configurações", variant: "destructive" });
@@ -185,6 +191,9 @@ export default function Settings() {
             </TabsTrigger>
             <TabsTrigger value="connections" className="rounded-[18px] h-full px-8 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg">
               <Share2 className="w-4 h-4 mr-2 text-amber-500" /> Conexões & API
+            </TabsTrigger>
+            <TabsTrigger value="users" className="rounded-[18px] h-full px-8 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg">
+              <Shield className="w-4 h-4 mr-2 text-purple-500" /> Equipe
             </TabsTrigger>
           </TabsList>
 
@@ -358,8 +367,126 @@ export default function Settings() {
              </div>
           </TabsContent>
 
+          {/* ABA USUÁRIOS */}
+          <TabsContent value="users" className="space-y-6 animate-in slide-in-from-bottom-4">
+            <div className="flex justify-between items-center">
+               <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter italic">Gestão da Equipe</h3>
+               <Button onClick={() => setIsNewUserModalOpen(true)} className="h-12 bg-slate-900 text-white rounded-xl px-6 font-black uppercase text-[10px] tracking-widest shadow-xl active:scale-95 transition-all">
+                  <Plus className="w-4 h-4 mr-2" /> Novo Colaborador
+               </Button>
+            </div>
+
+            <Card className="border-none shadow-3xl rounded-[40px] overflow-hidden bg-white">
+               <CardContent className="p-0">
+                  <div className="overflow-x-auto p-4">
+                     <table className="w-full text-left">
+                        <thead>
+                           <tr className="border-b border-slate-50">
+                              <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Colaborador</th>
+                              <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nível de Acesso</th>
+                              <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
+                           </tr>
+                        </thead>
+                        <tbody>
+                           {users.map((user) => (
+                              <tr key={user.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors group">
+                                 <td className="p-6">
+                                    <div className="flex items-center gap-3">
+                                       <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-400">
+                                          {user.name.charAt(0)}
+                                       </div>
+                                       <div>
+                                          <p className="font-extrabold text-slate-800">{user.name}</p>
+                                          <p className="text-[10px] font-bold text-slate-400 italic">{user.email}</p>
+                                       </div>
+                                    </div>
+                                 </td>
+                                 <td className="p-6">
+                                    <Badge variant="outline" className={`font-black text-[9px] uppercase tracking-widest ${user.role === 'ADMIN' ? 'border-purple-200 text-purple-600 bg-purple-50' : 'border-slate-200 text-slate-500 bg-slate-50'}`}>
+                                       {user.role}
+                                    </Badge>
+                                 </td>
+                                 <td className="p-6 text-right">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="text-red-400 hover:text-red-600 active:scale-90"
+                                      onClick={async () => {
+                                         if (confirm(`Remover acesso de ${user.name}?`)) {
+                                            await fetch(`/api/users/${user.id}`, { 
+                                               method: "DELETE",
+                                               headers: { "x-tenant-id": localStorage.getItem("tenantId") || "" }
+                                            });
+                                            fetchData();
+                                         }
+                                      }}
+                                    >
+                                       <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                 </td>
+                              </tr>
+                           ))}
+                        </tbody>
+                     </table>
+                  </div>
+               </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
+
+      <Dialog open={isNewUserModalOpen} onOpenChange={setIsNewUserModalOpen}>
+         <DialogContent className="rounded-[40px] p-10 max-w-md border-none shadow-3xl">
+            <h2 className="text-2xl font-black uppercase tracking-tighter mb-6">Novo <span className="text-emerald-500">Colaborador</span></h2>
+            <div className="space-y-4">
+               <div className="space-y-1">
+                  <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">Nome Completo</Label>
+                  <Input value={newUser.name} onChange={e => setNewUser({...newUser, name: e.target.value})} className="h-14 rounded-2xl bg-slate-50 border-none font-bold" placeholder="Ex: João Silva" />
+               </div>
+               <div className="space-y-1">
+                  <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">E-mail de Acesso</Label>
+                  <Input value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} className="h-14 rounded-2xl bg-slate-50 border-none font-bold" placeholder="joao@empresa.com" />
+               </div>
+               <div className="space-y-1">
+                  <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">Senha Temporária</Label>
+                  <Input type="password" value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} className="h-14 rounded-2xl bg-slate-50 border-none font-bold" placeholder="******" />
+               </div>
+               <div className="space-y-1">
+                  <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">Nível de Permissão</Label>
+                  <Select value={newUser.role} onValueChange={v => setNewUser({...newUser, role: v})}>
+                     <SelectTrigger className="h-14 rounded-2xl bg-slate-50 border-none font-bold">
+                        <SelectValue />
+                     </SelectTrigger>
+                     <SelectContent className="rounded-2xl border-none shadow-2xl">
+                        <SelectItem value="AGENT">Colaborador (Agente)</SelectItem>
+                        <SelectItem value="ADMIN">Administrador (Total)</SelectItem>
+                     </SelectContent>
+                  </Select>
+               </div>
+               <Button 
+                  className="w-full h-16 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-2xl uppercase tracking-widest mt-4 shadow-xl shadow-emerald-500/20"
+                  onClick={async () => {
+                     const res = await fetch("/api/users", {
+                        method: "POST",
+                        headers: { 
+                           "Content-Type": "application/json",
+                           "x-tenant-id": localStorage.getItem("tenantId") || ""
+                        },
+                        body: JSON.stringify(newUser)
+                     });
+                     if (res.ok) {
+                        toast({ title: "✅ Colaborador cadastrado!" });
+                        setIsNewUserModalOpen(false);
+                        setNewUser({ name: "", email: "", password: "", role: "AGENT" });
+                        fetchData();
+                     }
+                  }}
+               >
+                  Finalizar Cadastro
+               </Button>
+            </div>
+         </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

@@ -24,7 +24,12 @@ export default function Dashboard() {
     conversionRate: 0,
     emailsSent: 0,
     whatsappFollowups: 0,
-    funnel: []
+    funnel: [],
+    usedTokens: 0,
+    maxTokens: 0,
+    maxSdrs: 0,
+    planName: "...",
+    qualifiedLeadsCount: 0
   });
   const [recentLeads, setRecentLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,49 +38,45 @@ export default function Dashboard() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [statsRes, lRes, sRes] = await Promise.all([
-        fetch("/api/stats/dashboard"),
-        fetch("/api/leads"),
-        fetch("/api/sdrs")
-      ]);
+      const tenantId = localStorage.getItem("tenantId");
+      const headers = tenantId ? { "x-tenant-id": tenantId } : {};
       
-      const dashboard = await statsRes.json();
+      const statsRes = await fetch("/api/stats/dashboard", { headers });
+      const statsData = await statsRes.json();
+      
+      const lRes = await fetch("/api/leads", { headers });
       const leadsArr = await lRes.json();
-      const sdrsArr = await sRes.json();
       
-      const fData = dashboard.funnelData || [];
+      const fData = statsData.funnelData || [];
       
       setStats({
-        totalLeads: dashboard.stats.totalLeads || 0,
-        qualifiedLeads: dashboard.stats.totalLeads - (fData[0]?.value || 0),
-        appointments: dashboard.stats.appointments || 0,
-        activeSdrs: dashboard.stats.activeSdrs || 0,
-        conversionRate: dashboard.stats.conversionRate || 0,
-        emailsSent: dashboard.stats.emailsSent || 0,
-        whatsappFollowups: dashboard.stats.whatsappFollowups || 0,
+        totalLeads: statsData.stats.totalLeads || 0,
+        qualifiedLeads: statsData.stats.totalLeads - (fData[0]?.value || 0),
+        appointments: statsData.stats.appointments || 0,
+        activeSdrs: statsData.stats.activeSdrs || 0,
+        conversionRate: statsData.stats.conversionRate || 0,
+        emailsSent: statsData.stats.emailsSent || 0,
+        whatsappFollowups: statsData.stats.whatsappFollowups || 0,
         funnel: fData.map((f: any) => ({ label: f.name, value: f.value })),
+        usedTokens: statsData.stats.usedTokens || 0,
+        maxTokens: statsData.stats.maxTokens || 0,
+        maxSdrs: statsData.stats.maxSdrs || 0,
+        planName: statsData.stats.planName || "Básico",
+        qualifiedLeadsCount: statsData.stats.qualifiedLeadsCount || 0,
         openOpportunities: fData.slice(1).reduce((acc: number, curr: any) => acc + curr.value, 0)
       });
       setRecentLeads(Array.isArray(leadsArr) ? leadsArr.slice(0, 6) : []);
 
     } catch (e) {
       console.error("Dashboard fetch error:", e);
-      // toast({ title: "Atualização Falhou", description: "Conexão instável com o servidor.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   useEffect(() => { 
     fetchData(); 
   }, [fetchData]);
-
-  // Gráfico baseado nos dados reais (Distribuição por Status)
-  const chartData = [
-    { name: 'Captados', leads: stats.totalLeads },
-    { name: 'Qualificados', leads: stats.qualifiedLeads },
-    { name: 'Agendados', leads: stats.appointments },
-  ];
 
   const funnelData = (stats.funnel || []).map((item: any, idx: number) => ({
     name: item.label,
@@ -140,43 +141,111 @@ export default function Dashboard() {
            />
         </div>
 
+        {/* RESOURCE USAGE / SUBSCRIPTION */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+           <Card className="lg:col-span-2 border-none shadow-3xl rounded-[45px] bg-white p-10 flex flex-col md:flex-row gap-10 items-center justify-between border-t-8 border-t-blue-500">
+              <div className="w-full md:w-1/2 space-y-6">
+                 <div>
+                    <h3 className="text-2xl font-black text-slate-800 tracking-tighter uppercase italic flex items-center gap-3">
+                       <Zap className="text-blue-500 w-6 h-6" /> Créditos de IA
+                    </h3>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Controle de Tokens do Plano {stats.planName}</p>
+                 </div>
+                 
+                 <div className="space-y-3">
+                    <div className="flex justify-between items-end text-[11px] font-black uppercase tracking-wider">
+                       <span className="text-slate-400">Consumo</span>
+                       <span className="text-slate-900">{stats.usedTokens.toLocaleString()} / {stats.maxTokens.toLocaleString()}</span>
+                    </div>
+                    <div className="w-full h-4 bg-slate-50 rounded-full overflow-hidden border border-slate-100 p-0.5 shadow-inner">
+                       <div 
+                         className={`h-full rounded-full transition-all duration-1000 ${ (stats.usedTokens / (stats.maxTokens || 1)) > 0.8 ? 'bg-orange-500' : 'bg-blue-600' }`}
+                         style={{ width: `${Math.min(100, (stats.usedTokens / (stats.maxTokens || 1)) * 100)}%` }}
+                       />
+                    </div>
+                    <div className="flex justify-between items-center px-1">
+                        <Badge className="bg-blue-50 text-blue-600 border-none font-black text-[9px] px-3">{Math.round((stats.usedTokens / (stats.maxTokens || 1)) * 100)}% Utilizado</Badge>
+                        <span className="text-[9px] font-bold text-slate-300 italic">Renova mensalmente</span>
+                    </div>
+                 </div>
+              </div>
+
+              <div className="hidden md:block w-px h-24 bg-slate-100" />
+
+              <div className="w-full md:w-1/3 space-y-4">
+                 <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white shadow-xl">
+                       <Bot className="w-6 h-6" />
+                    </div>
+                    <div>
+                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">SDRs Ativos</p>
+                       <p className="text-2xl font-black text-slate-900 italic tracking-tighter">{stats.activeSdrs} / {stats.maxSdrs}</p>
+                    </div>
+                 </div>
+                 <div className="w-full h-2 bg-slate-50 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-slate-900 rounded-full transition-all duration-1000" 
+                      style={{ width: `${(stats.activeSdrs / (stats.maxSdrs || 1)) * 100}%` }}
+                    />
+                 </div>
+                 <Button variant="outline" className="w-full h-10 rounded-xl border-2 font-black text-[10px] uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all">
+                    Upgrade de Plano
+                 </Button>
+              </div>
+           </Card>
+
+           <Card className="border-none shadow-3xl rounded-[45px] bg-slate-900 p-10 flex flex-col justify-center items-center text-center relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[50px] rounded-full translate-x-1/2 -translate-y-1/2" />
+              <div className="space-y-6 relative z-10 w-full">
+                 <div className="p-5 bg-white/5 rounded-[30px] border border-white/5 inline-flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                    <Target className="w-10 h-10 text-emerald-500" />
+                 </div>
+                 <div className="space-y-1">
+                    <p className="text-[10px] font-black text-emerald-500/50 uppercase tracking-[0.3em]">Sucesso Comercial</p>
+                    <h4 className="text-5xl font-black text-white italic tracking-tighter">{stats.qualifiedLeadsCount}</h4>
+                    <p className="text-white/40 font-bold uppercase tracking-widest text-[10px]">Leads Qualificados pela IA</p>
+                 </div>
+              </div>
+           </Card>
+        </div>
+
         {/* PROSPECTING STATS (FASE 1 & 2) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
            <Card className="border-none shadow-3xl rounded-[45px] bg-slate-900 overflow-hidden group transition-all duration-500 hover:shadow-2xl relative">
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-[60px] rounded-full translate-x-1/2 -translate-y-1/2" />
               <CardContent className="p-10 flex items-center justify-between relative z-10">
-                <div className="space-y-2">
-                   <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.25em] mb-2 flex items-center gap-2">
-                      <Mail className="w-3 h-3 text-blue-400" /> Abordagem (Fase 1)
-                   </p>
-                   <div className="flex items-baseline gap-4">
-                      <p className="text-6xl font-black text-white tracking-tighter italic">{stats.emailsSent}</p>
-                      <span className="text-white/30 font-bold text-xs uppercase tracking-widest">E-mails Enviados</span>
-                   </div>
-                </div>
-                <div className="h-24 w-1 bg-white/5 mx-6" />
-                <div className="p-8 bg-white/5 rounded-[35px] border border-white/5 group-hover:bg-blue-600 group-hover:border-blue-500 transition-all duration-500">
-                   <Mail className="w-10 h-10 text-white" />
-                </div>
+                 <div className="space-y-2">
+                    <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.25em] mb-2 flex items-center gap-2">
+                       <Mail className="w-3 h-3 text-blue-400" /> Abordagem (Fase 1)
+                    </p>
+                    <div className="flex items-baseline gap-4">
+                       <p className="text-6xl font-black text-white tracking-tighter italic">{stats.emailsSent}</p>
+                       <span className="text-white/30 font-bold text-xs uppercase tracking-widest">E-mails Enviados</span>
+                    </div>
+                 </div>
+                 <div className="h-24 w-1 bg-white/5 mx-6" />
+                 <div className="p-8 bg-white/5 rounded-[35px] border border-white/5 group-hover:bg-blue-600 group-hover:border-blue-500 transition-all duration-500">
+                    <Mail className="w-10 h-10 text-white" />
+                 </div>
               </CardContent>
            </Card>
 
            <Card className="border-none shadow-3xl rounded-[45px] bg-slate-900 overflow-hidden group transition-all duration-500 hover:shadow-2xl relative">
               <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[60px] rounded-full translate-x-1/2 -translate-y-1/2" />
               <CardContent className="p-10 flex items-center justify-between relative z-10">
-                <div className="space-y-2">
-                   <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.25em] mb-2 flex items-center gap-2">
-                      <Phone className="w-3 h-3 text-emerald-400" /> Reengajamento (Fase 2)
-                   </p>
-                   <div className="flex items-baseline gap-4">
-                      <p className="text-6xl font-black text-white tracking-tighter italic">{stats.whatsappFollowups}</p>
-                      <span className="text-white/30 font-bold text-xs uppercase tracking-widest">Wpp Follow-ups</span>
-                   </div>
-                </div>
-                <div className="h-24 w-1 bg-white/5 mx-6" />
-                <div className="p-8 bg-white/5 rounded-[35px] border border-white/5 group-hover:bg-emerald-600 group-hover:border-emerald-500 transition-all duration-500">
-                   <Phone className="w-10 h-10 text-white" />
-                </div>
+                 <div className="space-y-2">
+                    <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.25em] mb-2 flex items-center gap-2">
+                       <Phone className="w-3 h-3 text-emerald-400" /> Reengajamento (Fase 2)
+                    </p>
+                    <div className="flex items-baseline gap-4">
+                       <p className="text-6xl font-black text-white tracking-tighter italic">{stats.whatsappFollowups}</p>
+                       <span className="text-white/30 font-bold text-xs uppercase tracking-widest">Wpp Follow-ups</span>
+                    </div>
+                 </div>
+                 <div className="h-24 w-1 bg-white/5 mx-6" />
+                 <div className="p-8 bg-white/5 rounded-[35px] border border-white/5 group-hover:bg-emerald-600 group-hover:border-emerald-500 transition-all duration-500">
+                    <Phone className="w-10 h-10 text-white" />
+                 </div>
               </CardContent>
            </Card>
         </div>
@@ -336,7 +405,7 @@ function KpiCard({ label, value, trend, up, icon }: { label: string, value: any,
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{label}</p>
           <p className="text-4xl font-black text-slate-900 tracking-tighter italic">{value}</p>
        </div>
-    </Card>
+  </Card>
   );
 }
 
