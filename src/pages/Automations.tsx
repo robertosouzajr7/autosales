@@ -336,17 +336,20 @@ export default function Automations() {
     } catch { }
   };
 
-  const fetchLimits = async () => {
+  const [hasSdr, setHasSdr] = useState<boolean>(false);
+
+  const fetchTenantData = async () => {
     try {
-      const res = await fetch("/api/tenant/current");
+      const res = await fetch("/api/tenant/settings");
       if (res.ok) {
         const data = await res.json();
         setTenantLimits(data.planFeatures || { aiEnabled: false, webhookEnabled: false });
+        setHasSdr(!!data.hasSdr);
       }
     } catch { }
   };
 
-  useEffect(() => { fetchData(); fetchStats(); fetchLimits(); }, []);
+  useEffect(() => { fetchData(); fetchStats(); fetchTenantData(); }, []);
 
   // -------- CRUD --------
   const handleCreateAuto = async () => {
@@ -573,12 +576,26 @@ export default function Automations() {
                 <div className="text-center"><p className="text-[9px] font-black text-red-400 uppercase">Falhas</p><p className="text-lg font-black text-red-500">{execStats.failed || 0}</p></div>
               </div>
             )}
-            <Button onClick={() => setShowTemplates(true)} variant="outline" className="h-11 px-6 rounded-2xl font-black uppercase text-[10px] tracking-widest border-2">
-              <Layers className="w-4 h-4 mr-2" /> Templates
-            </Button>
-            <Button onClick={() => setIsAddModalOpen(true)} className="h-11 bg-emerald-500 hover:bg-emerald-600 px-6 rounded-2xl font-black uppercase text-[10px] tracking-widest text-white shadow-xl shadow-emerald-500/20">
-              <Plus className="w-4 h-4 mr-2" /> Criar
-            </Button>
+            <div className="flex flex-col items-end gap-1">
+              <div className="flex gap-3">
+                <Button 
+                  onClick={() => hasSdr ? setShowTemplates(true) : toast({ title: "SDR Necessário", description: "Contrate um SDR antes de criar automações.", variant: "destructive" })} 
+                  variant="outline" 
+                  className={`h-11 px-6 rounded-2xl font-black uppercase text-[10px] tracking-widest border-2 ${!hasSdr ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <Layers className="w-4 h-4 mr-2" /> Templates
+                </Button>
+                <Button 
+                  onClick={() => hasSdr ? setIsAddModalOpen(true) : toast({ title: "SDR Necessário", description: "Contrate um SDR antes de criar automações.", variant: "destructive" })} 
+                  className={`h-11 px-6 rounded-2xl font-black uppercase text-[10px] tracking-widest text-white shadow-xl ${!hasSdr ? 'bg-slate-700 cursor-not-allowed' : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20'}`}
+                >
+                  <Plus className="w-4 h-4 mr-2" /> Criar
+                </Button>
+              </div>
+              {!hasSdr && (
+                <p className="text-[8px] font-black text-emerald-500 uppercase tracking-widest animate-pulse mr-1">Requer SDR Contratado</p>
+              )}
+            </div>
           </div>
         </div>
 

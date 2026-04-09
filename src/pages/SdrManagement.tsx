@@ -43,11 +43,20 @@ export default function SdrManagement() {
   
   const [uploading, setUploading] = useState(false);
 
+  const [hasWhatsApp, setHasWhatsApp] = useState<boolean>(false);
+
   const fetchData = async () => {
     try {
-      const res = await fetch("/api/sdrs");
-      const data = await res.json();
-      setSdrs(Array.isArray(data) ? data : []);
+      const [sdrsRes, settingsRes] = await Promise.all([
+        fetch("/api/sdrs"),
+        fetch("/api/tenant/settings")
+      ]);
+      
+      const sdrData = await sdrsRes.json();
+      const settingsData = await settingsRes.json();
+      
+      setSdrs(Array.isArray(sdrData) ? sdrData : []);
+      setHasWhatsApp(!!settingsData.hasWhatsAppConnection);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
@@ -179,12 +188,17 @@ export default function SdrManagement() {
               <p className="text-white/30 font-bold uppercase tracking-widest text-[9px] pl-[56px] leading-relaxed max-w-md">Gerencie e treine seu time de SDRs inteligentes para atuar em qualquer tipo de negócio.</p>
            </div>
            
-           <Button 
-            onClick={() => handleOpenModal()} 
-            className="z-10 h-16 bg-emerald-500 hover:bg-emerald-600 px-10 rounded-2xl font-black uppercase text-xs tracking-widest shadow-2xl transition-all hover:-translate-y-1 text-white"
-           >
-              <Plus className="w-5 h-5 mr-3" /> Contratar SDR
-           </Button>
+           <div className="flex flex-col items-end gap-2 relative z-10">
+              <Button 
+                onClick={() => hasWhatsApp ? handleOpenModal() : toast({ title: "WhatsApp Necessário", description: "Conecte um WhatsApp antes de contratar um SDR.", variant: "destructive" })} 
+                className={`h-16 px-10 rounded-2xl font-black uppercase text-xs tracking-widest shadow-2xl transition-all hover:-translate-y-1 text-white ${!hasWhatsApp ? 'bg-slate-700 cursor-not-allowed border-none' : 'bg-emerald-500 hover:bg-emerald-600'}`}
+              >
+                <Plus className="w-5 h-5 mr-3" /> Contratar SDR
+              </Button>
+              {!hasWhatsApp && (
+                <p className="text-[8px] font-black text-emerald-500 uppercase tracking-widest animate-pulse">Requer conexão WhatsApp</p>
+              )}
+           </div>
         </div>
 
         {loading ? (

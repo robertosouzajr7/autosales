@@ -1529,6 +1529,13 @@ app.get("/api/tenant/settings", async (req, res) => {
        try { planFeatures = JSON.parse(tenant.plan.features); } catch(e){}
     }
     
+    // Check for active WhatsApp session
+    const hasWhatsAppConnection = Array.from(whatsappSessions.values())
+      .some(s => s.tenantId === tenantId && s.status === 'CONNECTED');
+
+    // Check for existing SDRs
+    const sdrCount = await prisma.sDR.count({ where: { tenantId } });
+
     res.json({
       id: tenant?.id,
       name: tenant?.name,
@@ -1536,7 +1543,9 @@ app.get("/api/tenant/settings", async (req, res) => {
       usedTokens: tenant?.usedTokens || 0,
       qualifiedLeadsCount: tenant?.qualifiedLeadsCount || 0,
       plan: tenant?.plan || { name: "Básico", maxTokens: 1000 },
-      planFeatures
+      planFeatures,
+      hasWhatsAppConnection,
+      hasSdr: sdrCount > 0
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

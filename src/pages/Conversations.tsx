@@ -30,14 +30,21 @@ export default function Conversations() {
     scrollToBottom();
   }, [messages]);
 
+  const [hasWhatsApp, setHasWhatsApp] = useState<boolean>(true); // Default to true while loading
+
   const fetchData = async () => {
     try {
       const tenantId = localStorage.getItem("tenantId");
-      const res = await fetch("/api/leads", {
-        headers: { "x-tenant-id": tenantId || "" }
-      });
-      const data = await res.json();
-      setChats(Array.isArray(data) ? data : []);
+      const [leadsRes, settingsRes] = await Promise.all([
+        fetch("/api/leads", { headers: { "x-tenant-id": tenantId || "" } }),
+        fetch("/api/tenant/settings")
+      ]);
+      
+      const leadsData = await leadsRes.json();
+      const settingsData = await settingsRes.json();
+      
+      setChats(Array.isArray(leadsData) ? leadsData : []);
+      setHasWhatsApp(!!settingsData.hasWhatsAppConnection);
     } catch (e) {}
     setLoading(false);
   };
@@ -154,8 +161,27 @@ export default function Conversations() {
           <div className="p-8 border-b border-slate-50 bg-slate-50/30 space-y-6">
              <div className="flex items-center justify-between">
                 <h3 className="text-xl font-black text-slate-800 tracking-tight">Conversas</h3>
-                <Badge className="bg-emerald-500/10 text-emerald-600 border-none font-bold text-[9px] uppercase tracking-widest">IA Ativa</Badge>
+                <Badge className={`${hasWhatsApp ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-600"} border-none font-bold text-[9px] uppercase tracking-widest`}>
+                  {hasWhatsApp ? "WhatsApp Conectado" : "WhatsApp Desconectado"}
+                </Badge>
              </div>
+             {!hasWhatsApp && (
+               <div className="p-4 bg-red-50 rounded-2xl border border-red-100 mb-4">
+                 <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-1 flex items-center gap-2">
+                   <Smartphone className="w-4 h-4" /> Conexão Necessária
+                 </p>
+                 <p className="text-[9px] text-red-500 font-bold leading-relaxed uppercase">
+                   Seu WhatsApp não está conectado. As mensagens não serão recebidas nem enviadas até que você estabeleça uma conexão.
+                 </p>
+                 <Button 
+                   onClick={() => window.location.href = "/connections"} 
+                   variant="link" 
+                   className="p-0 h-auto text-[9px] font-black text-red-600 uppercase mt-2 underline"
+                 >
+                   Ir para Conexões
+                 </Button>
+               </div>
+             )}
              <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                 <Input placeholder="Buscar chat..." className="h-11 pl-10 border-slate-200 rounded-2xl bg-white text-xs font-bold" />
