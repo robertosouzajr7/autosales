@@ -40,7 +40,7 @@ model Tenant {
   smtpPort     Int?
   smtpUser     String?
   smtpPass     String?
-  smtpFrom     String? @default("disparos@autosales.com")
+  smtpFrom     String? @default("disparos@agentesvirtuais.com")
   
   // Listmonk Integration
   listmonkUrl      String?

@@ -72,7 +72,7 @@ export default function LandingPage() {
               <div className="bg-primary p-2 rounded-xl shadow-lg shadow-primary/20">
                 <Target className="w-6 h-6 text-white" />
               </div>
-              <span className="text-2xl font-black text-slate-900 tracking-tighter uppercase italic">Vend<span className="text-primary">Ai</span></span>
+              <span className="text-2xl font-black text-slate-900 tracking-tighter uppercase italic">Agentes <span className="text-primary">Virtuais</span></span>
             </>
           )}
         </div>
@@ -239,7 +239,7 @@ export default function LandingPage() {
             <div className="flex flex-col gap-4">
                <div className="flex items-center gap-3">
                   {settings?.logoUrl ? <img src={settings.logoUrl} className="h-8 grayscale opacity-60" /> : <Target className="w-6 h-6 text-slate-900" />}
-                  <span className="text-xl font-black text-slate-900 tracking-tighter uppercase italic">VendAi</span>
+                  <span className="text-xl font-black text-slate-900 tracking-tighter uppercase italic">Agentes Virtuais</span>
                </div>
                <div className="flex gap-4">
                   {settings?.contactInstagram && <a href={settings.contactInstagram} target="_blank" className="text-slate-300 hover:text-pink-500"><Instagram className="w-5 h-5" /></a>}
@@ -247,9 +247,11 @@ export default function LandingPage() {
                   {settings?.contactYouTube && <a href={settings.contactYouTube} target="_blank" className="text-slate-300 hover:text-red-600"><Youtube className="w-5 h-5" /></a>}
                </div>
             </div>
-            <div className="text-slate-400 text-sm font-bold text-center md:text-left">
-               {settings?.contactEmail && <div>Contato: {settings.contactEmail}</div>}
-               © 2026 VendAi S.A. Todos os direitos reservados.
+            <div className="text-slate-400 text-sm font-bold text-center md:text-left space-y-2">
+               <div>E-mail: contato@agentesvirtuais.com</div>
+               <div>WhatsApp: 71 99204-2802</div>
+               <div>Endereço: Rua Vereador Zezeu Ribeiro, 1117, Boca da Mata, Salvador - Ba. Cep: 41.345-100</div>
+               <div className="pt-2">© 2026 Agentes Virtuais. Todos os direitos reservados.</div>
             </div>
          </div>
       </footer>
@@ -257,15 +259,13 @@ export default function LandingPage() {
       {/* FLOATING BUTTONS */}
       <div className="fixed bottom-10 right-10 flex flex-col gap-4 z-[9999]">
          {/* WHATSAPP */}
-         {settings?.contactWhatsApp && (
-           <a 
-             href={`https://wa.me/${settings.contactWhatsApp}`} 
-             target="_blank" 
-             className="w-16 h-16 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all animate-bounce"
-           >
-              <Phone className="w-8 h-8" />
-           </a>
-         )}
+         <a 
+           href={`https://wa.me/5571992042802`} 
+           target="_blank" 
+           className="w-16 h-16 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all animate-bounce"
+         >
+            <Phone className="w-8 h-8" />
+         </a>
 
          {/* SDR CHAT BUTTON */}
          <button 
@@ -290,7 +290,7 @@ export default function LandingPage() {
            <div className="flex-1 h-96 p-6 overflow-y-auto space-y-4 bg-slate-50/50">
               {chatHistory.length === 0 && (
                 <div className="bg-white p-4 rounded-2xl border border-slate-100 text-xs font-bold text-slate-500 italic">
-                  Olá! Sou o especialista da VendAi. Como posso ajudar você a escalar suas vendas hoje?
+                  Olá! Sou o especialista da Agentes Virtuais. Como posso ajudar você a escalar suas vendas hoje?
                 </div>
               )}
               {chatHistory.map((msg, i) => (

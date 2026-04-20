@@ -92,7 +92,7 @@ export class EmailService {
       // Enviar e-mail
       const transport = await this.getTransporter();
       const info = await transport.sendMail({
-        from: `"${tenant.name} | SDR AI" <${process.env.SMTP_FROM || 'prospeccao@autosales.ai'}>`,
+        from: `"${tenant.name} | SDR AI" <${process.env.SMTP_FROM || 'prospeccao@agentesvirtuais.com'}>`,
         to: lead.email,
         subject,
         html: body

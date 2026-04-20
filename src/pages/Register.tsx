@@ -114,7 +114,7 @@ export default function Register() {
            </div>
            <div className="flex items-center gap-3 relative z-10">
               <Target className="w-8 h-8 text-emerald-500" />
-              <span className="text-2xl font-black tracking-tighter">AutoSales <span className="text-emerald-500 italic">AI</span></span>
+              <span className="text-2xl font-black tracking-tighter">Agentes Virtuais <span className="text-emerald-500 italic">AI</span></span>
            </div>
            <div className="space-y-6 relative z-10">
               <h2 className="text-4xl font-black leading-none tracking-tight">Comece sua jornada de escala.</h2>
@@ -151,7 +151,7 @@ export default function Register() {
                     </div>
                     <div className="space-y-1">
                        <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nome da Empresa</Label>
-                       <Input placeholder="Ex: AutoSales Tech" value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})} className="h-12 border-slate-100 rounded-2xl bg-slate-50 shadow-none font-bold" />
+                       <Input placeholder="Ex: Agentes Virtuais Tech" value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})} className="h-12 border-slate-100 rounded-2xl bg-slate-50 shadow-none font-bold" />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                        <div className="space-y-1">

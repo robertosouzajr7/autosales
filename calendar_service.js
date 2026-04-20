@@ -52,14 +52,14 @@ class CalendarService {
     return slots;
   }
 
-  async createAppointment(tenantId, lead, date, title = "Reunião de Vendas - AutoSales") {
+  async createAppointment(tenantId, lead, date, title = "Reunião de Vendas - Agentes Virtuais") {
     const auth = await this.getOAuth2Client(tenantId);
     if (!auth) throw new Error("Google Calendar não conectado");
 
     const calendar = google.calendar({ version: "v3", auth });
     const event = {
       summary: `${title}: ${lead.name}`,
-      description: `Agendado automaticamente via AutoSales (Eesier Mode).\nLead Phone: ${lead.phone}\nScore: ${lead.qualificationScore}`,
+      description: `Agendado automaticamente via Agentes Virtuais.\nLead Phone: ${lead.phone}\nScore: ${lead.qualificationScore}`,
       start: { dateTime: new Date(date).toISOString(), timeZone: "America/Sao_Paulo" },
       end: { dateTime: new Date(new Date(date).getTime() + 3600000).toISOString(), timeZone: "America/Sao_Paulo" },
       attendees: lead.email ? [{ email: lead.email }] : [],

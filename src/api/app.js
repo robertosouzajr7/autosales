@@ -67,21 +67,21 @@ export async function initDB() {
       const hashedPassword = await bcrypt.hash("admin", 10);
       const vitalicioPlan = await prisma.plan.findFirst({ where: { name: "VITALICIO" } });
       const systemTenant = await prisma.tenant.upsert({
-        where: { email: "admin@autosales.ai" },
+        where: { email: "admin@agentesvirtuais.com" },
         update: { planId: vitalicioPlan?.id },
-        create: { name: "AutoSales Global", email: "admin@autosales.ai", planId: vitalicioPlan?.id }
+        create: { name: "Agentes Virtuais Global", email: "admin@agentesvirtuais.com", planId: vitalicioPlan?.id }
       });
 
       await prisma.user.create({
         data: {
           name: "Super Administrator",
-          email: "admin@autosales.ai",
+          email: "admin@agentesvirtuais.com",
           password: hashedPassword,
           role: "SUPERADMIN",
           tenantId: systemTenant.id
         }
       });
-      console.log("👑 SuperAdmin criado com sucesso (admin@autosales.ai / admin)");
+      console.log("👑 SuperAdmin criado com sucesso (admin@agentesvirtuais.com / admin)");
     }
   } catch (e) {
     console.error("❌ Erro na inicialização do banco:", e);

@@ -509,7 +509,7 @@ export default function Settings() {
                       <div className="p-6 bg-blue-50 rounded-3xl border border-blue-100 flex items-center gap-4 text-blue-800">
                         <AlertCircle className="w-6 h-6 shrink-0" />
                         <p className="text-[11px] font-bold leading-relaxed italic">
-                          Ao configurar o Listmonk, o VendAi passará a gerenciar seus contatos e campanhas através dele, permitindo maior taxa de entrega e controle de bounces automático.
+                          Ao configurar o Listmonk, Agentes Virtuais passará a gerenciar seus contatos e campanhas através dele, permitindo maior taxa de entrega e controle de bounces automático.
                         </p>
                       </div>
                   </Card>

@@ -91,7 +91,7 @@ export default function PublicBooking() {
               <div className="p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
                 <CalIcon className="w-6 h-6" />
               </div>
-              <span className="font-bold tracking-widest text-xs uppercase">AutoSales Scheduling</span>
+              <span className="font-bold tracking-widest text-xs uppercase">Agentes Virtuais Scheduling</span>
             </div>
             <CardTitle className="text-4xl font-extrabold tracking-tight">Reserve seu Horário</CardTitle>
             <CardDescription className="text-slate-400 text-lg mt-2">

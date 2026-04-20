@@ -7,7 +7,7 @@ async function startServer() {
   await initDB();
   
   app.listen(PORT, () => {
-    console.log(`🚀 Servidor SaaS VendAi (Modular) ON: http://localhost:${PORT}`);
+    console.log(`🚀 Servidor SaaS Agentes Virtuais (Modular) ON: http://localhost:${PORT}`);
     WhatsAppManager.bootExistingSessions().catch(e => console.error("Err boot sessions:", e));
   });
 }

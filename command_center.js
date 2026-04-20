@@ -107,8 +107,8 @@ export class CommandCenter {
 
       // Montar contexto para a IA
       const systemContext = `
-Você é o Assistente de Gestão do AutoSales. O DONO da empresa "${tenant.name}" está falando com você pelo WhatsApp.
-Seu nome é AutoSales AI. Seja direto, objetivo e use emojis moderadamente.
+Você é o Assistente de Gestão do Agentes Virtuais. O DONO da empresa "${tenant.name}" está falando com você pelo WhatsApp.
+Seu nome é Agentes Virtuais AI. Seja direto, objetivo e use emojis moderadamente.
 
 DADOS EM TEMPO REAL DO NEGÓCIO:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -222,7 +222,7 @@ REGRAS:
         prisma.lead.count({ where: { tenantId, qualificationScore: { gte: 70 }, updatedAt: { gte: today } } })
       ]);
 
-      const report = `📊 *RELATÓRIO DIÁRIO — AutoSales*\n` +
+      const report = `📊 *RELATÓRIO DIÁRIO — Agentes Virtuais*\n` +
         `━━━━━━━━━━━━━━━━━━━━━\n` +
         `📅 ${new Date().toLocaleDateString('pt-BR')}\n\n` +
         `👤 Leads novos: *${newLeads}*\n` +

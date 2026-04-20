@@ -215,7 +215,7 @@ export default function Docs() {
                     <Badge variant="outline" className="text-[10px] font-black tracking-[0.2em] uppercase py-1 border-slate-200 text-slate-400">Hub de Sucesso</Badge>
                 </div>
                 <h1 className="text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-none mb-4">Documentação <span className="text-emerald-500 italic">Oficial</span></h1>
-                <p className="text-slate-500 font-medium text-lg leading-relaxed max-w-2xl">Manual instrutivo detalhado de cada funcionalidade disponível no AutoSales. O seu guia definitivo para automação de vendas.</p>
+                <p className="text-slate-500 font-medium text-lg leading-relaxed max-w-2xl">Manual instrutivo detalhado de cada funcionalidade disponível no Agentes Virtuais. O seu guia definitivo para automação de vendas.</p>
            </div>
         </div>
 

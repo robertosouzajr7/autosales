@@ -6,14 +6,14 @@ async function main() {
 
   // 1. Create a Master Tenant
   const masterTenant = await prisma.tenant.upsert({
-    where: { email: 'contato@autosales.com' },
+    where: { email: 'contato@agentesvirtuais.com' },
     update: {},
     create: {
       id: 'master-tenant',
-      name: 'AutoSales Master',
-      email: 'contato@autosales.com',
+      name: 'Agentes Virtuais Master',
+      email: 'contato@agentesvirtuais.com',
       subscriptionStatus: 'ACTIVE',
-      systemPrompt: 'Você é um SDR altamente capacitado da AutoSales. Seu objetivo é qualificar leads e agendar reuniões.',
+      systemPrompt: 'Você é um SDR altamente capacitado da Agentes Virtuais. Seu objetivo é qualificar leads e agendar reuniões.',
     },
   });
   console.log(`✅ Master Tenant created: ${masterTenant.name}`);

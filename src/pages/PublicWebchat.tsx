@@ -120,7 +120,7 @@ export default function PublicWebchat() {
                      <div className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl">
                         <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center font-black text-white">{data.sdr?.name?.[0] || "AI"}</div>
                         <div>
-                           <p className="text-sm font-black text-white">{data.sdr?.name || "Especialista VendAi"}</p>
+                           <p className="text-sm font-black text-white">{data.sdr?.name || "Especialista Agentes Virtuais"}</p>
                            <p className="text-[10px] text-white/40 font-bold uppercase">{data.sdr?.role || "Inbound SDR"}</p>
                         </div>
                      </div>
@@ -219,7 +219,7 @@ export default function PublicWebchat() {
                      </Button>
                   </div>
                </div>
-               <p className="text-center text-[9px] font-black text-white/20 uppercase tracking-widest mt-6">Powered by VendAi Neural Engine v4.0</p>
+               <p className="text-center text-[9px] font-black text-white/20 uppercase tracking-widest mt-6">Powered by Agentes Virtuais Neural Engine v4.0</p>
             </div>
          </div>
       </Card>
