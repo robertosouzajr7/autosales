@@ -320,8 +320,9 @@ export default function Automations() {
 
   // -------- FETCH --------
   const fetchData = async () => {
+    const token = localStorage.getItem("token");
     try {
-      const res = await fetch("/api/automations");
+      const res = await fetch("/api/automations", { headers: { "Authorization": `Bearer ${token}` } });
       const data = await res.json();
       setAutos(Array.isArray(data) ? data : []);
     } catch (e) { toast({ title: "Erro nas automações", variant: "destructive" }); }
@@ -329,8 +330,9 @@ export default function Automations() {
   };
 
   const fetchStats = async () => {
+    const token = localStorage.getItem("token");
     try {
-      const res = await fetch("/api/automations/executions/stats");
+      const res = await fetch("/api/automations/executions/stats", { headers: { "Authorization": `Bearer ${token}` } });
       const data = await res.json();
       setExecStats(data);
     } catch { }
@@ -339,8 +341,9 @@ export default function Automations() {
   const [hasSdr, setHasSdr] = useState<boolean>(false);
 
   const fetchTenantData = async () => {
+    const token = localStorage.getItem("token");
     try {
-      const res = await fetch("/api/tenant/settings");
+      const res = await fetch("/api/tenant/settings", { headers: { "Authorization": `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
         setTenantLimits(data.planFeatures || { aiEnabled: false, webhookEnabled: false });
@@ -354,9 +357,14 @@ export default function Automations() {
   // -------- CRUD --------
   const handleCreateAuto = async () => {
     if (!newAuto.name) return toast({ title: "Nome obrigatório", variant: "destructive" });
+    const token = localStorage.getItem("token");
     try {
       const res = await fetch("/api/automations", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", 
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify(newAuto)
       });
       if (res.ok) {
@@ -370,9 +378,14 @@ export default function Automations() {
   };
 
   const createFromTemplate = async (template: typeof FLOW_TEMPLATES[0]) => {
+    const token = localStorage.getItem("token");
     try {
       const res = await fetch("/api/automations", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", 
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({
           name: template.name,
           trigger: template.trigger,
@@ -392,8 +405,13 @@ export default function Automations() {
   };
 
   const toggleAuto = async (id: string, current: boolean) => {
+    const token = localStorage.getItem("token");
     await fetch(`/api/automations/${id}`, {
-      method: "PUT", headers: { "Content-Type": "application/json" },
+      method: "PUT", 
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
       body: JSON.stringify({ active: !current })
     });
     toast({ title: current ? "⏸ Pausado" : "▶ Ativado" }); fetchData();
@@ -401,12 +419,21 @@ export default function Automations() {
 
   const deleteAuto = async (id: string) => {
     if (!confirm("Deletar esta automação?")) return;
-    await fetch(`/api/automations/${id}`, { method: "DELETE" }); fetchData();
+    const token = localStorage.getItem("token");
+    await fetch(`/api/automations/${id}`, { 
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${token}` }
+    }); 
+    fetchData();
   };
 
   const duplicateAuto = async (id: string) => {
+    const token = localStorage.getItem("token");
     try {
-      const res = await fetch(`/api/automations/${id}/duplicate`, { method: "POST" });
+      const res = await fetch(`/api/automations/${id}/duplicate`, { 
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
       if (res.ok) {
         toast({ title: "📋 Duplicado" }); fetchData();
       } else {
@@ -450,9 +477,14 @@ export default function Automations() {
       id: n.id, type: (n.data as any).nodeType, position: n.position,
       data: { label: (n.data as any).label, config: (n.data as any).config || {} },
     }));
+    const token = localStorage.getItem("token");
     try {
       await fetch(`/api/automations/${selectedAuto.id}`, {
-        method: "PUT", headers: { "Content-Type": "application/json" },
+        method: "PUT", 
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({ nodes: JSON.stringify(ourNodes), edges: JSON.stringify(edges) })
       });
       toast({ title: "💎 Workflow Salvo!" }); setIsBuilderOpen(false); fetchData();

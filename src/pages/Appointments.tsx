@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { cn } from "../lib/utils";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,9 +48,10 @@ export default function Appointments() {
 
   const fetchData = async () => {
     try {
+      const token = localStorage.getItem("token");
       const [aRes, lRes] = await Promise.all([
-        fetch("/api/appointments"),
-        fetch("/api/leads")
+        fetch("/api/appointments", { headers: { "Authorization": `Bearer ${token}` } }),
+        fetch("/api/leads", { headers: { "Authorization": `Bearer ${token}` } })
       ]);
       const aData = await aRes.json();
       const lData = await lRes.json();
@@ -68,9 +70,13 @@ export default function Appointments() {
       return toast({ title: "Dados incompletos", variant: "destructive" });
     }
     try {
+      const token = localStorage.getItem("token");
       const res = await fetch("/api/appointments", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}` 
+        },
         body: JSON.stringify(newAppt)
       });
       if (res.ok) {
@@ -85,13 +91,57 @@ export default function Appointments() {
   const deleteAppt = async (id: string) => {
     if (!confirm("Remover este compromisso?")) return;
     try {
-      const res = await fetch(`/api/appointments/${id}`, { method: "DELETE" });
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/appointments/${id}`, { 
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
       if (res.ok) {
         toast({ title: "Agendamento removido" });
         fetchData();
       }
     } catch (e) { toast({ title: "Erro ao excluir", variant: "destructive" }); }
   };
+
+  const toggleComplete = async (appt: Appointment) => {
+    try {
+      const token = localStorage.getItem("token");
+      const newStatus = appt.status === "COMPLETED" ? "PENDING" : "COMPLETED";
+      const res = await fetch(`/api/appointments/${appt.id}`, {
+        method: "PUT",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (res.ok) {
+        toast({ title: newStatus === "COMPLETED" ? "Reunião Concluída! ✅" : "Status resetado." });
+        fetchData();
+      }
+    } catch (e) { toast({ title: "Ops! Erro ao atualizar", variant: "destructive" }); }
+  };
+
+  const calculateShowRate = () => {
+    if (appts.length === 0) return 0;
+    const completed = appts.filter(a => a.status === "COMPLETED").length;
+    return Math.round((completed / appts.length) * 100);
+  };
+
+  const getMonthlyStats = () => {
+    const now = new Date();
+    const monthAppts = appts.filter(a => {
+      const d = new Date(a.date);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+    
+    const completed = monthAppts.filter(a => a.status === "COMPLETED").length;
+    const rate = monthAppts.length > 0 ? Math.round((completed / monthAppts.length) * 100) : 0;
+    
+    return { total: monthAppts.length, rate };
+  };
+
+  const stats = getMonthlyStats();
 
   // Filtragem inteligente baseada no modo de visualização
   const filteredAppts = appts.filter(appt => {
@@ -183,11 +233,11 @@ export default function Appointments() {
                  <div className="space-y-4">
                     <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl">
                        <span className="text-xs font-bold text-slate-400">Total no Mês</span>
-                       <span className="text-lg font-black text-white">{appts.length}</span>
+                       <span className="text-lg font-black text-white">{stats.total}</span>
                     </div>
                     <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl">
                        <span className="text-xs font-bold text-slate-400">Taxa de Show</span>
-                       <span className="text-lg font-black text-emerald-400">84%</span>
+                       <span className="text-lg font-black text-emerald-400">{stats.rate}%</span>
                     </div>
                  </div>
               </Card>
@@ -251,7 +301,17 @@ export default function Appointments() {
                                          </div>
 
                                          <div className="flex items-center gap-4 w-full md:w-auto justify-end">
-                                            <Badge className="bg-emerald-500/10 text-emerald-600 border-none px-5 py-2.5 rounded-2xl font-black uppercase text-[9px] tracking-widest shadow-sm">Confirmado</Badge>
+                                            <Button 
+                                              onClick={() => toggleComplete(appt)}
+                                              className={cn(
+                                                "px-5 py-2.5 rounded-2xl font-black uppercase text-[9px] tracking-widest shadow-sm transition-all",
+                                                appt.status === "COMPLETED" 
+                                                  ? "bg-emerald-500 text-white hover:bg-emerald-600" 
+                                                  : "bg-slate-100 text-slate-500 hover:bg-emerald-500 hover:text-white"
+                                              )}
+                                            >
+                                               {appt.status === "COMPLETED" ? <><CheckCircle2 className="w-3 h-3 mr-2" /> Concluído</> : "Marcar Concluído"}
+                                            </Button>
                                             <Button variant="ghost" size="icon" className="w-12 h-12 rounded-2xl hover:bg-red-50 hover:text-red-500 transition-all text-slate-200" onClick={() => deleteAppt(appt.id)}>
                                                <Trash2 className="w-5 h-5" />
                                             </Button>

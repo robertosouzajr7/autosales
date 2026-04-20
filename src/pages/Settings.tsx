@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Settings as SettingsIcon, Shield, Bell, Database, Globe, Sliders, Save, CheckCircle2, 
   Trash2, Plus, Zap, Bot, Target, HelpCircle, Loader2, Sparkles, MapPin, Search, Linkedin,
-  ExternalLink, Mail, Smartphone, Phone, Calendar, Share2, Terminal, Code2, Key
+  ExternalLink, Mail, Smartphone, Phone, Calendar, Share2, Terminal, Code2, Key, RefreshCw, AlertCircle
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
@@ -59,56 +59,94 @@ export default function Settings() {
     verifyToken: "autosales_webhook_token"
   });
 
+  const [smtpConfig, setSmtpConfig] = useState({
+    host: "",
+    port: 587,
+    user: "",
+    pass: "",
+    from: ""
+  });
+
+  const [listmonkConfig, setListmonkConfig] = useState({
+    url: "",
+    token: "",
+    listId: ""
+  });
+
   const { toast } = useToast();
 
   useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      try {
+        const [resSettings, resIcp, resUsers] = await Promise.all([
+          fetch("/api/settings", { headers }),
+          fetch("/api/icp-profiles", { headers }),
+          fetch("/api/users", { headers })
+        ]);
+        
+        const dataSettings = await resSettings.json();
+        const dataIcp = await resIcp.json();
+        const dataUsers = await resUsers.json();
+        
+        setAiConfig({
+          openaiKey: dataSettings.openAiKey || "",
+          geminiKey: dataSettings.aiApiKey || "",
+          apolloApiKey: dataSettings.apolloApiKey || "",
+          snovClientId: dataSettings.snovClientId || "",
+          snovClientSecret: dataSettings.snovClientSecret || "",
+          googleRefreshToken: dataSettings.googleRefreshToken || "",
+          webChatUrl: dataSettings.webChatUrl || "",
+          systemPrompt: dataSettings.systemPrompt || aiConfig.systemPrompt,
+          language: "pt-BR"
+        });
+
+        setSmtpConfig({
+          host: dataSettings.smtpHost || "",
+          port: dataSettings.smtpPort || 587,
+          user: dataSettings.smtpUser || "",
+          pass: dataSettings.smtpPass || "",
+          from: dataSettings.smtpFrom || ""
+        });
+
+        setListmonkConfig({
+          url: dataSettings.listmonkUrl || "",
+          token: dataSettings.listmonkToken || "",
+          listId: dataSettings.listmonkListId || ""
+        });
+
+        setIcpProfiles(dataIcp);
+        setUsers(Array.isArray(dataUsers) ? dataUsers : []);
+
+      } catch (e) {
+        toast({ title: "Erro ao carregar configurações", variant: "destructive" });
+      }
+      setLoading(false);
+    };
+
     fetchData();
   }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
-    const tenantId = localStorage.getItem("tenantId");
-    try {
-      const [resSettings, resIcp, resUsers] = await Promise.all([
-        fetch("/api/settings", { headers: { "x-tenant-id": tenantId || "" } }),
-        fetch("/api/icp-profiles", { headers: { "x-tenant-id": tenantId || "" } }),
-        fetch("/api/users", { headers: { "x-tenant-id": tenantId || "" } })
-      ]);
-      
-      const dataSettings = await resSettings.json();
-      const dataIcp = await resIcp.json();
-      const dataUsers = await resUsers.json();
-      
-      setAiConfig({
-        openaiKey: dataSettings.openAiKey || "",
-        geminiKey: dataSettings.aiApiKey || "",
-        apolloApiKey: dataSettings.apolloApiKey || "",
-        snovClientId: dataSettings.snovClientId || "",
-        snovClientSecret: dataSettings.snovClientSecret || "",
-        googleRefreshToken: dataSettings.googleRefreshToken || "",
-        webChatUrl: dataSettings.webChatUrl || "",
-        systemPrompt: dataSettings.systemPrompt || aiConfig.systemPrompt,
-        language: "pt-BR"
-      });
-
-      setIcpProfiles(dataIcp);
-      setUsers(Array.isArray(dataUsers) ? dataUsers : []);
-
-    } catch (e) {
-      toast({ title: "Erro ao carregar configurações", variant: "destructive" });
-    }
-    setLoading(false);
-  };
-
   const handleSaveSettings = async () => {
     setSaving(true);
-    const tenantId = localStorage.getItem("tenantId");
+    const token = localStorage.getItem("token");
+    const headers: any = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
     try {
       const res = await fetch("/api/settings", {
         method: "PUT",
-        headers: { "Content-Type": "application/json", "x-tenant-id": tenantId || "" },
+        headers,
         body: JSON.stringify({
           ...aiConfig,
+          ...smtpConfig,
+          listmonkUrl: listmonkConfig.url,
+          listmonkToken: listmonkConfig.token,
+          listmonkListId: listmonkConfig.listId,
           metaConfig
         })
       });
@@ -120,11 +158,14 @@ export default function Settings() {
   };
 
   const handleAddIcp = async () => {
-    const tenantId = localStorage.getItem("tenantId");
+    const token = localStorage.getItem("token");
+    const headers: any = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
     try {
       const res = await fetch("/api/icp-profiles", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-tenant-id": tenantId || "" },
+        headers,
         body: JSON.stringify(newIcp)
       });
       const data = await res.json();
@@ -135,8 +176,12 @@ export default function Settings() {
   };
 
   const handleDeleteIcp = async (id: string) => {
+    const token = localStorage.getItem("token");
+    const headers: any = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
     try {
-      await fetch(`/api/icp-profiles/${id}`, { method: "DELETE" });
+      await fetch(`/api/icp-profiles/${id}`, { method: "DELETE", headers });
       setIcpProfiles(icpProfiles.filter(p => p.id !== id));
       toast({ title: "Perfil Removido" });
     } catch (e) {}
@@ -146,9 +191,13 @@ export default function Settings() {
       try {
           const profile = icpProfiles.find(p => p.id === id);
           if (!profile) return;
+          const token = localStorage.getItem("token");
+          const headers: any = { "Content-Type": "application/json" };
+          if (token) headers["Authorization"] = `Bearer ${token}`;
+
           const res = await fetch(`/api/icp-profiles/${id}`, {
               method: "PUT",
-              headers: { "Content-Type": "application/json" },
+              headers,
               body: JSON.stringify({ ...profile, isAutoHunterEnabled: active })
           });
           if (res.ok) {
@@ -188,6 +237,9 @@ export default function Settings() {
             </TabsTrigger>
             <TabsTrigger value="integrations" className="rounded-[18px] h-full px-8 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg">
               <Database className="w-4 h-4 mr-2 text-emerald-500" /> Integrações
+            </TabsTrigger>
+            <TabsTrigger value="channels" className="rounded-[18px] h-full px-8 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg">
+              <Mail className="w-4 h-4 mr-2 text-emerald-500" /> Canais de Disparo
             </TabsTrigger>
             <TabsTrigger value="connections" className="rounded-[18px] h-full px-8 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg">
               <Share2 className="w-4 h-4 mr-2 text-amber-500" /> Conexões & API
@@ -368,6 +420,101 @@ export default function Settings() {
           </TabsContent>
 
           {/* ABA USUÁRIOS */}
+          <TabsContent value="channels" className="animate-in slide-in-from-bottom-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                  <Card className="border-none shadow-xl rounded-[40px] bg-white p-12 space-y-8 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-8 opacity-5"><Mail className="w-48 h-48" /></div>
+                      <div className="flex items-center gap-4 text-emerald-500 mb-4"><Mail className="w-8 h-8" /><h3 className="text-xl font-black text-slate-900 uppercase underline decoration-emerald-500 decoration-4">Servidor de E-mail (SMTP)</h3></div>
+                      
+                      <div className="space-y-6">
+                          <div className="grid grid-cols-1 gap-6">
+                              <div className="space-y-2">
+                                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Host SMTP</Label>
+                                  <Input value={smtpConfig.host} onChange={(e) => setSmtpConfig({...smtpConfig, host: e.target.value})} className="h-14 bg-slate-50 rounded-2xl font-bold" placeholder="smtp.exemplo.com" />
+                              </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                      <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Porta</Label>
+                                      <Input type="number" value={smtpConfig.port} onChange={(e) => setSmtpConfig({...smtpConfig, port: parseInt(e.target.value)})} className="h-14 bg-slate-50 rounded-2xl font-bold" />
+                                  </div>
+                                  <div className="space-y-2">
+                                      <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">E-mail de Envio (From)</Label>
+                                      <Input value={smtpConfig.from} onChange={(e) => setSmtpConfig({...smtpConfig, from: e.target.value})} className="h-14 bg-slate-50 rounded-2xl font-bold" placeholder="disparos@seu-dominio.com" />
+                                  </div>
+                              </div>
+                              <div className="space-y-2">
+                                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Usuário SMTP</Label>
+                                  <Input value={smtpConfig.user} onChange={(e) => setSmtpConfig({...smtpConfig, user: e.target.value})} className="h-14 bg-slate-50 rounded-2xl font-bold" />
+                              </div>
+                              <div className="space-y-2">
+                                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Senha SMTP</Label>
+                                  <Input type="password" value={smtpConfig.pass} onChange={(e) => setSmtpConfig({...smtpConfig, pass: e.target.value})} className="h-14 bg-slate-50 rounded-2xl font-bold" />
+                              </div>
+                          </div>
+                      </div>
+                  </Card>
+
+                  <Card className="border-none shadow-xl rounded-[40px] bg-slate-900 text-white p-12 space-y-8 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-8 opacity-5"><Smartphone className="w-48 h-48" /></div>
+                      <div className="flex items-center gap-4 text-emerald-400 mb-4"><Smartphone className="w-8 h-8" /><h3 className="text-xl font-black uppercase underline decoration-emerald-400 decoration-4">WhatsApp Sender</h3></div>
+                      
+                      <div className="space-y-6">
+                        <p className="text-slate-400 text-sm font-medium leading-relaxed">
+                          O remetente de WhatsApp é configurado automaticamente através das conexões ativas no seu painel de <span className="text-emerald-400 font-black">Conexões Diárias</span>.
+                        </p>
+                        <div className="p-6 bg-white/5 rounded-3xl border border-white/10 space-y-4">
+                           <div className="flex items-center gap-3">
+                              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                              <span className="text-[10px] font-black uppercase tracking-widest">Multi-Instância Ativa</span>
+                           </div>
+                           <p className="text-[11px] text-white/40 font-bold italic">
+                             * O sistema rotaciona automaticamente entre os números conectados para evitar bloqueios em disparos em massa.
+                           </p>
+                        </div>
+                        <Button variant="outline" className="w-full border-white/20 text-white hover:bg-white/5 h-14 rounded-2xl font-black uppercase text-[10px] tracking-widest" onClick={() => window.location.href="/connections"}>
+                          Gerenciar Conexões
+                        </Button>
+                      </div>
+                  </Card>
+              </div>
+
+              <div className="mt-10">
+                  <Card className="border-none shadow-xl rounded-[40px] bg-slate-50 p-12 space-y-8 relative overflow-hidden">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4 text-slate-800 mb-4">
+                          <div className="p-4 bg-white rounded-3xl shadow-sm"><RefreshCw className="w-8 h-8 text-blue-500" /></div>
+                          <div>
+                            <h3 className="text-xl font-black uppercase underline decoration-blue-500 decoration-4">E-mail em Massa (Listmonk API)</h3>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Conecte sua infraestrutura de prospecção em massa</p>
+                          </div>
+                        </div>
+                        <Badge className="bg-blue-100 text-blue-600 border-none font-black px-4 py-2 rounded-full text-[9px] uppercase tracking-widest">Enterprise Ready</Badge>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <div className="space-y-2">
+                              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">URL do Listmonk</Label>
+                              <Input value={listmonkConfig.url} onChange={(e) => setListmonkConfig({...listmonkConfig, url: e.target.value})} className="h-14 bg-white rounded-2xl font-bold" placeholder="https://listmonk.exemplo.com" />
+                          </div>
+                          <div className="space-y-2">
+                              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">API Token</Label>
+                              <Input type="password" value={listmonkConfig.token} onChange={(e) => setListmonkConfig({...listmonkConfig, token: e.target.value})} className="h-14 bg-white rounded-2xl font-bold" />
+                          </div>
+                          <div className="space-y-2">
+                              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Default List ID</Label>
+                              <Input value={listmonkConfig.listId} onChange={(e) => setListmonkConfig({...listmonkConfig, listId: e.target.value})} className="h-14 bg-white rounded-2xl font-bold" placeholder="1" />
+                          </div>
+                      </div>
+                      
+                      <div className="p-6 bg-blue-50 rounded-3xl border border-blue-100 flex items-center gap-4 text-blue-800">
+                        <AlertCircle className="w-6 h-6 shrink-0" />
+                        <p className="text-[11px] font-bold leading-relaxed italic">
+                          Ao configurar o Listmonk, o VendAi passará a gerenciar seus contatos e campanhas através dele, permitindo maior taxa de entrega e controle de bounces automático.
+                        </p>
+                      </div>
+                  </Card>
+              </div>
+          </TabsContent>
           <TabsContent value="users" className="space-y-6 animate-in slide-in-from-bottom-4">
             <div className="flex justify-between items-center">
                <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter italic">Gestão da Equipe</h3>
@@ -413,9 +560,10 @@ export default function Settings() {
                                       className="text-red-400 hover:text-red-600 active:scale-90"
                                       onClick={async () => {
                                          if (confirm(`Remover acesso de ${user.name}?`)) {
+                                            const token = localStorage.getItem("token");
                                             await fetch(`/api/users/${user.id}`, { 
                                                method: "DELETE",
-                                               headers: { "x-tenant-id": localStorage.getItem("tenantId") || "" }
+                                               headers: { "Authorization": `Bearer ${token}` }
                                             });
                                             fetchData();
                                          }
@@ -466,11 +614,12 @@ export default function Settings() {
                <Button 
                   className="w-full h-16 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-2xl uppercase tracking-widest mt-4 shadow-xl shadow-emerald-500/20"
                   onClick={async () => {
+                     const token = localStorage.getItem("token");
                      const res = await fetch("/api/users", {
                         method: "POST",
                         headers: { 
                            "Content-Type": "application/json",
-                           "x-tenant-id": localStorage.getItem("tenantId") || ""
+                           "Authorization": `Bearer ${token}`
                         },
                         body: JSON.stringify(newUser)
                      });

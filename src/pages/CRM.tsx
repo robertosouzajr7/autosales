@@ -30,11 +30,11 @@ export default function CRM() {
 
   const fetchData = async () => {
     setLoading(true);
-    const tenantId = localStorage.getItem("tenantId");
+    const token = localStorage.getItem("token");
     try {
       const [lRes, sRes] = await Promise.all([
-        fetch("/api/leads", { headers: { "x-tenant-id": tenantId || "" } }),
-        fetch("/api/pipeline-stages", { headers: { "x-tenant-id": tenantId || "" } })
+        fetch("/api/leads", { headers: { "Authorization": `Bearer ${token}` } }),
+        fetch("/api/pipeline-stages", { headers: { "Authorization": `Bearer ${token}` } })
       ]);
       const leadsData = await lRes.json();
       const stagesData = await sRes.json();
@@ -51,13 +51,13 @@ export default function CRM() {
 
   const handleCreateLead = async () => {
     if (!newLead.name || !newLead.phone) return toast({ title: "Preencha Nome e Telefone", variant: "destructive" });
-    const tenantId = localStorage.getItem("tenantId");
+    const token = localStorage.getItem("token");
     try {
       const res = await fetch("/api/leads", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "x-tenant-id": tenantId || ""
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify(newLead)
       });
@@ -72,13 +72,13 @@ export default function CRM() {
 
   const handleUpdateLead = async () => {
     if (!selectedLead) return;
-    const tenantId = localStorage.getItem("tenantId");
+    const token = localStorage.getItem("token");
     try {
       const res = await fetch(`/api/leads/${selectedLead.id}`, {
         method: "PUT",
         headers: { 
           "Content-Type": "application/json",
-          "x-tenant-id": tenantId || ""
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
           name: selectedLead.name,

@@ -34,10 +34,24 @@ model Tenant {
   apolloApiKey String?
   snovClientId String?
   snovClientSecret String?
+
+  // Email Marketing Configuration (SMTP)
+  smtpHost     String?
+  smtpPort     Int?
+  smtpUser     String?
+  smtpPass     String?
+  smtpFrom     String? @default("disparos@autosales.com")
+  
+  // Listmonk Integration
+  listmonkUrl      String?
+  listmonkToken    String?
+  listmonkListId   String?
   
   // Consumption Tracking
   usedTokens        Int      @default(0)
   qualifiedLeadsCount Int    @default(0)
+  monthlyMessagesCount Int   @default(0)
+  lastMessagesReset    DateTime @default(now())
   lastUsageReset    DateTime @default(now())
 
   createdAt DateTime @default(now())
@@ -123,6 +137,7 @@ model Lead {
 model Campaign {
   id          String   @id @default(uuid())
   name        String
+  channel     String   @default("WHATSAPP") // WHATSAPP, EMAIL
   status      String   @default("DRAFT") // DRAFT, RUNNING, COMPLETED, PAUSED
   scheduledAt DateTime?
   
@@ -131,8 +146,11 @@ model Campaign {
   
   targetTagIds String? // IDs das tags participantes (JSON string)
   
-  sentCount   Int      @default(0)
-  errorCount  Int      @default(0)
+  sentCount      Int      @default(0)
+  deliveredCount Int      @default(0)
+  readCount      Int      @default(0)
+  clicks         Int      @default(0)
+  errorCount     Int      @default(0)
   
   tenantId    String
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -164,7 +182,8 @@ model Plan {
   priceYearly     Float
   maxLeads        Int
   maxSdrs         Int
-  maxTokens       Int      @default(100000) // Default limit
+  maxTokens       Int      @default(100000)
+  maxMessages     Int      @default(1000)   // Limite mensal de disparos (WhatsApp/E-mail)
   features        String?  // JSON list of features
   active          Boolean  @default(true)
   

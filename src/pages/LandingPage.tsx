@@ -182,7 +182,7 @@ export default function LandingPage() {
       <section id="pricing" className="py-40 bg-slate-900 px-6 lg:px-20">
          <div className="max-w-7xl mx-auto space-y-20">
             <div className="text-center space-y-6">
-               <h2 className="text-4xl lg:text-6xl font-black text-white tracking-tighter leading-none">Preço Justo para <span className="text-primary italic">Resultados Reais</span>.</h2>
+               <h2 className="text-4xl lg:text-6xl font-black text-white tracking-tighter leading-none">Preço Justo para <span className="text-blue-400 italic">Resultados Reais</span>.</h2>
                <p className="text-white/40 text-lg font-medium">Escolha o plano ideal para o seu momento de escala.</p>
             </div>
             

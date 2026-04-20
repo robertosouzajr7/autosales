@@ -30,14 +30,14 @@ export default function Conversations() {
     scrollToBottom();
   }, [messages]);
 
-  const [hasWhatsApp, setHasWhatsApp] = useState<boolean>(true); // Default to true while loading
+  const [hasWhatsApp, setHasWhatsApp] = useState<boolean>(false); 
 
   const fetchData = async () => {
     try {
-      const tenantId = localStorage.getItem("tenantId");
+      const token = localStorage.getItem("token");
       const [leadsRes, settingsRes] = await Promise.all([
-        fetch("/api/leads", { headers: { "x-tenant-id": tenantId || "" } }),
-        fetch("/api/tenant/settings")
+        fetch("/api/leads", { headers: { "Authorization": `Bearer ${token}` } }),
+        fetch("/api/tenant/settings", { headers: { "Authorization": `Bearer ${token}` } })
       ]);
       
       const leadsData = await leadsRes.json();
@@ -51,10 +51,10 @@ export default function Conversations() {
 
   const fetchMessages = async (leadId: string) => {
     if (!leadId) return;
-    const tenantId = localStorage.getItem("tenantId");
+    const token = localStorage.getItem("token");
     try {
       const res = await fetch(`/api/messages/${leadId}`, {
-        headers: { "x-tenant-id": tenantId || "" }
+        headers: { "Authorization": `Bearer ${token}` }
       });
       const data = await res.json();
       setMessages(Array.isArray(data) ? data : []);
@@ -63,7 +63,7 @@ export default function Conversations() {
 
   const toggleBot = async () => {
     if (!selectedChat) return;
-    const tenantId = localStorage.getItem("tenantId");
+    const token = localStorage.getItem("token");
     const currentStatus = selectedChat.conversations?.[0]?.botActive ?? true;
     const newStatus = !currentStatus;
     
@@ -72,7 +72,7 @@ export default function Conversations() {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "x-tenant-id": tenantId || ""
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({ botActive: newStatus })
       });
@@ -222,8 +222,24 @@ export default function Conversations() {
         <Card className="flex-1 border-none shadow-3xl rounded-[40px] bg-white overflow-hidden flex flex-col">
           {selectedChat ? (
             <>
+            <div className="flex-1 flex flex-col relative min-h-0 bg-slate-50/10">
               {/* Header do Chat */}
-              <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-white px-10">
+              <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-white px-10 shrink-0">
+                 {!hasWhatsApp && !loading && (
+                    <div className="absolute inset-0 z-50 bg-white/95 backdrop-blur-sm flex items-center justify-center p-12 text-center animate-in fade-in duration-500 rounded-[40px]">
+                       <Card className="max-w-md border-none shadow-3xl rounded-[40px] p-12 space-y-6 bg-white">
+                          <div className="w-20 h-20 bg-amber-50 rounded-3xl flex items-center justify-center mx-auto mb-4">
+                             <Smartphone className="w-10 h-10 text-amber-500 animate-pulse" />
+                          </div>
+                          <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">WhatsApp <span className="text-amber-500 italic">Desconectado</span></h2>
+                          <p className="text-slate-500 font-bold text-sm leading-relaxed">Você precisa conectar um aparelho para visualizar e responder as conversas em tempo real.</p>
+                          <Button onClick={() => window.location.href = "/connections"} className="w-full h-14 bg-slate-900 hover:bg-black font-black rounded-2xl shadow-xl shadow-slate-200">
+                             CONECTAR AGORA
+                          </Button>
+                       </Card>
+                    </div>
+                 )}
+
                  <div className="flex items-center gap-4">
                     <Avatar className="h-10 w-10">
                       <AvatarFallback className="bg-emerald-500 text-white font-black text-xs">
@@ -309,7 +325,8 @@ export default function Conversations() {
                     </Button>
                  </form>
               </div>
-            </>
+               </div>
+             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-slate-300 gap-4">
                <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center">

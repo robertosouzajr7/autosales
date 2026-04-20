@@ -275,7 +275,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const location = useLocation();
 
   useEffect(() => {
-    fetch("/api/tenant/settings")
+    const token = localStorage.getItem("token");
+    const headers: any = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    fetch("/api/tenant/settings", { headers })
       .then(res => res.json())
       .then(data => {
         if (data.planFeatures) {

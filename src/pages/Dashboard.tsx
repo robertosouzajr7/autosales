@@ -15,11 +15,40 @@ import {
   BarChart, Bar, Cell
 } from 'recharts';
 
+interface DashboardStats {
+  totalLeads: number;
+  qualifiedLeads: number;
+  appointments: number;
+  completedAppointments: number;
+  showRate: number;
+  activeSdrs: number;
+  conversionRate: number;
+  emailsSent: number;
+  whatsappFollowups: number;
+  funnel: { label: string; value: number }[];
+  usedTokens: number;
+  maxTokens: number;
+  maxSdrs: number;
+  planName: string;
+  qualifiedLeadsCount: number;
+  trends: { leads: number; qualified: number; appointments: number; conversion: number };
+  openOpportunities: number;
+}
+
+interface SimpleLead {
+  id: string;
+  name: string;
+  status: string;
+  source: string;
+}
+
 export default function Dashboard() {
-  const [stats, setStats] = useState<any>({
+  const [stats, setStats] = useState<DashboardStats>({
     totalLeads: 0,
     qualifiedLeads: 0,
     appointments: 0,
+    completedAppointments: 0,
+    showRate: 0,
     activeSdrs: 0,
     conversionRate: 0,
     emailsSent: 0,
@@ -29,17 +58,20 @@ export default function Dashboard() {
     maxTokens: 0,
     maxSdrs: 0,
     planName: "...",
-    qualifiedLeadsCount: 0
+    qualifiedLeadsCount: 0,
+    trends: { leads: 0, qualified: 0, appointments: 0, conversion: 0 },
+    openOpportunities: 0
   });
-  const [recentLeads, setRecentLeads] = useState<any[]>([]);
+  const [recentLeads, setRecentLeads] = useState<SimpleLead[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const tenantId = localStorage.getItem("tenantId");
-      const headers = tenantId ? { "x-tenant-id": tenantId } : {};
+      const token = localStorage.getItem("token");
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
       
       const statsRes = await fetch("/api/stats/dashboard", { headers });
       const statsData = await statsRes.json();
@@ -47,25 +79,28 @@ export default function Dashboard() {
       const lRes = await fetch("/api/leads", { headers });
       const leadsArr = await lRes.json();
       
-      const fData = statsData.funnelData || [];
+      const fData = (statsData.funnelData || []) as { name: string, value: number }[];
       
       setStats({
         totalLeads: statsData.stats.totalLeads || 0,
-        qualifiedLeads: statsData.stats.totalLeads - (fData[0]?.value || 0),
+        qualifiedLeads: statsData.stats.qualifiedLeadsCount || 0,
         appointments: statsData.stats.appointments || 0,
+        completedAppointments: statsData.stats.completedAppointments || 0,
+        showRate: statsData.stats.showRate || 0,
         activeSdrs: statsData.stats.activeSdrs || 0,
         conversionRate: statsData.stats.conversionRate || 0,
         emailsSent: statsData.stats.emailsSent || 0,
         whatsappFollowups: statsData.stats.whatsappFollowups || 0,
-        funnel: fData.map((f: any) => ({ label: f.name, value: f.value })),
+        funnel: fData.map((f) => ({ label: f.name, value: f.value })),
         usedTokens: statsData.stats.usedTokens || 0,
         maxTokens: statsData.stats.maxTokens || 0,
         maxSdrs: statsData.stats.maxSdrs || 0,
         planName: statsData.stats.planName || "Básico",
         qualifiedLeadsCount: statsData.stats.qualifiedLeadsCount || 0,
-        openOpportunities: fData.slice(1).reduce((acc: number, curr: any) => acc + curr.value, 0)
+        trends: statsData.stats.trends || { leads: 0, qualified: 0, appointments: 0, conversion: 0 },
+        openOpportunities: fData.length > 1 ? fData.slice(1).reduce((acc: number, curr) => acc + curr.value, 0) : 0
       });
-      setRecentLeads(Array.isArray(leadsArr) ? leadsArr.slice(0, 6) : []);
+      setRecentLeads(Array.isArray(leadsArr) ? (leadsArr as SimpleLead[]).slice(0, 6) : []);
 
     } catch (e) {
       console.error("Dashboard fetch error:", e);
@@ -78,7 +113,7 @@ export default function Dashboard() {
     fetchData(); 
   }, [fetchData]);
 
-  const funnelData = (stats.funnel || []).map((item: any, idx: number) => ({
+  const funnelDisplayData = (stats.funnel || []).map((item, idx: number) => ({
     name: item.label,
     value: stats.totalLeads > 0 ? Math.round((item.value / stats.totalLeads) * 100) : 0,
     color: ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#0f172a'][idx] || '#cbd5e1'
@@ -114,29 +149,29 @@ export default function Dashboard() {
            <KpiCard 
               label="Volume de Leads" 
               value={loading ? "..." : stats.totalLeads} 
-              trend="+14%" 
-              up={true}
+              trend={`${stats.trends.leads >= 0 ? '+' : ''}${stats.trends.leads}%`} 
+              up={stats.trends.leads >= 0}
               icon={<Users className="text-blue-500 w-6 h-6" />} 
            />
            <KpiCard 
               label="Leads Qualificados" 
               value={loading ? "..." : stats.qualifiedLeads} 
-              trend="+8.2%" 
-              up={true}
+              trend={`${stats.trends.qualified >= 0 ? '+' : ''}${stats.trends.qualified}%`} 
+              up={stats.trends.qualified >= 0}
               icon={<Bot className="text-emerald-500 w-6 h-6" />} 
            />
            <KpiCard 
               label="Agendamentos" 
               value={loading ? "..." : stats.appointments} 
-              trend="+22%" 
-              up={true}
+              trend={`${stats.trends.appointments >= 0 ? '+' : ''}${stats.trends.appointments}%`} 
+              up={stats.trends.appointments >= 0}
               icon={<Calendar className="text-purple-500 w-6 h-6" />} 
            />
            <KpiCard 
               label="Conversão Geral" 
               value={loading ? "..." : `${stats.conversionRate.toFixed(1)}%`} 
-              trend="+5.4%" 
-              up={true}
+              trend={`${stats.trends.conversion >= 0 ? '+' : ''}${stats.trends.conversion}%`} 
+              up={stats.trends.conversion >= 0}
               icon={<TrendingUp className="text-orange-500 w-6 h-6" />} 
            />
         </div>
@@ -297,7 +332,7 @@ export default function Dashboard() {
               </div>
 
               <div className="space-y-8 relative z-10">
-                 {funnelData.map((item: any) => (
+                 {funnelDisplayData.map((item) => (
                     <div key={item.name} className="space-y-3">
                        <div className="flex justify-between items-center text-[10px] font-black px-1 uppercase tracking-[0.1em]">
                           <span className="text-white/40">{item.name}</span>
@@ -330,7 +365,7 @@ export default function Dashboard() {
                  <Button variant="ghost" className="text-[10px] font-black text-slate-400 uppercase tracking-widest" onClick={() => window.location.href = "/crm"}>Ver CRM Completo</Button>
               </div>
               <div className="p-6 space-y-3">
-                 {recentLeads.map((lead: any) => (
+                 {recentLeads.map((lead: { id: string, name: string, status: string, source: string }) => (
                     <div key={lead.id} className="flex items-center gap-4 p-5 hover:bg-slate-50 rounded-[30px] transition-all duration-300 group cursor-pointer border-l-4 border-l-transparent hover:border-l-emerald-500">
                        <div className="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center font-black text-white group-hover:bg-emerald-500 shadow-xl transition-all hvr-pop">
                           {lead.name?.substring(0,2).toUpperCase() || "L"}
@@ -372,10 +407,11 @@ export default function Dashboard() {
                  </div>
                  
                  <div className="space-y-5">
-                    <InsightRow icon={<Bot className="w-4 h-4" />} text={`${stats.activeSdrs} SDRs IAs estão prospectando agora.`} />
-                    <InsightRow icon={<Target className="w-4 h-4" />} text="O nicho minerado hoje tem 42% mais chance de agendamento." />
-                    <InsightRow icon={<Calendar className="w-4 h-4" />} text="Projeção de fechamento estimada em R$ 25.000,00/semana." />
-                 </div>
+                      <InsightRow icon={<Bot className="w-4 h-4" />} text={stats.activeSdrs > 0 ? `${stats.activeSdrs} SDRs IAs estão prospectando agora.` : "Nenhum SDR ativo no momento."} />
+                      <InsightRow icon={<Target className="w-4 h-4" />} text={stats.qualifiedLeadsCount > 0 ? `Taxa de qualificação atual em ${((stats.qualifiedLeadsCount / (stats.totalLeads || 1)) * 100).toFixed(1)}%.` : "Aguardando primeiras qualificações."} />
+                      <InsightRow icon={<CheckCircle2 className="w-4 h-4" />} text={`Taxa de Show de reuniões em ${stats.showRate}%.`} />
+                      <InsightRow icon={<Calendar className="w-4 h-4" />} text={stats.appointments > 0 ? `${stats.appointments} reuniões confirmadas na agenda.` : "Sem agendamentos pendentes."} />
+                   </div>
 
                  <Button 
                    onClick={() => window.location.href = "/sdrs"}
@@ -391,7 +427,7 @@ export default function Dashboard() {
   );
 }
 
-function KpiCard({ label, value, trend, up, icon }: { label: string, value: any, trend: string, up: boolean, icon: any }) {
+function KpiCard({ label, value, trend, up, icon }: { label: string, value: string | number, trend: string, up: boolean, icon: React.ReactNode }) {
   return (
     <Card className="border-none shadow-xl rounded-[40px] bg-white p-10 hover:shadow-2xl hover:translate-y-[-8px] transition-all duration-500 group border-b-8 border-transparent hover:border-emerald-500">
        <div className="flex justify-between items-start mb-8">
@@ -409,7 +445,7 @@ function KpiCard({ label, value, trend, up, icon }: { label: string, value: any,
   );
 }
 
-function InsightRow({ icon, text }: { icon: any, text: string }) {
+function InsightRow({ icon, text }: { icon: React.ReactNode, text: string }) {
   return (
     <div className="flex items-center gap-4 py-4 border-b border-white/5 text-[13px] font-bold tracking-tight">
        <div className="p-2 bg-white/10 rounded-xl border border-white/5 backdrop-blur-md">{icon}</div>

@@ -46,10 +46,11 @@ export default function SdrManagement() {
   const [hasWhatsApp, setHasWhatsApp] = useState<boolean>(false);
 
   const fetchData = async () => {
+    const token = localStorage.getItem("token");
     try {
       const [sdrsRes, settingsRes] = await Promise.all([
-        fetch("/api/sdrs"),
-        fetch("/api/tenant/settings")
+        fetch("/api/sdrs", { headers: { "Authorization": `Bearer ${token}` } }),
+        fetch("/api/tenant/settings", { headers: { "Authorization": `Bearer ${token}` } })
       ]);
       
       const sdrData = await sdrsRes.json();
@@ -106,12 +107,16 @@ export default function SdrManagement() {
 
   const handleSave = async () => {
     if (!form.name) return toast({ title: "Nome obrigatório", variant: "destructive" });
+    const token = localStorage.getItem("token");
     try {
       const url = editingSdr ? `/api/sdrs/${editingSdr.id}` : "/api/sdrs";
       const method = editingSdr ? "PUT" : "POST";
       const res = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify(form)
       });
       if (res.ok) {
@@ -130,10 +135,12 @@ export default function SdrManagement() {
     setUploading(true);
     const formData = new FormData();
     formData.append("file", file);
+    const token = localStorage.getItem("token");
 
     try {
       const res = await fetch(`/api/sdrs/${editingSdr.id}/training`, {
         method: "POST",
+        headers: { "Authorization": `Bearer ${token}` },
         body: formData
       });
       const data = await res.json();
@@ -153,16 +160,24 @@ export default function SdrManagement() {
 
   const deleteSdr = async (id: string) => {
     if (!confirm("Remover este robô do time?")) return;
-    await fetch(`/api/sdrs/${id}`, { method: "DELETE" });
+    const token = localStorage.getItem("token");
+    await fetch(`/api/sdrs/${id}`, { 
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${token}` }
+    });
     fetchData();
     toast({ title: "🗑️ Removido" });
   };
 
   const toggleSdrActive = async (sdr: any) => {
+    const token = localStorage.getItem("token");
     try {
       const res = await fetch(`/api/sdrs/${sdr.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({ ...sdr, active: !sdr.active })
       });
       if (res.ok) {

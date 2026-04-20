@@ -156,22 +156,22 @@ export default function Connections() {
            <Card className="p-6 border-none shadow-xl rounded-[30px] bg-white flex items-center gap-6">
               <div className="bg-emerald-50 p-4 rounded-2xl text-emerald-600"><Activity className="w-6 h-6" /></div>
               <div>
-                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Saúde da Rede</p>
-                 <p className="text-2xl font-black text-emerald-600">100% Online</p>
+                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Conexões Ativas</p>
+                 <p className="text-2xl font-black text-slate-900">{connections.filter(c => c.status === 'CONNECTED').length} / {connections.length}</p>
               </div>
            </Card>
            <Card className="p-6 border-none shadow-xl rounded-[30px] bg-white flex items-center gap-6">
               <div className="bg-primary/5 p-4 rounded-2xl text-primary"><MessageSquare className="w-6 h-6" /></div>
               <div>
-                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mensagens / Hora</p>
-                 <p className="text-2xl font-black text-slate-900">~142 msgs</p>
+                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Saúde da Instância</p>
+                 <p className="text-2xl font-black text-slate-900">{connections.length > 0 ? "Operacional" : "Sem Conexões"}</p>
               </div>
            </Card>
            <Card className="p-6 border-none shadow-xl rounded-[30px] bg-white flex items-center gap-6">
               <div className="bg-blue-50 p-4 rounded-2xl text-blue-600"><Globe className="w-6 h-6" /></div>
               <div>
-                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Latência API</p>
-                 <p className="text-2xl font-black text-blue-600">24ms</p>
+                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status da API</p>
+                 <p className="text-2xl font-black text-blue-600">Online</p>
               </div>
            </Card>
         </div>

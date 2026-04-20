@@ -18,10 +18,31 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 
+interface Plan {
+  id: string;
+  name: string;
+  priceMonthly: number;
+  priceYearly: number;
+  maxLeads: number;
+  maxSdrs: number;
+  maxTokens: number;
+  features: string;
+}
+
+interface Tenant {
+  id: string;
+  name: string;
+  email: string;
+  active: boolean;
+  subscriptionStatus?: string;
+  plan?: Plan;
+  users?: any[];
+}
+
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("general");
-  const [tenants, setTenants] = useState<any[]>([]);
-  const [plans, setPlans] = useState<any[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
   const [allSdrs, setAllSdrs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -30,7 +51,7 @@ export default function AdminDashboard() {
   const [isEditTenantModalOpen, setIsEditTenantModalOpen] = useState(false);
 
   const [newTenant, setNewTenant] = useState({ name: "", email: "", planId: "", adminName: "", adminPassword: "" });
-  const [selectedTenant, setSelectedTenant] = useState<any>(null);
+  const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
 
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [newUser, setNewUser] = useState({ name: "", email: "", password: "", role: "AGENT" });
@@ -56,6 +77,7 @@ export default function AdminDashboard() {
 
   // CMS State
   const [lpSettings, setLpSettings] = useState({
+    id: "singleton",
     logoUrl: "",
     contactWhatsApp: "",
     contactEmail: "",
@@ -118,7 +140,9 @@ export default function AdminDashboard() {
         const parsed = JSON.parse(plan.features);
         featuresData = { ...featuresData, ...parsed };
       }
-    } catch(e) {}
+    } catch(e) {
+      console.error("Erro ao analisar features:", e);
+    }
 
     setNewPlan({
       ...plan,
@@ -194,6 +218,20 @@ export default function AdminDashboard() {
         setSelectedTenant(updatedTenant);
       }
     } catch (e) { toast({ title: "Erro ao criar usuário", variant: "destructive" }); }
+  };
+
+  const handleUpdateLp = async () => {
+    try {
+      const res = await fetch("/api/admin/landing-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(lpSettings)
+      });
+      if (res.ok) {
+        toast({ title: "🌐 Landing Page Atualizada!" });
+        fetchData();
+      }
+    } catch (e) { toast({ title: "Erro ao salvar", variant: "destructive" }); }
   };
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -315,8 +353,108 @@ export default function AdminDashboard() {
                 ))}
             </div>
           </TabsContent>
-          <TabsContent value="cms">
-              {/* LP Settings placeholder */}
+          <TabsContent value="cms" className="animate-in slide-in-from-bottom-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-20">
+                  <Card className="lg:col-span-2 border-none shadow-3xl rounded-[40px] bg-white p-10">
+                      <h3 className="text-2xl font-black text-slate-800 mb-8 uppercase italic flex items-center gap-3">
+                          <Globe className="w-8 h-8 text-blue-500" /> Configurações Visuais
+                      </h3>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                              <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">URL da Logotipo</Label>
+                              <Input value={lpSettings.logoUrl} onChange={e => setLpSettings({...lpSettings, logoUrl: e.target.value})} className="h-14 rounded-2xl bg-slate-50 border-none font-bold" placeholder="https://..." />
+                          </div>
+                          <div className="space-y-2">
+                              <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">SDR do Chat da Landing Page</Label>
+                              <Select value={lpSettings.selectedSdrId} onValueChange={v => setLpSettings({...lpSettings, selectedSdrId: v})}>
+                                  <SelectTrigger className="h-14 rounded-2xl bg-slate-50 border-none font-bold">
+                                      <SelectValue placeholder="Selecione um SDR..." />
+                                  </SelectTrigger>
+                                  <SelectContent className="rounded-2xl">
+                                      {allSdrs.map(s => <SelectItem key={s.id} value={s.id}>{s.name} ({s.role})</SelectItem>)}
+                                  </SelectContent>
+                              </Select>
+                          </div>
+                      </div>
+
+                      <h4 className="text-xl font-black text-slate-800 mt-12 mb-6 uppercase italic">Links de Contato</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                              <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">WhatsApp de Contato</Label>
+                              <div className="relative">
+                                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
+                                  <Input value={lpSettings.contactWhatsApp} onChange={e => setLpSettings({...lpSettings, contactWhatsApp: e.target.value})} className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold" placeholder="5511..." />
+                              </div>
+                          </div>
+                          <div className="space-y-2">
+                              <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">E-mail de Suporte</Label>
+                              <div className="relative">
+                                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-orange-500" />
+                                  <Input value={lpSettings.contactEmail} onChange={e => setLpSettings({...lpSettings, contactEmail: e.target.value})} className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold" placeholder="suporte@..." />
+                              </div>
+                          </div>
+                          <div className="space-y-2">
+                              <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">Instagram</Label>
+                              <div className="relative">
+                                  <Instagram className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-pink-500" />
+                                  <Input value={lpSettings.contactInstagram} onChange={e => setLpSettings({...lpSettings, contactInstagram: e.target.value})} className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold" />
+                              </div>
+                          </div>
+                          <div className="space-y-2">
+                              <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">LinkedIn</Label>
+                              <div className="relative">
+                                  <Linkedin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-600" />
+                                  <Input value={lpSettings.contactLinkedIn} onChange={e => setLpSettings({...lpSettings, contactLinkedIn: e.target.value})} className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold" />
+                              </div>
+                          </div>
+                          <div className="space-y-2">
+                              <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">YouTube</Label>
+                              <div className="relative">
+                                  <Youtube className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-red-600" />
+                                  <Input value={lpSettings.contactYouTube} onChange={e => setLpSettings({...lpSettings, contactYouTube: e.target.value})} className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold" />
+                              </div>
+                          </div>
+                      </div>
+                      
+                      <Button onClick={handleUpdateLp} className="h-16 w-full mt-10 bg-slate-900 text-white font-black rounded-3xl uppercase tracking-widest shadow-2xl hover:scale-[1.01] transition-all">
+                          Salvar Configurações da Landing Page
+                      </Button>
+                  </Card>
+
+                  <Card className="border-none shadow-3xl rounded-[40px] bg-slate-50 p-10">
+                      <h3 className="text-xl font-black text-slate-800 mb-6 uppercase italic flex items-center gap-3">
+                          <Layout className="w-6 h-6 text-purple-500" /> Visibilidade de Planos
+                      </h3>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">Escolha quais planos serão exibidos na Landing Page.</p>
+                      
+                      <div className="space-y-3">
+                          {plans.map(p => {
+                              const isVisible = lpSettings.visiblePlanIds?.split(",").includes(p.id);
+                              return (
+                                  <div key={p.id} className={`p-5 rounded-2xl flex items-center justify-between border-2 transition-all ${isVisible ? 'bg-white border-emerald-500 shadow-lg' : 'bg-slate-100 border-transparent opacity-60'}`}>
+                                      <div className="flex flex-col">
+                                          <span className="font-black text-slate-800">{p.name}</span>
+                                          <span className="text-[10px] font-bold text-emerald-500 italic">R$ {p.priceMonthly}/mês</span>
+                                      </div>
+                                      <Checkbox 
+                                          checked={isVisible} 
+                                          onCheckedChange={(checked) => {
+                                              let ids = lpSettings.visiblePlanIds ? lpSettings.visiblePlanIds.split(",").filter(Boolean) : [];
+                                              if (checked) {
+                                                  if(!ids.includes(p.id)) ids.push(p.id);
+                                              } else {
+                                                  ids = ids.filter(id => id !== p.id);
+                                              }
+                                              setLpSettings({...lpSettings, visiblePlanIds: ids.join(",")});
+                                          }}
+                                      />
+                                  </div>
+                              );
+                          })}
+                      </div>
+                  </Card>
+              </div>
           </TabsContent>
         </Tabs>
       </div>

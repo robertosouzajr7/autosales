@@ -83,6 +83,7 @@ export default function Register() {
       const data = await res.json();
       if (res.ok) {
         toast({ title: "🚀 Conta Criada com Sucesso!", description: "Seu trial de 7 dias começou." });
+        localStorage.setItem("token", data.token);
         localStorage.setItem("userRole", "OWNER");
         localStorage.setItem("userPlan", formData.plan);
         localStorage.setItem("tenantId", data.tenant.id);
