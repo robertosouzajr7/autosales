@@ -170,7 +170,7 @@ function SidebarContent({
         </div>
         {!collapsed && (
           <span className="text-xl font-black tracking-tighter uppercase text-white">
-            Vend<span className="text-emerald-500 italic">Ai</span>
+            Agentes <span className="text-emerald-500 italic">Virtuais</span>
           </span>
         )}
         {!collapsed && showCollapseButton && (
