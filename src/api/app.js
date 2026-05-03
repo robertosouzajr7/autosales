@@ -14,6 +14,7 @@ import { EventEmitter } from "events";
 dotenv.config();
 
 const app = express();
+app.set("trust proxy", 1); // Necessário para o rateLimit funcionar atrás do Nginx/Easypanel proxy
 const eventEmitter = new EventEmitter();
 AutomationEngine.setEventEmitter(eventEmitter);
 
