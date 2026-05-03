@@ -3,75 +3,75 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model Tenant {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  phone     String?
-  active    Boolean  @default(true)
-  
+  id     String  @id @default(uuid())
+  name   String
+  email  String  @unique
+  phone  String?
+  active Boolean @default(true)
+
   // SaaS Subscription
-  planId            String?  
-  plan              Plan?    @relation(fields: [planId], references: [id])
-  subscriptionStatus String  @default("TRIAL") // TRIAL, ACTIVE, PAST_DUE, CANCELED
-  trialEnd          DateTime?
-  mercadoPagoId     String?
-  cardLast4         String?
-  
+  planId             String?
+  plan               Plan?     @relation(fields: [planId], references: [id])
+  subscriptionStatus String    @default("TRIAL") // TRIAL, ACTIVE, PAST_DUE, CANCELED
+  trialEnd           DateTime?
+  mercadoPagoId      String?
+  cardLast4          String?
+
   // Customization
-  webChatUrl   String?
-  openAiKey String?
-  systemPrompt String?
+  webChatUrl         String?
+  openAiKey          String?
+  systemPrompt       String?
   googleRefreshToken String?
-  aiProvider   String?  @default("GEMINI")
-  aiApiKey     String?
-  
+  aiProvider         String? @default("GEMINI")
+  aiApiKey           String?
+
   // Lead Discovery Integrations
-  apolloApiKey String?
-  snovClientId String?
+  apolloApiKey     String?
+  snovClientId     String?
   snovClientSecret String?
 
   // Email Marketing Configuration (SMTP)
-  smtpHost     String?
-  smtpPort     Int?
-  smtpUser     String?
-  smtpPass     String?
-  smtpFrom     String? @default("disparos@agentesvirtuais.com")
-  
+  smtpHost String?
+  smtpPort Int?
+  smtpUser String?
+  smtpPass String?
+  smtpFrom String? @default("disparos@agentesvirtuais.com")
+
   // Listmonk Integration
-  listmonkUrl      String?
-  listmonkToken    String?
-  listmonkListId   String?
-  
+  listmonkUrl    String?
+  listmonkToken  String?
+  listmonkListId String?
+
   // Consumption Tracking
-  usedTokens        Int      @default(0)
-  qualifiedLeadsCount Int    @default(0)
-  monthlyMessagesCount Int   @default(0)
+  usedTokens           Int      @default(0)
+  qualifiedLeadsCount  Int      @default(0)
+  monthlyMessagesCount Int      @default(0)
   lastMessagesReset    DateTime @default(now())
-  lastUsageReset    DateTime @default(now())
+  lastUsageReset       DateTime @default(now())
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
-  users     User[]
-  leads     Lead[]
+
+  users            User[]
+  leads            Lead[]
   automationConfig AutomationConfig?
-  automations Automation[]
-  sdrs      SdrBot[]
-  appointments Appointment[]
+  automations      Automation[]
+  sdrs             SdrBot[]
+  appointments     Appointment[]
   whatsappAccounts WhatsAppAccount[]
-  
+
   // Custom Pipelines
   pipelineStages PipelineStage[]
-  
+
   // Marketing / Bulk Messaging
-  campaigns    Campaign[]
-  templates    MessageTemplate[]
-  
+  campaigns Campaign[]
+  templates MessageTemplate[]
+
   conversations Conversation[]
   messages      Message[]
   products      Product[]
@@ -79,200 +79,200 @@ model Tenant {
 }
 
 model PipelineStage {
-  id        String   @id @default(uuid())
-  name      String   // Ex: Novos, Qualificando, Agendados
-  color     String?  @default("#3b82f6")
-  order     Int      @default(0)
-  
-  tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  
-  leads     Lead[]
+  id    String  @id @default(uuid())
+  name  String // Ex: Novos, Qualificando, Agendados
+  color String? @default("#3b82f6")
+  order Int     @default(0)
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  leads Lead[]
 }
 
 model Tag {
-  id        String   @id @default(uuid())
-  name      String
-  color     String?  @default("#cbd5e1")
-  
+  id    String  @id @default(uuid())
+  name  String
+  color String? @default("#cbd5e1")
+
   // Many-to-many relationship with Leads is better but SQLite doesn't support implicit join tables easily for large scale. 
   // I'll use a string of tag IDs in Lead for now as a common pattern for SQLite portability, or a explicit join model.
   // Actually, standard Many-to-Many is fine.
-  leads     Lead[]
+  leads Lead[]
 }
 
 model Lead {
-  id        String   @id @default(uuid())
-  name      String
-  phone     String?  
-  email     String?
-  
+  id    String  @id @default(uuid())
+  name  String
+  phone String?
+  email String?
+
   // Reference to PipelineStage
-  status    String   @default("NEW") 
-  stageId   String?
-  stage     PipelineStage? @relation(fields: [stageId], references: [id])
-  
-  source    String?  
-  tags      Tag[]    // Many-to-Many
-  notes     String?  
+  status  String         @default("NEW")
+  stageId String?
+  stage   PipelineStage? @relation(fields: [stageId], references: [id])
+
+  source   String?
+  tags     Tag[] // Many-to-Many
+  notes    String?
   tenantId String
-  
-  isToEnrich Boolean @default(false) 
-  
+
+  isToEnrich Boolean @default(false)
+
   // Fase 3 — IA Avançada
-  qualificationScore Int?      // 0-100 score via IA
-  extractedData      String?   // JSON com dados extraídos via NER (nome, empresa, cargo, etc.)
+  qualificationScore       Int? // 0-100 score via IA
+  extractedData            String? // JSON com dados extraídos via NER (nome, empresa, cargo, etc.)
   lastIntentClassification String? // Última intent classificada pela IA
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  conversations Conversation[]
-  appointments  Appointment[]
-  progressions AutomationProgress[]
+  tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversations        Conversation[]
+  appointments         Appointment[]
+  progressions         AutomationProgress[]
   automationExecutions AutomationExecution[]
 }
 
 model Campaign {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   name        String
-  channel     String   @default("WHATSAPP") // WHATSAPP, EMAIL
-  status      String   @default("DRAFT") // DRAFT, RUNNING, COMPLETED, PAUSED
+  channel     String    @default("WHATSAPP") // WHATSAPP, EMAIL
+  status      String    @default("DRAFT") // DRAFT, RUNNING, COMPLETED, PAUSED
   scheduledAt DateTime?
-  
-  templateId  String
-  template    MessageTemplate @relation(fields: [templateId], references: [id])
-  
+
+  templateId String
+  template   MessageTemplate @relation(fields: [templateId], references: [id])
+
   targetTagIds String? // IDs das tags participantes (JSON string)
-  
-  sentCount      Int      @default(0)
-  deliveredCount Int      @default(0)
-  readCount      Int      @default(0)
-  clicks         Int      @default(0)
-  errorCount     Int      @default(0)
-  
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+
+  sentCount      Int @default(0)
+  deliveredCount Int @default(0)
+  readCount      Int @default(0)
+  clicks         Int @default(0)
+  errorCount     Int @default(0)
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model MessageTemplate {
-  id        String   @id @default(uuid())
-  name      String
-  content   String   // Texto com {{name}}
-  mediaUrl  String?  // Imagem/Vídeo
-  buttons   String?  // JSON string dos botões
-  
-  tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  
+  id       String  @id @default(uuid())
+  name     String
+  content  String // Texto com {{name}}
+  mediaUrl String? // Imagem/Vídeo
+  buttons  String? // JSON string dos botões
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   campaigns Campaign[]
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Plan {
-  id              String   @id @default(uuid())
-  name            String   // Pro, Basic, Enterprise
-  priceMonthly    Float
-  priceYearly     Float
-  maxLeads        Int
-  maxSdrs         Int
-  maxTokens       Int      @default(100000)
-  maxMessages     Int      @default(1000)   // Limite mensal de disparos (WhatsApp/E-mail)
-  features        String?  // JSON list of features
-  active          Boolean  @default(true)
-  
-  tenants         Tenant[]
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id           String  @id @default(uuid())
+  name         String // Pro, Basic, Enterprise
+  priceMonthly Float
+  priceYearly  Float
+  maxLeads     Int
+  maxSdrs      Int
+  maxTokens    Int     @default(100000)
+  maxMessages  Int     @default(1000) // Limite mensal de disparos (WhatsApp/E-mail)
+  features     String? // JSON list of features
+  active       Boolean @default(true)
+
+  tenants   Tenant[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model SdrBot {
-  id              String   @id @default(uuid())
-  name            String
-  role            String   @default("INBOUND") // INBOUND, OUTBOUND
-  prompt          String?  @default("Você é um SDR focado em qualificar leads.")
-  
+  id     String  @id @default(uuid())
+  name   String
+  role   String  @default("INBOUND") // INBOUND, OUTBOUND
+  prompt String? @default("Você é um SDR focado em qualificar leads.")
+
   // Treinamento individualizado (Requisito 4 e 5)
-  knowledgeBase   String?  @default("") // Texto de treinamento
-  trainingUrls    String?  // Links de sites ou arquivos (JSON array string)
-  
+  knowledgeBase String? @default("") // Texto de treinamento
+  trainingUrls  String? // Links de sites ou arquivos (JSON array string)
+
   // Parâmetros avançados de IA (Requisito 8 e 9)
-  responseDelay   Int      @default(2000) // Milisegundos
-  voiceTone       String   @default("PROFESSIONAL") // CASUAL, PROFESSIONAL, PERSUASIVE
+  responseDelay      Int     @default(2000) // Milisegundos
+  voiceTone          String  @default("PROFESSIONAL") // CASUAL, PROFESSIONAL, PERSUASIVE
   escalationKeywords String? @default("atendente, falar com humano, ajuda, queima, dor, bolha")
-  
+
   // Parâmetros Globais de Negócio (Extraídos dos áudios)
   followUpInterval      Int     @default(120) // Minutos para cobrar resposta após preço
-  preConfirmationHours  Int     @default(12)  // Horas antes para pré-confirmação
-  noShowGraceMinutes    Int     @default(15)  // Minutos de tolerância antes de cobrar presença
-  postServiceCheckHours Int     @default(24)  // Horas após serviço para enviar pós-venda
+  preConfirmationHours  Int     @default(12) // Horas antes para pré-confirmação
+  noShowGraceMinutes    Int     @default(15) // Minutos de tolerância antes de cobrar presença
+  postServiceCheckHours Int     @default(24) // Horas após serviço para enviar pós-venda
   enableWaitlist        Boolean @default(true) // Encaixe automático em desistências
 
-  tenantId        String
-  active          Boolean  @default(true)
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  tenantId String
+  active   Boolean @default(true)
 
-  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model AutomationConfig {
-  id                    String   @id @default(uuid())
+  id               String @id @default(uuid())
   // Parâmetros Globais de Negócio (Extraídos dos áudios)
-  autoConfirmHours      Int      @default(24)
-  lateToleranceMin      Int      @default(15)
-  postServiceHours      Int      @default(24)
-  humanHandoffTags      String   @default("ajuda, atendente, humano, queima, dor, bolha")
-  
+  autoConfirmHours Int    @default(24)
+  lateToleranceMin Int    @default(15)
+  postServiceHours Int    @default(24)
+  humanHandoffTags String @default("ajuda, atendente, humano, queima, dor, bolha")
+
   // Estrutura Visual (Opcional se usado como Hub Global)
-  nodes                 String?  // JSON string
-  edges                 String?  // JSON string
-  
+  nodes String? // JSON string
+  edges String? // JSON string
+
   // Templates de Mensagens (Universalização)
-  confirmMsgTemplate    String?  @default("Olá {name}! 👋 Passando para confirmar seu atendimento de amanhã às {time}. Podemos confirmar? ✅")
-  lateMsgTemplate       String?  @default("Oi {name}! 😊 Notamos que você ainda não chegou para o seu horário das {time}. Está tudo bem?")
+  confirmMsgTemplate     String? @default("Olá {name}! 👋 Passando para confirmar seu atendimento de amanhã às {time}. Podemos confirmar? ✅")
+  lateMsgTemplate        String? @default("Oi {name}! 😊 Notamos que você ainda não chegou para o seu horário das {time}. Está tudo bem?")
   postServiceMsgTemplate String? @default("Oi {name}! Esperamos que tenha gostado do atendimento! ✨ Como foi sua experiência?")
-  
-  tenantId              String   @unique
-  tenant                Tenant   @relation(fields: [tenantId], references: [id])
-  
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Automation {
-  id          String   @id @default(uuid())
-  tenantId   String
+  id          String  @id @default(uuid())
+  tenantId    String
   name        String
   description String?
 
   // Trigger config
-  trigger     String   // NEW_LEAD, NEW_MSG, KEYWORD, PIPELINE_MOVE, INACTIVITY, APPOINTMENT_CREATED, SCHEDULE
+  trigger       String // NEW_LEAD, NEW_MSG, KEYWORD, PIPELINE_MOVE, INACTIVITY, APPOINTMENT_CREATED, SCHEDULE
   triggerConfig String? // JSON: { keywords: [], inactivityMinutes: 1440, schedule: "0 9 * * *" }
 
   // Flow Definition (ReactFlow format)
-  nodes       String?  // JSON: [{ id, type, position: {x,y}, data: { label, config } }]
-  edges       String?  // JSON: [{ id, source, target, sourceHandle }]
+  nodes String? // JSON: [{ id, type, position: {x,y}, data: { label, config } }]
+  edges String? // JSON: [{ id, source, target, sourceHandle }]
 
-  active      Boolean  @default(true)
-  version     Int      @default(1)
+  active  Boolean @default(true)
+  version Int     @default(1)
 
   // Stats
-  totalExecutions  Int @default(0)
-  lastExecutedAt   DateTime?
+  totalExecutions Int       @default(0)
+  lastExecutedAt  DateTime?
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  tenant     Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  executions AutomationExecution[]
+  tenant       Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  executions   AutomationExecution[]
   progressions AutomationProgress[]
 }
 
@@ -281,27 +281,26 @@ model User {
   name      String
   email     String   @unique
   password  String
-  phone     String?  // WhatsApp do admin para Modo Comando
+  phone     String? // WhatsApp do admin para Modo Comando
   role      String   @default("ADMIN") // ADMIN, AGENT, OWNER, SUPERADMIN
-  tenantId String
+  tenantId  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
-
 
 model Conversation {
   id        String   @id @default(uuid())
   leadId    String   @unique
   tenantId  String
-  botActive Boolean  @default(true) 
+  botActive Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  messages  Message[]
+  lead     Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  messages Message[]
 }
 
 model Message {
@@ -309,163 +308,163 @@ model Message {
   conversationId String
   tenantId       String
   content        String
-  role           String   
-  messageType    String   @default("TEXT") 
-  mediaUrl       String?  
+  role           String
+  messageType    String   @default("TEXT")
+  mediaUrl       String?
   createdAt      DateTime @default(now())
 
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  tenant         Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model Appointment {
   id        String   @id @default(uuid())
   leadId    String
-  tenantId String
+  tenantId  String
   title     String
   date      DateTime
-  status    String   @default("SCHEDULED") 
+  status    String   @default("SCHEDULED")
   notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model AutomationProgress {
-  id           String   @id @default(uuid())
-  automationId String
-  leadId       String
+  id            String    @id @default(uuid())
+  automationId  String
+  leadId        String
   currentStepId String?
-  status       String   @default("RUNNING")
-  nextRun      DateTime?
-  data         String?
+  status        String    @default("RUNNING")
+  nextRun       DateTime?
+  data          String?
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
-  lead         Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  automation Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  lead       Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@unique([automationId, leadId])
 }
 
 model AutomationExecution {
-  id             String   @id @default(uuid())
-  automationId   String
-  leadId         String
+  id           String @id @default(uuid())
+  automationId String
+  leadId       String
 
-  status         String   @default("RUNNING") // RUNNING, WAITING_INPUT, WAITING_DELAY, COMPLETED, FAILED, CANCELLED
-  currentNodeId  String?
+  status        String  @default("RUNNING") // RUNNING, WAITING_INPUT, WAITING_DELAY, COMPLETED, FAILED, CANCELLED
+  currentNodeId String?
 
   // Flow context (variables persisted between steps)
-  context        String?  // JSON: { variables: {}, inputs: {}, metadata: {} }
+  context String? // JSON: { variables: {}, inputs: {}, metadata: {} }
 
   // Delay/scheduling
-  resumeAt       DateTime?
+  resumeAt DateTime?
 
   // User input collection
   waitingForInput Boolean @default(false)
   inputVariable   String? // variable name to save user response into
 
-  startedAt      DateTime @default(now())
-  completedAt    DateTime?
-  error          String?
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  error       String?
 
-  automation     Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
-  lead           Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  steps          AutomationStepLog[]
+  automation Automation          @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  lead       Lead                @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  steps      AutomationStepLog[]
 }
 
 model AutomationStepLog {
-  id           String   @id @default(uuid())
-  executionId  String
-  nodeId       String
-  nodeType     String
+  id          String @id @default(uuid())
+  executionId String
+  nodeId      String
+  nodeType    String
 
-  status       String   @default("SUCCESS") // SUCCESS, FAILED, SKIPPED
-  input        String?  // JSON: node config/data
-  output       String?  // JSON: result of execution
-  duration     Int?     // ms
+  status   String  @default("SUCCESS") // SUCCESS, FAILED, SKIPPED
+  input    String? // JSON: node config/data
+  output   String? // JSON: result of execution
+  duration Int? // ms
 
-  createdAt    DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  execution    AutomationExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  execution AutomationExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
 }
 
 model WhatsAppAccount {
-  id        String   @id @default(uuid())
-  name      String
-  phone     String?
-  status    String   @default("DISCONNECTED") 
-  
+  id     String  @id @default(uuid())
+  name   String
+  phone  String?
+  status String  @default("DISCONNECTED")
+
   // Meta Cloud API Fields
   phoneId     String?
   accessToken String?
   wabaId      String?
-  
-  tenantId  String
-  
+
+  tenantId String
+
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model LandingPageSettings {
-  id               String   @id @default("singleton")
+  id               String  @id @default("singleton")
   logoUrl          String?
   contactWhatsApp  String?
   contactEmail     String?
   contactInstagram String?
   contactLinkedIn  String?
   contactYouTube   String?
-  
+
   // SDR for Landing Page Chat
-  selectedSdrId    String?
-  
+  selectedSdrId String?
+
   // Plans to show (comma separated IDs)
-  visiblePlanIds   String?  @default("") 
-  
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  visiblePlanIds String? @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Product {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   name        String
-  type        String   @default("PRODUCT") // PRODUCT, SERVICE
+  type        String  @default("PRODUCT") // PRODUCT, SERVICE
   description String?
   price       Float?
-  size        String?  // P, M, G ou dimensões
-  buyUrl      String?  @default("https://")
-  isActive    Boolean  @default(true)
-  
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  size        String? // P, M, G ou dimensões
+  buyUrl      String? @default("https://")
+  isActive    Boolean @default(true)
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model IcpProfile {
-  id              String   @id @default(uuid())
-  name            String   // Ex: Donos de Restaurantes em SP
-  
+  id   String @id @default(uuid())
+  name String // Ex: Donos de Restaurantes em SP
+
   // Critérios de Busca
-  niche           String?  // Ex: Restaurantes, Academias
-  role            String?  // Ex: CEO, Dono, Gerente Comercial
-  location        String?  // Ex: São Paulo, Brasil
-  
+  niche    String? // Ex: Restaurantes, Academias
+  role     String? // Ex: CEO, Dono, Gerente Comercial
+  location String? // Ex: São Paulo, Brasil
+
   // Automação
   isAutoHunterEnabled Boolean @default(false)
   isProspectingActive Boolean @default(false) // Novo campo
-  isActive            Boolean @default(true)  // Novo campo
-  dailyLimit      Int      @default(200)
-  
-  tenantId        String
-  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  isActive            Boolean @default(true) // Novo campo
+  dailyLimit          Int     @default(200)
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
