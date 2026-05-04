@@ -7,9 +7,22 @@ export const getSettings = async (req, res) => {
   try {
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
-      include: { plan: true }
+      include: { plan: true, whatsappAccounts: true, sdrs: true }
     });
+    
+    const hasWhatsAppConnection = tenant?.whatsappAccounts?.some(acc => acc.status === 'CONNECTED') || false;
+    const hasSdr = (tenant?.sdrs?.length || 0) > 0;
+    
+    let planFeatures = {};
+    if (tenant?.plan?.features) {
+      try {
+        planFeatures = JSON.parse(tenant.plan.features);
+      } catch(e) {}
+    }
     res.json({
+      hasWhatsAppConnection,
+      hasSdr,
+      planFeatures,
       companyName: tenant?.name,
       phone: tenant?.phone,
       aiProvider: tenant?.aiProvider,

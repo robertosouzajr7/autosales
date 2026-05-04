@@ -74,7 +74,8 @@ export default function Connections() {
     setQrCode(null);
     setQrStatus("Conectando...");
 
-    const eventSource = new EventSource(`/api/whatsapp/qr/${id}`);
+    const token = localStorage.getItem("token");
+    const eventSource = new EventSource(`/api/whatsapp/qr/${id}?token=${token}`);
 
     eventSource.onmessage = (event) => {
       try {
@@ -276,16 +277,16 @@ export default function Connections() {
 
             <TabsContent value="meta" className="space-y-4">
                <div className="space-y-3">
-                  <input type="text" id="meta-name" placeholder="Nome do Canal" className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-xl font-bold text-sm" />
-                  <input type="text" id="meta-phone" placeholder="Seu Número (ex: 5511999999999)" className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-xl font-bold text-sm" />
-                  <input type="text" id="meta-phoneid" placeholder="Phone Number ID" className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-xl font-bold text-sm" />
-                  <input type="text" id="meta-waba" placeholder="WABA (Business Account ID)" className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-xl font-bold text-sm" />
-                  <input type="text" id="meta-verify" placeholder="Verify Token (Escolha uma Senha p/ Webhook)" className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-xl font-bold text-sm" />
+                   <input type="text" id="meta-name" placeholder="Nome do Canal" className="w-full h-14 px-6 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all" />
+                   <input type="text" id="meta-phone" placeholder="Seu Número (ex: 5511999999999)" className="w-full h-14 px-6 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all" />
+                   <input type="text" id="meta-phoneid" placeholder="Phone Number ID" className="w-full h-14 px-6 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all" />
+                   <input type="text" id="meta-waba" placeholder="WABA (Business Account ID)" className="w-full h-14 px-6 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all" />
+                   <input type="text" id="meta-verify" placeholder="Verify Token (Escolha uma Senha p/ Webhook)" className="w-full h-14 px-6 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all" />
                   <div className="p-4 bg-slate-900 rounded-xl space-y-2">
                      <p className="text-[10px] text-white/50 font-black uppercase tracking-widest">Webhook URL p/ Colar no Facebook:</p>
                      <p className="text-[11px] text-primary font-mono font-bold break-all">{window.location.origin}/api/webhook/whatsapp/meta</p>
                   </div>
-                  <textarea id="meta-token" placeholder="Access Token Permanente (Bearer)" className="w-full h-24 px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl font-bold text-xs" />
+                   <textarea id="meta-token" placeholder="Access Token Permanente (Bearer)" className="w-full h-24 px-6 py-4 bg-slate-50 border-none rounded-2xl font-bold text-xs outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all resize-none" />
                </div>
                <Button 
                 onClick={async () => {

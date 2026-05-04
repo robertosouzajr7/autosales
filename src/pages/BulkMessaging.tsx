@@ -87,14 +87,48 @@ export default function BulkMessaging() {
     }
   };
 
+  const getHeaders = () => {
+    const token = localStorage.getItem("token");
+    return token ? { "Content-Type": "application/json", "Authorization": `Bearer ${token}` } : { "Content-Type": "application/json" };
+  };
+
+  const toggleContact = (id: string, checked: boolean) => {
+    if (checked) {
+      setSelectedContacts(prev => [...prev, id]);
+    } else {
+      setSelectedContacts(prev => prev.filter(c => c !== id));
+    }
+  };
+
   const startCampaign = async () => {
+    if (selectedContacts.length === 0) {
+      toast({ title: "Aviso", description: "Selecione pelo menos um contato.", variant: "destructive" });
+      return;
+    }
+    
     setSending(true);
-    // Lógica de disparo modularizada via api/v2
-    toast({ title: "Campanha Iniciada", description: "Acompanhe os resultados em tempo real." });
-    setTimeout(() => {
-      setSending(false);
+    try {
+      const campRes = await fetch("/api/bulk/campaigns", {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify({ name: `Disparo via Painel - ${new Date().toLocaleDateString()}`, channel, message })
+      });
+      const campaign = await campRes.json();
+      
+      const sendRes = await fetch(`/api/bulk/campaigns/${campaign.id}/send`, {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify({ leadIds: selectedContacts })
+      });
+
+      if (!sendRes.ok) throw new Error("Erro no disparo");
+
+      toast({ title: "Campanha Iniciada", description: "Acompanhe os resultados em tempo real." });
       setStep(6);
-    }, 2000);
+    } catch (e) {
+      toast({ title: "Falha ao enviar", variant: "destructive", description: "Verifique suas configurações de canal." });
+    }
+    setSending(false);
   };
 
   return (
@@ -231,7 +265,10 @@ export default function BulkMessaging() {
                         {contacts.map(c => (
                           <div key={c.id} className="p-4 rounded-2xl border border-slate-100 flex items-center justify-between hover:bg-slate-50 transition-all">
                             <div className="flex items-center gap-4">
-                              <Checkbox />
+                              <Checkbox 
+                                checked={selectedContacts.includes(c.id)} 
+                                onCheckedChange={(checked) => toggleContact(c.id, checked === true)} 
+                              />
                               <div>
                                 <p className="font-black text-slate-800">{c.name}</p>
                                 <p className="text-[10px] font-bold text-slate-400">{c.phone}</p>
@@ -282,6 +319,12 @@ export default function BulkMessaging() {
                          <div className="bg-white px-4 py-1.5 rounded-lg border border-slate-200 text-[10px] font-bold text-slate-400 flex-1">
                             {smtpConfig.from || "remetente@seu-dominio.com"}
                          </div>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 p-8 border-b border-slate-50 relative z-10 bg-slate-50/50">
+                        <div>
+                          <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Alvo Selecionado</p>
+                          <p className="text-2xl font-black text-slate-800">{selectedContacts.length} <span className="text-sm">Contatos</span></p>
+                        </div>
                       </div>
                       <div className="p-10 space-y-6 text-left">
                          <div className="space-y-1">

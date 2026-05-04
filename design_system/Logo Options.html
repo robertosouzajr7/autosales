@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agentes Virtuais — Logo Options</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,700;0,900;1,900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { overflow: hidden; font-family: 'Inter', system-ui, sans-serif; }
+.hint { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.55); color: white; font-size: 11px; font-weight: 600; padding: 8px 18px; border-radius: 99px; backdrop-filter: blur(8px); pointer-events: none; z-index: 999; letter-spacing: 0.05em; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div class="hint">Scroll / pinch to zoom · drag to pan</div>
+
+<script type="text/babel">
+/* ─── Shared constants ─── */
+const EM = '#10b981';   // emerald-500
+const DARK = '#0f172a'; // slate-900
+const BLUE = '#3b82f6';
+const PURP = '#8b5cf6';
+const WHITE = '#ffffff';
+
+/* ─── Artboard shell with light/dark toggle ─── */
+function LogoBoard({ label, bg = '#ffffff', children }) {
+  return (
+    <DCArtboard label={label} width={380} height={200} style={{ background: bg }}>
+      <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', padding: 32 }}>
+        {children}
+      </div>
+    </DCArtboard>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   OPTION A — "Bot Mark"
+   Square icon + wordmark. The icon is a
+   stylised robot face with emerald pupils.
+═══════════════════════════════════════════════ */
+function LogoA({ size = 1, dark = false }) {
+  const fg = dark ? WHITE : DARK;
+  const s = size;
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap: 14*s }}>
+      {/* Icon */}
+      <svg width={48*s} height={48*s} viewBox="0 0 48 48" fill="none">
+        <rect width="48" height="48" rx={12*s} fill={DARK}/>
+        {/* head */}
+        <rect x="10" y="16" width="28" height="20" rx="6" stroke={EM} strokeWidth="2.2" fill="none"/>
+        {/* eyes */}
+        <circle cx="18" cy="26" r="3" fill={EM}/>
+        <circle cx="30" cy="26" r="3" fill={EM}/>
+        {/* antenna */}
+        <line x1="24" y1="16" x2="24" y2="11" stroke={EM} strokeWidth="2.2" strokeLinecap="round"/>
+        <circle cx="24" cy="9.5" r="2" fill={EM}/>
+        {/* mouth */}
+        <path d="M18 32 Q24 35.5 30 32" stroke={EM} strokeWidth="2" strokeLinecap="round" fill="none"/>
+      </svg>
+      {/* Wordmark */}
+      <div style={{ lineHeight: 1 }}>
+        <div style={{ fontSize: 22*s, fontWeight: 900, letterSpacing: '-0.04em', textTransform: 'uppercase', fontStyle: 'italic', color: fg }}>
+          AGENTES <span style={{ color: EM }}>VIRTUAIS</span>
+        </div>
+        <div style={{ fontSize: 9*s, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.22em', color: dark ? 'rgba(255,255,255,0.35)' : '#94a3b8', marginTop: 4*s }}>
+          SDR de Inteligência Artificial
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   OPTION B — "Circuit A"
+   A stylised letter A built from circuit-board
+   lines, emerald accent dot, dark square icon.
+═══════════════════════════════════════════════ */
+function LogoB({ size = 1, dark = false }) {
+  const fg = dark ? WHITE : DARK;
+  const s = size;
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap: 14*s }}>
+      <svg width={48*s} height={48*s} viewBox="0 0 48 48" fill="none">
+        <rect width="48" height="48" rx={12} fill={DARK}/>
+        {/* A shape with circuit breaks */}
+        <path d="M24 9 L10 39" stroke={WHITE} strokeWidth="2.5" strokeLinecap="round"/>
+        <path d="M24 9 L38 39" stroke={WHITE} strokeWidth="2.5" strokeLinecap="round"/>
+        <path d="M15 29 L33 29" stroke={WHITE} strokeWidth="2.5" strokeLinecap="round"/>
+        {/* circuit dots */}
+        <circle cx="10" cy="39" r="2.5" fill={EM}/>
+        <circle cx="38" cy="39" r="2.5" fill={EM}/>
+        <circle cx="24" cy="9" r="2.5" fill={EM}/>
+        <circle cx="15" cy="29" r="2" fill={EM}/>
+        <circle cx="33" cy="29" r="2" fill={EM}/>
+      </svg>
+      <div>
+        <div style={{ fontSize: 22*s, fontWeight: 900, letterSpacing: '-0.04em', textTransform: 'uppercase', fontStyle: 'italic', color: fg }}>
+          AGENTES<span style={{ color: EM }}>.</span>
+        </div>
+        <div style={{ fontSize: 22*s, fontWeight: 900, letterSpacing: '-0.04em', textTransform: 'uppercase', fontStyle: 'italic', color: EM, marginTop: -4*s }}>
+          VIRTUAIS
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   OPTION C — "Infinity Node"
+   Two overlapping rounded squares forming an
+   ∞-like node shape. Represents infinite SDRs.
+═══════════════════════════════════════════════ */
+function LogoC({ size = 1, dark = false }) {
+  const fg = dark ? WHITE : DARK;
+  const s = size;
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap: 14*s }}>
+      <svg width={52*s} height={44*s} viewBox="0 0 52 44" fill="none">
+        {/* left square */}
+        <rect x="2" y="6" width="22" height="32" rx="8" fill={DARK}/>
+        {/* right square — offset, emerald */}
+        <rect x="20" y="6" width="22" height="32" rx="8" fill={EM}/>
+        {/* overlap blend layer */}
+        <rect x="20" y="6" width="4" height="32" rx="0" fill={DARK} opacity="0.35"/>
+        {/* pulse dot */}
+        <circle cx="31" cy="22" r="5" fill={WHITE}/>
+        <circle cx="31" cy="22" r="2.5" fill={EM}/>
+        {/* signal bars on left */}
+        <rect x="7" y="18" width="3" height="8" rx="1.5" fill={WHITE} opacity="0.9"/>
+        <rect x="12" y="15" width="3" height="14" rx="1.5" fill={WHITE} opacity="0.7"/>
+        <rect x="17" y="12" width="3" height="20" rx="1.5" fill={WHITE} opacity="0.5"/>
+      </svg>
+      <div style={{ lineHeight: 1 }}>
+        <div style={{ fontSize: 22*s, fontWeight: 900, letterSpacing: '-0.04em', textTransform: 'uppercase', color: fg }}>
+          Agentes <span style={{ fontStyle:'italic', color: EM }}>Virtuais</span>
+        </div>
+        <div style={{ fontSize: 9*s, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.2em', color: dark ? 'rgba(255,255,255,0.3)' : '#94a3b8', marginTop: 4*s }}>
+          SDR · IA · Automação
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   OPTION D — "Spark Target"
+   A crosshair / target with lightning bolt.
+   Minimal, geometric, conversion-focused.
+═══════════════════════════════════════════════ */
+function LogoD({ size = 1, dark = false }) {
+  const fg = dark ? WHITE : DARK;
+  const s = size;
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap: 14*s }}>
+      <svg width={48*s} height={48*s} viewBox="0 0 48 48" fill="none">
+        <rect width="48" height="48" rx={24} fill={DARK}/>
+        {/* outer ring */}
+        <circle cx="24" cy="24" r="14" stroke={EM} strokeWidth="2" fill="none"/>
+        {/* cross lines */}
+        <line x1="24" y1="6" x2="24" y2="14" stroke={EM} strokeWidth="2" strokeLinecap="round"/>
+        <line x1="24" y1="34" x2="24" y2="42" stroke={EM} strokeWidth="2" strokeLinecap="round"/>
+        <line x1="6" y1="24" x2="14" y2="24" stroke={EM} strokeWidth="2" strokeLinecap="round"/>
+        <line x1="34" y1="24" x2="42" y2="24" stroke={EM} strokeWidth="2" strokeLinecap="round"/>
+        {/* lightning bolt inside */}
+        <path d="M27 14 L20 24 H25 L21 34 L28 22 H23 Z" fill={EM}/>
+      </svg>
+      <div style={{ lineHeight: 1 }}>
+        <div style={{ fontSize: 24*s, fontWeight: 900, letterSpacing: '-0.05em', textTransform: 'uppercase', fontStyle: 'italic', color: fg }}>
+          AGENTES <span style={{ color: EM }}>VIRTUAIS</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5*s }}>
+          <div style={{ width: 20*s, height: 2, background: EM, borderRadius: 99 }}/>
+          <div style={{ fontSize: 9*s, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.25em', color: dark ? 'rgba(255,255,255,0.3)' : '#94a3b8' }}>Powered by AI</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   OPTION E — "Type-Only"
+   No icon — all in the wordmark.
+   Two lines, split weight for contrast.
+═══════════════════════════════════════════════ */
+function LogoE({ size = 1, dark = false }) {
+  const fg = dark ? WHITE : DARK;
+  const s = size;
+  return (
+    <div>
+      <div style={{ display:'flex', alignItems:'baseline', gap: 8*s }}>
+        <span style={{ fontSize: 36*s, fontWeight: 900, letterSpacing: '-0.05em', textTransform: 'uppercase', color: fg, lineHeight: 1 }}>AGENTES</span>
+        <div style={{ width: 8*s, height: 8*s, background: EM, borderRadius: '50%', marginBottom: 4*s, flexShrink: 0 }}/>
+      </div>
+      <div style={{ fontSize: 36*s, fontWeight: 900, letterSpacing: '-0.05em', textTransform: 'uppercase', fontStyle: 'italic', color: EM, lineHeight: 0.9 }}>VIRTUAIS</div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   OPTION F — "Gradient Pill"
+   Horizontal pill with gradient bg, white text.
+   Modern, tech, badge-like.
+═══════════════════════════════════════════════ */
+function LogoF({ size = 1, dark = false }) {
+  const s = size;
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap: 14*s }}>
+      {/* pill badge icon */}
+      <div style={{
+        background: `linear-gradient(135deg, ${DARK} 0%, #1e3a5f 50%, ${EM} 100%)`,
+        borderRadius: 14*s, padding: `${10*s}px ${16*s}px`,
+        display: 'flex', alignItems: 'center', gap: 8*s,
+      }}>
+        <svg width={18*s} height={18*s} viewBox="0 0 24 24" fill="none">
+          <rect x="2" y="8" width="20" height="13" rx="4" stroke="white" strokeWidth="2" fill="none"/>
+          <circle cx="8" cy="14.5" r="2" fill="white"/>
+          <circle cx="16" cy="14.5" r="2" fill="white"/>
+          <line x1="12" y1="8" x2="12" y2="5" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+          <circle cx="12" cy="3.5" r="1.5" fill={EM}/>
+        </svg>
+        <span style={{ fontSize: 15*s, fontWeight: 900, color: WHITE, letterSpacing: '-0.02em', textTransform: 'uppercase', fontStyle:'italic' }}>
+          Agentes <span style={{ color: '#6ee7b7' }}>Virtuais</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/* ─── APP ─── */
+function App() {
+  return (
+    <DesignCanvas>
+
+      <DCSection title="A — Bot Mark" subtitle="Ícone robô + wordmark em duas linhas · mais reconhecível, amigável">
+        <LogoBoard label="Fundo Claro"><LogoA/></LogoBoard>
+        <LogoBoard label="Fundo Escuro" bg={DARK}><LogoA dark/></LogoBoard>
+        <LogoBoard label="Pequeno (nav/sidebar)" bg={DARK}><LogoA size={0.75} dark/></LogoBoard>
+        <LogoBoard label="Ícone Isolado" bg="#f8fafc" style={{ width: 120 }}>
+          <DCArtboard label="" width={120} height={120} style={{background:'#f8fafc'}}>
+            <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <svg width="72" height="72" viewBox="0 0 48 48" fill="none">
+                <rect width="48" height="48" rx="12" fill={DARK}/>
+                <rect x="10" y="16" width="28" height="20" rx="6" stroke={EM} strokeWidth="2.2" fill="none"/>
+                <circle cx="18" cy="26" r="3" fill={EM}/>
+                <circle cx="30" cy="26" r="3" fill={EM}/>
+                <line x1="24" y1="16" x2="24" y2="11" stroke={EM} strokeWidth="2.2" strokeLinecap="round"/>
+                <circle cx="24" cy="9.5" r="2" fill={EM}/>
+                <path d="M18 32 Q24 35.5 30 32" stroke={EM} strokeWidth="2" strokeLinecap="round" fill="none"/>
+              </svg>
+            </div>
+          </DCArtboard>
+        </LogoBoard>
+      </DCSection>
+
+      <DCSection title="B — Circuit A" subtitle="Letra A construída com linhas de circuito · técnico, geométrico">
+        <LogoBoard label="Fundo Claro"><LogoB/></LogoBoard>
+        <LogoBoard label="Fundo Escuro" bg={DARK}><LogoB dark/></LogoBoard>
+        <LogoBoard label="Wordmark em 2 linhas" bg="#f8fafc">
+          <div style={{textAlign:'left'}}>
+            <div style={{fontSize:28,fontWeight:900,letterSpacing:'-0.04em',textTransform:'uppercase',fontStyle:'italic',color:DARK}}>AGENTES<span style={{color:EM}}>.</span></div>
+            <div style={{fontSize:28,fontWeight:900,letterSpacing:'-0.04em',textTransform:'uppercase',fontStyle:'italic',color:EM,marginTop:-4}}>VIRTUAIS</div>
+          </div>
+        </LogoBoard>
+      </DCSection>
+
+      <DCSection title="C — Infinity Node" subtitle="Dois quadrados sobrepostos + sinal de atividade · representa SDRs infinitos">
+        <LogoBoard label="Fundo Claro"><LogoC/></LogoBoard>
+        <LogoBoard label="Fundo Escuro" bg={DARK}><LogoC dark/></LogoBoard>
+        <LogoBoard label="Grande — Landing Hero"><LogoC size={1.3}/></LogoBoard>
+      </DCSection>
+
+      <DCSection title="D — Spark Target" subtitle="Crosshair + raio · foco em conversão, energy, alta performance">
+        <LogoBoard label="Fundo Claro"><LogoD/></LogoBoard>
+        <LogoBoard label="Fundo Escuro" bg={DARK}><LogoD dark/></LogoBoard>
+        <LogoBoard label="Variante circular bg" bg="#ecfdf5">
+          <div style={{display:'flex',alignItems:'center',gap:14}}>
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+              <rect width="48" height="48" rx={24} fill={EM}/>
+              <circle cx="24" cy="24" r="14" stroke="white" strokeWidth="2" fill="none"/>
+              <line x1="24" y1="6" x2="24" y2="14" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+              <line x1="24" y1="34" x2="24" y2="42" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+              <line x1="6" y1="24" x2="14" y2="24" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+              <line x1="34" y1="24" x2="42" y2="24" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+              <path d="M27 14 L20 24 H25 L21 34 L28 22 H23 Z" fill="white"/>
+            </svg>
+            <div>
+              <div style={{fontSize:22,fontWeight:900,letterSpacing:'-0.04em',textTransform:'uppercase',fontStyle:'italic',color:DARK}}>AGENTES <span style={{color:EM}}>VIRTUAIS</span></div>
+              <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'0.22em',color:'#94a3b8',marginTop:4}}>Powered by AI</div>
+            </div>
+          </div>
+        </LogoBoard>
+      </DCSection>
+
+      <DCSection title="E — Type Only" subtitle="Sem ícone · força pura da tipografia · moderno e ousado">
+        <LogoBoard label="Fundo Claro"><LogoE/></LogoBoard>
+        <LogoBoard label="Fundo Escuro" bg={DARK}><LogoE dark/></LogoBoard>
+        <LogoBoard label="Uma linha compacta" bg="#f8fafc">
+          <div style={{fontSize:26,fontWeight:900,letterSpacing:'-0.05em',textTransform:'uppercase',fontStyle:'italic',color:DARK}}>
+            AGENTES<span style={{color:EM}}>.</span><span style={{color:EM}}>VIRTUAIS</span>
+          </div>
+        </LogoBoard>
+      </DCSection>
+
+      <DCSection title="F — Gradient Pill" subtitle="Badge horizontal com gradiente · futurista, tech-forward, chamativo em landing pages">
+        <LogoBoard label="Destaque / Hero"><LogoF/></LogoBoard>
+        <LogoBoard label="Em fundo escuro" bg={DARK}><LogoF/></LogoBoard>
+        <LogoBoard label="Versão pill invertida" bg="#f8fafc">
+          <div style={{
+            background:'#f8fafc',border:`2px solid ${EM}`,
+            borderRadius:14,padding:'10px 20px',
+            display:'flex',alignItems:'center',gap:10
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <rect x="2" y="8" width="20" height="13" rx="4" stroke={DARK} strokeWidth="2" fill="none"/>
+              <circle cx="8" cy="14.5" r="2" fill={EM}/>
+              <circle cx="16" cy="14.5" r="2" fill={EM}/>
+              <line x1="12" y1="8" x2="12" y2="5" stroke={DARK} strokeWidth="2" strokeLinecap="round"/>
+              <circle cx="12" cy="3.5" r="1.5" fill={EM}/>
+            </svg>
+            <span style={{fontSize:16,fontWeight:900,color:DARK,letterSpacing:'-0.02em',textTransform:'uppercase',fontStyle:'italic'}}>
+              Agentes <span style={{color:EM}}>Virtuais</span>
+            </span>
+          </div>
+        </LogoBoard>
+      </DCSection>
+
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

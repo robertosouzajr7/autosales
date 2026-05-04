@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;900&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: #f8fafc; padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+.row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.section-label { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #cbd5e1; padding-bottom: 4px; border-bottom: 1px solid #f1f5f9; }
+.badge { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 999px; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.18em; line-height: 1.4; }
+.trend-up   { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; font-size: 9px; font-weight: 900; background: #ecfdf5; color: #059669; }
+.trend-down { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; font-size: 9px; font-weight: 900; background: #fff1f2; color: #e11d48; }
+</style></head><body>
+<div class="section-label">Status / Category Badges</div>
+<div class="row">
+  <span class="badge" style="background:#ecfdf5;color:#059669">Active</span>
+  <span class="badge" style="background:#ecfdf5;color:#059669">Real-Time</span>
+  <span class="badge" style="background:#eff6ff;color:#2563eb">Blue Feature</span>
+  <span class="badge" style="background:#f5f3ff;color:#7c3aed">IA Ativo</span>
+  <span class="badge" style="background:#fff7ed;color:#ea580c">Pro Plan</span>
+  <span class="badge" style="background:#fff1f2;color:#e11d48">Erro</span>
+</div>
+<div class="section-label">On Dark Background</div>
+<div class="row" style="background:#0f172a;padding:12px;border-radius:16px">
+  <span class="badge" style="background:rgba(255,255,255,0.1);color:white">Recomendado</span>
+  <span class="badge" style="background:#10b981;color:#0f172a">Básico</span>
+  <span class="badge" style="background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6)">Plano Ativo</span>
+</div>
+<div class="section-label">Trend Indicators</div>
+<div class="row">
+  <span class="trend-up">↑ +12.4%</span>
+  <span class="trend-up">↑ +5%</span>
+  <span class="trend-down">↓ -2.1%</span>
+  <span class="badge" style="background:#eff6ff;color:#2563eb">52% Utilizado</span>
+</div>
+<div class="section-label">Landing Page Badge</div>
+<div class="row">
+  <span class="badge" style="background:rgba(16,185,129,0.12);color:#10b981;border-radius:12px;padding:6px 16px;letter-spacing:0.25em">A NOVA GERAÇÃO DE VENDAS B2B ESTÁ AQUI</span>
+</div>
+</body></html>

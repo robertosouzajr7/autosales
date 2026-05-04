@@ -28,6 +28,12 @@ interface DashboardStats {
   funnel: { label: string; value: number }[];
   usedTokens: number;
   maxTokens: number;
+  usedMessages: number;
+  maxMessages: number;
+  usedProspects: number;
+  maxProspects: number;
+  usedResearch: number;
+  maxResearch: number;
   maxSdrs: number;
   planName: string;
   qualifiedLeadsCount: number;
@@ -94,6 +100,12 @@ export default function Dashboard() {
         funnel: fData.map((f) => ({ label: f.name, value: f.value })),
         usedTokens: statsData.stats.usedTokens || 0,
         maxTokens: statsData.stats.maxTokens || 0,
+        usedMessages: statsData.stats.usedMessages || 0,
+        maxMessages: statsData.stats.maxMessages || 0,
+        usedProspects: statsData.stats.usedProspects || 0,
+        maxProspects: statsData.stats.maxProspects || 0,
+        usedResearch: statsData.stats.usedResearch || 0,
+        maxResearch: statsData.stats.maxResearch || 0,
         maxSdrs: statsData.stats.maxSdrs || 0,
         planName: statsData.stats.planName || "Básico",
         qualifiedLeadsCount: statsData.stats.qualifiedLeadsCount || 0,
@@ -178,67 +190,81 @@ export default function Dashboard() {
 
         {/* RESOURCE USAGE / SUBSCRIPTION */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-           <Card className="lg:col-span-2 border-none shadow-3xl rounded-[45px] bg-white p-10 flex flex-col md:flex-row gap-10 items-center justify-between border-t-8 border-t-blue-500">
-              <div className="w-full md:w-1/2 space-y-6">
-                 <div>
+           <Card className="lg:col-span-2 border-none shadow-3xl rounded-[45px] bg-white p-10 flex flex-col gap-10 border-t-8 border-t-blue-500">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                 <div className="space-y-1">
                     <h3 className="text-2xl font-black text-slate-800 tracking-tighter uppercase italic flex items-center gap-3">
-                       <Zap className="text-blue-500 w-6 h-6" /> Créditos de IA
+                       <Zap className="text-blue-500 w-6 h-6" /> Créditos & Consumo
                     </h3>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Controle de Tokens do Plano {stats.planName}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Acompanhe o uso dos recursos do seu plano {stats.planName}</p>
                  </div>
-                 
-                 <div className="space-y-3">
-                    <div className="flex justify-between items-end text-[11px] font-black uppercase tracking-wider">
-                       <span className="text-slate-400">Consumo</span>
-                       <span className="text-slate-900">{stats.usedTokens.toLocaleString()} / {stats.maxTokens.toLocaleString()}</span>
-                    </div>
-                    <div className="w-full h-4 bg-slate-50 rounded-full overflow-hidden border border-slate-100 p-0.5 shadow-inner">
-                       <div 
-                         className={`h-full rounded-full transition-all duration-1000 ${ (stats.usedTokens / (stats.maxTokens || 1)) > 0.8 ? 'bg-orange-500' : 'bg-blue-600' }`}
-                         style={{ width: `${Math.min(100, (stats.usedTokens / (stats.maxTokens || 1)) * 100)}%` }}
-                       />
-                    </div>
-                    <div className="flex justify-between items-center px-1">
-                        <Badge className="bg-blue-50 text-blue-600 border-none font-black text-[9px] px-3">{Math.round((stats.usedTokens / (stats.maxTokens || 1)) * 100)}% Utilizado</Badge>
-                        <span className="text-[9px] font-bold text-slate-300 italic">Renova mensalmente</span>
-                    </div>
-                 </div>
-              </div>
-
-              <div className="hidden md:block w-px h-24 bg-slate-100" />
-
-              <div className="w-full md:w-1/3 space-y-4">
-                 <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white shadow-xl">
-                       <Bot className="w-6 h-6" />
-                    </div>
-                    <div>
-                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">SDRs Ativos</p>
-                       <p className="text-2xl font-black text-slate-900 italic tracking-tighter">{stats.activeSdrs} / {stats.maxSdrs}</p>
-                    </div>
-                 </div>
-                 <div className="w-full h-2 bg-slate-50 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-slate-900 rounded-full transition-all duration-1000" 
-                      style={{ width: `${(stats.activeSdrs / (stats.maxSdrs || 1)) * 100}%` }}
-                    />
-                 </div>
-                 <Button variant="outline" className="w-full h-10 rounded-xl border-2 font-black text-[10px] uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all">
+                 <Button variant="outline" className="h-10 rounded-xl border-2 font-black text-[10px] uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all shadow-lg">
                     Upgrade de Plano
                  </Button>
               </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+                 {/* TOKENS IA */}
+                 <UsageMetric 
+                   label="Tokens de IA (Gemini/GPT)"
+                   used={stats.usedTokens}
+                   max={stats.maxTokens}
+                   color="bg-blue-600"
+                   icon={<Brain className="w-4 h-4 text-blue-500" />}
+                 />
+                 
+                 {/* MENSAGENS */}
+                 <UsageMetric 
+                   label="Mensagens (WhatsApp/E-mail)"
+                   used={stats.usedMessages}
+                   max={stats.maxMessages}
+                   color="bg-emerald-500"
+                   icon={<MessageSquare className="w-4 h-4 text-emerald-500" />}
+                 />
+
+                 {/* PROSPECTING */}
+                 <UsageMetric 
+                   label="Buscas de Prospecção"
+                   used={stats.usedProspects}
+                   max={stats.maxProspects}
+                   color="bg-purple-500"
+                   icon={<Search className="w-4 h-4 text-purple-500" />}
+                 />
+
+                 {/* DEEP RESEARCH */}
+                 <UsageMetric 
+                   label="Investigações (Deep Research)"
+                   used={stats.usedResearch}
+                   max={stats.maxResearch}
+                   color="bg-orange-500"
+                   icon={<Zap className="w-4 h-4 text-orange-500" />}
+                 />
+              </div>
            </Card>
 
-           <Card className="border-none shadow-3xl rounded-[45px] bg-slate-900 p-10 flex flex-col justify-center items-center text-center relative overflow-hidden group">
+           <Card className="border-none shadow-3xl rounded-[45px] bg-slate-900 p-10 flex flex-col justify-between items-center text-center relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[50px] rounded-full translate-x-1/2 -translate-y-1/2" />
               <div className="space-y-6 relative z-10 w-full">
                  <div className="p-5 bg-white/5 rounded-[30px] border border-white/5 inline-flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
                     <Target className="w-10 h-10 text-emerald-500" />
                  </div>
                  <div className="space-y-1">
-                    <p className="text-[10px] font-black text-emerald-500/50 uppercase tracking-[0.3em]">Sucesso Comercial</p>
+                    <p className="text-[10px] font-black text-emerald-500/50 uppercase tracking-[0.3em]">SDR Intelligence</p>
                     <h4 className="text-5xl font-black text-white italic tracking-tighter">{stats.qualifiedLeadsCount}</h4>
-                    <p className="text-white/40 font-bold uppercase tracking-widest text-[10px]">Leads Qualificados pela IA</p>
+                    <p className="text-white/40 font-bold uppercase tracking-widest text-[10px]">Leads Qualificados</p>
+                 </div>
+              </div>
+
+              <div className="w-full space-y-4 pt-10 border-t border-white/5">
+                 <div className="flex items-center justify-between text-[10px] font-black uppercase text-white/30">
+                    <span>Vagas SDR</span>
+                    <span>{stats.activeSdrs} / {stats.maxSdrs}</span>
+                 </div>
+                 <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-emerald-500 rounded-full transition-all duration-1000" 
+                      style={{ width: `${(stats.activeSdrs / (stats.maxSdrs || 1)) * 100}%` }}
+                    />
                  </div>
               </div>
            </Card>
@@ -424,6 +450,29 @@ export default function Dashboard() {
         </div>
       </div>
     </DashboardLayout>
+  );
+}
+
+function UsageMetric({ label, used, max, color, icon }: { label: string, used: number, max: number, color: string, icon: React.ReactNode }) {
+  const percentage = Math.min(100, (used / (max || 1)) * 100);
+  const isHigh = percentage > 80;
+
+  return (
+    <div className="space-y-3">
+       <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+          <div className="flex items-center gap-2">
+             <div className="p-1.5 bg-slate-50 rounded-lg">{icon}</div>
+             <span className="text-slate-400">{label}</span>
+          </div>
+          <span className={isHigh ? "text-orange-500" : "text-slate-900"}>{used.toLocaleString()} / {max.toLocaleString()}</span>
+       </div>
+       <div className="w-full h-3 bg-slate-50 rounded-full overflow-hidden border border-slate-100 p-0.5">
+          <div 
+            className={`h-full rounded-full transition-all duration-1000 ${isHigh ? 'bg-orange-500' : color}`}
+            style={{ width: `${percentage}%` }}
+          />
+       </div>
+    </div>
   );
 }
 

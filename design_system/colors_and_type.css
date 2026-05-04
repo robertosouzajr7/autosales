@@ -1,0 +1,422 @@
+/**
+ * Agentes Virtuais — Design Tokens
+ * Source: robertosouzajr7/autosales + agentesvirtuais_novosite
+ *
+ * Import this file into any HTML artifact:
+ *   <link rel="stylesheet" href="../../colors_and_type.css">
+ *   (or copy the vars into a <style> block)
+ *
+ * Also imports Inter from Google Fonts as the system font substitute.
+ * ⚠️ FLAG: No custom webfonts found in the codebase. If proprietary fonts exist,
+ *    replace the @import below with the correct @font-face declarations.
+ */
+
+/*
+  FONT STRATEGY — system-ui (zero loading time)
+  The codebase uses Tailwind's default `font-sans` which maps to system-ui.
+  No Google Fonts or custom fonts are imported — this is intentional for
+  maximum load speed and native OS integration.
+
+  Runtime font per OS:
+    macOS / iOS  → San Francisco (SF Pro)
+    Windows      → Segoe UI
+    Android      → Roboto
+    Linux        → Ubuntu / Cantarell
+
+  For design previews and HTML artifacts, use Inter as the closest simulation
+  of this aesthetic (clean, high-weight, tight-tracking Tailwind look).
+  Say "use Inter or SF Pro" when prompting AI design tools.
+*/
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+
+/* ─────────────────────────────────────────────
+   BASE COLOR PALETTE
+   ───────────────────────────────────────────── */
+:root {
+  /* Slate scale (primary neutrals) */
+  --slate-50:  #f8fafc;
+  --slate-100: #f1f5f9;
+  --slate-200: #e2e8f0;
+  --slate-300: #cbd5e1;
+  --slate-400: #94a3b8;
+  --slate-500: #64748b;
+  --slate-600: #475569;
+  --slate-700: #334155;
+  --slate-800: #1e293b;
+  --slate-900: #0f172a;
+
+  /* Emerald (primary accent — active, success, brand) */
+  --emerald-50:  #ecfdf5;
+  --emerald-400: #34d399;
+  --emerald-500: #10b981;
+  --emerald-600: #059669;
+
+  /* Blue (data viz, feature icons) */
+  --blue-50:  #eff6ff;
+  --blue-400: #60a5fa;
+  --blue-500: #3b82f6;
+  --blue-600: #2563eb;
+
+  /* Purple (AI features) */
+  --purple-50:  #f5f3ff;
+  --purple-500: #8b5cf6;
+  --purple-600: #7c3aed;
+
+  /* Orange (metrics, trends) */
+  --orange-50:  #fff7ed;
+  --orange-500: #f97316;
+
+  /* Rose (danger, destructive) */
+  --rose-50:  #fff1f2;
+  --rose-500: #f43f5e;
+
+  /* Indigo (scheduling) */
+  --indigo-50:  #eef2ff;
+  --indigo-500: #6366f1;
+
+  /* White / Pure */
+  --white: #ffffff;
+  --black: #000000;
+}
+
+/* ─────────────────────────────────────────────
+   SEMANTIC COLOR TOKENS
+   ───────────────────────────────────────────── */
+:root {
+  /* App surfaces */
+  --bg-app:       var(--slate-50);
+  --bg-card:      var(--white);
+  --bg-sidebar:   var(--slate-900);
+  --bg-dark-card: var(--slate-900);
+  --bg-input:     var(--slate-50);
+
+  /* Borders */
+  --border-subtle: var(--slate-100);
+  --border-card:   var(--slate-200);
+  --border-input:  var(--slate-100);
+
+  /* Foreground / text */
+  --fg-primary:   var(--slate-900);
+  --fg-secondary: var(--slate-600);
+  --fg-muted:     var(--slate-400);
+  --fg-micro:     var(--slate-400);   /* for 9–11px uppercase labels */
+  --fg-on-dark:   var(--white);
+  --fg-on-dark-muted: rgba(255,255,255,0.4);
+
+  /* Brand / action */
+  --color-accent:        var(--emerald-500);
+  --color-accent-bg:     var(--emerald-50);
+  --color-accent-dark:   var(--emerald-400);  /* on dark backgrounds */
+  --color-primary-btn:   var(--slate-900);    /* main CTA bg */
+  --color-hero-btn:      var(--slate-900);
+
+  /* Status */
+  --color-success: var(--emerald-500);
+  --color-warning: var(--orange-500);
+  --color-danger:  var(--rose-500);
+  --color-info:    var(--blue-500);
+
+  /* Gradient (marketing site logo/hero) */
+  --gradient-brand: linear-gradient(135deg, var(--blue-500), var(--purple-500));
+}
+
+/* ─────────────────────────────────────────────
+   TYPOGRAPHY TOKENS
+   ───────────────────────────────────────────── */
+:root {
+  /* Production: system-ui (Tailwind font-sans default — no import, zero latency)
+     Design previews: Inter (closest visual simulation of the system-ui aesthetic) */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /* Weights */
+  --fw-regular: 400;
+  --fw-medium:  500;
+  --fw-bold:    700;
+  --fw-black:   900;
+
+  /* Scale */
+  --text-micro:   9px;    /* uppercase micro-labels */
+  --text-xxs:     10px;   /* badge labels, plan names */
+  --text-xs:      11px;   /* secondary labels */
+  --text-sm:      13px;   /* body small */
+  --text-base:    15px;   /* body */
+  --text-lg:      18px;   /* card body */
+  --text-xl:      20px;   /* sidebar brand */
+  --text-2xl:     24px;   /* card titles */
+  --text-3xl:     30px;   /* sub-section heads */
+  --text-4xl:     36px;   /* section headings */
+  --text-5xl:     48px;   /* KPI numbers */
+  --text-6xl:     60px;   /* large stat values */
+  --text-7xl:     72px;   /* hero */
+
+  /* Tracking (letter-spacing) */
+  --tracking-hero:    -0.04em;  /* tracking-tighter for display */
+  --tracking-tight:   -0.02em;
+  --tracking-normal:  0em;
+  --tracking-wide:    0.05em;
+  --tracking-widest:  0.2em;   /* micro-labels uppercase */
+
+  /* Leading (line-height) */
+  --leading-hero:   0.9;
+  --leading-tight:  1.1;
+  --leading-normal: 1.5;
+  --leading-loose:  1.75;
+}
+
+/* ─────────────────────────────────────────────
+   SEMANTIC TYPE STYLES (use as classes)
+   ───────────────────────────────────────────── */
+
+/* Reset + base */
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  font-family: var(--font-sans);
+  font-weight: var(--fw-medium);
+  color: var(--fg-primary);
+  background: var(--bg-app);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Display / Hero headings */
+.t-hero {
+  font-size: var(--text-7xl);
+  font-weight: var(--fw-black);
+  letter-spacing: var(--tracking-hero);
+  line-height: var(--leading-hero);
+  color: var(--fg-primary);
+}
+.t-hero em { font-style: italic; }
+
+/* Section headings */
+.t-h1 {
+  font-size: var(--text-5xl);
+  font-weight: var(--fw-black);
+  letter-spacing: var(--tracking-hero);
+  line-height: var(--leading-tight);
+  text-transform: uppercase;
+}
+.t-h2 {
+  font-size: var(--text-4xl);
+  font-weight: var(--fw-black);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+}
+.t-h3 {
+  font-size: var(--text-2xl);
+  font-weight: var(--fw-black);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-normal);
+}
+
+/* KPI / Stat value */
+.t-stat {
+  font-size: var(--text-6xl);
+  font-weight: var(--fw-black);
+  letter-spacing: var(--tracking-hero);
+  font-style: italic;
+  color: var(--fg-primary);
+}
+.t-stat-dark {
+  font-size: var(--text-6xl);
+  font-weight: var(--fw-black);
+  letter-spacing: var(--tracking-hero);
+  font-style: italic;
+  color: var(--white);
+}
+
+/* Body */
+.t-body {
+  font-size: var(--text-base);
+  font-weight: var(--fw-medium);
+  color: var(--fg-secondary);
+  line-height: var(--leading-normal);
+}
+.t-body-muted {
+  font-size: var(--text-base);
+  font-weight: var(--fw-medium);
+  color: var(--fg-muted);
+  line-height: var(--leading-normal);
+}
+
+/* Micro-labels (the tiny ALL CAPS labels everywhere) */
+.t-micro {
+  font-size: var(--text-xxs);
+  font-weight: var(--fw-black);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  color: var(--fg-muted);
+  line-height: 1;
+}
+.t-micro-accent {
+  font-size: var(--text-xxs);
+  font-weight: var(--fw-black);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  color: var(--color-accent);
+  line-height: 1;
+}
+.t-micro-dark {
+  font-size: var(--text-xxs);
+  font-weight: var(--fw-black);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  color: rgba(255,255,255,0.4);
+  line-height: 1;
+}
+
+/* ─────────────────────────────────────────────
+   SPACING & RADIUS TOKENS
+   ───────────────────────────────────────────── */
+:root {
+  --radius-sm:    12px;  /* badges, small elements */
+  --radius-md:    16px;  /* buttons, inputs */
+  --radius-lg:    24px;  /* icon containers */
+  --radius-xl:    40px;  /* standard cards */
+  --radius-2xl:   45px;  /* large feature cards */
+  --radius-full:  9999px; /* pills, FAB */
+
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.10);
+  --shadow-lg:  0 10px 30px rgba(0,0,0,0.12);
+  --shadow-xl:  0 20px 60px rgba(0,0,0,0.15);
+  --shadow-2xl: 0 30px 80px rgba(0,0,0,0.18);
+  --shadow-dark: 0 50px 100px rgba(0,0,0,0.25);
+
+  /* Accent glow (for hero CTAs) */
+  --shadow-accent: 0 20px 40px -5px rgba(16,185,129,0.3);
+}
+
+/* ─────────────────────────────────────────────
+   UTILITY CLASSES
+   ───────────────────────────────────────────── */
+
+/* Card base */
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  border: none;
+}
+.card-dark {
+  background: var(--bg-dark-card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-dark);
+  overflow: hidden;
+  position: relative;
+}
+.card-hover {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.card-hover:hover {
+  transform: translateY(-8px);
+  box-shadow: var(--shadow-2xl);
+}
+
+/* Buttons */
+/*
+  BUTTON RULES:
+  - Always TALL: h-14 (56px) minimum, h-16 (64px) for hero/auth CTAs
+  - Border radius: 28px (rounded-[28px]) for main CTAs; 16–18px for secondary
+  - Text: 10px UPPERCASE BLACK tracking-widest — not readable-size body text
+  - No visible border on primary/accent buttons
+  - active:scale-95 on ALL buttons
+*/
+.btn-primary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 64px; padding: 0 40px;
+  background: var(--slate-900); color: var(--white);
+  border: none; border-radius: 28px;
+  font-family: var(--font-sans);
+  font-size: var(--text-xxs); font-weight: var(--fw-black);
+  text-transform: uppercase; letter-spacing: var(--tracking-widest);
+  cursor: pointer; transition: all 0.2s;
+  box-shadow: var(--shadow-xl);
+}
+.btn-primary:hover  { background: var(--black); transform: scale(1.04); }
+.btn-primary:active { transform: scale(0.95); }
+
+.btn-accent {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 64px; padding: 0 40px;
+  background: var(--emerald-500); color: var(--white);
+  border: none; border-radius: 28px;
+  font-family: var(--font-sans);
+  font-size: var(--text-xxs); font-weight: var(--fw-black);
+  text-transform: uppercase; letter-spacing: var(--tracking-widest);
+  cursor: pointer; transition: all 0.2s;
+  box-shadow: var(--shadow-accent);
+}
+.btn-accent:hover  { transform: scale(1.04); }
+.btn-accent:active { transform: scale(0.95); }
+
+/* Ghost = slate-50 background, NO visible border */
+.btn-ghost {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 56px; padding: 0 32px;
+  background: var(--slate-50); color: var(--slate-600);
+  border: none; border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs); font-weight: var(--fw-bold);
+  text-transform: uppercase; letter-spacing: var(--tracking-wide);
+  cursor: pointer; transition: all 0.2s;
+}
+.btn-ghost:hover  { background: var(--slate-100); }
+.btn-ghost:active { transform: scale(0.97); }
+
+/* Dashboard action outline (border visible) */
+.btn-outline {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 48px; padding: 0 20px;
+  background: var(--white); color: var(--slate-600);
+  border: 2px solid var(--slate-100); border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--text-xxs); font-weight: var(--fw-black);
+  text-transform: uppercase; letter-spacing: var(--tracking-widest);
+  cursor: pointer; transition: all 0.2s;
+}
+.btn-outline:hover  { border-color: var(--slate-200); color: var(--slate-900); }
+.btn-outline:active { transform: scale(0.97); }
+
+/* Badge */
+.badge {
+  display: inline-flex; align-items: center; 
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xxs); font-weight: var(--fw-black);
+  text-transform: uppercase; letter-spacing: var(--tracking-widest);
+  line-height: 1.4;
+}
+.badge-accent   { background: var(--emerald-50); color: var(--emerald-600); }
+.badge-blue     { background: var(--blue-50); color: var(--blue-600); }
+.badge-purple   { background: var(--purple-50); color: var(--purple-600); }
+.badge-dark     { background: rgba(255,255,255,0.1); color: var(--white); }
+.badge-primary  { background: var(--emerald-500); color: var(--slate-900); }
+
+/*
+  INPUT RULES:
+  - NO hard border — uses background color contrast (slate-50 on white/slate-50 bg)
+  - Height: 56px (h-14) standard, 64px (h-16) for auth forms
+  - Border radius: 18–20px (pill-inflated feel)
+  - Font: bold, 16px minimum — feels substantial
+  - Focus: only a subtle emerald ring, no border color change
+*/
+.input-field {
+  height: 56px;
+  width: 100%;
+  background: var(--bg-input);   /* slate-50 */
+  border: none;
+  border-radius: 18px;
+  padding: 0 20px 0 52px;        /* leading icon space */
+  font-family: var(--font-sans);
+  font-size: var(--text-lg); font-weight: var(--fw-bold);
+  color: var(--fg-primary);
+  outline: none; transition: box-shadow 0.2s;
+}
+.input-field:focus {
+  box-shadow: 0 0 0 3px rgba(16,185,129,0.2);
+}
+.input-field-auth {
+  height: 64px;
+  border-radius: 20px;
+  font-size: 18px;
+}

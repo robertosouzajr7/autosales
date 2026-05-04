@@ -64,7 +64,8 @@ const navItems: NavItem[] = [
   { label: "CRM / Leads", icon: Users, href: "/crm" },
   { label: "Contatos", icon: BookUser, href: "/contacts" },
   { label: "Agendamentos", icon: Calendar, href: "/appointments", feature: "calendar" },
-  { label: "Prospecção", icon: Target, href: "/prospecting" },
+  { label: "Prospecção", icon: Search, href: "/prospecting" },
+  { label: "Jornadas (ICP)", icon: Target, href: "/prospecting/icp" },
   { label: "Time de SDRs", icon: Bot, href: "/sdrs" },
   { label: "Automações", icon: Zap, href: "/automations" },
   { label: "Disparos", icon: Send, href: "/disparos", feature: "bulkMessaging" },
@@ -279,7 +280,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     const headers: any = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    fetch("/api/tenant/settings", { headers })
+    fetch("/api/settings", { headers })
       .then(res => res.json())
       .then(data => {
         if (data.planFeatures) {
@@ -361,17 +362,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
           {/* Page title / breadcrumb */}
           <div className="flex flex-1 items-center gap-2">
-            <h1 className="text-base font-semibold text-slate-800 md:text-lg">
+            <h1 className="text-sm font-black text-slate-800 uppercase tracking-tighter md:text-base">
               {currentPage}
             </h1>
           </div>
 
           {/* Search */}
           <div className="relative hidden w-64 md:block">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300" />
             <Input
               placeholder="Buscar..."
-              className="h-9 bg-slate-50 pl-9 text-sm focus-visible:ring-emerald-500"
+              className="h-11 bg-slate-50 pl-10 text-xs font-bold rounded-2xl border-none focus-visible:ring-emerald-500/20"
             />
           </div>
 
@@ -392,12 +393,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               >
                 <Avatar className="h-8 w-8">
                   <AvatarImage src="" />
-                  <AvatarFallback className="bg-emerald-600 text-xs font-semibold text-white">
-                    ME
+                  <AvatarFallback className="bg-emerald-600 text-[10px] font-black text-white uppercase">
+                    {localStorage.getItem("companyName")?.charAt(0) || "U"}
                   </AvatarFallback>
                 </Avatar>
-                <span className="hidden text-sm font-medium text-slate-700 md:block">
-                  Minha Empresa
+                <span className="hidden text-xs font-black text-slate-700 uppercase tracking-tight md:block">
+                  {localStorage.getItem("companyName") || "Minha Empresa"}
                 </span>
               </Button>
             </DropdownMenuTrigger>
@@ -438,9 +439,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Main content */}
         <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-7xl p-4 md:p-6 lg:p-8">
-            {children}
-          </div>
+          {children}
         </main>
       </div>
     </div>

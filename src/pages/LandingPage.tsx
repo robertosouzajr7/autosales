@@ -199,26 +199,64 @@ export default function LandingPage() {
                           <Badge className={`${isRecommended ? 'bg-black/20' : 'bg-white/10'} text-white border-none py-1 px-4 font-black text-[10px] uppercase tracking-widest`}>{plan.name}</Badge>
                           <h3 className="text-5xl font-black tracking-tighter">R$ {plan.priceMonthly}<span className="text-sm font-medium text-white/40">/mês</span></h3>
                        </div>
-                       <ul className="space-y-5">
-                          <li className="flex items-center gap-3 text-sm font-bold">
-                             <Check className={`w-5 h-5 flex-shrink-0 ${isRecommended ? 'text-white' : 'text-primary'}`} /> 
-                             <span className={isRecommended ? 'text-white' : 'text-white/60'}>{plan.maxLeads.toLocaleString()} Leads/mês</span>
+                       <ul className="space-y-3 pt-4 border-t border-white/5">
+                          <li className="flex items-center gap-2 text-[11px] font-bold">
+                             <Check className={`w-4 h-4 ${isRecommended ? 'text-white' : 'text-primary'}`} /> 
+                             <span className={isRecommended ? 'text-white' : 'text-white/60'}>CRM & Pipeline (Kanban)</span>
                           </li>
-                          <li className="flex items-center gap-3 text-sm font-bold">
-                             <Check className={`w-5 h-5 flex-shrink-0 ${isRecommended ? 'text-white' : 'text-primary'}`} /> 
-                             <span className={isRecommended ? 'text-white' : 'text-white/60'}>{plan.maxSdrs} SDRs de IA Ativos</span>
+                          <li className="flex items-center gap-2 text-[11px] font-bold">
+                             <Check className={`w-4 h-4 ${isRecommended ? 'text-white' : 'text-primary'}`} /> 
+                             <span className={isRecommended ? 'text-white' : 'text-white/60'}>Agendador de Reuniões</span>
                           </li>
-                          <li className="flex items-center gap-3 text-sm font-bold">
-                             <Check className={`w-5 h-5 flex-shrink-0 ${isRecommended ? 'text-white' : 'text-primary'}`} /> 
-                             <span className={isRecommended ? 'text-white' : 'text-white/60'}>{(plan.maxTokens / 1000).toLocaleString()}k Tokens mensais</span>
+                          <li className="flex items-center gap-2 text-[11px] font-bold">
+                             <Check className={`w-4 h-4 ${isRecommended ? 'text-white' : 'text-primary'}`} /> 
+                             <span className={isRecommended ? 'text-white' : 'text-white/60'}>Central de Conversas</span>
                           </li>
-                          {Object.entries(featuresData).filter(([k,v]) => typeof v === 'boolean' && v === true && !['whatsapp', 'email'].includes(k)).map(([key, val]) => (
-                            <li key={key} className="flex items-center gap-3 text-sm font-bold capitalize">
-                               <Check className={`w-5 h-5 flex-shrink-0 ${isRecommended ? 'text-white' : 'text-primary'}`} /> 
-                               <span className={isRecommended ? 'text-white' : 'text-white/60'}>{key.replace(/([A-Z])/g, ' $1').trim()} Incluso</span>
+                          <li className="flex items-center gap-2 text-[11px] font-bold">
+                             <Check className={`w-4 h-4 ${isRecommended ? 'text-white' : 'text-primary'}`} /> 
+                             <span className={isRecommended ? 'text-white' : 'text-white/60'}>Prospector Pro (Maps/LinkedIn)</span>
+                          </li>
+                          <li className="flex items-center gap-2 text-[11px] font-bold">
+                             <Check className={`w-4 h-4 ${isRecommended ? 'text-white' : 'text-primary'}`} /> 
+                             <span className={isRecommended ? 'text-white' : 'text-white/60'}>Automações {featuresData.automations || "Inclusas"}</span>
+                          </li>
+                          <li className="flex items-center gap-2 text-[11px] font-bold">
+                             <Check className={`w-4 h-4 ${isRecommended ? 'text-white' : 'text-primary'}`} /> 
+                             <span className={isRecommended ? 'text-white' : 'text-white/60'}>Canais: {featuresData.channels || "1 Canal"}</span>
+                          </li>
+                          {featuresData.massMessaging && (
+                            <li className="flex items-center gap-2 text-[11px] font-bold">
+                               <Check className={`w-4 h-4 ${isRecommended ? 'text-white' : 'text-primary'}`} /> 
+                               <span className={isRecommended ? 'text-white' : 'text-white/60'}>Disparos em Massa</span>
                             </li>
-                          ))}
+                          )}
+                          {featuresData.webhooks && (
+                            <li className="flex items-center gap-2 text-[11px] font-bold">
+                               <Check className={`w-4 h-4 ${isRecommended ? 'text-white' : 'text-primary'}`} /> 
+                               <span className={isRecommended ? 'text-white' : 'text-white/60'}>Webhooks & API</span>
+                            </li>
+                          )}
                        </ul>
+
+                       <div className="space-y-3 pt-6 border-t border-white/5">
+                          <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em] mb-4">Limites de Consumo</p>
+                          <div className="flex justify-between items-center text-[10px] font-black">
+                             <span className="text-white/40 italic">Créditos de IA</span>
+                             <span>{(plan.maxTokens / 1000).toLocaleString()}k Tokens</span>
+                          </div>
+                          <div className="flex justify-between items-center text-[10px] font-black">
+                             <span className="text-white/40 italic">Buscas de Prospecção</span>
+                             <span>{plan.maxProspects.toLocaleString()} Buscas</span>
+                          </div>
+                          <div className="flex justify-between items-center text-[10px] font-black">
+                             <span className="text-white/40 italic">Deep Research</span>
+                             <span>{plan.maxResearch.toLocaleString()} Pesquisas</span>
+                          </div>
+                          <div className="flex justify-between items-center text-[10px] font-black">
+                             <span className="text-white/40 italic">Mensagens/mês</span>
+                             <span>{plan.maxMessages.toLocaleString()} Msgs</span>
+                          </div>
+                       </div>
                        <Link to="/register" className="block w-full">
                          <Button className={`w-full h-16 ${isRecommended ? 'bg-white text-primary hover:bg-slate-50 shadow-2xl' : 'bg-white/10 text-white hover:bg-white/20'} font-black rounded-2xl text-lg transition-transform active:scale-95`}>
                            Começar Agora

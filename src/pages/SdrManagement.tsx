@@ -50,7 +50,7 @@ export default function SdrManagement() {
     try {
       const [sdrsRes, settingsRes] = await Promise.all([
         fetch("/api/sdrs", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch("/api/tenant/settings", { headers: { "Authorization": `Bearer ${token}` } })
+        fetch("/api/settings", { headers: { "Authorization": `Bearer ${token}` } })
       ]);
       
       const sdrData = await sdrsRes.json();

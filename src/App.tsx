@@ -18,6 +18,7 @@ import AutomationConfig from "@/pages/AutomationConfig";
 import BulkMessaging from "@/pages/BulkMessaging";
 import PublicBooking from "@/pages/PublicBooking";
 import PublicWebchat from "@/pages/PublicWebchat";
+import IcpManagement from "@/pages/IcpManagement";
 import Docs from "@/pages/Docs";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -39,6 +40,7 @@ function App() {
         <Route path="/contacts" element={<Contacts />} />
         <Route path="/appointments" element={<Appointments />} />
         <Route path="/prospecting" element={<Prospecting />} />
+        <Route path="/prospecting/icp" element={<IcpManagement />} />
         <Route path="/sdrs" element={<SdrManagement />} />
         <Route path="/automations" element={<Automations />} />
         <Route path="/automations/config" element={<AutomationConfig />} />

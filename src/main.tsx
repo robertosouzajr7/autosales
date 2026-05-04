@@ -9,10 +9,12 @@ window.fetch = async (input, init) => {
   if (url.startsWith("/api/")) {
     const tenantId = localStorage.getItem("tenantId");
     const userId = localStorage.getItem("userId");
+    const token = localStorage.getItem("token");
     init = init || {};
     init.headers = { ...init.headers };
     if (tenantId) init.headers["x-tenant-id"] = tenantId;
     if (userId) init.headers["x-user-id"] = userId;
+    if (token) init.headers["Authorization"] = `Bearer ${token}`;
   }
   return originalFetch(input, init);
 };

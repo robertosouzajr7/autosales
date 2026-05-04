@@ -147,25 +147,25 @@ export default function Register() {
                  <div className="space-y-3">
                     <div className="space-y-1">
                        <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nome Completo</Label>
-                       <Input placeholder="Seu nome" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="h-12 border-slate-100 rounded-2xl bg-slate-50 shadow-none font-bold" />
+                       <Input placeholder="Seu nome" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="h-14 border-slate-100 rounded-2xl bg-slate-50 shadow-none font-bold" />
                     </div>
                     <div className="space-y-1">
                        <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nome da Empresa</Label>
-                       <Input placeholder="Ex: Agentes Virtuais Tech" value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})} className="h-12 border-slate-100 rounded-2xl bg-slate-50 shadow-none font-bold" />
+                       <Input placeholder="Ex: Agentes Virtuais Tech" value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})} className="h-14 border-slate-100 rounded-2xl bg-slate-50 shadow-none font-bold" />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                        <div className="space-y-1">
                           <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">WhatsApp</Label>
-                          <Input placeholder="11 99999-9999" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="h-12 border-slate-100 rounded-2xl bg-slate-50 shadow-none font-bold" />
+                          <Input placeholder="11 99999-9999" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="h-14 border-slate-100 rounded-2xl bg-slate-50 shadow-none font-bold" />
                        </div>
                        <div className="space-y-1">
                           <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Senha</Label>
-                          <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="h-12 border-slate-100 rounded-2xl bg-slate-50 shadow-none font-bold" />
+                          <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="h-14 border-slate-100 rounded-2xl bg-slate-50 shadow-none font-bold" />
                        </div>
                     </div>
                     <div className="space-y-1">
                        <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">E-mail Corporativo</Label>
-                       <Input placeholder="seu@email.com" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="h-12 border-slate-100 rounded-2xl bg-slate-50 shadow-none font-bold" />
+                       <Input placeholder="seu@email.com" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="h-14 border-slate-100 rounded-2xl bg-slate-50 shadow-none font-bold" />
                     </div>
                  </div>
                  <Button onClick={handleSendCode} disabled={loading} className="w-full h-14 bg-slate-900 hover:bg-black rounded-2xl font-black text-base gap-3">
@@ -210,18 +210,25 @@ export default function Register() {
                  <div className="grid grid-cols-1 gap-3">
                     <div onClick={() => setFormData({...formData, plan: 'BASIC'})} className={`p-5 rounded-3xl border-2 cursor-pointer transition-all ${formData.plan === 'BASIC' ? 'border-emerald-500 bg-emerald-500/5' : 'border-slate-100 hover:bg-slate-50'}`}>
                        <div className="flex justify-between items-center text-slate-900">
-                          <span className="font-black">Plano Basic</span>
+                          <span className="font-black">BASIC</span>
                           <span className="font-black text-sm">R$ 197/mês</span>
                        </div>
-                       <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Ideal para começar.</p>
+                       <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">100 Buscas + 1 SDR de IA.</p>
                     </div>
                     <div onClick={() => setFormData({...formData, plan: 'PRO'})} className={`p-5 rounded-3xl border-2 cursor-pointer relative overflow-hidden transition-all ${formData.plan === 'PRO' ? 'border-emerald-500 bg-emerald-500/5 shadow-xl' : 'border-slate-100 hover:bg-slate-50'}`}>
                        <div className="flex justify-between items-center text-slate-900">
-                          <span className="font-black flex items-center gap-1.5">PLATINUM PRO <Zap className="w-3 h-3 text-orange-500 fill-orange-500" /></span>
-                          <span className="font-black text-sm">R$ 497/mês</span>
+                          <span className="font-black flex items-center gap-1.5">PRO <Zap className="w-3 h-3 text-orange-500 fill-orange-500" /></span>
+                          <span className="font-black text-sm">R$ 797/mês</span>
                        </div>
-                       <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Multi-SDR e Leads Ilimitados.</p>
+                       <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">1k Buscas + 5 SDRs + Deep Research.</p>
                        {formData.plan === 'PRO' && <div className="absolute top-0 right-0 h-1 bg-emerald-500 w-full" />}
+                    </div>
+                    <div onClick={() => setFormData({...formData, plan: 'ENTERPRISE'})} className={`p-5 rounded-3xl border-2 cursor-pointer transition-all ${formData.plan === 'ENTERPRISE' ? 'border-emerald-500 bg-emerald-500/5' : 'border-slate-100 hover:bg-slate-50'}`}>
+                       <div className="flex justify-between items-center text-slate-900">
+                          <span className="font-black">ENTERPRISE</span>
+                          <span className="font-black text-sm">R$ 997/mês</span>
+                       </div>
+                       <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">10k Buscas + 20 SDRs + Full AI Power.</p>
                     </div>
                  </div>
                  <Button onClick={() => setStep(4)} className="w-full h-14 bg-slate-900 hover:bg-black rounded-2xl font-black text-base gap-3 mt-4">

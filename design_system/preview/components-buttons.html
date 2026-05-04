@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;900&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: #f8fafc; padding: 24px; display: flex; flex-direction: column; gap: 18px; }
+.row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.label { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #94a3b8; width: 80px; flex-shrink: 0; }
+button { font-family: 'Inter', sans-serif; cursor: pointer; transition: all 0.2s; border: none; outline: none; }
+button:active { transform: scale(0.95); }
+
+/* Primary — tall, near-black, all-caps micro-text */
+.btn-primary {
+  height: 64px; padding: 0 40px;
+  background: #0f172a; color: white;
+  border-radius: 28px;
+  font-size: 10px; font-weight: 900;
+  text-transform: uppercase; letter-spacing: 0.18em;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.18);
+}
+.btn-primary:hover { transform: scale(1.04); background: #000; }
+
+/* Accent — emerald glow CTA */
+.btn-accent {
+  height: 64px; padding: 0 40px;
+  background: #10b981; color: white;
+  border-radius: 28px;
+  font-size: 10px; font-weight: 900;
+  text-transform: uppercase; letter-spacing: 0.18em;
+  box-shadow: 0 20px 40px -5px rgba(16,185,129,0.4);
+}
+.btn-accent:hover { transform: scale(1.04); }
+
+/* Ghost / outline — inflated slate-50 */
+.btn-ghost {
+  height: 56px; padding: 0 32px;
+  background: #f8fafc; color: #475569;
+  border-radius: 16px; border: none;
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.15em;
+}
+.btn-ghost:hover { background: #f1f5f9; }
+
+/* Dashboard action — outline with border */
+.btn-outline-dash {
+  height: 48px; padding: 0 20px;
+  background: white; color: #64748b;
+  border-radius: 16px;
+  border: 2px solid #f1f5f9;
+  font-size: 10px; font-weight: 900;
+  text-transform: uppercase; letter-spacing: 0.15em;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-outline-dash:hover { border-color: #e2e8f0; color: #0f172a; }
+
+/* Dark section button (on slate-900 bg) */
+.btn-dark-ghost {
+  height: 52px; padding: 0 28px;
+  background: rgba(255,255,255,0.08); color: white;
+  border-radius: 18px; border: none;
+  font-size: 10px; font-weight: 900;
+  text-transform: uppercase; letter-spacing: 0.15em;
+}
+.btn-dark-ghost:hover { background: rgba(255,255,255,0.14); }
+
+/* FAB */
+.btn-fab {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: #10b981; color: white; font-size: 22px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 10px 28px rgba(16,185,129,0.45);
+}
+.btn-fab:hover { transform: scale(1.1); }
+.btn-fab-dark {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: #0f172a; color: white; font-size: 20px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.25);
+}
+</style></head><body>
+
+<div class="row">
+  <div class="label">Primary CTA</div>
+  <button class="btn-primary">Começar Trial Grátis</button>
+  <button class="btn-primary">Entrar Painel SDR →</button>
+</div>
+
+<div class="row">
+  <div class="label">Accent / Success</div>
+  <button class="btn-accent">Testar a Plataforma Agora</button>
+</div>
+
+<div class="row">
+  <div class="label">Ghost / Outline</div>
+  <button class="btn-ghost">Ver Como Funciona</button>
+  <button class="btn-outline-dash">⏱ Sincronizar</button>
+</div>
+
+<div class="row" style="background:#0f172a;padding:16px;border-radius:20px">
+  <div class="label" style="color:rgba(255,255,255,0.2)">On Dark BG</div>
+  <button class="btn-dark-ghost">Upgrade de Plano</button>
+  <button style="height:52px;padding:0 28px;background:white;color:#059669;border-radius:18px;border:none;font-family:Inter,sans-serif;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;cursor:pointer;transition:all 0.2s">Começar Agora</button>
+</div>
+
+<div class="row">
+  <div class="label">FAB Buttons</div>
+  <div class="btn-fab">💬</div>
+  <div class="btn-fab-dark">📞</div>
+</div>
+
+</body></html>

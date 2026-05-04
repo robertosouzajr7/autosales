@@ -110,19 +110,22 @@ export class WhatsAppManager {
 
                 console.log(`[WhatsApp] Conexão ${accountId} fechada (code: ${statusCode}). Reconectar: ${shouldReconnect}`);
                 whatsappSessions.delete(accountId);
-                await WhatsAppManager.updateAccountStatus(accountId, 'DISCONNECTED');
-
-                if (emitQr) emitQr(JSON.stringify({ status: "DISCONNECTED" }));
-
-                // Reconecta automaticamente em caso de queda (não logout)
+                
                 if (shouldReconnect) {
+                    await WhatsAppManager.updateAccountStatus(accountId, 'CONNECTING');
+                    if (emitQr) emitQr(JSON.stringify({ status: "WAITING" }));
+                    
                     console.log(`[WhatsApp] Tentando reconectar ${accountId} em 3s...`);
                     setTimeout(() => {
-                        WhatsAppManager.createSession(accountId, null).catch(err =>
+                        // Passamos o mesmo emitQr para que o frontend continue recebendo atualizações da nova sessão
+                        WhatsAppManager.createSession(accountId, emitQr).catch(err =>
                             console.error(`[WhatsApp] Falha ao reconectar ${accountId}:`, err)
                         );
                     }, 3000);
                 } else {
+                    await WhatsAppManager.updateAccountStatus(accountId, 'DISCONNECTED');
+                    if (emitQr) emitQr(JSON.stringify({ status: "DISCONNECTED" }));
+                    
                     // Logout explícito: limpa credenciais
                     console.log(`[WhatsApp] Logout detectado para ${accountId}. Limpando credenciais.`);
                     try {

@@ -1,11 +1,14 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import prisma from "./config/prisma.js";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import apiRouter from "./routes/index.js";
 import publicRouter from "./routes/public.js";
+import publicApiRouter from "./routes/publicApi.js";
 import { WhatsAppManager } from "../../whatsapp.js";
 import AutomationEngine from "../../automation_engine.js";
 import bcrypt from "bcryptjs";
@@ -43,6 +46,7 @@ if (process.env.NODE_ENV === "development") {
 }
 
 // Routes
+app.use("/api/public", publicApiRouter);
 app.use("/api", apiRouter);
 app.use("/api/v2", apiRouter);
 app.use("/", publicRouter);
@@ -54,10 +58,10 @@ export async function initDB() {
     if (planCount === 0) {
       await prisma.plan.createMany({
         data: [
-          { name: "BASIC", priceMonthly: 197, priceYearly: 0, maxLeads: 300, maxSdrs: 1, maxTokens: 50000 },
-          { name: "PRO", priceMonthly: 797, priceYearly: 0, maxLeads: 10000, maxSdrs: 5, maxTokens: 500000 },
-          { name: "ENTERPRISE", priceMonthly: 997, priceYearly: 0, maxLeads: 999999, maxSdrs: 20, maxTokens: 2000000 },
-          { name: "VITALICIO", priceMonthly: 0, priceYearly: 0, maxLeads: 9999999, maxSdrs: 999, maxTokens: 999999999, features: JSON.stringify({ aiEnabled: true, webhookEnabled: true, bulkMessaging: true, calendar: true, crmIntegration: true, maxAutomations: -1, maxExecutions: -1 }) }
+          { name: "BASIC", priceMonthly: 197, priceYearly: 0, maxLeads: 300, maxSdrs: 1, maxTokens: 50000, maxProspects: 100, maxResearch: 10, maxMessages: 1000 },
+          { name: "PRO", priceMonthly: 797, priceYearly: 0, maxLeads: 10000, maxSdrs: 5, maxTokens: 500000, maxProspects: 1000, maxResearch: 100, maxMessages: 10000 },
+          { name: "ENTERPRISE", priceMonthly: 997, priceYearly: 0, maxLeads: 999999, maxSdrs: 20, maxTokens: 2000000, maxProspects: 10000, maxResearch: 500, maxMessages: 50000 },
+          { name: "VITALICIO", priceMonthly: 0, priceYearly: 0, maxLeads: 9999999, maxSdrs: 999, maxTokens: 999999999, maxProspects: 9999999, maxResearch: 9999999, maxMessages: 9999999, features: JSON.stringify({ aiEnabled: true, webhookEnabled: true, bulkMessaging: true, calendar: true, crmIntegration: true, maxAutomations: -1, maxExecutions: -1 }) }
         ]
       });
       console.log("💎 Planos iniciais criados.");

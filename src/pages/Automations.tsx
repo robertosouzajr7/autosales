@@ -343,7 +343,7 @@ export default function Automations() {
   const fetchTenantData = async () => {
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch("/api/tenant/settings", { headers: { "Authorization": `Bearer ${token}` } });
+      const res = await fetch("/api/settings", { headers: { "Authorization": `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
         setTenantLimits(data.planFeatures || { aiEnabled: false, webhookEnabled: false });

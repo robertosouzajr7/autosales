@@ -37,7 +37,7 @@ export default function Contacts() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Lead | null>(null);
-  const [newContact, setNewContact] = useState({ name: "", phone: "", email: "" });
+  const [newContact, setNewContact] = useState({ name: "", phone: "", email: "", tags: "", notes: "", status: "NEW" });
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [importPreview, setImportPreview] = useState<{name: string, phone: string, email?: string}[]>([]);
@@ -45,10 +45,16 @@ export default function Contacts() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const getHeaders = () => {
+    const token = localStorage.getItem("token");
+    return token ? { "Content-Type": "application/json", "Authorization": `Bearer ${token}` } : { "Content-Type": "application/json" };
+  };
+
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/leads");
+      const res = await fetch("/api/leads", { headers: getHeaders() });
+      if (!res.ok) throw new Error("Falha ao buscar");
       const data = await res.json();
       setContacts(Array.isArray(data) ? data : []);
     } catch (e) { toast({ title: "Erro na base", variant: "destructive" }); }
@@ -62,14 +68,16 @@ export default function Contacts() {
     try {
       const res = await fetch("/api/leads", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getHeaders(),
         body: JSON.stringify(newContact)
       });
       if (res.ok) {
         toast({ title: "🏢 Contato salvo com sucesso!" });
         setIsAddModalOpen(false);
-        setNewContact({ name: "", phone: "", email: "" });
+        setNewContact({ name: "", phone: "", email: "", tags: "", notes: "", status: "NEW" });
         fetchData();
+      } else {
+        toast({ title: "Erro ao salvar", variant: "destructive" });
       }
     } catch (e) { toast({ title: "Falha na conexão", variant: "destructive" }); }
   };
@@ -77,7 +85,10 @@ export default function Contacts() {
   const handleDeleteContact = async (id: string) => {
     if (!confirm("Tem certeza que deseja excluir este contato?")) return;
     try {
-      const res = await fetch(`/api/leads/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/leads/${id}`, { 
+        method: "DELETE",
+        headers: getHeaders()
+      });
       if (res.ok) {
         toast({ title: "🗑️ Contato removido." });
         setSelectedContact(null);
@@ -91,7 +102,7 @@ export default function Contacts() {
     try {
       const res = await fetch(`/api/leads/${selectedContact.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: getHeaders(),
         body: JSON.stringify(selectedContact)
       });
       if (res.ok) {
@@ -142,7 +153,7 @@ export default function Contacts() {
       setLoading(true);
       const res = await fetch("/api/contacts/import-bulk", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getHeaders(),
         body: JSON.stringify({ 
           contacts: importPreview,
           startInactive: true // Nova flag de segurança
@@ -187,7 +198,7 @@ export default function Contacts() {
     try {
       const res = await fetch("/api/contacts/bulk-delete", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getHeaders(),
         body: JSON.stringify({ ids: Array.from(selectedIds) })
       });
       if (res.ok) {
@@ -359,21 +370,38 @@ export default function Contacts() {
 
       {/* MODAL NOVO CONTATO */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-        <DialogContent className="rounded-[40px] p-10 max-w-lg border-none shadow-3xl">
+        <DialogContent className="max-w-2xl p-10 overflow-hidden border-none shadow-3xl rounded-[40px]">
           <DialogHeader>
             <DialogTitle className="text-2xl font-black flex items-center gap-2">
               <div className="bg-emerald-500 p-2 rounded-xl"><UserPlus className="text-white w-5 h-5" /></div> Novo Contato
             </DialogTitle>
           </DialogHeader>
-          <div className="grid gap-6 py-4">
-            <div className="space-y-2">
-               <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400">Nome Completo</Label>
-               <Input value={newContact.name} onChange={e => setNewContact({...newContact, name: e.target.value})} className="h-14 rounded-2xl border-2 border-slate-50 font-bold bg-slate-50/30" placeholder="Ex: Ana Maria" />
-            </div>
-            <div className="space-y-2">
-               <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400">WhatsApp Oficial</Label>
-               <Input value={newContact.phone} onChange={e => setNewContact({...newContact, phone: e.target.value})} className="h-14 rounded-2xl border-2 border-slate-50 font-bold bg-slate-50/30" placeholder="55119..." />
-            </div>
+          <div className="grid grid-cols-2 gap-8 py-4">
+             <div className="space-y-2">
+                <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Nome de Exibição</Label>
+                <Input value={newContact.name} onChange={e => setNewContact({...newContact, name: e.target.value})} className="h-14 border-2 border-slate-50 rounded-2xl font-bold bg-slate-50/30" placeholder="Ex: Ana Maria" />
+             </div>
+             <div className="space-y-2">
+                <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Celular / WhatsApp</Label>
+                <Input value={newContact.phone} onChange={e => setNewContact({...newContact, phone: e.target.value})} className="h-14 border-2 border-slate-50 rounded-2xl font-bold bg-slate-50/30" placeholder="55119..." />
+             </div>
+             <div className="col-span-2 space-y-2">
+                <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">E-mail de Contato</Label>
+                <Input value={newContact.email} onChange={e => setNewContact({...newContact, email: e.target.value})} className="h-14 border-2 border-slate-50 rounded-2xl font-bold bg-slate-50/30" placeholder="cliente@email.com" />
+             </div>
+             <div className="col-span-2 space-y-2">
+                <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Tags (Separadas por vírgula)</Label>
+                <Input value={newContact.tags} onChange={e => setNewContact({...newContact, tags: e.target.value})} className="h-14 border-2 border-slate-50 rounded-2xl font-bold bg-slate-50/30" placeholder="vip, interessado, automacao" />
+             </div>
+             <div className="col-span-2 space-y-2">
+                <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Notas do Agente (Internal Only)</Label>
+                <textarea 
+                  value={newContact.notes} 
+                  onChange={e => setNewContact({...newContact, notes: e.target.value})}
+                  className="w-full min-h-[120px] p-4 border-2 border-slate-50 rounded-2xl font-medium bg-slate-50/30 focus:ring-2 ring-emerald-500/20 outline-none transition-all"
+                  placeholder="Adicione observações sobre este lead..."
+                />
+             </div>
           </div>
           <DialogFooter>
              <Button onClick={handleCreateContact} className="w-full h-16 bg-slate-900 hover:bg-black text-white font-black rounded-2xl uppercase tracking-widest text-sm transition-all shadow-2xl">

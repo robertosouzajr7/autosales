@@ -25,6 +25,7 @@ class AutomationEngine {
     this.inactivityInterval = setInterval(() => this.processInactivityTriggers(), 5 * 60 * 1000);
     this.queueInterval = setInterval(() => this.processQueue(), 1000);
     this.prospectingInterval = setInterval(() => this.processProspectingRoutines(), 10 * 60 * 1000); // 10 min
+    this.enrichmentInterval = setInterval(() => this.processEnrichmentRoutine(), 15 * 60 * 1000); // 15 min
     console.log(`[AutoEngine] ✅ Engine iniciado (concurrency: ${MAX_CONCURRENT_EXECUTIONS}, rate: ${RATE_LIMIT_PER_MINUTE} msg/min).`);
     this.cronJobs = new Map();
     setTimeout(() => this.bootSchedulers(), 2000); // Startup delay
@@ -148,7 +149,21 @@ class AutomationEngine {
       this.rateLimiter.set(tenantId, bucket);
     }
 
+    // Check Plan Monthly Message Limit
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, include: { plan: true } });
+    if (tenant?.plan && tenant.usedMessages >= tenant.plan.maxMessages) {
+       console.log(`[AutoEngine] 🛑 Limite mensal de mensagens atingido para o tenant ${tenantId}`);
+       return { error: "LIMIT_REACHED" };
+    }
+
     bucket.count++;
+    
+    // Increment Usage
+    await prisma.tenant.update({
+      where: { id: tenantId },
+      data: { usedMessages: { increment: 1 } }
+    });
+
     if (mediaUrl && mediaType) {
       return WhatsAppManager.sendMedia(tenantId, phone, mediaUrl, mediaType, content);
     }
@@ -770,11 +785,13 @@ Dados do lead:
 - Telefone: ${lead.phone}
 - Status: ${lead.status}
 - Score: ${lead.qualificationScore || "N/A"}
+- Pesquisa Adicional: ${lead.notes || "Sem notas"}
+- Dados Estruturados: ${lead.extractedData || "{}"}
 
 Histórico da conversa:
 ${history}
 
-Responda de forma profissional e objetiva.`;
+Responda de forma profissional e objetiva, focando em qualificar o lead conforme o ICP.`;
 
       const result = await model.generateContent(fullPrompt);
       const text = result.response.text();
@@ -1510,6 +1527,164 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
       }
     } catch(err) {
        console.error("[Prospecting] Erro geraleoutine:", err);
+    }
+  }
+
+  // --- AI ENRICHMENT ROUTINE (Deep Research) ---
+  async processEnrichmentRoutine() {
+    try {
+      const leadsToEnrich = await prisma.lead.findMany({
+        where: { isToEnrich: true },
+        take: 3 // Small batch to avoid API costs/limits
+      });
+
+      for (const lead of leadsToEnrich) {
+        console.log(`[Enrichment] Iniciando pesquisa profunda para: ${lead.name}`);
+        await this.enrichLeadWithAI(lead);
+      }
+    } catch (err) {
+      console.error("[Enrichment] Erro na rotina:", err);
+    }
+  }
+
+  async enrichLeadWithAI(lead) {
+    const serperKey = process.env.SERPER_API_KEY;
+    if (!serperKey) return;
+
+    try {
+      const tenant = await prisma.tenant.findUnique({ where: { id: lead.tenantId }, include: { plan: true } });
+      const icp = await prisma.icpProfile.findFirst({ where: { tenantId: lead.tenantId, isActive: true } });
+      
+      // A. Check Plan Monthly Research Limit
+      if (tenant?.plan && tenant.usedResearch >= tenant.plan.maxResearch) {
+        console.log(`[Enrichment] 🛑 Limite MENSAL do plano atingido para o tenant ${lead.tenantId}`);
+        return;
+      }
+
+      // B. Check ICP Daily Research Limit
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      const researchCountToday = await prisma.lead.count({
+        where: { 
+          tenantId: lead.tenantId, 
+          updatedAt: { gte: today },
+          isToEnrich: false,
+          extractedData: { contains: "lastEnrichedAt" }
+        }
+      });
+
+      const limit = icp?.dailyResearchLimit || 10;
+      if (researchCountToday >= limit) {
+        console.log(`[Enrichment] 🛑 Limite diário do ICP atingido para o tenant ${lead.tenantId} (${researchCountToday}/${limit})`);
+        return;
+      }
+
+      // 1. Search for info using ICP Keywords
+      const keywords = icp?.searchKeywords || "linkedin profile news";
+      const query = `${lead.name} ${lead.company || ''} ${keywords}`;
+      const searchRes = await fetch('https://google.serper.dev/search', {
+        method: 'POST',
+        headers: { 'X-API-KEY': serperKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: query, num: 5 })
+      });
+      const searchData = await searchRes.json();
+      const organic = searchData.organic || [];
+      const context = organic.map(o => `Título: ${o.title}\nSnippet: ${o.snippet}\nLink: ${o.link}`).join('\n\n');
+
+      // 2. Process with Gemini (Strategic Analysis)
+      const { model } = await this._getAIModel(lead.tenantId);
+      const sdr = await prisma.sdrBot.findFirst({ where: { tenantId: lead.tenantId, active: true } });
+
+      const prompt = `
+        Você é um Estrategista de Vendas Outbound de Alta Performance. 
+        Recebi os seguintes resultados de pesquisa sobre o lead "${lead.name}":
+        
+        ${context}
+        
+        PERFIL DE CLIENTE IDEAL (ICP) DA EMPRESA:
+        ${icp ? `Nicho: ${icp.niche}, Cargo: ${icp.role}, Objetivo: ${icp.name}` : "Não definido"}
+        
+        INFORMAÇÕES RELEVANTES PARA BUSCAR (FOCO):
+        ${icp?.relevantInfo || "Informações gerais de negócio e contato"}
+        
+        INSTRUÇÕES:
+        1. Analise se o lead tem fit com o ICP.
+        2. Extraia informações estruturadas focando no que foi pedido nas INFORMAÇÕES RELEVANTES.
+        3. Crie uma MENSAGEM DE ABERTURA (ICE BREAKER) para WhatsApp que seja:
+           - Curta (máximo 3 frases)
+           - Extremamente personalizada citando um dado real encontrado na pesquisa.
+           - Sem parecer um robô ou spam.
+           - Com uma pergunta aberta no final para gerar conversa.
+
+        Retorne APENAS um JSON no formato:
+        {
+          "companyName": "...",
+          "role": "...",
+          "industry": "...",
+          "potentialPains": "...",
+          "summary": "...",
+          "iceBreaker": "Mensagem personalizada para o WhatsApp",
+          "strategy": "Explicação da abordagem recomendada"
+        }
+      `;
+
+      const result = await model.generateContent(prompt);
+      let aiJson = {};
+      try {
+        const text = result.response.text().replace(/```json|```/g, "").trim();
+        aiJson = JSON.parse(text);
+      } catch(e) { console.error("Erro parse AI Strategy:", e); }
+
+      // 3. Update Lead
+      const currentData = JSON.parse(lead.extractedData || "{}");
+      const newData = { ...currentData, ...aiJson, lastEnrichedAt: new Date() };
+      
+      let newNotes = lead.notes || "";
+      if (aiJson.summary) {
+        newNotes += `\n\n--- ESTRATÉGIA IA (${new Date().toLocaleDateString()}) ---\n${aiJson.summary}\n\nABORDAGEM: ${aiJson.strategy || 'N/A'}`;
+      }
+
+      await prisma.lead.update({
+        where: { id: lead.id },
+        data: {
+          extractedData: JSON.stringify(newData),
+          notes: newNotes,
+          isToEnrich: false,
+          status: "PROSPECTING"
+        }
+      });
+
+      // Increment Research Usage
+      await prisma.tenant.update({
+        where: { id: lead.tenantId },
+        data: { usedResearch: { increment: 1 } }
+      });
+
+      // 4. Autonomously Initiate Outreach if SDR is active
+      if (sdr && aiJson.iceBreaker && lead.phone) {
+        console.log(`[Outreach] 🚀 Iniciando contato proativo com ${lead.name}`);
+        
+        const conv = await prisma.conversation.upsert({
+          where: { leadId: lead.id },
+          update: { botActive: true },
+          create: { leadId: lead.id, botActive: true, tenantId: lead.tenantId }
+        });
+
+        await this.sendMessage(lead.tenantId, lead.phone, aiJson.iceBreaker);
+
+        await prisma.message.create({
+          data: {
+            conversationId: conv.id,
+            content: aiJson.iceBreaker,
+            role: "ASSISTANT",
+            tenantId: lead.tenantId
+          }
+        });
+      }
+
+      console.log(`[Enrichment] ✅ Sucesso e Outreach iniciado para ${lead.name}`);
+    } catch (e) {
+      console.error(`[Enrichment] Falha ao enriquecer lead ${lead.id}:`, e);
     }
   }
 

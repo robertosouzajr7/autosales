@@ -143,7 +143,11 @@ export default function Settings() {
         headers,
         body: JSON.stringify({
           ...aiConfig,
-          ...smtpConfig,
+          smtpHost: smtpConfig.host,
+          smtpPort: smtpConfig.port,
+          smtpUser: smtpConfig.user,
+          smtpPass: smtpConfig.pass,
+          smtpFrom: smtpConfig.from,
           listmonkUrl: listmonkConfig.url,
           listmonkToken: listmonkConfig.token,
           listmonkListId: listmonkConfig.listId,
@@ -358,16 +362,16 @@ export default function Settings() {
                 <Card className="border-none shadow-xl rounded-[40px] bg-white p-12 space-y-8">
                    <div className="flex items-center gap-4 text-rose-500 mb-4"><Zap className="w-8 h-8" /><h3 className="text-xl font-black text-slate-900 uppercase">Inteligência Apollo & Snov</h3></div>
                    <div className="space-y-6">
-                      <div className="space-y-2"><Label>Apollo.io API Key</Label><Input type="password" value={aiConfig.apolloApiKey} onChange={(e) => setAiConfig({...aiConfig, apolloApiKey: e.target.value})} className="h-16 bg-slate-50 rounded-3xl px-8" /></div>
-                      <div className="space-y-2"><Label>Snov.io Client ID</Label><Input value={aiConfig.snovClientId} onChange={(e) => setAiConfig({...aiConfig, snovClientId: e.target.value})} className="h-14 bg-slate-50 rounded-2xl px-6" /></div>
-                      <div className="space-y-2"><Label>Snov.io Client Secret</Label><Input type="password" value={aiConfig.snovClientSecret} onChange={(e) => setAiConfig({...aiConfig, snovClientSecret: e.target.value})} className="h-14 bg-slate-50 rounded-2xl px-6" /></div>
+                      <div className="space-y-2"><Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Apollo.io API Key</Label><Input type="password" value={aiConfig.apolloApiKey} onChange={(e) => setAiConfig({...aiConfig, apolloApiKey: e.target.value})} className="h-16 bg-slate-50 rounded-3xl px-8 font-bold" /></div>
+                      <div className="space-y-2"><Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Snov.io Client ID</Label><Input value={aiConfig.snovClientId} onChange={(e) => setAiConfig({...aiConfig, snovClientId: e.target.value})} className="h-14 bg-slate-50 rounded-2xl px-6 font-bold" /></div>
+                      <div className="space-y-2"><Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Snov.io Client Secret</Label><Input type="password" value={aiConfig.snovClientSecret} onChange={(e) => setAiConfig({...aiConfig, snovClientSecret: e.target.value})} className="h-14 bg-slate-50 rounded-2xl px-6 font-bold" /></div>
                    </div>
                 </Card>
                 <Card className="border-none shadow-xl rounded-[40px] bg-white p-12 space-y-8">
                    <div className="flex items-center gap-4 text-blue-500 mb-4"><Bot className="w-8 h-8" /><h3 className="text-xl font-black text-slate-900 uppercase">Modelos de IA (LLMs)</h3></div>
                    <div className="space-y-6">
-                      <div className="space-y-2"><Label>Google Gemini API Key</Label><Input type="password" value={aiConfig.geminiKey} onChange={(e) => setAiConfig({...aiConfig, geminiKey: e.target.value})} className="h-16 bg-slate-50 rounded-3xl px-8" /></div>
-                      <div className="space-y-2"><Label>OpenAI API Key (Opcional)</Label><Input type="password" value={aiConfig.openaiKey} onChange={(e) => setAiConfig({...aiConfig, openaiKey: e.target.value})} className="h-16 bg-slate-50 rounded-3xl px-8" /></div>
+                      <div className="space-y-2"><Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Google Gemini API Key</Label><Input type="password" value={aiConfig.geminiKey} onChange={(e) => setAiConfig({...aiConfig, geminiKey: e.target.value})} className="h-16 bg-slate-50 rounded-3xl px-8 font-bold" /></div>
+                      <div className="space-y-2"><Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">OpenAI API Key (Opcional)</Label><Input type="password" value={aiConfig.openaiKey} onChange={(e) => setAiConfig({...aiConfig, openaiKey: e.target.value})} className="h-16 bg-slate-50 rounded-3xl px-8 font-bold" /></div>
                    </div>
                 </Card>
              </div>
@@ -381,7 +385,7 @@ export default function Settings() {
                    <div className="flex items-center gap-4 text-amber-500 mb-4"><Calendar className="w-8 h-8" /><h3 className="text-xl font-black text-slate-900 uppercase underline decoration-amber-500 decoration-4">Google Calendar</h3></div>
                    <div className="space-y-6">
                       <div className="space-y-2">
-                         <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Google Refresh Token (Offline Access)</Label>
+                         <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Google Refresh Token (Offline Access)</Label>
                          <Input value={aiConfig.googleRefreshToken} onChange={(e) => setAiConfig({...aiConfig, googleRefreshToken: e.target.value})} className="h-16 bg-slate-50 rounded-3xl px-8 font-bold" />
                       </div>
                       <Button className="w-full bg-slate-900 text-white h-14 rounded-2xl flex items-center justify-center gap-2 font-black uppercase text-[10px] tracking-widest">
@@ -395,12 +399,12 @@ export default function Settings() {
                    <div className="flex items-center gap-4 text-blue-600 mb-4"><Smartphone className="w-8 h-8" /><h3 className="text-xl font-black text-slate-900 uppercase underline decoration-blue-600 decoration-4">WhatsApp Cloud API (Meta)</h3></div>
                    <div className="space-y-6">
                       <div className="grid grid-cols-2 gap-6">
-                         <div className="space-y-2"><Label>Phone Number ID</Label><Input value={metaConfig.phoneId} onChange={(e) => setMetaConfig({...metaConfig, phoneId: e.target.value})} className="h-14 bg-slate-50 rounded-2xl" /></div>
-                         <div className="space-y-2"><Label>WABA Account ID</Label><Input value={metaConfig.wabaId} onChange={(e) => setMetaConfig({...metaConfig, wabaId: e.target.value})} className="h-14 bg-slate-50 rounded-2xl" /></div>
+                         <div className="space-y-2"><Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Phone Number ID</Label><Input value={metaConfig.phoneId} onChange={(e) => setMetaConfig({...metaConfig, phoneId: e.target.value})} className="h-14 bg-slate-50 rounded-2xl px-6 font-bold" /></div>
+                         <div className="space-y-2"><Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">WABA Account ID</Label><Input value={metaConfig.wabaId} onChange={(e) => setMetaConfig({...metaConfig, wabaId: e.target.value})} className="h-14 bg-slate-50 rounded-2xl px-6 font-bold" /></div>
                       </div>
                       <div className="space-y-2">
-                         <Label>Permanent Access Token</Label>
-                         <Input type="password" value={metaConfig.accessToken} onChange={(e) => setMetaConfig({...metaConfig, accessToken: e.target.value})} className="h-14 bg-slate-50 rounded-2xl" />
+                         <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Permanent Access Token</Label>
+                         <Input type="password" value={metaConfig.accessToken} onChange={(e) => setMetaConfig({...metaConfig, accessToken: e.target.value})} className="h-14 bg-slate-50 rounded-2xl px-6 font-bold" />
                       </div>
                       <Separator />
                       <div className="p-6 bg-slate-900 rounded-3xl space-y-4">

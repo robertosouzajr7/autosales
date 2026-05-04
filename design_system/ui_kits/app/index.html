@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoSales App — UI Kit</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #0f172a; -webkit-font-smoothing: antialiased; }
+
+/* ── Layout ── */
+.app { display: flex; height: 100vh; overflow: hidden; }
+
+/* ── Sidebar ── */
+.sidebar { width: 260px; flex-shrink: 0; background: #0f172a; display: flex; flex-direction: column; transition: width 0.3s; }
+.sidebar.collapsed { width: 68px; }
+.sidebar-logo { height: 64px; display: flex; align-items: center; gap: 10px; padding: 0 16px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.logo-icon { width: 32px; height: 32px; background: #10b981; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 12px rgba(16,185,129,0.4); }
+.logo-text { font-size: 18px; font-weight: 900; letter-spacing: -0.03em; text-transform: uppercase; color: white; white-space: nowrap; overflow: hidden; }
+.logo-text span { color: #10b981; font-style: italic; }
+.sidebar-nav { flex: 1; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 500; color: #64748b; transition: all 0.2s; white-space: nowrap; overflow: hidden; position: relative; }
+.nav-item:hover { background: rgba(255,255,255,0.06); color: #94a3b8; }
+.nav-item.active { background: rgba(255,255,255,0.12); color: white; }
+.nav-item.active i { color: #10b981; }
+.nav-dot { width: 6px; height: 6px; background: #10b981; border-radius: 50%; margin-left: auto; flex-shrink: 0; }
+.sidebar-plan { padding: 12px 14px; border-top: 1px solid rgba(255,255,255,0.06); }
+.plan-box { background: rgba(255,255,255,0.04); border-radius: 14px; padding: 10px 12px; }
+.plan-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.plan-label { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.18em; color: #334155; }
+.plan-badge { background: #10b981; color: #0f172a; font-size: 8px; font-weight: 900; padding: 2px 8px; border-radius: 99px; text-transform: uppercase; }
+.plan-bar { height: 3px; background: #1e293b; border-radius: 99px; overflow: hidden; }
+.plan-fill { height: 100%; background: #10b981; border-radius: 99px; }
+.sidebar-user { padding: 10px 14px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.avatar { width: 32px; height: 32px; background: #059669; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; color: white; flex-shrink: 0; }
+.user-info { overflow: hidden; }
+.user-name { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-plan { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: #334155; }
+
+/* ── Top bar ── */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.topbar { height: 64px; background: white; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 12px; padding: 0 24px; flex-shrink: 0; }
+.topbar-title { font-size: 16px; font-weight: 600; color: #1e293b; flex: 1; }
+.search-wrap { position: relative; }
+.search-wrap input { width: 240px; height: 36px; background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 10px; padding: 0 12px 0 36px; font-family: 'Inter', sans-serif; font-size: 13px; color: #0f172a; outline: none; }
+.search-wrap i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8; width: 16px; height: 16px; }
+.bell-btn { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; color: #64748b; }
+.bell-dot { position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; background: #10b981; border-radius: 50%; border: 2px solid white; }
+
+/* ── Content area ── */
+.content { flex: 1; overflow-y: auto; padding: 32px; }
+
+/* ── Page header ── */
+.page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 32px; }
+.page-title { font-size: 36px; font-weight: 900; letter-spacing: -0.04em; text-transform: uppercase; line-height: 1; }
+.page-title em { font-style: italic; color: #10b981; }
+.page-sub { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.22em; color: #94a3b8; margin-top: 4px; }
+.header-actions { display: flex; gap: 10px; }
+.btn { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 900; border: none; transition: all 0.2s; }
+.btn-primary { height: 44px; padding: 0 24px; background: #0f172a; color: white; border-radius: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; }
+.btn-primary:hover { background: #000; }
+.btn-outline { height: 44px; padding: 0 20px; background: white; color: #475569; border-radius: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; border: 2px solid #f1f5f9; }
+.btn-outline:hover { border-color: #e2e8f0; }
+.btn:active { transform: scale(0.97); }
+
+/* ── KPI grid ── */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.kpi-card { background: white; border-radius: 32px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); border-bottom: 4px solid transparent; transition: all 0.3s; cursor: default; }
+.kpi-card:hover { box-shadow: 0 16px 40px rgba(0,0,0,0.10); transform: translateY(-4px); border-bottom-color: #10b981; }
+.kpi-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+.kpi-icon { width: 42px; height: 42px; border-radius: 16px; background: #f8fafc; display: flex; align-items: center; justify-content: center; transition: all 0.3s; }
+.kpi-card:hover .kpi-icon { background: #0f172a; }
+.kpi-card:hover .kpi-icon i { color: white !important; }
+.trend { font-size: 9px; font-weight: 900; padding: 4px 8px; border-radius: 99px; display: flex; align-items: center; gap: 3px; }
+.trend.up { background: #ecfdf5; color: #059669; }
+.trend.down { background: #fff1f2; color: #e11d48; }
+.kpi-label { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.18em; color: #94a3b8; margin-bottom: 4px; }
+.kpi-value { font-size: 34px; font-weight: 900; letter-spacing: -0.04em; font-style: italic; }
+
+/* ── Charts row ── */
+.charts-row { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 24px; }
+.chart-card { background: white; border-radius: 36px; padding: 28px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+.chart-card-dark { background: #0f172a; border-radius: 36px; padding: 28px; box-shadow: 0 16px 50px rgba(0,0,0,0.25); position: relative; overflow: hidden; }
+.glow-blob { position: absolute; width: 160px; height: 160px; background: rgba(16,185,129,0.12); border-radius: 50%; filter: blur(60px); top: -40px; right: -40px; }
+.card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+.card-title { font-size: 18px; font-weight: 900; letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px; }
+.card-sub { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.18em; color: #94a3b8; margin-top: 2px; }
+.badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 10px; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; }
+.badge-green { background: #ecfdf5; color: #059669; }
+/* Bar chart mock */
+.bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 140px; }
+.bar { flex: 1; background: linear-gradient(to top, #10b981, #34d399); border-radius: 8px 8px 0 0; transition: opacity 0.2s; }
+.bar:hover { opacity: 0.8; }
+.bar-labels { display: flex; gap: 8px; margin-top: 8px; }
+.bar-lbl { flex: 1; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #cbd5e1; text-align: center; }
+/* Funnel bars */
+.funnel-row { margin-bottom: 16px; }
+.funnel-lbl-row { display: flex; justify-content: space-between; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 6px; }
+.funnel-lbl-name { color: rgba(255,255,255,0.3); }
+.funnel-lbl-pct { color: white; }
+.funnel-track { background: rgba(255,255,255,0.06); border-radius: 99px; height: 10px; overflow: hidden; padding: 1px; }
+.funnel-fill { height: 100%; border-radius: 99px; transition: width 1s ease; }
+
+/* ── Bottom row ── */
+.bottom-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.leads-card { background: white; border-radius: 36px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+.leads-header { padding: 20px 24px; border-bottom: 1px solid #f8fafc; display: flex; justify-content: space-between; align-items: center; }
+.leads-title { font-size: 16px; font-weight: 900; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; text-transform: uppercase; }
+.leads-list { padding: 8px; }
+.lead-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s; border-left: 3px solid transparent; }
+.lead-row:hover { background: #f8fafc; border-left-color: #10b981; }
+.lead-avatar { width: 44px; height: 44px; background: #0f172a; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; color: white; transition: background 0.2s; flex-shrink: 0; }
+.lead-row:hover .lead-avatar { background: #10b981; }
+.lead-name { font-size: 14px; font-weight: 900; color: #0f172a; }
+.lead-status { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: #94a3b8; }
+.lead-icon { width: 32px; height: 32px; background: #ecfdf5; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-left: auto; flex-shrink: 0; }
+/* Intelligence card */
+.intel-card { background: linear-gradient(135deg, #10b981, #059669); border-radius: 36px; padding: 32px; position: relative; overflow: hidden; box-shadow: 0 20px 60px rgba(16,185,129,0.35); }
+.intel-glow { position: absolute; bottom: -60px; right: -60px; width: 200px; height: 200px; background: rgba(255,255,255,0.1); border-radius: 50%; filter: blur(60px); }
+.intel-icon { width: 72px; height: 72px; background: rgba(255,255,255,0.2); border-radius: 28px; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.15); }
+.intel-title { font-size: 26px; font-weight: 900; letter-spacing: -0.03em; text-transform: uppercase; font-style: italic; color: white; line-height: 1.1; margin-bottom: 6px; }
+.intel-sub { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: rgba(255,255,255,0.5); margin-bottom: 20px; }
+.intel-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 13px; font-weight: 700; color: white; }
+.intel-row i { width: 14px; height: 14px; }
+.intel-btn { width: 100%; height: 52px; background: white; color: #059669; border: none; border-radius: 18px; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; cursor: pointer; margin-top: 20px; transition: all 0.2s; }
+.intel-btn:hover { transform: scale(1.02); }
+
+/* ── Nav pages ── */
+.page { display: none; }
+.page.active { display: block; }
+
+/* ── CRM page ── */
+.crm-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; }
+.kanban { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.kanban-col { background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+.col-header { padding: 14px 16px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f8fafc; }
+.col-count { background: #f8fafc; color: #64748b; font-size: 10px; font-weight: 900; padding: 2px 8px; border-radius: 99px; }
+.col-body { padding: 8px; display: flex; flex-direction: column; gap: 6px; min-height: 200px; }
+.lead-card { background: #f8fafc; border-radius: 12px; padding: 12px; cursor: pointer; transition: all 0.2s; border: 1px solid #f1f5f9; }
+.lead-card:hover { background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-1px); }
+.lc-name { font-size: 12px; font-weight: 900; color: #0f172a; margin-bottom: 4px; }
+.lc-source { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: #94a3b8; }
+.score-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 900; padding: 2px 8px; border-radius: 99px; margin-top: 6px; }
+
+/* ── Conversations page ── */
+.conv-layout { display: grid; grid-template-columns: 300px 1fr; gap: 0; height: calc(100vh - 64px - 64px); background: white; border-radius: 28px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+.conv-list { border-right: 1px solid #f1f5f9; overflow-y: auto; }
+.conv-list-header { padding: 16px; border-bottom: 1px solid #f1f5f9; }
+.conv-list-header input { width: 100%; height: 36px; background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 10px; padding: 0 12px 0 32px; font-family: 'Inter', sans-serif; font-size: 12px; outline: none; }
+.conv-item { display: flex; align-items: center; gap: 10px; padding: 12px 16px; cursor: pointer; transition: background 0.15s; border-bottom: 1px solid #f8fafc; }
+.conv-item:hover { background: #f8fafc; }
+.conv-item.active { background: #f0fdf4; border-right: 3px solid #10b981; }
+.conv-avatar { width: 40px; height: 40px; border-radius: 12px; background: #0f172a; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; color: white; flex-shrink: 0; }
+.conv-name { font-size: 13px; font-weight: 900; color: #0f172a; }
+.conv-preview { font-size: 11px; color: #94a3b8; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+.conv-time { font-size: 9px; font-weight: 900; color: #cbd5e1; text-transform: uppercase; margin-left: auto; flex-shrink: 0; }
+.unread-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; margin-left: 4px; flex-shrink: 0; }
+/* Chat area */
+.chat-area { display: flex; flex-direction: column; }
+.chat-header { padding: 16px 20px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 12px; }
+.chat-name { font-size: 15px; font-weight: 900; }
+.chat-status { font-size: 9px; font-weight: 700; color: #10b981; text-transform: uppercase; letter-spacing: 0.15em; display: flex; align-items: center; gap: 4px; }
+.chat-msgs { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background: #f8fafc; }
+.msg { max-width: 70%; }
+.msg-in { align-self: flex-start; }
+.msg-out { align-self: flex-end; }
+.msg-bubble { padding: 12px 16px; border-radius: 20px; font-size: 13px; font-weight: 500; line-height: 1.5; }
+.msg-in .msg-bubble { background: white; color: #0f172a; border-bottom-left-radius: 4px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+.msg-out .msg-bubble { background: #0f172a; color: white; border-bottom-right-radius: 4px; }
+.msg-ai .msg-bubble { background: #ecfdf5; border: 1px solid #d1fae5; }
+.msg-time { font-size: 9px; color: #cbd5e1; font-weight: 700; margin-top: 3px; padding: 0 4px; }
+.chat-input-area { padding: 16px 20px; border-top: 1px solid #f1f5f9; display: flex; gap: 10px; align-items: center; background: white; }
+.chat-input-area input { flex: 1; height: 44px; background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 14px; padding: 0 16px; font-family: 'Inter', sans-serif; font-size: 13px; outline: none; }
+.send-btn { width: 44px; height: 44px; background: #0f172a; border: none; border-radius: 12px; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+.send-btn:hover { background: #10b981; }
+
+/* ── Mobile overlay for collapsed sidebar ── */
+@media (max-width: 1100px) {
+  .sidebar { width: 68px; }
+  .logo-text, .nav-item span, .sidebar-plan, .sidebar-user .user-info, .nav-dot { display: none; }
+  .nav-item { justify-content: center; padding: 10px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">
+        <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
+          <rect x="2" y="7" width="18" height="13" rx="4" stroke="white" stroke-width="1.8" fill="none"/>
+          <circle cx="8" cy="13" r="1.6" fill="white"/>
+          <circle cx="14" cy="13" r="1.6" fill="white"/>
+          <line x1="11" y1="7" x2="11" y2="4" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="11" cy="3" r="1.2" fill="white"/>
+        </svg>
+      </div>
+      <span class="logo-text">Agentes <span>Virtuais</span></span>
+    </div>
+    <nav class="sidebar-nav" id="sidebarNav">
+      <div class="nav-item" onclick="goTo('dashboard')"><i data-lucide="layout-dashboard" style="width:16px;height:16px;flex-shrink:0"></i><span>Dashboard</span></div>
+      <div class="nav-item" onclick="goTo('conversations')"><i data-lucide="message-square" style="width:16px;height:16px;flex-shrink:0"></i><span>Conversas</span></div>
+      <div class="nav-item" onclick="goTo('crm')"><i data-lucide="users" style="width:16px;height:16px;flex-shrink:0"></i><span>CRM / Leads</span></div>
+      <div class="nav-item"><i data-lucide="calendar" style="width:16px;height:16px;flex-shrink:0"></i><span>Agendamentos</span></div>
+      <div class="nav-item"><i data-lucide="target" style="width:16px;height:16px;flex-shrink:0"></i><span>Prospecção</span></div>
+      <div class="nav-item"><i data-lucide="bot" style="width:16px;height:16px;flex-shrink:0"></i><span>Time de SDRs</span></div>
+      <div class="nav-item"><i data-lucide="zap" style="width:16px;height:16px;flex-shrink:0"></i><span>Automações</span></div>
+      <div class="nav-item"><i data-lucide="send" style="width:16px;height:16px;flex-shrink:0"></i><span>Disparos</span></div>
+      <div class="nav-item"><i data-lucide="settings" style="width:16px;height:16px;flex-shrink:0"></i><span>Configurações</span></div>
+    </nav>
+    <div class="sidebar-plan">
+      <div class="plan-box">
+        <div class="plan-row">
+          <span class="plan-label">Plano Ativo</span>
+          <span class="plan-badge">Pro</span>
+        </div>
+        <div class="plan-bar"><div class="plan-fill" style="width:42%"></div></div>
+      </div>
+    </div>
+    <div class="sidebar-user">
+      <div class="avatar">ME</div>
+      <div class="user-info">
+        <div class="user-name">Minha Empresa</div>
+        <div class="user-plan">Pro Plan</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <!-- Topbar -->
+    <header class="topbar">
+      <span class="topbar-title" id="topbarTitle">Dashboard</span>
+      <div class="search-wrap">
+        <i data-lucide="search"></i>
+        <input placeholder="Buscar...">
+      </div>
+      <div class="bell-btn"><i data-lucide="bell" style="width:18px;height:18px"></i><span class="bell-dot"></span></div>
+      <div class="avatar" style="cursor:pointer">ME</div>
+    </header>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- Dashboard Page -->
+      <div class="page active" id="page-dashboard">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Painel <em>Estratégico</em></div>
+            <div class="page-sub">Real-time Performance Metrics & AI Insights</div>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-outline"><i data-lucide="clock" style="width:14px;height:14px"></i> Sincronizar</button>
+            <button class="btn btn-primary">Ver Pipeline</button>
+          </div>
+        </div>
+        <!-- KPIs -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <div class="kpi-icon"><i data-lucide="users" style="width:20px;height:20px;color:#3b82f6"></i></div>
+              <span class="trend up">↑ +8%</span>
+            </div>
+            <div class="kpi-label">Volume de Leads</div>
+            <div class="kpi-value">1.284</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <div class="kpi-icon"><i data-lucide="bot" style="width:20px;height:20px;color:#10b981"></i></div>
+              <span class="trend up">↑ +22%</span>
+            </div>
+            <div class="kpi-label">Leads Qualificados</div>
+            <div class="kpi-value">341</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <div class="kpi-icon"><i data-lucide="calendar" style="width:20px;height:20px;color:#8b5cf6"></i></div>
+              <span class="trend up">↑ +5%</span>
+            </div>
+            <div class="kpi-label">Agendamentos</div>
+            <div class="kpi-value">67</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <div class="kpi-icon"><i data-lucide="trending-up" style="width:20px;height:20px;color:#f97316"></i></div>
+              <span class="trend down">↓ -1%</span>
+            </div>
+            <div class="kpi-label">Conversão Geral</div>
+            <div class="kpi-value">26.6%</div>
+          </div>
+        </div>
+        <!-- Charts -->
+        <div class="charts-row">
+          <div class="chart-card">
+            <div class="card-header">
+              <div>
+                <div class="card-title"><i data-lucide="bar-chart-3" style="width:18px;height:18px;color:#10b981"></i> Fluxo de Atividade</div>
+                <div class="card-sub">Distribuição por estágio do funil</div>
+              </div>
+              <span class="badge badge-green">Real-Time</span>
+            </div>
+            <div class="bar-chart">
+              <div class="bar" style="height:90%"></div>
+              <div class="bar" style="height:65%"></div>
+              <div class="bar" style="height:45%"></div>
+              <div class="bar" style="height:30%"></div>
+              <div class="bar" style="height:18%"></div>
+            </div>
+            <div class="bar-labels">
+              <div class="bar-lbl">Novos</div>
+              <div class="bar-lbl">Contato</div>
+              <div class="bar-lbl">Qualif.</div>
+              <div class="bar-lbl">Proposta</div>
+              <div class="bar-lbl">Fechado</div>
+            </div>
+          </div>
+          <div class="chart-card-dark">
+            <div class="glow-blob"></div>
+            <div style="position:relative;z-index:1">
+              <div class="card-header" style="margin-bottom:16px">
+                <div>
+                  <div class="card-title" style="color:#10b981;font-size:15px;text-transform:uppercase;font-style:italic">Conversão de Funil</div>
+                  <div class="card-sub" style="color:rgba(255,255,255,0.25)">Efetividade da Qualificação IA</div>
+                </div>
+              </div>
+              <div class="funnel-row">
+                <div class="funnel-lbl-row"><span class="funnel-lbl-name">Novos Leads</span><span class="funnel-lbl-pct">100%</span></div>
+                <div class="funnel-track"><div class="funnel-fill" style="width:100%;background:#3b82f6"></div></div>
+              </div>
+              <div class="funnel-row">
+                <div class="funnel-lbl-row"><span class="funnel-lbl-name">Contato Feito</span><span class="funnel-lbl-pct">72%</span></div>
+                <div class="funnel-track"><div class="funnel-fill" style="width:72%;background:#8b5cf6"></div></div>
+              </div>
+              <div class="funnel-row">
+                <div class="funnel-lbl-row"><span class="funnel-lbl-name">Qualificados</span><span class="funnel-lbl-pct">44%</span></div>
+                <div class="funnel-track"><div class="funnel-fill" style="width:44%;background:#10b981"></div></div>
+              </div>
+              <div class="funnel-row">
+                <div class="funnel-lbl-row"><span class="funnel-lbl-name">Agendamentos</span><span class="funnel-lbl-pct">27%</span></div>
+                <div class="funnel-track"><div class="funnel-fill" style="width:27%;background:#f97316"></div></div>
+              </div>
+              <div style="margin-top:16px;background:rgba(255,255,255,0.05);border-radius:16px;padding:12px;text-align:center;border:1px solid rgba(255,255,255,0.05)">
+                <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.2em;color:#10b981;margin-bottom:2px">Oportunidades</div>
+                <div style="font-size:26px;font-weight:900;color:white;letter-spacing:-0.04em;font-style:italic">217</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Bottom row -->
+        <div class="bottom-row">
+          <div class="leads-card">
+            <div class="leads-header">
+              <div class="leads-title"><i data-lucide="clock" style="width:16px;height:16px;color:#10b981"></i> Atividade Recente</div>
+              <button class="btn btn-outline" style="height:32px;font-size:9px;padding:0 12px" onclick="goTo('crm')">Ver CRM</button>
+            </div>
+            <div class="leads-list">
+              ${[['João Silva','Novo','WhatsApp'],['Ana Pereira','Qualificado','Site'],['Carlos Mota','Proposta','LinkedIn'],['Beatriz Lima','Agendado','WhatsApp'],['Rafael Costa','Fechado','Indicação']].map(([n,s,src])=>`
+              <div class="lead-row">
+                <div class="lead-avatar">${n.split(' ').map(x=>x[0]).join('')}</div>
+                <div>
+                  <div class="lead-name">${n}</div>
+                  <div class="lead-status">${s} · ${src}</div>
+                </div>
+                <div class="lead-icon"><i data-lucide="message-square" style="width:14px;height:14px;color:#10b981"></i></div>
+              </div>`).join('')}
+            </div>
+          </div>
+          <div class="intel-card">
+            <div class="intel-glow"></div>
+            <div style="position:relative;z-index:1">
+              <div class="intel-icon"><i data-lucide="zap" style="width:32px;height:32px;color:white"></i></div>
+              <div class="intel-title">SDR Intelligence<br>Monitoring</div>
+              <div class="intel-sub">Análise Preditiva de Conversão</div>
+              <div class="intel-row"><i data-lucide="bot"></i> 3 SDRs IAs prospectando agora.</div>
+              <div class="intel-row"><i data-lucide="target"></i> Taxa de qualificação em 26.5%.</div>
+              <div class="intel-row"><i data-lucide="check-circle-2"></i> Taxa de Show de reuniões em 78%.</div>
+              <div class="intel-row" style="border:none"><i data-lucide="calendar"></i> 67 reuniões confirmadas.</div>
+              <button class="intel-btn" onclick="goTo('crm')">Acessar Central SDR</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CRM Page -->
+      <div class="page" id="page-crm">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Pipeline <em>CRM</em></div>
+            <div class="page-sub">Gestão de Leads & Oportunidades</div>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-outline"><i data-lucide="filter" style="width:14px;height:14px"></i> Filtrar</button>
+            <button class="btn btn-primary"><i data-lucide="plus" style="width:14px;height:14px"></i> Novo Lead</button>
+          </div>
+        </div>
+        <div class="kanban">
+          ${[
+            {col:'Novos',count:8,color:'#3b82f6',leads:[['João Silva',82,'WhatsApp'],['Ana Costa',71,'Site']]},
+            {col:'Contato',count:12,color:'#8b5cf6',leads:[['Pedro Lima',55,'Email'],['Clara Mota',68,'LinkedIn']]},
+            {col:'Qualificado',count:6,color:'#f97316',leads:[['Rafael Souza',90,'WhatsApp']]},
+            {col:'Proposta',count:4,color:'#10b981',leads:[['Beatriz Neves',88,'Indicação'],['Lucas Dias',76,'WhatsApp']]},
+            {col:'Fechado',count:3,color:'#059669',leads:[['Marina Reis',95,'Site']]}
+          ].map(({col,count,color,leads})=>`
+          <div class="kanban-col">
+            <div class="col-header" style="color:${color}">
+              ${col}<span class="col-count">${count}</span>
+            </div>
+            <div class="col-body">
+              ${leads.map(([name,score,src])=>`
+              <div class="lead-card">
+                <div class="lc-name">${name}</div>
+                <div class="lc-source">${src}</div>
+                <span class="score-pill" style="background:${score>=80?'#ecfdf5':score>=60?'#eff6ff':'#f5f3ff'};color:${score>=80?'#059669':score>=60?'#2563eb':'#7c3aed'}">
+                  Score ${score}
+                </span>
+              </div>`).join('')}
+            </div>
+          </div>`).join('')}
+        </div>
+      </div>
+
+      <!-- Conversations Page -->
+      <div class="page" id="page-conversations">
+        <div class="conv-layout">
+          <div class="conv-list">
+            <div class="conv-list-header">
+              <div style="position:relative">
+                <i data-lucide="search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:#94a3b8"></i>
+                <input placeholder="Buscar conversa..." style="padding-left:32px">
+              </div>
+            </div>
+            ${[
+              ['João Silva','Pode agendar amanhã?','09:42',true,true],
+              ['Ana Pereira','Tenho interesse no plano Pro','09:15',false,false],
+              ['Carlos Mota','Qual o valor mensal?','08:58',true,false],
+              ['Beatriz Lima','Ok, confirmado para 14h','08:30',false,false],
+              ['Rafael Costa','Obrigado pelo atendimento!','07:45',false,false],
+            ].map(([n,msg,time,active,unread],i)=>`
+            <div class="conv-item ${active?'active':''}" onclick="selectConv(this,'${n}')">
+              <div class="conv-avatar" style="background:${['#0f172a','#3b82f6','#8b5cf6','#10b981','#f97316'][i]}">${n.split(' ').map(x=>x[0]).join('')}</div>
+              <div style="flex:1;min-width:0">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span class="conv-name">${n}</span>
+                  <span class="conv-time">${time}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:4px">
+                  <span class="conv-preview">${msg}</span>
+                  ${unread?'<span class="unread-dot"></span>':''}
+                </div>
+              </div>
+            </div>`).join('')}
+          </div>
+          <div class="chat-area">
+            <div class="chat-header">
+              <div class="conv-avatar" id="chatAvatar" style="background:#0f172a">JS</div>
+              <div>
+                <div class="chat-name" id="chatName">João Silva</div>
+                <div class="chat-status"><span style="width:6px;height:6px;background:#10b981;border-radius:50%;display:inline-block"></span> Ativo agora</div>
+              </div>
+              <div style="margin-left:auto;display:flex;gap:8px">
+                <button class="btn btn-outline" style="height:32px;font-size:9px;padding:0 12px">Score: 82</button>
+                <button class="btn btn-primary" style="height:32px;font-size:9px;padding:0 12px">Agendar</button>
+              </div>
+            </div>
+            <div class="chat-msgs" id="chatMsgs">
+              <div class="msg msg-in"><div class="msg-bubble">Olá! Tenho interesse nos planos de vocês.</div><div class="msg-time">09:30</div></div>
+              <div class="msg msg-ai msg-in"><div class="msg-bubble" style="background:#ecfdf5;border:1px solid #d1fae5">🤖 <strong>SDR IA:</strong> Oi João! Que ótimo te ter aqui. Para entender melhor suas necessidades, você atua em qual segmento?</div><div class="msg-time">09:31 · SDR IA</div></div>
+              <div class="msg msg-out"><div class="msg-bubble">Trabalho com consultoria B2B, temos um time de 5 vendedores.</div><div class="msg-time">09:35</div></div>
+              <div class="msg msg-ai msg-in"><div class="msg-bubble" style="background:#ecfdf5;border:1px solid #d1fae5">🤖 Perfeito! Com 5 vendedores, o plano Pro seria ideal. Posso te mostrar como automatizar toda a prospecção. Qual melhor horário para uma demo de 30min?</div><div class="msg-time">09:36 · SDR IA</div></div>
+              <div class="msg msg-out"><div class="msg-bubble">Pode agendar amanhã às 14h?</div><div class="msg-time">09:42</div></div>
+            </div>
+            <div class="chat-input-area">
+              <input placeholder="Escreva uma mensagem..." id="chatInput" onkeydown="sendMsg(event)">
+              <button class="send-btn" onclick="sendMsgBtn()"><i data-lucide="send" style="width:16px;height:16px"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+lucide.createIcons();
+
+function goTo(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const labels = {dashboard:'Dashboard',crm:'CRM / Leads',conversations:'Conversas'};
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if(n.querySelector('span') && n.querySelector('span').textContent.toLowerCase().includes(page === 'crm' ? 'crm' : page === 'conversations' ? 'conversa' : 'dashboard')) {
+      n.classList.add('active');
+    }
+  });
+  document.getElementById('topbarTitle').textContent = labels[page] || page;
+  lucide.createIcons();
+}
+
+function selectConv(el, name) {
+  document.querySelectorAll('.conv-item').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('chatName').textContent = name;
+  document.getElementById('chatAvatar').textContent = name.split(' ').map(x=>x[0]).join('');
+}
+
+function sendMsg(e) { if(e.key==='Enter') sendMsgBtn(); }
+function sendMsgBtn() {
+  const input = document.getElementById('chatInput');
+  if(!input.value.trim()) return;
+  const msgs = document.getElementById('chatMsgs');
+  const div = document.createElement('div');
+  div.className = 'msg msg-out';
+  div.innerHTML = `<div class="msg-bubble">${input.value}</div><div class="msg-time">agora</div>`;
+  msgs.appendChild(div);
+  input.value = '';
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+// init active nav
+document.querySelectorAll('.nav-item')[0].classList.add('active');
+</script>
+</body>
+</html>

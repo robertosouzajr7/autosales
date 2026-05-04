@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: #f8fafc; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+.row { display: flex; align-items: center; gap: 12px; }
+.dot { width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0; }
+.info { display: flex; flex-direction: column; gap: 2px; }
+.name { font-size: 11px; font-weight: 900; color: #0f172a; }
+.desc { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: #94a3b8; }
+.val  { font-size: 9px; font-weight: 700; color: #cbd5e1; font-family: monospace; }
+</style></head><body>
+<div class="row"><div class="dot" style="background:#f8fafc;border:1px solid #e2e8f0"></div><div class="info"><div class="name">bg-app</div><div class="desc">App background</div><div class="val">#f8fafc</div></div></div>
+<div class="row"><div class="dot" style="background:#ffffff;border:1px solid #e2e8f0"></div><div class="info"><div class="name">bg-card</div><div class="desc">Card / panel surface</div><div class="val">#ffffff</div></div></div>
+<div class="row"><div class="dot" style="background:#0f172a"></div><div class="info"><div class="name">bg-sidebar / bg-dark-card</div><div class="desc">Sidebar, pricing section, dark accent cards</div><div class="val">#0f172a</div></div></div>
+<div class="row"><div class="dot" style="background:#10b981"></div><div class="info"><div class="name">color-accent</div><div class="desc">Active nav, badges, success states, primary FAB</div><div class="val">#10b981</div></div></div>
+<div class="row"><div class="dot" style="background:#0f172a"></div><div class="info"><div class="name">color-primary-btn</div><div class="desc">Main CTA buttons</div><div class="val">#0f172a</div></div></div>
+<div class="row"><div class="dot" style="background:#3b82f6"></div><div class="info"><div class="name">color-info</div><div class="desc">Data viz, feature icon (blue)</div><div class="val">#3b82f6</div></div></div>
+<div class="row"><div class="dot" style="background:#8b5cf6"></div><div class="info"><div class="name">color-ai</div><div class="desc">AI feature icons, smart tags</div><div class="val">#8b5cf6</div></div></div>
+<div class="row"><div class="dot" style="background:#f97316"></div><div class="info"><div class="name">color-warning</div><div class="desc">Trend arrows, token near-limit</div><div class="val">#f97316</div></div></div>
+<div class="row"><div class="dot" style="background:#f43f5e"></div><div class="info"><div class="name">color-danger</div><div class="desc">Destructive actions, errors</div><div class="val">#f43f5e</div></div></div>
+</body></html>

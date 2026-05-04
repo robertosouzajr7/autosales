@@ -14,7 +14,7 @@ const DOC_CONTENT = [
     id: "conversas",
     label: "Conversas & Chat",
     icon: <MessageCircle className="w-5 h-5" />,
-    title: "💬 Central de Atendimento (Omnichannel)",
+    title: "Central de Atendimento (Omnichannel)",
     intro: "O módulo de conversas é o coração da interação entre sua IA SDR e seus clientes. Aqui você monitora o progresso de cada negociação em tempo real.",
     sections: [
       {
@@ -32,7 +32,7 @@ const DOC_CONTENT = [
     id: "crm",
     label: "CRM & Pipelines",
     icon: <ListChecks className="w-5 h-5" />,
-    title: "📋 Gestão de Pipelines e Funis",
+    title: "Gestão de Pipelines e Funis",
     intro: "O CRM organiza seus leads visualmente em colunas (Stages), permitindo saber exatamente em que fase da jornada de compra cada um está.",
     sections: [
       {
@@ -50,7 +50,7 @@ const DOC_CONTENT = [
     id: "contatos",
     label: "Contatos",
     icon: <Users className="w-5 h-5" />,
-    title: "👥 Gestão da Base de Leads",
+    title: "Gestão da Base de Leads",
     intro: "O banco de dados central onde todas as informações dos seus prospectos ficam armazenadas de forma segura.",
     sections: [
       {
@@ -67,7 +67,7 @@ const DOC_CONTENT = [
     id: "agendamentos",
     label: "Agendamentos",
     icon: <Calendar className="w-5 h-5" />,
-    title: "📅 Gestão de Reuniões e Consultas",
+    title: "Gestão de Reuniões e Consultas",
     intro: "Visualize todos os horários que o seu SDR reservou diretamente na sua agenda ou na do seu time.",
     sections: [
       {
@@ -84,7 +84,7 @@ const DOC_CONTENT = [
     id: "prospeccao",
     label: "Prospecção Pro",
     icon: <Target className="w-5 h-5" />,
-    title: "🚀 Mineração Ativa de Mercado",
+    title: "Mineração Ativa de Mercado",
     intro: "Ferramenta de 'Growth' para encontrar novos clientes no Google Maps e redes sociais de forma automática.",
     sections: [
       {
@@ -103,7 +103,7 @@ const DOC_CONTENT = [
     id: "sdr",
     label: "Time de SDRs",
     icon: <Bot className="w-5 h-5" />,
-    title: "🤖 Parametrização de Agentes de IA",
+    title: "Parametrização de Agentes de IA",
     intro: "Aqui você define o 'cérebro' do robô. Cada SDR pode ser treinado para um produto ou público diferente.",
     sections: [
       {
@@ -121,7 +121,7 @@ const DOC_CONTENT = [
     id: "automacoes",
     label: "Fluxos & Flow Builder",
     icon: <Zap className="w-5 h-5" />,
-    title: "⚡ Manual do Flow Builder",
+    title: "Manual do Flow Builder",
     intro: "O cérebro lógico por trás de todas as mensagens automáticas.",
     sections: [
       {
@@ -148,7 +148,7 @@ const DOC_CONTENT = [
     id: "disparos",
     label: "Disparos em Massa",
     icon: <Megaphone className="w-5 h-5" />,
-    title: "📢 Campanhas e Broadcast",
+    title: "Campanhas e Broadcast",
     intro: "Alcance milhares de pessoas ao mesmo tempo com tags e funis específicos.",
     sections: [
       {
@@ -165,7 +165,7 @@ const DOC_CONTENT = [
     id: "conexoes",
     label: "Conexões (WhatsApp)",
     icon: <Smartphone className="w-5 h-5" />,
-    title: "🔌 Gerenciamento de Instâncias",
+    title: "Gerenciamento de Instâncias",
     intro: "A ponte física entre o software e o seu celular.",
     sections: [
       {
@@ -182,7 +182,7 @@ const DOC_CONTENT = [
     id: "config",
     label: "Configurações Gerais",
     icon: <Settings2 className="w-5 h-5" />,
-    title: "⚙️ Administração da Plataforma",
+    title: "Administração da Plataforma",
     intro: "Gerencie o motor central do seu negócio.",
     sections: [
       {

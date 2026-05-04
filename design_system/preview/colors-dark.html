@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: #0f172a; padding: 28px; display: flex; flex-direction: column; gap: 20px; }
+.row { display: flex; align-items: center; gap: 14px; }
+.dot { width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.06); }
+.name { font-size: 12px; font-weight: 900; color: rgba(255,255,255,0.7); }
+.desc { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: rgba(255,255,255,0.25); margin-top: 2px; }
+.val { font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.15); font-family: monospace; margin-top: 1px; }
+.divider { height: 1px; background: rgba(255,255,255,0.04); }
+.section-lbl { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.22em; color: rgba(255,255,255,0.15); }
+</style></head><body>
+<div class="section-lbl">Dark Surface Tokens</div>
+<div class="row"><div class="dot" style="background:#0f172a"></div><div><div class="name">bg-dark-card</div><div class="desc">Dark card / sidebar / pricing section</div><div class="val">#0f172a · slate-900</div></div></div>
+<div class="row"><div class="dot" style="background:#1e293b"></div><div><div class="name">bg-dark-elevated</div><div class="desc">Hover surfaces on dark bg</div><div class="val">#1e293b · slate-800</div></div></div>
+<div class="row"><div class="dot" style="background:rgba(255,255,255,0.08)"></div><div><div class="name">bg-dark-input</div><div class="desc">Inputs, plan boxes on dark bg</div><div class="val">rgba(255,255,255,0.08)</div></div></div>
+<div class="divider"></div>
+<div class="section-lbl">Foreground on Dark</div>
+<div class="row"><div class="dot" style="background:#ffffff"></div><div><div class="name">fg-on-dark</div><div class="desc">Primary text on dark</div><div class="val">#ffffff</div></div></div>
+<div class="row"><div class="dot" style="background:rgba(255,255,255,0.4)"></div><div><div class="name">fg-on-dark-muted</div><div class="desc">Subtitles, secondary text</div><div class="val">rgba(255,255,255,0.4)</div></div></div>
+<div class="row"><div class="dot" style="background:rgba(255,255,255,0.15)"></div><div><div class="name">fg-on-dark-micro</div><div class="desc">Micro labels, borders, dividers</div><div class="val">rgba(255,255,255,0.15)</div></div></div>
+<div class="divider"></div>
+<div class="section-lbl">Accent on Dark</div>
+<div class="row"><div class="dot" style="background:#10b981"></div><div><div class="name">color-accent-dark</div><div class="desc">Active nav, badges, progress fills</div><div class="val">#10b981 · emerald-500</div></div></div>
+<div class="row"><div class="dot" style="background:#34d399"></div><div><div class="name">color-accent-light</div><div class="desc">Lighter emerald on dark headers</div><div class="val">#34d399 · emerald-400</div></div></div>
+</body></html>

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;900&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: #f8fafc; padding: 24px; display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+.item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.box { background: #0f172a; }
+.label { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: #94a3b8; text-align: center; }
+.sub { font-size: 8px; font-weight: 700; color: #cbd5e1; font-family: monospace; text-align: center; }
+</style></head><body>
+<div class="item"><div class="box" style="width:40px;height:40px;border-radius:12px"></div><div class="label">radius-sm</div><div class="sub">12px · xl</div></div>
+<div class="item"><div class="box" style="width:48px;height:48px;border-radius:16px"></div><div class="label">radius-md</div><div class="sub">16px · 2xl</div></div>
+<div class="item"><div class="box" style="width:56px;height:56px;border-radius:24px"></div><div class="label">radius-lg</div><div class="sub">24px · 3xl</div></div>
+<div class="item"><div class="box" style="width:72px;height:64px;border-radius:40px"></div><div class="label">radius-xl</div><div class="sub">40px · card</div></div>
+<div class="item"><div class="box" style="width:80px;height:72px;border-radius:45px"></div><div class="label">radius-2xl</div><div class="sub">45px · large card</div></div>
+<div class="item"><div class="box" style="width:56px;height:56px;border-radius:9999px"></div><div class="label">radius-full</div><div class="sub">pill / FAB</div></div>
+<div class="item"><div class="box" style="width:32px;height:32px;border-radius:10px;background:#10b981"></div><div class="label">icon sm</div><div class="sub">32px · 10px r</div></div>
+<div class="item"><div class="box" style="width:64px;height:64px;border-radius:24px;background:#3b82f6"></div><div class="label">icon lg</div><div class="sub">64px · 24px r</div></div>
+</body></html>

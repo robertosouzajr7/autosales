@@ -12,6 +12,17 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useToast } from "@/components/ui/use-toast";
+import { useNavigate } from "react-router-dom";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function Conversations() {
   const [chats, setChats] = useState<any[]>([]);
@@ -20,7 +31,13 @@ export default function Conversations() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sdrTyping, setSdrTyping] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [hasWhatsApp, setHasWhatsApp] = useState<boolean>(false);
+  const messagesEndRef = useRef<any>(null);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const [callModalOpen, setCallModalOpen] = useState(false);
+  const [callMessage, setCallMessage] = useState("");
+  const [callingLoading, setCallingLoading] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -30,14 +47,12 @@ export default function Conversations() {
     scrollToBottom();
   }, [messages]);
 
-  const [hasWhatsApp, setHasWhatsApp] = useState<boolean>(false); 
-
   const fetchData = async () => {
     try {
       const token = localStorage.getItem("token");
       const [leadsRes, settingsRes] = await Promise.all([
         fetch("/api/leads", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch("/api/tenant/settings", { headers: { "Authorization": `Bearer ${token}` } })
+        fetch("/api/settings", { headers: { "Authorization": `Bearer ${token}` } })
       ]);
       
       const leadsData = await leadsRes.json();
@@ -68,7 +83,7 @@ export default function Conversations() {
     const newStatus = !currentStatus;
     
     try {
-      const res = await fetch(`/api/conversations/${selectedChat.id}/bot`, {
+      const res = await fetch(`/api/conversations/${selectedChat.id}/toggle-bot`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -88,6 +103,43 @@ export default function Conversations() {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const handleOpenCallModal = () => {
+    if (!selectedChat?.phone) {
+      toast({ title: "Lead sem telefone cadastrado", variant: "destructive" });
+      return;
+    }
+    const firstName = selectedChat.name?.split(" ")[0] || "tudo bem";
+    setCallMessage(
+      `Olá, ${firstName}! 👋\n\nPosso te chamar agora por aqui para uma conversa rápida? Tenho algumas novidades que podem te interessar! 📞\n\nResponda com "SIM" se estiver disponível ou me diga o melhor horário. 😊`
+    );
+    setCallModalOpen(true);
+  };
+
+  const handleCallIntent = async () => {
+    if (!selectedChat) return;
+    setCallingLoading(true);
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch("/api/messages/call-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ leadId: selectedChat.id, customMessage: callMessage })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast({ title: "📞 Aviso enviado!", description: "Mensagem enviada. Abrindo WhatsApp Web..." });
+        setCallModalOpen(false);
+        fetchMessages(selectedChat.id);
+        setTimeout(() => window.open(data.waLink, "_blank"), 800);
+      } else {
+        toast({ title: "Erro ao enviar", description: data.error, variant: "destructive" });
+      }
+    } catch (e) {
+      toast({ title: "Falha na conexão", variant: "destructive" });
+    }
+    setCallingLoading(false);
   };
 
   const handleSend = async () => {
@@ -265,8 +317,52 @@ export default function Conversations() {
                     >
                       {selectedChat.conversations?.[0]?.botActive !== false ? "Pausar SDR" : "Retomar SDR"}
                     </Button>
-                    <Button variant="outline" size="icon" className="rounded-xl border-slate-100 hover:bg-slate-50"><Phone className="w-4 h-4 text-slate-400" /></Button>
-                    <Button variant="outline" size="icon" className="rounded-xl border-slate-100 hover:bg-slate-50"><MoreVertical className="w-4 h-4 text-slate-400" /></Button>
+                      <Button variant="outline" size="icon" className="rounded-xl border-slate-100 hover:bg-emerald-50 hover:border-emerald-200 group/call transition-colors"
+                        onClick={handleOpenCallModal}
+                        title="Iniciar contato por WhatsApp"
+                      >
+                        <Phone className="w-4 h-4 text-slate-400 group-hover/call:text-emerald-500 transition-colors" />
+                      </Button>
+                     <DropdownMenu>
+                       <DropdownMenuTrigger asChild>
+                         <Button variant="outline" size="icon" className="rounded-xl border-slate-100 hover:bg-slate-50">
+                           <MoreVertical className="w-4 h-4 text-slate-400" />
+                         </Button>
+                       </DropdownMenuTrigger>
+                       <DropdownMenuContent align="end" className="rounded-2xl border-none shadow-2xl p-2 w-52">
+                         <DropdownMenuItem
+                           className="rounded-xl font-bold text-xs cursor-pointer"
+                           onClick={() => navigate(`/crm?lead=${selectedChat?.id}`)}
+                         >
+                           <User className="w-4 h-4 mr-2 text-emerald-500" />
+                           Ver no CRM
+                         </DropdownMenuItem>
+                         <DropdownMenuItem
+                           className="rounded-xl font-bold text-xs cursor-pointer"
+                           onClick={() => {
+                             if (selectedChat?.phone) {
+                               navigator.clipboard.writeText(selectedChat.phone);
+                               toast({ title: "📋 Telefone copiado!" });
+                             }
+                           }}
+                         >
+                           <Phone className="w-4 h-4 mr-2 text-blue-500" />
+                           Copiar Telefone
+                         </DropdownMenuItem>
+                         <DropdownMenuSeparator />
+                         <DropdownMenuItem
+                           className="rounded-xl font-bold text-xs cursor-pointer text-red-500 focus:text-red-600"
+                           onClick={() => {
+                             if (confirm(`Apagar conversa de ${selectedChat?.name}?`)) {
+                               setSelectedChat(null);
+                             }
+                           }}
+                         >
+                           <ChevronRight className="w-4 h-4 mr-2" />
+                           Fechar Conversa
+                         </DropdownMenuItem>
+                       </DropdownMenuContent>
+                     </DropdownMenu>
                  </div>
               </div>
 
@@ -288,7 +384,7 @@ export default function Conversations() {
                       <div className="flex justify-start">
                          <div className="max-w-[70%] p-5 rounded-3xl text-sm font-medium shadow-sm bg-slate-900 text-white rounded-tl-none">
                             <span className="flex items-center gap-2">
-                               🤖 SDR está digitando
+                               <Bot className="w-4 h-4" /> SDR está digitando
                                <span className="flex space-x-1">
                                   <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce"></span>
                                   <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
@@ -369,6 +465,76 @@ export default function Conversations() {
           </Card>
         )}
       </div>
+
+      {/* MODAL DE CONTATO VIA WHATSAPP */}
+      <Dialog open={callModalOpen} onOpenChange={setCallModalOpen}>
+        <DialogContent className="max-w-lg p-0 border-none shadow-2xl rounded-[40px] overflow-hidden">
+          {/* Header */}
+          <div className="bg-slate-900 p-10 text-white">
+            <div className="flex items-center gap-4 mb-2">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                <Phone className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-black uppercase tracking-tighter">Iniciar Contato</h2>
+                <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">via WhatsApp</p>
+              </div>
+            </div>
+            <div className="mt-4 p-4 bg-white/5 rounded-2xl border border-white/10">
+              <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Como funciona</p>
+              <p className="text-[11px] text-white/60 font-medium leading-relaxed">
+                O sistema envia esta mensagem ao lead pelo WhatsApp e abre a conversa no WhatsApp Web para você continuar o contato manualmente.
+              </p>
+            </div>
+          </div>
+
+          {/* Body */}
+          <div className="p-10 bg-white space-y-6">
+            <div className="space-y-3">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                Mensagem de Aviso (editável)
+              </label>
+              <Textarea
+                value={callMessage}
+                onChange={e => setCallMessage(e.target.value)}
+                rows={6}
+                className="rounded-2xl border-slate-100 bg-slate-50 font-medium text-sm resize-none focus-visible:ring-emerald-500/30"
+              />
+              <p className="text-[10px] text-slate-400 font-bold">
+                Para: <span className="text-emerald-600">{selectedChat?.phone}</span>
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1 h-14 rounded-2xl font-black uppercase text-xs tracking-widest border-slate-100"
+                onClick={() => setCallModalOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="flex-[2] h-14 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-emerald-500/20 transition-all"
+                onClick={handleCallIntent}
+                disabled={callingLoading || !callMessage.trim()}
+              >
+                {callingLoading ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Enviando...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <Phone className="w-4 h-4" />
+                    Enviar e Abrir WhatsApp
+                  </span>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </DashboardLayout>
   );
 }

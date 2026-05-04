@@ -85,6 +85,9 @@ export const sendCampaign = async (req, res) => {
           user: tenant.smtpUser,
           pass: tenant.smtpPass,
         },
+        tls: {
+          rejectUnauthorized: false
+        }
       });
     }
 

@@ -10,6 +10,15 @@ import * as AuthController from "../controllers/AuthController.js";
 import { authMiddleware, adminMiddleware } from "../middlewares/auth.js";
 import * as AdminController from "../controllers/AdminController.js";
 import * as AppointmentController from "../controllers/AppointmentController.js";
+import multer from "multer";
+import * as WhatsAppController from "../controllers/WhatsAppController.js";
+import * as AutomationController from "../controllers/AutomationController.js";
+import * as SdrController from "../controllers/SdrController.js";
+import * as MessageController from "../controllers/MessageController.js";
+import * as ProspectController from "../controllers/ProspectController.js";
+import * as AnalyticsController from "../controllers/AnalyticsController.js";
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 const router = express.Router();
 
@@ -28,6 +37,8 @@ router.post("/leads", LeadController.createLead);
 router.put("/leads/:id", LeadController.updateLead);
 router.delete("/leads/:id", LeadController.deleteLead);
 router.post("/contacts/bulk-delete", LeadController.bulkDeleteLeads);
+router.get("/contacts/export", LeadController.exportContacts);
+router.post("/contacts/import-bulk", LeadController.importBulk);
 
 // Appointments
 router.get("/appointments", AppointmentController.getAppointments);
@@ -45,8 +56,39 @@ router.post("/bulk/import-csv", BulkController.importCSV);
 router.get("/settings", SettingsController.getSettings);
 router.put("/settings", SettingsController.updateSettings);
 
-// Stats
+// WhatsApp Connections
+router.get("/whatsapp/accounts", WhatsAppController.getAccounts);
+router.post("/whatsapp/accounts", WhatsAppController.createAccount);
+router.delete("/whatsapp/accounts/:id", WhatsAppController.deleteAccount);
+router.post("/whatsapp/accounts/meta", WhatsAppController.createMetaAccount);
+router.get("/whatsapp/qr/:id", WhatsAppController.qrCodeStream);
+
+// Automations
+router.get("/automations", AutomationController.getAutomations);
+router.post("/automations", AutomationController.createAutomation);
+router.put("/automations/:id", AutomationController.updateAutomation);
+router.delete("/automations/:id", AutomationController.deleteAutomation);
+router.post("/automations/:id/duplicate", AutomationController.duplicateAutomation);
+router.get("/automations/executions/stats", AutomationController.getStats);
+router.get("/automations/config", AutomationController.getConfig);
+router.post("/automations/config", AutomationController.updateConfig);
+
+// Stats & Analytics
 router.get("/stats/dashboard", StatsController.getDashboardStats);
+router.get("/analytics", AnalyticsController.getAnalytics);
+
+// Messages & Conversations (Chat/Inbox)
+router.get("/messages/:leadId", MessageController.getMessages);
+router.post("/messages", MessageController.sendMessage);
+router.post("/messages/call-intent", MessageController.callIntent);
+router.put("/conversations/:leadId/toggle-bot", MessageController.toggleBot);
+router.get("/events", MessageController.sseEvents);
+
+// Prospecting (B2B)
+router.post("/prospect", ProspectController.prospectGeneric);
+router.post("/apollo/search", ProspectController.searchApollo);
+router.post("/prospect/linkedin", ProspectController.prospectLinkedIn);
+router.post("/prospect/enrich", ProspectController.enrichData);
 
 // Users
 router.get("/users", UserController.getUsers);
@@ -64,6 +106,13 @@ router.get("/icp-profiles", ICPController.getProfiles);
 router.post("/icp-profiles", ICPController.createProfile);
 router.put("/icp-profiles/:id", ICPController.updateProfile);
 router.delete("/icp-profiles/:id", ICPController.deleteProfile);
+
+// SDRs
+router.get("/sdrs", SdrController.getSdrs);
+router.post("/sdrs", SdrController.createSdr);
+router.put("/sdrs/:id", SdrController.updateSdr);
+router.delete("/sdrs/:id", SdrController.deleteSdr);
+router.post("/sdrs/:id/training", upload.single("file"), SdrController.trainSdr);
 
 // Admin / SaaS Central (Required for AdminDashboard.tsx)
 router.get("/admin/tenants", adminMiddleware, AdminController.getTenants);

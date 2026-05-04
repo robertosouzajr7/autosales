@@ -76,15 +76,19 @@ export const getDashboardStats = async (req, res) => {
         usedTokens: tenant.usedTokens || 0,
         maxTokens: tenant.plan?.maxTokens || 1000,
         maxSdrs: tenant.plan?.maxSdrs || 1,
+        usedMessages: tenant.usedMessages || 0,
+        maxMessages: tenant.plan?.maxMessages || 1000,
+        usedProspects: tenant.usedProspects || 0,
+        maxProspects: tenant.plan?.maxProspects || 100,
+        usedResearch: tenant.usedResearch || 0,
+        maxResearch: tenant.plan?.maxResearch || 20,
         planName: tenant.plan?.name || "Básico",
         qualifiedLeadsCount: finalQualifiedCount,
         conversionRate,
         emailsSent,
         whatsappFollowups,
-        messagesCount: tenant.monthlyMessagesCount || 0,
-        maxMessages: tenant.plan?.maxMessages || 1000,
         trends: {
-          leads: 0, // In production, this would compare with last month's data
+          leads: 0, 
           qualified: 0,
           appointments: 0,
           conversion: 0

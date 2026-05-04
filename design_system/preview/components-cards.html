@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', system-ui, sans-serif; background: #f1f5f9; padding: 24px; display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+svg { display: block; flex-shrink: 0; }
+
+/* Light feature card */
+.card-light { background: white; border-radius: 40px; padding: 32px; width: 210px; box-shadow: 0 10px 30px rgba(0,0,0,0.07); border: 2px solid #f8fafc; transition: all 0.3s; cursor: default; }
+.card-light:hover { box-shadow: 0 25px 60px rgba(0,0,0,0.12); border-color: rgba(16,185,129,0.2); }
+.icon-box { width: 60px; height: 60px; border-radius: 20px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; transition: transform 0.3s; }
+.card-light:hover .icon-box { transform: scale(1.1); }
+.card-title { font-size: 20px; font-weight: 900; letter-spacing: -0.02em; color: #0f172a; margin-bottom: 8px; }
+.card-body { font-size: 13px; font-weight: 500; color: #64748b; line-height: 1.6; }
+
+/* Dark stat card */
+.card-dark { background: #0f172a; border-radius: 40px; padding: 32px; width: 196px; position: relative; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.25); }
+.glow { position: absolute; top: -40px; right: -40px; width: 120px; height: 120px; background: rgba(16,185,129,0.15); border-radius: 50%; filter: blur(40px); pointer-events: none; }
+.micro { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: rgba(255,255,255,0.25); }
+.micro-accent { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: rgba(16,185,129,0.6); }
+.stat-num { font-size: 48px; font-weight: 900; letter-spacing: -0.04em; font-style: italic; color: white; line-height: 1; margin: 6px 0; }
+</style></head><body>
+
+<!-- Feature card: Workflow (node graph) -->
+<div class="card-light">
+  <div class="icon-box" style="background:#eff6ff">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2" y="8" width="6" height="6" rx="1.5"/>
+      <rect x="16" y="2" width="6" height="6" rx="1.5"/>
+      <rect x="16" y="16" width="6" height="6" rx="1.5"/>
+      <line x1="8" y1="11" x2="16" y2="5"/>
+      <line x1="8" y1="11" x2="16" y2="19"/>
+    </svg>
+  </div>
+  <div class="card-title">Workflow No-Code</div>
+  <div class="card-body">Automatize com blocos visuais e gatilhos condicionais.</div>
+</div>
+
+<!-- Feature card: Agentes IA (bot mark) — hover active state -->
+<div class="card-light" style="box-shadow:0 25px 60px rgba(0,0,0,0.12);border-color:rgba(16,185,129,0.2)">
+  <div class="icon-box" style="background:#10b981;transform:scale(1.1)">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2" y="8" width="20" height="13" rx="4"/>
+      <circle cx="8.5" cy="14.5" r="1.5" fill="white" stroke="none"/>
+      <circle cx="15.5" cy="14.5" r="1.5" fill="white" stroke="none"/>
+      <line x1="12" y1="8" x2="12" y2="5"/>
+      <circle cx="12" cy="3.5" r="1.2" fill="#ecfdf5" stroke="none"/>
+      <path d="M9 18 Q12 20 15 18"/>
+    </svg>
+  </div>
+  <div class="card-title">Agentes IA</div>
+  <div class="card-body">Qualifica leads 24h com Score de 0–100 e extrai dados ao CRM.</div>
+</div>
+
+<!-- Dark stat card -->
+<div class="card-dark">
+  <div class="glow"></div>
+  <div style="position:relative;z-index:1">
+    <div class="micro-accent" style="margin-bottom:10px">Sucesso Comercial</div>
+    <!-- Bot icon on dark -->
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:10px">
+      <rect x="2" y="8" width="20" height="13" rx="4"/>
+      <circle cx="8.5" cy="14.5" r="1.5" fill="#10b981" stroke="none"/>
+      <circle cx="15.5" cy="14.5" r="1.5" fill="#10b981" stroke="none"/>
+      <line x1="12" y1="8" x2="12" y2="5"/>
+      <circle cx="12" cy="3.5" r="1" fill="#34d399" stroke="none"/>
+    </svg>
+    <div class="stat-num">341</div>
+    <div class="micro" style="margin-top:4px">Leads Qualificados pela IA</div>
+  </div>
+</div>
+
+</body></html>

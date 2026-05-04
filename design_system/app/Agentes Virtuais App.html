@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Agentes Virtuais — App</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,700;0,900;1,700;1,900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { background: #0f172a; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  #root { width: 100%; max-width: 430px; height: 100dvh; position: relative; overflow: hidden; background: #f8fafc; }
+  @media (min-height: 800px) { #root { height: 100dvh; max-height: 932px; border-radius: 0; } }
+  ::-webkit-scrollbar { display: none; }
+  scrollbar-width: none;
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ── Design tokens ──
+const C = {
+  dark: '#0f172a', accent: '#10b981', accentDark: '#059669',
+  accentBg: '#ecfdf5', accentBorder: '#d1fae5',
+  bg: '#f8fafc', card: '#ffffff',
+  s400: '#94a3b8', s500: '#64748b', s600: '#475569',
+  s200: '#e2e8f0', s100: '#f1f5f9', s50: '#f8fafc',
+  blue: '#3b82f6', blueBg: '#eff6ff',
+  purple: '#8b5cf6', purpleBg: '#f5f3ff',
+  orange: '#f97316', orangeBg: '#fff7ed',
+  rose: '#f43f5e', roseBg: '#fff1f2',
+  indigo: '#6366f1', indigoBg: '#eef2ff',
+};
+
+// ── SVG Bot Icon ──
+const BotIcon = ({ size = 20, color = 'white' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="8" width="20" height="13" rx="4"/>
+    <circle cx="8.5" cy="14.5" r="1.5" fill={color} stroke="none"/>
+    <circle cx="15.5" cy="14.5" r="1.5" fill={color} stroke="none"/>
+    <line x1="12" y1="8" x2="12" y2="5"/>
+    <circle cx="12" cy="3.5" r="1.2" fill={color} stroke="none"/>
+    <path d="M9 18 Q12 20.5 15 18"/>
+  </svg>
+);
+
+// ── Lucide icon wrapper ──
+const Icon = ({ name, size = 18, color = C.s500, style }) => {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.innerHTML = '';
+      const el = document.createElement('i');
+      el.setAttribute('data-lucide', name);
+      el.style.width = size + 'px';
+      el.style.height = size + 'px';
+      el.style.display = 'block';
+      el.style.color = color;
+      ref.current.appendChild(el);
+      lucide.createIcons({ nameAttr: 'data-lucide', nodes: [el] });
+    }
+  }, [name, size, color]);
+  return <span ref={ref} style={{ display:'inline-flex', alignItems:'center', flexShrink:0, ...style }} />;
+};
+
+// ── Micro label ──
+const Micro = ({ children, color = C.s400, style }) => (
+  <span style={{ fontSize:9, fontWeight:900, textTransform:'uppercase', letterSpacing:'0.2em', color, ...style }}>{children}</span>
+);
+
+// ── Score pill ──
+const Score = ({ v }) => {
+  const bg = v >= 80 ? C.accentBg : v >= 60 ? C.blueBg : C.purpleBg;
+  const col = v >= 80 ? C.accentDark : v >= 60 ? C.blue : C.purple;
+  return <span style={{ background:bg, color:col, fontSize:9, fontWeight:900, padding:'3px 8px', borderRadius:99, letterSpacing:'0.1em' }}>SCORE {v}</span>;
+};
+
+// ── KPI Card ──
+const KpiCard = ({ label, value, icon, color, trend, up }) => (
+  <div style={{ background:C.card, borderRadius:28, padding:'20px 18px', boxShadow:'0 4px 16px rgba(0,0,0,0.06)', display:'flex', flexDirection:'column', gap:12 }}>
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+      <div style={{ width:40, height:40, borderRadius:14, background:C.s50, display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <Icon name={icon} size={18} color={color} />
+      </div>
+      <span style={{ fontSize:9, fontWeight:900, padding:'3px 8px', borderRadius:99, background: up ? C.accentBg : C.roseBg, color: up ? C.accentDark : C.rose }}>
+        {trend}
+      </span>
+    </div>
+    <div>
+      <Micro style={{ marginBottom:4 }}>{label}</Micro>
+      <div style={{ fontSize:30, fontWeight:900, letterSpacing:'-0.04em', fontStyle:'italic', color:C.dark }}>{value}</div>
+    </div>
+  </div>
+);
+
+// ── Screen wrapper ──
+const Screen = ({ children, bg = C.bg, style }) => (
+  <div style={{ position:'absolute', inset:0, background:bg, overflowY:'auto', overflowX:'hidden', paddingBottom:80, ...style }}>
+    {children}
+  </div>
+);
+
+// ── Status bar ──
+const StatusBar = ({ light }) => (
+  <div style={{ height:44, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 24px', flexShrink:0 }}>
+    <span style={{ fontSize:13, fontWeight:700, color: light ? 'white' : C.dark }}>9:41</span>
+    <div style={{ display:'flex', gap:5, alignItems:'center' }}>
+      {[...Array(4)].map((_,i) => <div key={i} style={{ width:3, height:6+i*2, borderRadius:1, background: light ? 'white' : C.dark, opacity: i < 3 ? 0.6+(i*0.2) : 1 }} />)}
+      <Icon name="wifi" size={14} color={light ? 'white' : C.dark} />
+      <Icon name="battery" size={14} color={light ? 'white' : C.dark} />
+    </div>
+  </div>
+);
+
+// ══════════════ ONBOARDING ══════════════
+const slides = [
+  {
+    bg: C.dark,
+    icon: <BotIcon size={56} color={C.accent} />,
+    label: 'A NOVA GERAÇÃO DE VENDAS B2B',
+    title: <>Scale suas Vendas com<br/><em style={{color:C.accent}}>SDRs Infinitos</em><br/>de IA.</>,
+    sub: 'Automatize seu WhatsApp, qualifique leads 24h e deixe a IA prospectar por você.',
+  },
+  {
+    bg: C.dark,
+    features: [
+      { icon:'bot', color:C.accent, bg:'rgba(16,185,129,0.15)', label:'SDRs de IA', desc:'Qualificam e pontuam leads 24/7 com score de 0 a 100.' },
+      { icon:'zap', color:C.blue, bg:'rgba(59,130,246,0.15)', label:'Automações', desc:'Workflows no-code com gatilhos inteligentes.' },
+      { icon:'bar-chart-3', color:C.purple, bg:'rgba(139,92,246,0.15)', label:'Analytics', desc:'Dashboard em tempo real com métricas de conversão.' },
+    ]
+  },
+  {
+    bg: C.accent,
+    light: true,
+    cta: true,
+    icon: <Icon name="check-circle-2" size={56} color="white" />,
+    label: '7 DIAS GRÁTIS · SEM CARTÃO',
+    title: <>Pronto para <em>escalar</em>?</>,
+    sub: 'Comece agora e tenha seus primeiros leads qualificados em menos de 24 horas.',
+  }
+];
+
+const Onboarding = ({ onDone }) => {
+  const [cur, setCur] = useState(0);
+  const s = slides[cur];
+
+  return (
+    <div style={{ position:'absolute', inset:0, background:s.bg, display:'flex', flexDirection:'column', transition:'background 0.4s' }}>
+      <StatusBar light />
+      <div style={{ flex:1, display:'flex', flexDirection:'column', padding:'0 32px 40px' }}>
+        {cur === 0 && (
+          <div style={{ flex:1, display:'flex', flexDirection:'column', justifyContent:'center', gap:24 }}>
+            <div style={{ width:88, height:88, background:'rgba(255,255,255,0.07)', borderRadius:32, display:'flex', alignItems:'center', justifyContent:'center', border:'1px solid rgba(255,255,255,0.1)' }}>
+              {s.icon}
+            </div>
+            <Micro color="rgba(255,255,255,0.4)" style={{ letterSpacing:'0.25em' }}>{s.label}</Micro>
+            <div style={{ fontSize:42, fontWeight:900, letterSpacing:'-0.04em', lineHeight:1, color:'white' }}>{s.title}</div>
+            <div style={{ fontSize:16, fontWeight:500, color:'rgba(255,255,255,0.5)', lineHeight:1.6 }}>{s.sub}</div>
+          </div>
+        )}
+        {cur === 1 && (
+          <div style={{ flex:1, display:'flex', flexDirection:'column', justifyContent:'center', gap:20 }}>
+            <div style={{ fontSize:32, fontWeight:900, letterSpacing:'-0.03em', color:'white', lineHeight:1.1, marginBottom:8 }}>
+              Tudo que você<br/><em style={{color:C.accent}}>precisa</em> unificado.
+            </div>
+            {s.features.map(f => (
+              <div key={f.label} style={{ display:'flex', gap:16, alignItems:'center', background:'rgba(255,255,255,0.05)', borderRadius:24, padding:'18px 20px', border:'1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ width:52, height:52, background:f.bg, borderRadius:18, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                  <Icon name={f.icon} size={22} color={f.color} />
+                </div>
+                <div>
+                  <div style={{ fontSize:15, fontWeight:900, color:'white', marginBottom:4 }}>{f.label}</div>
+                  <div style={{ fontSize:13, fontWeight:500, color:'rgba(255,255,255,0.45)', lineHeight:1.5 }}>{f.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {cur === 2 && (
+          <div style={{ flex:1, display:'flex', flexDirection:'column', justifyContent:'center', gap:24 }}>
+            <div style={{ width:88, height:88, background:'rgba(255,255,255,0.2)', borderRadius:32, display:'flex', alignItems:'center', justifyContent:'center' }}>
+              {s.icon}
+            </div>
+            <Micro color="rgba(255,255,255,0.7)" style={{ letterSpacing:'0.25em' }}>{s.label}</Micro>
+            <div style={{ fontSize:42, fontWeight:900, letterSpacing:'-0.04em', lineHeight:1, color:'white' }}>{s.title}</div>
+            <div style={{ fontSize:16, fontWeight:500, color:'rgba(255,255,255,0.7)', lineHeight:1.6 }}>{s.sub}</div>
+          </div>
+        )}
+
+        {/* Dots */}
+        <div style={{ display:'flex', gap:6, marginBottom:24 }}>
+          {[0,1,2].map(i => (
+            <div key={i} style={{ height:4, width: cur===i ? 28:8, borderRadius:99, background: cur===i ? (cur===2?'white':C.accent) : 'rgba(255,255,255,0.2)', transition:'all 0.3s' }} />
+          ))}
+        </div>
+
+        {cur < 2 ? (
+          <button onClick={() => setCur(cur+1)} style={{ height:60, background: cur===0?C.accent:'rgba(255,255,255,0.1)', border:'none', borderRadius:20, color:'white', fontFamily:'inherit', fontSize:11, fontWeight:900, textTransform:'uppercase', letterSpacing:'0.15em', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+            Próximo
+            <Icon name="arrow-right" size={16} color="white" />
+          </button>
+        ) : (
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+            <button onClick={onDone} style={{ height:60, background:'white', border:'none', borderRadius:20, color:C.accentDark, fontFamily:'inherit', fontSize:11, fontWeight:900, textTransform:'uppercase', letterSpacing:'0.15em', cursor:'pointer' }}>
+              Começar Trial Grátis
+            </button>
+            <button onClick={onDone} style={{ height:52, background:'transparent', border:'1px solid rgba(255,255,255,0.3)', borderRadius:20, color:'white', fontFamily:'inherit', fontSize:11, fontWeight:900, textTransform:'uppercase', letterSpacing:'0.15em', cursor:'pointer' }}>
+              Já tenho conta
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ══════════════ LOGIN ══════════════
+const Login = ({ onLogin }) => {
+  const [email, setEmail] = useState('');
+  const [pass, setPass] = useState('');
+  const [loading, setLoading] = useState(false);
+  const go = () => { setLoading(true); setTimeout(onLogin, 1200); };
+  return (
+    <div style={{ position:'absolute', inset:0, background:C.dark, display:'flex', flexDirection:'column' }}>
+      <StatusBar light />
+      <div style={{ flex:1, display:'flex', flexDirection:'column', padding:'20px 32px 40px', justifyContent:'center', gap:32 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          <div style={{ width:52, height:52, background:C.accent, borderRadius:18, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 8px 24px rgba(16,185,129,0.4)' }}>
+            <BotIcon size={26} color="white" />
+          </div>
+          <div>
+            <div style={{ fontSize:20, fontWeight:900, color:'white', letterSpacing:'-0.02em', textTransform:'uppercase', fontStyle:'italic' }}>Agentes <span style={{color:C.accent}}>Virtuais</span></div>
+            <Micro color="rgba(255,255,255,0.3)">SDR de Inteligência Artificial</Micro>
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize:32, fontWeight:900, color:'white', letterSpacing:'-0.03em', lineHeight:1.1 }}>Bem-vindo<br/><em style={{color:C.accent}}>de volta.</em></div>
+        </div>
+        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          {[
+            { placeholder:'seu@email.com', value:email, set:setEmail, icon:'mail', type:'email' },
+            { placeholder:'••••••••', value:pass, set:setPass, icon:'lock', type:'password' }
+          ].map(f => (
+            <div key={f.icon} style={{ position:'relative' }}>
+              <Icon name={f.icon} size={16} color="rgba(255,255,255,0.3)" style={{ position:'absolute', left:18, top:'50%', transform:'translateY(-50%)' }} />
+              <input
+                type={f.type} placeholder={f.placeholder} value={f.value}
+                onChange={e => f.set(e.target.value)}
+                style={{ width:'100%', height:60, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:20, paddingLeft:50, paddingRight:20, fontFamily:'inherit', fontSize:16, fontWeight:600, color:'white', outline:'none', caretColor:C.accent }}
+              />
+            </div>
+          ))}
+          <button onClick={go} disabled={loading} style={{ height:60, background:C.accent, border:'none', borderRadius:20, color:'white', fontFamily:'inherit', fontSize:11, fontWeight:900, textTransform:'uppercase', letterSpacing:'0.15em', cursor:'pointer', marginTop:8, boxShadow:'0 12px 32px rgba(16,185,129,0.4)', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+            {loading ? <><Icon name="loader" size={16} color="white" /> Entrando...</> : 'Entrar na Plataforma'}
+          </button>
+        </div>
+        <div style={{ textAlign:'center', fontSize:13, fontWeight:600, color:'rgba(255,255,255,0.3)' }}>
+          Não tem conta? <span style={{ color:C.accent, cursor:'pointer' }} onClick={onLogin}>Trial grátis por 7 dias</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ══════════════ TOPBAR ══════════════
+const TopBar = ({ title, sub, light, onNotif, badge, right }) => (
+  <div style={{ padding:'12px 20px 16px', background: light ? C.dark : C.card, borderBottom: light ? 'none' : `1px solid ${C.s100}` }}>
+    <StatusBar light={light} />
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', paddingTop:4 }}>
+      <div>
+        <div style={{ fontSize:28, fontWeight:900, letterSpacing:'-0.03em', textTransform:'uppercase', fontStyle:'italic', color: light ? 'white' : C.dark }}>{title} {sub && <em style={{color:C.accent}}>{sub}</em>}</div>
+        {badge && <Micro color={ light ? 'rgba(255,255,255,0.3)' : C.s400 }>{badge}</Micro>}
+      </div>
+      <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+        {right}
+        <div onClick={onNotif} style={{ width:40, height:40, borderRadius:14, background: light ? 'rgba(255,255,255,0.08)' : C.s50, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', position:'relative' }}>
+          <Icon name="bell" size={18} color={light ? 'white' : C.s500} />
+          <div style={{ position:'absolute', top:8, right:8, width:7, height:7, background:C.accent, borderRadius:'50%', border:`2px solid ${light?C.dark:C.card}` }} />
+        </div>
+        <div style={{ width:40, height:40, background:C.accent, borderRadius:14, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, fontSize:12, color:'white', flexShrink:0 }}>ME</div>
+      </div>
+    </div>
+  </div>
+);
+
+// ══════════════ DASHBOARD ══════════════
+const Dashboard = ({ goTo }) => {
+  const kpis = [
+    { label:'Leads Ativos', value:'1.284', icon:'users', color:C.blue, trend:'↑ +8%', up:true },
+    { label:'Qualificados', value:'341', icon:'bot', color:C.accent, trend:'↑ +22%', up:true },
+    { label:'Agendamentos', value:'67', icon:'calendar', color:C.purple, trend:'↑ +5%', up:true },
+    { label:'Conversão', value:'26.6%', icon:'trending-up', color:C.orange, trend:'↓ -1%', up:false },
+  ];
+  const bars = [90,65,45,30,18,52,74];
+  const barLabels = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+  const leads = [
+    { n:'João Silva', s:'Qualificado', src:'WhatsApp', score:82, c:'#0f172a' },
+    { n:'Ana Pereira', s:'Proposta', src:'LinkedIn', score:91, c:C.blue },
+    { n:'Carlos Mota', s:'Contato', src:'Site', score:55, c:C.purple },
+    { n:'Beatriz Lima', s:'Agendado', src:'WhatsApp', score:88, c:C.accent },
+  ];
+  return (
+    <Screen>
+      <div style={{ background:C.dark, paddingBottom:24 }}>
+        <StatusBar light />
+        <div style={{ padding:'8px 20px 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <div>
+            <Micro color="rgba(255,255,255,0.4)">BOM DIA, EMPRESA</Micro>
+            <div style={{ fontSize:26, fontWeight:900, letterSpacing:'-0.03em', color:'white', marginTop:2 }}>Painel <em style={{color:C.accent}}>Estratégico</em></div>
+            <Micro color="rgba(255,255,255,0.25)">Real-time Performance Metrics</Micro>
+          </div>
+          <div style={{ display:'flex', gap:10 }}>
+            <div style={{ width:40, height:40, background:'rgba(255,255,255,0.08)', borderRadius:14, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', position:'relative' }}>
+              <Icon name="bell" size={18} color="white" />
+              <div style={{ position:'absolute', top:8, right:8, width:7, height:7, background:C.accent, borderRadius:'50%' }} />
+            </div>
+            <div style={{ width:40, height:40, background:C.accent, borderRadius:14, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, fontSize:12, color:'white' }}>ME</div>
+          </div>
+        </div>
+        {/* Quick stats strip */}
+        <div style={{ display:'flex', gap:12, overflowX:'auto', padding:'20px 20px 4px' }}>
+          {[{icon:'bot',label:'SDRs Ativos',value:'3',color:C.accent},{icon:'message-square',label:'Chats Hoje',value:'47',color:C.blue},{icon:'zap',label:'Automações',value:'12',color:C.purple}].map(q => (
+            <div key={q.label} style={{ background:'rgba(255,255,255,0.07)', borderRadius:20, padding:'14px 18px', flexShrink:0, border:'1px solid rgba(255,255,255,0.06)', minWidth:110 }}>
+              <Icon name={q.icon} size={16} color={q.color} />
+              <div style={{ fontSize:22, fontWeight:900, color:'white', letterSpacing:'-0.03em', fontStyle:'italic', marginTop:8 }}>{q.value}</div>
+              <Micro color="rgba(255,255,255,0.3)" style={{ marginTop:2, display:'block' }}>{q.label}</Micro>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ padding:'20px 16px', display:'flex', flexDirection:'column', gap:16 }}>
+        {/* KPI Grid */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+          {kpis.map(k => <KpiCard key={k.label} {...k} />)}
+        </div>
+
+        {/* Bar chart */}
+        <div style={{ background:C.card, borderRadius:28, padding:'20px', boxShadow:'0 4px 16px rgba(0,0,0,0.06)' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+            <div>
+              <div style={{ fontSize:16, fontWeight:900, letterSpacing:'-0.02em' }}>Fluxo de Atividade</div>
+              <Micro>Leads por dia da semana</Micro>
+            </div>
+            <span style={{ fontSize:9, fontWeight:900, padding:'4px 10px', borderRadius:10, background:C.accentBg, color:C.accentDark, letterSpacing:'0.12em' }}>REAL-TIME</span>
+          </div>
+          <div style={{ display:'flex', alignItems:'flex-end', gap:6, height:100 }}>
+            {bars.map((h,i) => (
+              <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:6, height:'100%', justifyContent:'flex-end' }}>
+                <div style={{ width:'100%', height:`${h}%`, background:`linear-gradient(to top, ${C.accent}, #34d399)`, borderRadius:'6px 6px 0 0', opacity: i===6?0.4:1 }} />
+                <Micro style={{ fontSize:8 }}>{barLabels[i]}</Micro>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Funil */}
+        <div style={{ background:C.dark, borderRadius:28, padding:'20px', boxShadow:'0 16px 50px rgba(0,0,0,0.2)', position:'relative', overflow:'hidden' }}>
+          <div style={{ position:'absolute', top:-40, right:-40, width:160, height:160, background:'rgba(16,185,129,0.12)', borderRadius:'50%', filter:'blur(60px)' }} />
+          <div style={{ position:'relative', zIndex:1 }}>
+            <div style={{ fontSize:15, fontWeight:900, color:C.accent, textTransform:'uppercase', fontStyle:'italic', letterSpacing:'-0.01em', marginBottom:4 }}>Conversão de Funil</div>
+            <Micro color="rgba(255,255,255,0.25)" style={{ marginBottom:16, display:'block' }}>Efetividade da Qualificação IA</Micro>
+            {[{n:'Novos Leads',p:100,c:C.blue},{n:'Contato Feito',p:72,c:C.purple},{n:'Qualificados',p:44,c:C.accent},{n:'Agendamentos',p:27,c:C.orange}].map(f => (
+              <div key={f.n} style={{ marginBottom:14 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+                  <Micro color="rgba(255,255,255,0.3)">{f.n}</Micro>
+                  <Micro color="white">{f.p}%</Micro>
+                </div>
+                <div style={{ background:'rgba(255,255,255,0.06)', borderRadius:99, height:8, overflow:'hidden', padding:1 }}>
+                  <div style={{ height:'100%', width:`${f.p}%`, background:f.c, borderRadius:99 }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Recent leads */}
+        <div style={{ background:C.card, borderRadius:28, overflow:'hidden', boxShadow:'0 4px 16px rgba(0,0,0,0.06)' }}>
+          <div style={{ padding:'18px 20px', borderBottom:`1px solid ${C.s50}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div style={{ fontSize:15, fontWeight:900, textTransform:'uppercase', display:'flex', alignItems:'center', gap:8 }}>
+              <Icon name="clock" size={15} color={C.accent} />Atividade Recente
+            </div>
+            <span onClick={() => goTo('crm')} style={{ fontSize:10, fontWeight:900, color:C.accent, cursor:'pointer', letterSpacing:'0.1em', textTransform:'uppercase' }}>Ver CRM →</span>
+          </div>
+          <div style={{ padding:8 }}>
+            {leads.map(l => (
+              <div key={l.n} onClick={() => goTo('crm')} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 12px', borderRadius:16, cursor:'pointer', borderLeft:'3px solid transparent', transition:'all 0.2s' }}
+                onMouseEnter={e => { e.currentTarget.style.background=C.s50; e.currentTarget.style.borderLeftColor=C.accent; }}
+                onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.borderLeftColor='transparent'; }}>
+                <div style={{ width:42, height:42, background:l.c, borderRadius:14, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:900, color:'white', flexShrink:0 }}>{l.n.split(' ').map(x=>x[0]).join('')}</div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:14, fontWeight:900, color:C.dark }}>{l.n}</div>
+                  <div style={{ fontSize:10, fontWeight:700, color:C.s400, textTransform:'uppercase', letterSpacing:'0.12em' }}>{l.s} · {l.src}</div>
+                </div>
+                <Score v={l.score} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* AI card */}
+        <div style={{ background:`linear-gradient(135deg, ${C.accent}, ${C.accentDark})`, borderRadius:28, padding:'24px 20px', position:'relative', overflow:'hidden', boxShadow:'0 20px 60px rgba(16,185,129,0.35)' }}>
+          <div style={{ position:'absolute', bottom:-60, right:-60, width:200, height:200, background:'rgba(255,255,255,0.1)', borderRadius:'50%', filter:'blur(60px)' }} />
+          <div style={{ position:'relative', zIndex:1 }}>
+            <div style={{ width:56, height:56, background:'rgba(255,255,255,0.2)', borderRadius:20, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:16, border:'1px solid rgba(255,255,255,0.15)' }}>
+              <Icon name="zap" size={26} color="white" />
+            </div>
+            <div style={{ fontSize:22, fontWeight:900, color:'white', textTransform:'uppercase', fontStyle:'italic', letterSpacing:'-0.02em', lineHeight:1.1, marginBottom:4 }}>SDR Intelligence<br/>Monitoring</div>
+            <Micro color="rgba(255,255,255,0.5)" style={{ marginBottom:16, display:'block' }}>Análise Preditiva de Conversão</Micro>
+            {['3 SDRs IAs prospectando agora.','Taxa de qualificação em 26.5%.','78% de show de reuniões.'].map(t => (
+              <div key={t} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 0', borderBottom:'1px solid rgba(255,255,255,0.08)', fontSize:13, fontWeight:700, color:'white' }}>
+                <Icon name="check-circle-2" size={14} color="rgba(255,255,255,0.7)" />{t}
+              </div>
+            ))}
+            <button onClick={() => goTo('sdrs')} style={{ width:'100%', height:48, background:'white', border:'none', borderRadius:16, marginTop:16, fontFamily:'inherit', fontSize:11, fontWeight:900, textTransform:'uppercase', letterSpacing:'0.12em', color:C.accentDark, cursor:'pointer' }}>
+              Acessar Central SDR
+            </button>
+          </div>
+        </div>
+      </div>
+    </Screen>
+  );
+};
+
+// ══════════════ CRM ══════════════
+const CRM = () => {
+  const [active, setActive] = useState(null);
+  const cols = [
+    { name:'Novos', count:8, color:C.blue, leads:[{n:'João Silva',score:82,src:'WhatsApp'},{n:'Ana Costa',score:71,src:'Site'},{n:'Pedro Ramos',score:45,src:'Email'}] },
+    { name:'Contato', count:12, color:C.purple, leads:[{n:'Pedro Lima',score:55,src:'Email'},{n:'Clara Mota',score:68,src:'LinkedIn'}] },
+    { name:'Qualificado', count:6, color:C.orange, leads:[{n:'Rafael Souza',score:90,src:'WhatsApp'},{n:'Lúcia Ferraz',score:83,src:'Site'}] },
+    { name:'Proposta', count:4, color:C.accent, leads:[{n:'Beatriz Neves',score:88,src:'Indicação'},{n:'Lucas Dias',score:76,src:'WhatsApp'}] },
+    { name:'Fechado', count:3, color:'#059669', leads:[{n:'Marina Reis',score:95,src:'Site'}] },
+  ];
+  return (
+    <Screen>
+      <TopBar title="Pipeline" sub="CRM" badge="Gestão de Leads & Oportunidades"
+        right={<button style={{ height:36, padding:'0 16px', background:C.dark, border:'none', borderRadius:12, color:'white', fontFamily:'inherit', fontSize:10, fontWeight:900, textTransform:'uppercase', letterSpacing:'0.12em', cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+          <Icon name="plus" size={13} color="white" />Novo
+        </button>} />
+      {/* Status tabs */}
+      <div style={{ display:'flex', gap:8, overflowX:'auto', padding:'12px 16px' }}>
+        {['Todos',...cols.map(c=>c.name)].map(t => (
+          <button key={t} onClick={() => setActive(t==='Todos'?null:t)} style={{ height:32, padding:'0 14px', borderRadius:99, border:'none', background: (active===t||(t==='Todos'&&!active)) ? C.dark : C.card, color:(active===t||(t==='Todos'&&!active)) ? 'white' : C.s500, fontFamily:'inherit', fontSize:11, fontWeight:900, cursor:'pointer', flexShrink:0, letterSpacing:'0.08em' }}>
+            {t}
+          </button>
+        ))}
+      </div>
+      {/* Kanban horizontal scroll */}
+      <div style={{ display:'flex', gap:12, overflowX:'auto', padding:'4px 16px 16px' }}>
+        {cols.filter(c => !active || c.name===active).map(col => (
+          <div key={col.name} style={{ flexShrink:0, width:200, background:C.card, borderRadius:20, overflow:'hidden', boxShadow:'0 2px 8px rgba(0,0,0,0.06)' }}>
+            <div style={{ padding:'14px 16px', borderBottom:`1px solid ${C.s50}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <span style={{ fontSize:11, fontWeight:900, textTransform:'uppercase', letterSpacing:'0.15em', color:col.color }}>{col.name}</span>
+              <span style={{ background:C.s50, color:C.s500, fontSize:10, fontWeight:900, padding:'2px 8px', borderRadius:99 }}>{col.count}</span>
+            </div>
+            <div style={{ padding:8, display:'flex', flexDirection:'column', gap:8 }}>
+              {col.leads.map(l => (
+                <div key={l.n} style={{ background:C.s50, borderRadius:14, padding:12, cursor:'pointer', border:`1px solid ${C.s100}`, transition:'all 0.2s' }}
+                  onMouseEnter={e=>{e.currentTarget.style.background='white';e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)';}}
+                  onMouseLeave={e=>{e.currentTarget.style.background=C.s50;e.currentTarget.style.boxShadow='none';}}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+                    <div style={{ width:32, height:32, background:C.dark, borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:900, color:'white', flexShrink:0 }}>{l.n.split(' ').map(x=>x[0]).join('')}</div>
+                    <div>
+                      <div style={{ fontSize:12, fontWeight:900, color:C.dark }}>{l.n}</div>
+                      <div style={{ fontSize:9, fontWeight:700, color:C.s400, textTransform:'uppercase', letterSpacing:'0.1em' }}>{l.src}</div>
+                    </div>
+                  </div>
+                  <Score v={l.score} />
+                </div>
+              ))}
+              <div style={{ height:36, borderRadius:14, border:`2px dashed ${C.s200}`, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:C.s400 }}>
+                <Icon name="plus" size={14} color={C.s400} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Stats row */}
+      <div style={{ padding:'0 16px 8px', display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 }}>
+        {[{l:'Total Leads',v:'33'},{l:'Em Negociação',v:'16'},{l:'Fechados/Mês',v:'3'}].map(s=>(
+          <div key={s.l} style={{ background:C.card, borderRadius:20, padding:'14px 16px', boxShadow:'0 2px 8px rgba(0,0,0,0.05)', textAlign:'center' }}>
+            <div style={{ fontSize:24, fontWeight:900, letterSpacing:'-0.04em', fontStyle:'italic', color:C.dark }}>{s.v}</div>
+            <Micro style={{ marginTop:4, display:'block' }}>{s.l}</Micro>
+          </div>
+        ))}
+      </div>
+    </Screen>
+  );
+};
+
+// ══════════════ CONVERSAS ══════════════
+const Conversations = () => {
+  const [chat, setChat] = useState(null);
+  const [msg, setMsg] = useState('');
+  const [msgs, setMsgs] = useState([
+    { type:'in', text:'Olá! Tenho interesse nos planos de vocês.', time:'09:30' },
+    { type:'ai', text:'Oi João! Para entender melhor, você atua em qual segmento de mercado?', time:'09:31' },
+    { type:'out', text:'Trabalho com consultoria B2B, time de 5 vendedores.', time:'09:35' },
+    { type:'ai', text:'Perfeito! Com 5 vendedores, o plano Pro seria ideal. Qual melhor horário para uma demo rápida?', time:'09:36' },
+    { type:'out', text:'Pode agendar amanhã às 14h?', time:'09:42' },
+  ]);
+  const msgsRef = useRef(null);
+  const contacts = [
+    { n:'João Silva', preview:'Pode agendar amanhã?', time:'09:42', unread:true, active:true, c:C.dark, score:82 },
+    { n:'Ana Pereira', preview:'Tenho interesse no plano Pro', time:'09:15', unread:false, c:C.blue, score:91 },
+    { n:'Carlos Mota', preview:'Qual o valor mensal?', time:'08:58', unread:true, c:C.purple, score:55 },
+    { n:'Beatriz Lima', preview:'Ok, confirmado para 14h', time:'08:30', c:C.accent, score:88 },
+    { n:'Rafael Costa', preview:'Obrigado pelo atendimento!', time:'07:45', c:C.orange, score:76 },
+    { n:'Mariana Souza', preview:'Vou pensar e retorno amanhã', time:'Ontem', c:'#e11d48', score:42 },
+  ];
+  const send = () => {
+    if (!msg.trim()) return;
+    setMsgs(m => [...m, { type:'out', text:msg, time:'agora' }]);
+    setMsg('');
+    setTimeout(() => { if (msgsRef.current) msgsRef.current.scrollTop = 99999; }, 50);
+  };
+
+  if (chat) {
+    const c = contacts.find(x=>x.n===chat);
+    return (
+      <div style={{ position:'absolute', inset:0, background:C.card, display:'flex', flexDirection:'column' }}>
+        <div style={{ background:C.dark, paddingTop:44 }}>
+          <div style={{ padding:'12px 16px', display:'flex', alignItems:'center', gap:12 }}>
+            <button onClick={() => setChat(null)} style={{ width:36, height:36, background:'rgba(255,255,255,0.08)', border:'none', borderRadius:12, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <Icon name="arrow-left" size={16} color="white" />
+            </button>
+            <div style={{ width:40, height:40, background:c.c, borderRadius:13, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:900, color:'white' }}>{c.n.split(' ').map(x=>x[0]).join('')}</div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:15, fontWeight:900, color:'white' }}>{c.n}</div>
+              <div style={{ display:'flex', alignItems:'center', gap:4, fontSize:10, fontWeight:700, color:C.accent, textTransform:'uppercase', letterSpacing:'0.12em' }}>
+                <div style={{ width:6, height:6, background:C.accent, borderRadius:'50%' }} />Ativo agora
+              </div>
+            </div>
+            <Score v={c.score} />
+          </div>
+        </div>
+        <div ref={msgsRef} style={{ flex:1, overflowY:'auto', padding:'16px', display:'flex', flexDirection:'column', gap:10, background:C.s50 }}>
+          {msgs.map((m,i) => (
+            <div key={i} style={{ display:'flex', justifyContent: m.type==='out'?'flex-end':'flex-start' }}>
+              <div style={{ maxWidth:'80%' }}>
+                <div style={{
+                  padding:'12px 16px', borderRadius:20, fontSize:13, fontWeight:500, lineHeight:1.5,
+                  background: m.type==='out' ? C.dark : m.type==='ai' ? C.accentBg : C.card,
+                  color: m.type==='out' ? 'white' : C.dark,
+                  border: m.type==='ai' ? `1px solid ${C.accentBorder}` : 'none',
+                  borderBottomLeftRadius: m.type!=='out' ? 4 : 20,
+                  borderBottomRightRadius: m.type==='out' ? 4 : 20,
+                  boxShadow: m.type!=='out' ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
+                }}>
+                  {m.type==='ai' && <strong style={{color:C.accentDark}}>🤖 SDR IA: </strong>}{m.text}
+                </div>
+                <div style={{ fontSize:9, color:C.s300, fontWeight:700, marginTop:3, textAlign: m.type==='out'?'right':'left', paddingLeft:4 }}>{m.time}{m.type==='ai'?' · SDR IA':''}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ padding:'12px 16px', borderTop:`1px solid ${C.s100}`, display:'flex', gap:10, background:C.card }}>
+          <input value={msg} onChange={e=>setMsg(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} placeholder="Escreva uma mensagem..."
+            style={{ flex:1, height:44, background:C.s50, border:`1px solid ${C.s100}`, borderRadius:14, padding:'0 16px', fontFamily:'inherit', fontSize:13, outline:'none' }} />
+          <button onClick={send} style={{ width:44, height:44, background:C.dark, border:'none', borderRadius:12, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'background 0.2s' }}
+            onMouseEnter={e=>e.currentTarget.style.background=C.accent}
+            onMouseLeave={e=>e.currentTarget.style.background=C.dark}>
+            <Icon name="send" size={16} color="white" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Screen>
+      <TopBar title="Conversas" badge="Central de Atendimento WhatsApp" />
+      <div style={{ padding:'12px 16px' }}>
+        <div style={{ position:'relative' }}>
+          <Icon name="search" size={15} color={C.s400} style={{ position:'absolute', left:14, top:'50%', transform:'translateY(-50%)' }} />
+          <input placeholder="Buscar conversa..." style={{ width:'100%', height:44, background:C.card, border:`1px solid ${C.s100}`, borderRadius:14, paddingLeft:40, paddingRight:16, fontFamily:'inherit', fontSize:13, outline:'none', color:C.dark }} />
+        </div>
+      </div>
+      <div style={{ display:'flex', gap:8, padding:'0 16px 12px', overflowX:'auto' }}>
+        {['Todos','IA Ativa','Aguardando','Agendado'].map(t => (
+          <button key={t} style={{ height:30, padding:'0 14px', borderRadius:99, border:'none', background: t==='Todos'?C.dark:C.card, color:t==='Todos'?'white':C.s500, fontFamily:'inherit', fontSize:10, fontWeight:900, cursor:'pointer', flexShrink:0, letterSpacing:'0.08em', textTransform:'uppercase' }}>{t}</button>
+        ))}
+      </div>
+      <div style={{ background:C.card, marginHorizontal:0 }}>
+        {contacts.map((c, i) => (
+          <div key={c.n} onClick={() => setChat(c.n)} style={{ display:'flex', alignItems:'center', gap:12, padding:'14px 16px', cursor:'pointer', borderBottom:`1px solid ${C.s50}`, transition:'background 0.15s', borderLeft:`3px solid ${c.active?C.accent:'transparent'}`, background:c.active?'#f0fdf4':'white' }}
+            onMouseEnter={e=>e.currentTarget.style.background=C.s50}
+            onMouseLeave={e=>e.currentTarget.style.background=c.active?'#f0fdf4':'white'}>
+            <div style={{ position:'relative' }}>
+              <div style={{ width:44, height:44, borderRadius:14, background:c.c, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:900, color:'white' }}>{c.n.split(' ').map(x=>x[0]).join('')}</div>
+              {c.unread && <div style={{ position:'absolute', bottom:1, right:1, width:10, height:10, background:C.accent, borderRadius:'50%', border:`2px solid white` }} />}
+            </div>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <span style={{ fontSize:14, fontWeight:900, color:C.dark }}>{c.n}</span>
+                <span style={{ fontSize:9, fontWeight:900, color:C.s300, textTransform:'uppercase' }}>{c.time}</span>
+              </div>
+              <span style={{ fontSize:12, color:C.s400, fontWeight:500, display:'block', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.preview}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Screen>
+  );
+};
+
+// ══════════════ SDRS ══════════════
+const SDRs = () => {
+  const [sdrs, setSdrs] = useState([
+    { name:'SDR Alpha', status:true, convs:47, qual:82, score:91, color:C.accent, persona:'Especialista B2B' },
+    { name:'SDR Beta', status:true, convs:31, qual:74, score:87, color:C.blue, persona:'Consultor Técnico' },
+    { name:'SDR Gamma', status:false, convs:18, qual:68, score:79, color:C.purple, persona:'Abordagem Consultiva' },
+    { name:'SDR Delta', status:true, convs:52, qual:88, score:94, color:C.orange, persona:'Fechador Agressivo' },
+  ]);
+  return (
+    <Screen>
+      <TopBar title="Time de" sub="SDRs" badge="Agentes de Inteligência Artificial" />
+      <div style={{ padding:'16px 16px', display:'flex', flexDirection:'column', gap:12 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10, marginBottom:4 }}>
+          {[{l:'SDRs Ativos',v:'3',c:C.accent},{l:'Conversas Hoje',v:'130',c:C.blue},{l:'Score Médio',v:'88',c:C.purple}].map(s=>(
+            <div key={s.l} style={{ background:C.card, borderRadius:20, padding:'14px 14px', boxShadow:'0 2px 8px rgba(0,0,0,0.05)', textAlign:'center' }}>
+              <div style={{ fontSize:24, fontWeight:900, letterSpacing:'-0.04em', fontStyle:'italic', color:s.c }}>{s.v}</div>
+              <Micro style={{ marginTop:4, display:'block', fontSize:8 }}>{s.l}</Micro>
+            </div>
+          ))}
+        </div>
+        {sdrs.map((sdr, i) => (
+          <div key={sdr.name} style={{ background:C.card, borderRadius:28, padding:'20px', boxShadow:'0 4px 16px rgba(0,0,0,0.06)', opacity: sdr.status?1:0.6 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:16 }}>
+              <div style={{ width:52, height:52, background:sdr.color, borderRadius:20, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:`0 8px 20px ${sdr.color}40` }}>
+                <BotIcon size={24} color="white" />
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:16, fontWeight:900, letterSpacing:'-0.02em', color:C.dark }}>{sdr.name}</div>
+                <div style={{ fontSize:10, fontWeight:700, color:C.s400, textTransform:'uppercase', letterSpacing:'0.12em' }}>{sdr.persona}</div>
+              </div>
+              {/* Toggle */}
+              <div onClick={() => setSdrs(s => s.map((x,j) => j===i ? {...x,status:!x.status} : x))}
+                style={{ width:48, height:26, background:sdr.status?C.accent:C.s200, borderRadius:99, cursor:'pointer', position:'relative', transition:'background 0.2s', flexShrink:0 }}>
+                <div style={{ position:'absolute', top:3, left:sdr.status?24:3, width:20, height:20, background:'white', borderRadius:'50%', boxShadow:'0 2px 4px rgba(0,0,0,0.2)', transition:'left 0.2s' }} />
+              </div>
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
+              {[{l:'Conversas',v:sdr.convs},{l:'% Qualif.',v:sdr.qual+'%'},{l:'Score IA',v:sdr.score}].map(m=>(
+                <div key={m.l} style={{ background:C.s50, borderRadius:16, padding:'10px 12px', textAlign:'center' }}>
+                  <div style={{ fontSize:20, fontWeight:900, letterSpacing:'-0.03em', fontStyle:'italic', color:C.dark }}>{m.v}</div>
+                  <Micro style={{ marginTop:2, display:'block' }}>{m.l}</Micro>
+                </div>
+              ))}
+            </div>
+            {sdr.status && (
+              <div style={{ marginTop:12, padding:'10px 14px', background:C.accentBg, borderRadius:16, border:`1px solid ${C.accentBorder}`, display:'flex', alignItems:'center', gap:8 }}>
+                <div style={{ width:7, height:7, background:C.accent, borderRadius:'50%', animation:'pulse 2s infinite' }} />
+                <span style={{ fontSize:11, fontWeight:700, color:C.accentDark }}>Prospectando ativamente agora</span>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
+    </Screen>
+  );
+};
+
+// ══════════════ AUTOMAÇÕES ══════════════
+const Automacoes = () => {
+  const flows = [
+    { name:'Boas-vindas WhatsApp', status:'ativo', runs:1240, icon:'message-square', color:C.accent },
+    { name:'Follow-up Leads Frios', status:'ativo', runs:340, icon:'thermometer', color:C.blue },
+    { name:'Qualificação Automática', status:'ativo', runs:890, icon:'bot', color:C.purple },
+    { name:'Agendamento Inteligente', status:'pausado', runs:210, icon:'calendar', color:C.orange },
+    { name:'Reengajamento 7 Dias', status:'ativo', runs:155, icon:'refresh-cw', color:C.indigo },
+  ];
+  return (
+    <Screen>
+      <TopBar title="Auto" sub="mações" badge="Workflows de Prospecção Inteligente"
+        right={<button style={{ height:36, padding:'0 16px', background:C.dark, border:'none', borderRadius:12, color:'white', fontFamily:'inherit', fontSize:10, fontWeight:900, textTransform:'uppercase', letterSpacing:'0.12em', cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+          <Icon name="plus" size={13} color="white" />Novo
+        </button>} />
+      {/* Viz preview */}
+      <div style={{ margin:'16px', background:C.dark, borderRadius:24, padding:'20px', position:'relative', overflow:'hidden' }}>
+        <div style={{ position:'absolute', top:-30, right:-30, width:120, height:120, background:'rgba(16,185,129,0.1)', borderRadius:'50%', filter:'blur(50px)' }} />
+        <Micro color="rgba(255,255,255,0.3)" style={{ marginBottom:12, display:'block' }}>Fluxo Ativo — Boas-vindas</Micro>
+        <div style={{ display:'flex', alignItems:'center', gap:0, overflowX:'auto', paddingBottom:4 }}>
+          {[{icon:'zap',label:'Gatilho',c:C.accent},{icon:'message-square',label:'Msg 1',c:C.blue},{icon:'clock',label:'Espera 2h',c:'rgba(255,255,255,0.15)'},{icon:'bot',label:'IA Qualif.',c:C.purple},{icon:'calendar',label:'Agenda',c:C.orange}].map((n,i,arr) => (
+            <React.Fragment key={n.label}>
+              <div style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
+                <div style={{ width:40, height:40, background:n.c, borderRadius:14, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <Icon name={n.icon} size={16} color="white" />
+                </div>
+                <span style={{ fontSize:8, fontWeight:900, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', letterSpacing:'0.1em', whiteSpace:'nowrap' }}>{n.label}</span>
+              </div>
+              {i<arr.length-1 && <div style={{ flex:'none', width:20, height:2, background:'rgba(255,255,255,0.12)', margin:'0 4px', marginBottom:14, flexShrink:0 }} />}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+      <div style={{ padding:'0 16px', display:'flex', flexDirection:'column', gap:10 }}>
+        {flows.map(f => (
+          <div key={f.name} style={{ background:C.card, borderRadius:24, padding:'16px 18px', boxShadow:'0 2px 8px rgba(0,0,0,0.05)', display:'flex', alignItems:'center', gap:14 }}>
+            <div style={{ width:46, height:46, background:f.color+'20', borderRadius:16, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+              <Icon name={f.icon} size={20} color={f.color} />
+            </div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:14, fontWeight:900, color:C.dark, marginBottom:4 }}>{f.name}</div>
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <span style={{ fontSize:9, fontWeight:900, padding:'3px 8px', borderRadius:99, background:f.status==='ativo'?C.accentBg:C.s100, color:f.status==='ativo'?C.accentDark:C.s500, textTransform:'uppercase', letterSpacing:'0.1em' }}>{f.status}</span>
+                <Micro>{f.runs.toLocaleString()} execuções</Micro>
+              </div>
+            </div>
+            <Icon name="chevron-right" size={16} color={C.s300} />
+          </div>
+        ))}
+      </div>
+    </Screen>
+  );
+};
+
+// ══════════════ ANALYTICS ══════════════
+const Analytics = () => {
+  const [period, setPeriod] = useState('7d');
+  const points = [30,55,40,80,60,90,75];
+  const maxV = Math.max(...points);
+  const w = 280, h = 120;
+  const pts = points.map((v,i) => `${(i/(points.length-1))*w},${h - (v/maxV)*h}`).join(' ');
+  return (
+    <Screen>
+      <TopBar title="Analytics" badge="Relatórios de Performance em Tempo Real" />
+      <div style={{ padding:'12px 16px', display:'flex', gap:8 }}>
+        {['7d','30d','90d'].map(p => (
+          <button key={p} onClick={() => setPeriod(p)} style={{ height:32, padding:'0 16px', borderRadius:99, border:'none', background:period===p?C.dark:C.card, color:period===p?'white':C.s500, fontFamily:'inherit', fontSize:11, fontWeight:900, cursor:'pointer', boxShadow:'0 1px 4px rgba(0,0,0,0.06)' }}>
+            {p==='7d'?'7 dias':p==='30d'?'30 dias':'90 dias'}
+          </button>
+        ))}
+      </div>
+      <div style={{ padding:'0 16px', display:'flex', flexDirection:'column', gap:14 }}>
+        {/* Main chart */}
+        <div style={{ background:C.card, borderRadius:28, padding:'20px', boxShadow:'0 4px 16px rgba(0,0,0,0.06)' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16 }}>
+            <div>
+              <div style={{ fontSize:16, fontWeight:900, letterSpacing:'-0.02em' }}>Leads Qualificados</div>
+              <Micro>Evolução no período</Micro>
+            </div>
+            <div style={{ textAlign:'right' }}>
+              <div style={{ fontSize:28, fontWeight:900, letterSpacing:'-0.04em', fontStyle:'italic', color:C.accent }}>+22%</div>
+              <Micro color={C.accentDark}>vs. período anterior</Micro>
+            </div>
+          </div>
+          <svg width="100%" viewBox={`0 0 ${w} ${h+20}`} style={{ overflow:'visible' }}>
+            <defs>
+              <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={C.accent} stopOpacity="0.3"/>
+                <stop offset="100%" stopColor={C.accent} stopOpacity="0"/>
+              </linearGradient>
+            </defs>
+            <polygon points={`0,${h} ${pts} ${w},${h}`} fill="url(#grad)" />
+            <polyline points={pts} fill="none" stroke={C.accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            {['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'].map((l,i) => (
+              <text key={l} x={(i/(points.length-1))*w} y={h+16} textAnchor="middle" fontSize="9" fontWeight="900" fill={C.s400} fontFamily="Inter" textTransform="uppercase" letterSpacing="0.1em">{l}</text>
+            ))}
+          </svg>
+        </div>
+        {/* Metrics grid */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+          {[
+            {l:'Mensagens Enviadas',v:'4.280',c:C.blue,icon:'send',trend:'+12%'},
+            {l:'Taxa de Resposta',v:'68%',c:C.accent,icon:'message-square',trend:'+5%'},
+            {l:'Custo por Lead',v:'R$2,40',c:C.orange,icon:'dollar-sign',trend:'-8%'},
+            {l:'Tempo Médio Resp.',v:'1m 20s',c:C.purple,icon:'clock',trend:'-15%'},
+          ].map(m => (
+            <div key={m.l} style={{ background:C.card, borderRadius:24, padding:'18px', boxShadow:'0 2px 8px rgba(0,0,0,0.05)' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:12 }}>
+                <div style={{ width:36, height:36, background:m.c+'20', borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <Icon name={m.icon} size={16} color={m.c} />
+                </div>
+                <span style={{ fontSize:9, fontWeight:900, padding:'3px 8px', borderRadius:99, background:C.accentBg, color:C.accentDark }}>{m.trend}</span>
+              </div>
+              <div style={{ fontSize:22, fontWeight:900, letterSpacing:'-0.03em', fontStyle:'italic', color:C.dark }}>{m.v}</div>
+              <Micro style={{ marginTop:4, display:'block' }}>{m.l}</Micro>
+            </div>
+          ))}
+        </div>
+        {/* Channel breakdown */}
+        <div style={{ background:C.card, borderRadius:28, padding:'20px', boxShadow:'0 4px 16px rgba(0,0,0,0.06)' }}>
+          <div style={{ fontSize:15, fontWeight:900, letterSpacing:'-0.01em', marginBottom:4 }}>Canais de Aquisição</div>
+          <Micro style={{ marginBottom:16, display:'block' }}>Origem dos leads no período</Micro>
+          {[{l:'WhatsApp',p:62,c:C.accent},{l:'Site / Formulário',p:23,c:C.blue},{l:'LinkedIn',p:10,c:C.purple},{l:'Indicação',p:5,c:C.orange}].map(ch => (
+            <div key={ch.l} style={{ marginBottom:14 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+                <span style={{ fontSize:13, fontWeight:700, color:C.dark }}>{ch.l}</span>
+                <span style={{ fontSize:13, fontWeight:900, color:C.dark }}>{ch.p}%</span>
+              </div>
+              <div style={{ height:8, background:C.s50, borderRadius:99 }}>
+                <div style={{ width:`${ch.p}%`, height:'100%', background:ch.c, borderRadius:99 }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Screen>
+  );
+};
+
+// ══════════════ AGENDAMENTOS ══════════════
+const Agendamentos = () => {
+  const [day, setDay] = useState(3);
+  const days = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+  const dates = [18,19,20,21,22,23,24];
+  const appts = [
+    { time:'09:00', name:'João Silva', type:'Demo Plataforma', dur:'30min', c:C.accent, score:82 },
+    { time:'10:30', name:'Ana Pereira', type:'Apresentação Proposta', dur:'45min', c:C.blue, score:91 },
+    { time:'14:00', name:'Carlos Mota', type:'Discovery Call', dur:'30min', c:C.purple, score:55 },
+    { time:'16:00', name:'Beatriz Lima', type:'Follow-up Fechamento', dur:'20min', c:C.orange, score:88 },
+  ];
+  return (
+    <Screen>
+      <TopBar title="Agenda" sub="mentos" badge="Gestão de Reuniões e Demos"
+        right={<button style={{ height:36, padding:'0 16px', background:C.dark, border:'none', borderRadius:12, color:'white', fontFamily:'inherit', fontSize:10, fontWeight:900, textTransform:'uppercase', letterSpacing:'0.12em', cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+          <Icon name="plus" size={13} color="white" />Novo
+        </button>} />
+      {/* Week strip */}
+      <div style={{ padding:'8px 16px 0', display:'flex', gap:8 }}>
+        {days.map((d,i) => (
+          <div key={d} onClick={() => setDay(i)} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4, cursor:'pointer' }}>
+            <Micro style={{ color: i===day ? C.accent : C.s400, fontSize:8 }}>{d}</Micro>
+            <div style={{ width:36, height:36, borderRadius:12, background: i===day?C.dark:C.card, display:'flex', alignItems:'center', justifyContent:'center', boxShadow: i===day?'0 4px 12px rgba(0,0,0,0.2)':'0 1px 4px rgba(0,0,0,0.06)', border: i===day?'none':`1px solid ${C.s100}` }}>
+              <span style={{ fontSize:14, fontWeight:900, color: i===day?'white':C.dark }}>{dates[i]}</span>
+            </div>
+            {[0,2,3].includes(i) && <div style={{ width:5, height:5, background: i===day?C.accent:C.s300, borderRadius:'50%' }} />}
+          </div>
+        ))}
+      </div>
+      {/* Today stats */}
+      <div style={{ display:'flex', gap:10, padding:'16px 16px 8px', overflowX:'auto' }}>
+        {[{l:'Reuniões Hoje',v:'4',c:C.accent},{l:'Confirmadas',v:'3',c:C.blue},{l:'Canceladas',v:'1',c:C.rose}].map(s=>(
+          <div key={s.l} style={{ background:C.card, borderRadius:20, padding:'14px 18px', flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.05)' }}>
+            <div style={{ fontSize:26, fontWeight:900, letterSpacing:'-0.04em', fontStyle:'italic', color:s.c }}>{s.v}</div>
+            <Micro style={{ marginTop:4, display:'block' }}>{s.l}</Micro>
+          </div>
+        ))}
+      </div>
+      <div style={{ padding:'0 16px', display:'flex', flexDirection:'column', gap:10 }}>
+        {appts.map(a => (
+          <div key={a.name} style={{ background:C.card, borderRadius:24, padding:'16px 18px', boxShadow:'0 2px 8px rgba(0,0,0,0.05)', display:'flex', alignItems:'center', gap:14, borderLeft:`4px solid ${a.c}` }}>
+            <div style={{ textAlign:'center', flexShrink:0, width:44 }}>
+              <div style={{ fontSize:16, fontWeight:900, color:C.dark, letterSpacing:'-0.02em' }}>{a.time}</div>
+              <Micro style={{ fontSize:8 }}>{a.dur}</Micro>
+            </div>
+            <div style={{ width:1, height:40, background:C.s100, flexShrink:0 }} />
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:14, fontWeight:900, color:C.dark }}>{a.name}</div>
+              <div style={{ fontSize:11, fontWeight:700, color:C.s400, marginTop:2 }}>{a.type}</div>
+            </div>
+            <Score v={a.score} />
+          </div>
+        ))}
+      </div>
+    </Screen>
+  );
+};
+
+// ══════════════ CONFIGURAÇÕES ══════════════
+const Configuracoes = ({ goTo }) => {
+  const sections = [
+    { title:'Conta', items:[{icon:'user',label:'Perfil & Empresa'},{icon:'shield',label:'Segurança & Senha'},{icon:'bell',label:'Notificações'}] },
+    { title:'Plataforma', items:[{icon:'bot',label:'SDRs & Personalidades'},{icon:'link',label:'Conexões & APIs'},{icon:'globe',label:'WhatsApp Business'}] },
+    { title:'Plano', items:[{icon:'zap',label:'Plano Pro — R$797/mês'},{icon:'credit-card',label:'Faturamento'},{icon:'bar-chart-2',label:'Uso de Tokens'}] },
+  ];
+  return (
+    <Screen>
+      <TopBar title="Config" sub="urações" badge="Preferências da Plataforma" />
+      {/* Profile card */}
+      <div style={{ margin:'16px', background:C.dark, borderRadius:28, padding:'20px', position:'relative', overflow:'hidden' }}>
+        <div style={{ position:'absolute', top:-40, right:-40, width:140, height:140, background:'rgba(16,185,129,0.1)', borderRadius:'50%', filter:'blur(50px)' }} />
+        <div style={{ position:'relative', zIndex:1, display:'flex', alignItems:'center', gap:14 }}>
+          <div style={{ width:60, height:60, background:C.accent, borderRadius:20, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:900, color:'white', boxShadow:`0 8px 24px ${C.accent}40` }}>ME</div>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:18, fontWeight:900, color:'white', letterSpacing:'-0.02em' }}>Minha Empresa</div>
+            <div style={{ fontSize:13, fontWeight:600, color:'rgba(255,255,255,0.4)', marginTop:2 }}>contato@empresa.com</div>
+            <div style={{ marginTop:8, display:'flex', gap:6 }}>
+              <span style={{ background:C.accent, color:C.dark, fontSize:9, fontWeight:900, padding:'3px 10px', borderRadius:99, textTransform:'uppercase', letterSpacing:'0.12em' }}>PRO</span>
+              <span style={{ background:'rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.5)', fontSize:9, fontWeight:900, padding:'3px 10px', borderRadius:99, textTransform:'uppercase', letterSpacing:'0.1em' }}>5 SDRs Ativos</span>
+            </div>
+          </div>
+        </div>
+        {/* Usage bar */}
+        <div style={{ marginTop:16, borderTop:'1px solid rgba(255,255,255,0.07)', paddingTop:14 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+            <Micro color="rgba(255,255,255,0.3)">Tokens Usados</Micro>
+            <Micro color="white">42% de 500k</Micro>
+          </div>
+          <div style={{ height:4, background:'rgba(255,255,255,0.1)', borderRadius:99 }}>
+            <div style={{ width:'42%', height:'100%', background:C.accent, borderRadius:99 }} />
+          </div>
+        </div>
+      </div>
+      <div style={{ padding:'0 16px', display:'flex', flexDirection:'column', gap:16 }}>
+        {sections.map(sec => (
+          <div key={sec.title}>
+            <Micro style={{ marginBottom:8, display:'block', paddingLeft:4 }}>{sec.title}</Micro>
+            <div style={{ background:C.card, borderRadius:24, overflow:'hidden', boxShadow:'0 2px 8px rgba(0,0,0,0.05)' }}>
+              {sec.items.map((item, i) => (
+                <div key={item.label} style={{ display:'flex', alignItems:'center', gap:14, padding:'16px 18px', borderBottom: i<sec.items.length-1 ? `1px solid ${C.s50}` : 'none', cursor:'pointer' }}
+                  onMouseEnter={e=>e.currentTarget.style.background=C.s50}
+                  onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                  <div style={{ width:36, height:36, background:C.s50, borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    <Icon name={item.icon} size={16} color={C.s500} />
+                  </div>
+                  <span style={{ flex:1, fontSize:14, fontWeight:700, color:C.dark }}>{item.label}</span>
+                  <Icon name="chevron-right" size={16} color={C.s300} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+        <button onClick={() => goTo('onboarding')} style={{ height:52, background:'transparent', border:`2px solid ${C.s100}`, borderRadius:20, color:C.s400, fontFamily:'inherit', fontSize:11, fontWeight:900, textTransform:'uppercase', letterSpacing:'0.12em', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+          <Icon name="log-out" size={15} color={C.s400} />Sair da Conta
+        </button>
+      </div>
+    </Screen>
+  );
+};
+
+// ══════════════ BOTTOM NAV ══════════════
+const NAV_ITEMS = [
+  { id:'dashboard', icon:'layout-dashboard', label:'Início' },
+  { id:'conversations', icon:'message-square', label:'Chats' },
+  { id:'crm', icon:'users', label:'CRM' },
+  { id:'sdrs', icon:'bot', label:'SDRs' },
+  { id:'more', icon:'grid-2x2', label:'Mais' },
+];
+
+const MoreMenu = ({ goTo, onClose }) => {
+  const items = [
+    { id:'automacoes', icon:'zap', label:'Automações', color:C.blue },
+    { id:'analytics', icon:'bar-chart-3', label:'Analytics', color:C.purple },
+    { id:'agendamentos', icon:'calendar', label:'Agendamentos', color:C.orange },
+    { id:'configuracoes', icon:'settings', label:'Configurações', color:C.s500 },
+  ];
+  return (
+    <>
+      <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:200 }} />
+      <div style={{ position:'absolute', bottom:0, left:0, right:0, background:C.card, borderRadius:'28px 28px 0 0', padding:'20px 20px 32px', zIndex:201, boxShadow:'0 -20px 60px rgba(0,0,0,0.2)' }}>
+        <div style={{ width:40, height:4, background:C.s200, borderRadius:99, margin:'0 auto 20px' }} />
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+          {items.map(item => (
+            <div key={item.id} onClick={() => { goTo(item.id); onClose(); }} style={{ background:C.s50, borderRadius:24, padding:'20px 16px', display:'flex', flexDirection:'column', gap:10, cursor:'pointer', border:`1px solid ${C.s100}`, transition:'all 0.2s' }}
+              onMouseEnter={e=>{e.currentTarget.style.background='white';e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)';}}
+              onMouseLeave={e=>{e.currentTarget.style.background=C.s50;e.currentTarget.style.boxShadow='none';}}>
+              <div style={{ width:44, height:44, background:item.color+'20', borderRadius:16, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <Icon name={item.icon} size={20} color={item.color} />
+              </div>
+              <span style={{ fontSize:14, fontWeight:900, color:C.dark }}>{item.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+};
+
+const BottomNav = ({ active, goTo }) => {
+  const [more, setMore] = useState(false);
+  const moreScreens = ['automacoes','analytics','agendamentos','configuracoes'];
+  const isMoreActive = moreScreens.includes(active);
+  return (
+    <>
+      <div style={{ position:'absolute', bottom:0, left:0, right:0, height:80, background:C.card, borderTop:`1px solid ${C.s100}`, display:'flex', alignItems:'center', justifyContent:'space-around', paddingBottom:8, zIndex:100, boxShadow:'0 -4px 20px rgba(0,0,0,0.06)' }}>
+        {NAV_ITEMS.map(item => {
+          const isActive = item.id==='more' ? isMoreActive : active===item.id;
+          return (
+            <div key={item.id} onClick={() => item.id==='more' ? setMore(true) : goTo(item.id)}
+              style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4, cursor:'pointer', padding:'8px 12px', borderRadius:16, transition:'all 0.2s', background: isActive?`${C.accent}15`:'transparent' }}>
+              {item.id === 'bot' || item.id === 'sdrs'
+                ? <div style={{ width:22, height:22, display:'flex', alignItems:'center', justifyContent:'center' }}><BotIcon size={20} color={isActive?C.accent:C.s400} /></div>
+                : <Icon name={item.icon} size={22} color={isActive?C.accent:C.s400} />}
+              <span style={{ fontSize:9, fontWeight:900, textTransform:'uppercase', letterSpacing:'0.1em', color:isActive?C.accent:C.s400 }}>{item.label}</span>
+            </div>
+          );
+        })}
+      </div>
+      {more && <MoreMenu goTo={goTo} onClose={() => setMore(false)} />}
+    </>
+  );
+};
+
+// ══════════════ APP SHELL ══════════════
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accentColor": "#10b981",
+  "darkMode": false
+}/*EDITMODE-END*/;
+
+const App = () => {
+  const stored = localStorage.getItem('av_screen');
+  const [screen, setScreen] = useState(stored || 'onboarding');
+
+  const goTo = useCallback((s) => {
+    setScreen(s);
+    localStorage.setItem('av_screen', s);
+  }, []);
+
+  const noNav = ['onboarding','login'].includes(screen);
+
+  const renderScreen = () => {
+    switch(screen) {
+      case 'onboarding': return <Onboarding onDone={() => goTo('login')} />;
+      case 'login': return <Login onLogin={() => goTo('dashboard')} />;
+      case 'dashboard': return <Dashboard goTo={goTo} />;
+      case 'crm': return <CRM />;
+      case 'conversations': return <Conversations />;
+      case 'sdrs': return <SDRs />;
+      case 'automacoes': return <Automacoes />;
+      case 'analytics': return <Analytics />;
+      case 'agendamentos': return <Agendamentos />;
+      case 'configuracoes': return <Configuracoes goTo={goTo} />;
+      default: return <Dashboard goTo={goTo} />;
+    }
+  };
+
+  // Tweaks
+  useEffect(() => {
+    window.addEventListener('message', (e) => {
+      if (e.data?.type === '__activate_edit_mode') {
+        document.getElementById('tweaks-panel').style.display = 'flex';
+      } else if (e.data?.type === '__deactivate_edit_mode') {
+        document.getElementById('tweaks-panel').style.display = 'none';
+      }
+    });
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+  }, []);
+
+  return (
+    <div style={{ position:'relative', width:'100%', height:'100%' }}>
+      {renderScreen()}
+      {!noNav && <BottomNav active={screen} goTo={goTo} />}
+      {/* Tweaks panel */}
+      <div id="tweaks-panel" style={{ display:'none', position:'absolute', bottom:88, right:12, background:'white', borderRadius:20, padding:'16px', boxShadow:'0 8px 32px rgba(0,0,0,0.15)', flexDirection:'column', gap:12, zIndex:300, minWidth:180 }}>
+        <div style={{ fontSize:11, fontWeight:900, textTransform:'uppercase', letterSpacing:'0.15em', color:C.dark, borderBottom:`1px solid ${C.s100}`, paddingBottom:8 }}>Tweaks</div>
+        <div>
+          <div style={{ fontSize:10, fontWeight:700, color:C.s400, marginBottom:6, textTransform:'uppercase', letterSpacing:'0.12em' }}>Tela</div>
+          {['dashboard','crm','conversations','sdrs','automacoes','analytics','agendamentos','configuracoes'].map(s => (
+            <div key={s} onClick={() => goTo(s)} style={{ padding:'6px 10px', borderRadius:10, cursor:'pointer', fontSize:12, fontWeight:700, color:screen===s?C.accent:C.s600, background:screen===s?C.accentBg:'transparent', marginBottom:2, textTransform:'capitalize' }}>
+              {s.replace('automacoes','Automações').replace('configuracoes','Config').replace('agendamentos','Agenda').replace('conversations','Conversas')}
+            </div>
+          ))}
+        </div>
+        <button onClick={() => goTo('onboarding')} style={{ height:36, background:C.dark, border:'none', borderRadius:12, color:'white', fontFamily:'inherit', fontSize:10, fontWeight:900, textTransform:'uppercase', letterSpacing:'0.1em', cursor:'pointer' }}>
+          ↺ Reset
+        </button>
+      </div>
+    </div>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
