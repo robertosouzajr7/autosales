@@ -33,6 +33,14 @@ export class WhatsAppManager {
      */
     static async updateAccountStatus(accountId, status, phone = null) {
         try {
+            // Verifica se a conta ainda existe no DB antes de tentar atualizar
+            const account = await prisma.whatsAppAccount.findUnique({
+                where: { id: accountId },
+                select: { id: true }
+            });
+
+            if (!account) return;
+
             const data = { status };
             if (phone) data.phone = phone;
             await prisma.whatsAppAccount.update({
@@ -41,6 +49,7 @@ export class WhatsAppManager {
             });
             console.log(`[WhatsApp DB] Account ${accountId} -> ${status}${phone ? ` (${phone})` : ''}`);
         } catch (e) {
+            if (e.code === 'P2025') return; // Ignora silenciosamente se o registro sumiu entre o check e o update
             console.error(`[WhatsApp DB] Erro ao atualizar status:`, e);
         }
     }
@@ -106,7 +115,12 @@ export class WhatsAppManager {
 
             if (connection === 'close') {
                 const statusCode = lastDisconnect?.error?.output?.statusCode;
-                const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401;
+                // Códigos que NÃO devem disparar reconexão automática:
+                // 401: Logged Out
+                // 403: Forbidden
+                // 405: Session Invalid/Logged out elsewhere
+                const fatalCodes = [DisconnectReason.loggedOut, 401, 403, 405];
+                const shouldReconnect = !fatalCodes.includes(statusCode);
 
                 console.log(`[WhatsApp] Conexão ${accountId} fechada (code: ${statusCode}). Reconectar: ${shouldReconnect}`);
                 whatsappSessions.delete(accountId);
