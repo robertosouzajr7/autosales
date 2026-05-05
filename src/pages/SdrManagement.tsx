@@ -38,6 +38,8 @@ export default function SdrManagement() {
     noShowGraceMinutes: 15,
     postServiceCheckHours: 24,
     enableWaitlist: true,
+    voiceId: "21m00Tcm4TlvDq8ikWAM",
+    responseMode: "TEXT",
     active: true
   });
   
@@ -81,6 +83,8 @@ export default function SdrManagement() {
         noShowGraceMinutes: sdr.noShowGraceMinutes || 15,
         postServiceCheckHours: sdr.postServiceCheckHours || 24,
         enableWaitlist: sdr.enableWaitlist ?? true,
+        voiceId: sdr.voiceId || "21m00Tcm4TlvDq8ikWAM",
+        responseMode: sdr.responseMode || "TEXT",
         active: sdr.active ?? true
       });
     } else {
@@ -99,6 +103,8 @@ export default function SdrManagement() {
         noShowGraceMinutes: 15,
         postServiceCheckHours: 24,
         enableWaitlist: true,
+        voiceId: "21m00Tcm4TlvDq8ikWAM",
+        responseMode: "TEXT",
         active: true
       });
     }
@@ -414,6 +420,37 @@ export default function SdrManagement() {
                     <div className="space-y-2">
                        <Label className="font-black text-[9px] uppercase tracking-widest text-slate-400 pl-1">Gatilhos de Alerta Humano (Separados por vírgula)</Label>
                        <Input value={form.escalationKeywords} onChange={e => setForm({...form, escalationKeywords: e.target.value})} className="h-14 rounded-2xl border-none bg-slate-50 font-bold px-6 shadow-inner" />
+                    </div>
+
+                    <Separator className="opacity-50" />
+
+                    <div className="bg-slate-900 p-8 rounded-[35px] space-y-6">
+                       <div className="flex items-center gap-3 text-emerald-400 mb-2">
+                          <Zap className="w-5 h-5" />
+                          <h4 className="font-black uppercase text-[11px] tracking-widest">Configuração de Voz (Neural)</h4>
+                       </div>
+                       
+                       <div className="grid grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                             <Label className="font-black text-[9px] uppercase tracking-widest text-white/50 pl-1">Modo de Resposta</Label>
+                             <Select value={form.responseMode} onValueChange={v => setForm({...form, responseMode: v})}>
+                                <SelectTrigger className="h-14 rounded-2xl border-none bg-white/5 text-white font-bold px-6 shadow-inner">
+                                   <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl border-none shadow-2xl">
+                                   <SelectItem value="TEXT" className="font-bold">APENAS TEXTO</SelectItem>
+                                   <SelectItem value="AUDIO" className="font-bold">APENAS ÁUDIO (Voz)</SelectItem>
+                                   <SelectItem value="BOTH" className="font-bold">AMBOS (Texto + Áudio)</SelectItem>
+                                </SelectContent>
+                             </Select>
+                          </div>
+                          
+                          <div className="space-y-2">
+                             <Label className="font-black text-[9px] uppercase tracking-widest text-white/50 pl-1">ID da Voz (ElevenLabs)</Label>
+                             <Input value={form.voiceId} onChange={e => setForm({...form, voiceId: e.target.value})} className="h-14 rounded-2xl border-none bg-white/5 text-white font-bold px-6 shadow-inner" placeholder="Ex: 21m00Tcm4TlvDq8ikWAM" />
+                             <p className="text-[8px] font-bold text-white/20 pl-1 italic">Rachel: 21m00Tcm4TlvDq8ikWAM</p>
+                          </div>
+                       </div>
                     </div>
                   </TabsContent>
 

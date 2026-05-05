@@ -41,6 +41,11 @@ export const importBulk = async (req, res) => {
   const { contacts } = req.body;
   
   try {
+    const firstStage = await prisma.pipelineStage.findFirst({
+      where: { tenantId },
+      orderBy: { order: 'asc' }
+    });
+
     const createdLeads = [];
     for (const c of contacts) {
       if (!c.phone && !c.email) continue;
@@ -57,7 +62,8 @@ export const importBulk = async (req, res) => {
           phone: c.phone || null,
           email: c.email || null,
           source: "BULK_IMPORT",
-          tenantId
+          tenantId,
+          stageId: firstStage?.id
         }
       });
       createdLeads.push(lead.id);
@@ -71,22 +77,33 @@ export const importBulk = async (req, res) => {
 export const createLead = async (req, res) => {
   try {
     const tenantId = req.headers["x-tenant-id"] || req.tenantId;
-    // Destructure only known scalar fields to avoid Prisma relation errors (tags is a relation, not a string)
     const { name, phone, email, notes, status, source, stageId, isToEnrich } = req.body;
+
+    // Buscar primeira etapa se não informada
+    let finalStageId = stageId;
+    if (!finalStageId) {
+      const firstStage = await prisma.pipelineStage.findFirst({
+        where: { tenantId },
+        orderBy: { order: 'asc' }
+      });
+      finalStageId = firstStage?.id;
+    }
+
     const data = {
-      name,
+      name: name || "Novo Lead",
       tenantId,
       ...(phone !== undefined && { phone }),
       ...(email !== undefined && { email }),
       ...(notes !== undefined && { notes }),
       ...(status !== undefined && { status }),
       ...(source !== undefined && { source }),
-      ...(stageId !== undefined && stageId !== null && stageId !== '' && { stageId }),
+      ...(finalStageId && { stageId: finalStageId }),
       ...(isToEnrich !== undefined && { isToEnrich }),
     };
+
     const lead = await prisma.lead.upsert({
       where: { 
-        phone_tenantId: { phone, tenantId } 
+        phone_tenantId: { phone: phone || "", tenantId } 
       },
       update: data,
       create: data
@@ -171,6 +188,12 @@ export const receiveWhatsappWebhook = async (req, res) => {
   }
 
   try {
+    // Buscar primeira etapa se for um novo lead
+    const firstStage = await prisma.pipelineStage.findFirst({
+      where: { tenantId },
+      orderBy: { order: 'asc' }
+    });
+
     // 1. Upsert do Lead (Garante que não existam duplicados por telefone + tenantId)
     const lead = await prisma.lead.upsert({
       where: { 
@@ -185,7 +208,8 @@ export const receiveWhatsappWebhook = async (req, res) => {
         phone, 
         tenantId, 
         source, 
-        status: "NEW" 
+        status: "NEW",
+        stageId: firstStage?.id
       }
     });
 
@@ -226,17 +250,18 @@ export const receiveWhatsappWebhook = async (req, res) => {
     }
 
     // 6. Aciona o SDR para gerar resposta via IA
-    const aiResponse = await AutomationEngine.handleIncomingMessage(lead, content, tenantId);
+    const aiData = await AutomationEngine.handleIncomingMessage(lead, content, tenantId);
 
     // 7. Se houve resposta da IA, salva no banco também
-    if (aiResponse) {
+    if (aiData && aiData.text) {
       const assistantMessage = await prisma.message.create({
         data: {
           conversationId: conversation.id,
           tenantId,
-          content: aiResponse,
+          content: aiData.text,
+          mediaUrl: aiData.audioUrl,
           role: "ASSISTANT",
-          messageType: "TEXT"
+          messageType: aiData.audioUrl ? "AUDIO" : "TEXT"
         }
       });
       try {
@@ -245,7 +270,12 @@ export const receiveWhatsappWebhook = async (req, res) => {
       } catch (_) {}
     }
 
-    res.json({ success: true, ai_response: aiResponse || null });
+    res.json({ 
+      success: true, 
+      ai_response: aiData?.text || null,
+      ai_audio_url: aiData?.audioUrl || null,
+      response_mode: aiData?.responseMode || "TEXT"
+    });
 
   } catch (error) {
     console.error("[Webhook] Erro ao processar mensagem WhatsApp:", error);

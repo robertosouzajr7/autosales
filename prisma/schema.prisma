@@ -29,6 +29,7 @@ model Tenant {
   googleRefreshToken String?
   aiProvider         String? @default("GEMINI")
   aiApiKey           String?
+  elevenLabsKey      String?
 
   // Lead Discovery Integrations
   apolloApiKey     String?
@@ -206,6 +207,10 @@ model SdrBot {
   name   String
   role   String  @default("INBOUND") // INBOUND, OUTBOUND
   prompt String? @default("Você é um SDR focado em qualificar leads.")
+  
+  // Áudio e Voz (ElevenLabs)
+  voiceId      String? @default("21m00Tcm4TlvDq8ikWAM") // ID da voz (Default: Rachel)
+  responseMode String  @default("TEXT") // TEXT, AUDIO, BOTH
 
   // Treinamento individualizado (Requisito 4 e 5)
   knowledgeBase String? @default("") // Texto de treinamento

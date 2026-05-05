@@ -1,11 +1,10 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "./src/api/config/prisma.js";
 import { WhatsAppManager } from "./whatsapp.js";
 import { EmailService } from "./email_service.js";
 import CalendarService from "./calendar_service.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import TTSService from "./src/api/services/TTSService.js";
 import cron from "node-cron";
-
-const prisma = new PrismaClient();
 const MAX_STEPS = 100;
 const MAX_CONCURRENT_EXECUTIONS = 10;
 const RATE_LIMIT_PER_MINUTE = 20; // max msgs per tenant per minute
@@ -24,7 +23,10 @@ class AutomationEngine {
     this.routineInterval = setInterval(() => this.processGlobalRoutines(), 5 * 60 * 1000);
     this.inactivityInterval = setInterval(() => this.processInactivityTriggers(), 5 * 60 * 1000);
     this.queueInterval = setInterval(() => this.processQueue(), 1000);
-    this.prospectingInterval = setInterval(() => this.processProspectingRoutines(), 10 * 60 * 1000); // 10 min
+    // Varredura de prospecção (novos leads) - a cada 1 min (mais proativo)
+    setInterval(() => {
+      this.runGlobalProspecting();
+    }, 1 * 60 * 1000);
     this.enrichmentInterval = setInterval(() => this.processEnrichmentRoutine(), 15 * 60 * 1000); // 15 min
     console.log(`[AutoEngine] ✅ Engine iniciado (concurrency: ${MAX_CONCURRENT_EXECUTIONS}, rate: ${RATE_LIMIT_PER_MINUTE} msg/min).`);
     this.cronJobs = new Map();
@@ -705,31 +707,44 @@ class AutomationEngine {
 
     if (!apiKey) {
       console.warn(`[AutoEngine] ⚠️ Nenhuma API Key configurada para o tenant ${tenantId}. Usando fallback Gemini (env).`);
+    } else {
+      console.log(`[AutoEngine] 🔑 Usando API Key: ${apiKey.substring(0, 8)}...`);
     }
 
-    // 2. Retornar modelo baseado no provedor (Foco no Gemini conforme solicitado)
+    // 2. Retornar modelo baseado no provedor
     if (provider === "GEMINI") {
-      const genAI = new GoogleGenerativeAI(apiKey || process.env.GEMINI_API_KEY);
+      // Forçamos v1 para evitar erros de v1beta não encontrar modelos em certas regiões
+      const genAI = new GoogleGenerativeAI(apiKey);
       return { 
         provider: "GEMINI", 
-        model: genAI.getGenerativeModel({ model: "gemini-1.5-flash" }) 
+        genAI,
+        apiKey
       };
     }
 
     if (provider === "OPENAI") {
-       // Implementação simplificada se quiser suportar OpenAI futuramente no mesmo motor
        return { provider: "OPENAI", apiKey };
     }
 
-    // Fallback padrão se der erro: Gemini
+    // Fallback padrão: Gemini
     const defaultAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    return { provider: "GEMINI", model: defaultAI.getGenerativeModel({ model: "gemini-1.5-flash" }) };
+    return { provider: "GEMINI", genAI: defaultAI, apiKey: process.env.GEMINI_API_KEY };
   }
 
   async _getLeadFullContext(lead, context) {
-    const sdr = await prisma.sdrBot.findFirst({ where: { tenantId: lead.tenantId, active: true } });
+    const tid = lead.tenantId || context.tenantId;
+    console.log(`[AutoEngine] 🔍 Buscando SDR para Tenant: ${tid}`);
+    
+    const sdr = await prisma.sdrBot.findFirst({ 
+      where: { 
+        tenantId: tid, 
+        active: true 
+      } 
+    });
+
     if (!sdr) {
-      console.log(`[AutoEngine] ⚠️ Nenhum SDR ativo para o tenant ${lead.tenantId}. Ignorando IA.`);
+      const allSdrs = await prisma.sdrBot.findMany({ where: { tenantId: tid } });
+      console.log(`[AutoEngine] ⚠️ Nenhum SDR ativo para o tenant ${tid}. (Total: ${allSdrs.length})`);
       return { sdr: null, history: "Sem histórico", kb: "" };
     }
 
@@ -746,64 +761,75 @@ class AutomationEngine {
 
   async callAI(customPrompt, lead, context) {
     try {
-      const { model } = await this._getAIModel(lead.tenantId);
+      const ai = await this._getAIModel(lead.tenantId);
       const { sdr, history, kb } = await this._getLeadFullContext(lead, context);
+      
       if (!sdr) {
           console.log(`[AutoEngine] SDR is globally disabled for tenant ${lead.tenantId}. Skipping AI Node.`);
           return null;
       }
 
-      // Check Plan Feature: AI
-      const tenantUsage = await prisma.tenant.findUnique({
-        where: { id: lead.tenantId },
-        include: { plan: true }
-      });
-      let aiEnabled = false;
-      if (tenantUsage && tenantUsage.plan && tenantUsage.plan.features) {
-         try { aiEnabled = JSON.parse(tenantUsage.plan.features).aiEnabled === true; } catch(e){}
+      if (ai.provider === "GEMINI") {
+        console.log(`[AutoEngine] 🧪 Diagnóstico AI Object:`, Object.keys(ai.genAI || {}));
+        const modelsToTry = [
+          "gemini-2.5-flash",
+          "gemini-1.5-flash-latest",
+          "gemini-1.5-flash", 
+          "gemini-1.5-pro", 
+          "gemini-1.0-pro",
+          "gemini-pro"
+        ];
+        let lastError = null;
+        
+        for (let modelName of modelsToTry) {
+          try {
+            console.log(`[AutoEngine] 🤖 Tentando modelo: ${modelName}...`);
+            const model = ai.genAI.getGenerativeModel({ model: modelName });
+            
+            console.log(`[AutoEngine] 📝 Gerando conteúdo para ${lead.name}...`);
+            const systemPrompt = customPrompt || sdr.prompt || "Você é um SDR profissional.";
+            const fullPrompt = `${systemPrompt}\n\nBase de conhecimento:\n${kb}\n\nDados do lead:\n- Nome: ${lead.name}\n- Telefone: ${lead.phone}\n\nHistórico:\n${history}\n\nResponda de forma curta e humana.`;
+
+            const result = await model.generateContent(fullPrompt);
+            const text = result.response.text();
+
+            console.log(`[AutoEngine] ✅ Resposta gerada com sucesso (${modelName})`);
+            
+            // Track usage
+            const tokens = Math.ceil((fullPrompt.length + text.length) / 4);
+            await prisma.tenant.update({
+              where: { id: lead.tenantId },
+              data: { usedTokens: { increment: tokens } }
+            }).catch(() => {});
+
+            return text;
+          } catch (err) {
+            lastError = err;
+            console.warn(`[AutoEngine] ⚠️ Falha no modelo ${modelName}: ${err.message}`);
+            if (err.message.includes("404") || err.message.includes("not found")) {
+              continue;
+            }
+            throw err; 
+          }
+        }
+
+        // DIAGNÓSTICO: Se chegou aqui, nenhum dos modelos funcionou.
+        console.error(`[AutoEngine] 🛑 Nenhum modelo padrão funcionou.`);
+        try {
+           if (typeof ai.genAI.listModels === "function") {
+              const modelList = await ai.genAI.listModels();
+              console.log(`[AutoEngine] 📋 Modelos disponíveis:`, modelList.models.map(m => m.name).join(", "));
+           } else {
+              console.log(`[AutoEngine] ❌ genAI.listModels não é uma função. Métodos disponíveis:`, Object.getOwnPropertyNames(Object.getPrototypeOf(ai.genAI)));
+           }
+        } catch(listErr) {
+           console.error(`[AutoEngine] ❌ Falha ao listar modelos:`, listErr.message);
+        }
+
+        throw lastError;
       }
-      if (!aiEnabled) {
-        console.log(`[AutoEngine] 🛑 Recurso de IA desabilitado para o tenant ${lead.tenantId}.`);
-        return "Serviço de IA não disponível neste plano.";
-      }
-      
-      // Check Token Limit
-      if (tenantUsage && tenantUsage.plan && tenantUsage.usedTokens >= tenantUsage.plan.maxTokens) {
-        console.log(`[AutoEngine] 🛑 Limite de tokens atingido para o tenant ${lead.tenantId}.`);
-        return "Desculpe, meu limite de processamento mensal foi atingido. Entre em contato com o suporte.";
-      }
-      
-      const systemPrompt = customPrompt || sdr.prompt || "Você é um SDR profissional.";
 
-      const fullPrompt = `${systemPrompt}
-
-Base de conhecimento:
-${kb}
-
-Dados do lead:
-- Nome: ${lead.name}
-- Telefone: ${lead.phone}
-- Status: ${lead.status}
-- Score: ${lead.qualificationScore || "N/A"}
-- Pesquisa Adicional: ${lead.notes || "Sem notas"}
-- Dados Estruturados: ${lead.extractedData || "{}"}
-
-Histórico da conversa:
-${history}
-
-Responda de forma profissional e objetiva, focando em qualificar o lead conforme o ICP.`;
-
-      const result = await model.generateContent(fullPrompt);
-      const text = result.response.text();
-
-      // Track usage
-      const tokens = Math.ceil((fullPrompt.length + text.length) / 4); // Estimativa fallback
-      await prisma.tenant.update({
-        where: { id: lead.tenantId },
-        data: { usedTokens: { increment: tokens } }
-      });
-
-      return text;
+      return "Provedor de IA não suportado.";
     } catch (e) {
       console.error("[AutoEngine] Erro na IA:", e);
       return "Desculpe, tive um problema técnico. Pode repetir?";
@@ -876,8 +902,9 @@ Responda de forma profissional e objetiva, focando em qualificar o lead conforme
       ].filter(t => enabledTools.includes(t.name));
 
       const systemPrompt = customPrompt || sdr?.prompt || "Você é um SDR inteligente com acesso a ferramentas do CRM.";
+      const { apiKey: tApiKey } = await this._getAIModel(lead.tenantId);
 
-      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      const genAI = new GoogleGenerativeAI(tApiKey || process.env.GEMINI_API_KEY);
       const toolModel = genAI.getGenerativeModel({
         model: "gemini-1.5-flash",
         tools: [{ functionDeclarations: toolDeclarations }]
@@ -1464,7 +1491,6 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
            console.log(`[Prospecting] Iniciando contato com lead ${lead.name} (${lead.phone}) baseado no ICP: ${icp.name}`);
            
            // Generate specific prospecting first message via AI
-           const { model } = await this._getAIModel(lead.tenantId);
            const icpContext = `O Público Alvo (ICP) deste contato é:
            Indústria: ${icp.industry || 'Geral'}
            Tamanho da Empresa: ${icp.companySize || 'Qualquer'}
@@ -1493,8 +1519,7 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
            `;
 
            try {
-             const result = await model.generateContent(prompt);
-             const aiMsg = result.response.text();
+             const aiMsg = await this.callAI(prompt, lead, { tenantId });
              
              if (aiMsg && lead.phone) {
                 // Ensure conversation marked as botActive=true exists
@@ -1504,11 +1529,11 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
                   create: { leadId: lead.id, botActive: true, tenantId }
                 });
 
-                // Fill AI summary with prospecting context
+                // Fill notes with prospecting context
                  await prisma.lead.update({
                     where: { id: lead.id },
                     data: { 
-                      aiContactSummary: `Lead em prospecção fria via ICP: ${icp.name}. Alvo: ${icp.role}. Objetivo abordado: ${icp.goals}`,
+                      notes: `${lead.notes || ""}\n[Auto-SDR] Prospecção via ICP: ${icp.name}. Alvo: ${icp.role}.`.trim(),
                       status: "PROSPECTING"
                     }
                  });
@@ -1802,41 +1827,24 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
         this.enqueueExecution(aut, lead);
       }
 
-      // Gera resposta do SDR ativo
-      const { sdr, history, kb } = await this._getLeadFullContext(lead, {});
-      if (!sdr) return null;
+      // Gera resposta do SDR ativo via callAI (que já tem retry logic)
+      const aiResponse = await this.callAI(null, lead, { tenantId });
+      if (!aiResponse) return null;
 
-      const { model } = await this._getAIModel(tenantId);
-      if (!model) return null;
+      // Lógica de Áudio (ElevenLabs)
+      const { sdr } = await this._getLeadFullContext(lead, {});
+      const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+      
+      let audioUrl = null;
+      if (sdr && (sdr.responseMode === "AUDIO" || sdr.responseMode === "BOTH") && tenant?.elevenLabsKey) {
+        audioUrl = await TTSService.generateSpeech(aiResponse, sdr.voiceId, tenant.elevenLabsKey);
+      }
 
-      const fullPrompt = `${sdr.prompt || "Você é um SDR profissional."}
-
-Base de conhecimento:
-${kb}
-
-Dados do lead:
-- Nome: ${lead.name}
-- Telefone: ${lead.phone}
-- Status: ${lead.status}
-
-Histórico da conversa:
-${history}
-
-Última mensagem do lead: "${content}"
-
-Responda de forma profissional, objetiva e humanizada.`;
-
-      const result = await model.generateContent(fullPrompt);
-      const aiResponse = result.response.text();
-
-      // Estima tokens usados
-      const tokens = Math.ceil((fullPrompt.length + aiResponse.length) / 4);
-      await prisma.tenant.update({
-        where: { id: tenantId },
-        data: { usedTokens: { increment: tokens } }
-      }).catch(() => {});
-
-      return aiResponse;
+      return { 
+        text: aiResponse, 
+        audioUrl, 
+        responseMode: sdr?.responseMode || "TEXT" 
+      };
     } catch (err) {
       console.error("[AutoEngine] Erro em handleIncomingMessage:", err.message);
       return null;

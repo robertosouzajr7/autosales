@@ -296,13 +296,33 @@ export class WhatsAppManager {
                 });
                 const data = await response.json();
 
-                if (data.success && data.ai_response) {
+                if (data.success) {
+                    const { ai_response, ai_audio_url, response_mode } = data;
+                    
                     await new Promise(resolve => setTimeout(resolve, 1500));
                     await sock.readMessages([msg.key]);
                     await sock.sendPresenceUpdate('composing', remoteJid);
                     await new Promise(resolve => setTimeout(resolve, 1000));
                     await sock.sendPresenceUpdate('paused', remoteJid);
-                    await sock.sendMessage(remoteJid, { text: data.ai_response });
+
+                    // 1. Envia Texto se necessário
+                    if (ai_response && (response_mode === "TEXT" || response_mode === "BOTH")) {
+                        await sock.sendMessage(remoteJid, { text: ai_response });
+                    }
+
+                    // 2. Envia Áudio se necessário
+                    if (ai_audio_url && (response_mode === "AUDIO" || response_mode === "BOTH")) {
+                        // O ai_audio_url é relativo (ex: /uploads/audio.mp3)
+                        const fullAudioPath = path.join(process.cwd(), "public", ai_audio_url);
+                        
+                        if (fs.existsSync(fullAudioPath)) {
+                            await sock.sendMessage(remoteJid, {
+                                audio: { url: fullAudioPath },
+                                mimetype: 'audio/mp4',
+                                ptt: true // Envia como mensagem de voz gravada
+                            });
+                        }
+                    }
                     
                     // 🔔 ALERTA & QUALIFICAÇÃO (Assíncrono - Não trava a resposta)
                     setImmediate(async () => {

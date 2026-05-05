@@ -23,7 +23,8 @@ export const createSdr = async (req, res) => {
     name, role, prompt, knowledgeBase, trainingUrls,
     responseDelay, voiceTone, escalationKeywords,
     followUpInterval, preConfirmationHours, noShowGraceMinutes,
-    postServiceCheckHours, enableWaitlist, active
+    postServiceCheckHours, enableWaitlist, active,
+    voiceId, responseMode
   } = req.body;
 
   try {
@@ -43,6 +44,8 @@ export const createSdr = async (req, res) => {
         postServiceCheckHours: postServiceCheckHours ? parseInt(postServiceCheckHours) : 24,
         enableWaitlist: enableWaitlist !== undefined ? enableWaitlist : true,
         active: active !== undefined ? active : true,
+        voiceId: voiceId || "21m00Tcm4TlvDq8ikWAM",
+        responseMode: responseMode || "TEXT",
         tenantId
       }
     });
@@ -61,7 +64,8 @@ export const updateSdr = async (req, res) => {
     name, role, prompt, knowledgeBase, trainingUrls,
     responseDelay, voiceTone, escalationKeywords,
     followUpInterval, preConfirmationHours, noShowGraceMinutes,
-    postServiceCheckHours, enableWaitlist, active
+    postServiceCheckHours, enableWaitlist, active,
+    voiceId, responseMode
   } = req.body;
 
   try {
@@ -81,7 +85,9 @@ export const updateSdr = async (req, res) => {
         noShowGraceMinutes: noShowGraceMinutes ? parseInt(noShowGraceMinutes) : undefined,
         postServiceCheckHours: postServiceCheckHours ? parseInt(postServiceCheckHours) : undefined,
         enableWaitlist,
-        active
+        active,
+        voiceId,
+        responseMode
       }
     });
     res.json(sdr);

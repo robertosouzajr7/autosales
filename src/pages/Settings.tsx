@@ -41,8 +41,9 @@ export default function Settings() {
   const [newUser, setNewUser] = useState({ name: "", email: "", password: "", role: "AGENT" });
 
   const [aiConfig, setAiConfig] = useState({
-    openaiKey: "",
-    geminiKey: "",
+    openAiKey: "",
+    aiApiKey: "",
+    elevenLabsKey: "",
     apolloApiKey: "",
     snovClientId: "",
     snovClientSecret: "",
@@ -94,15 +95,16 @@ export default function Settings() {
         const dataUsers = await resUsers.json();
         
         setAiConfig({
-          openaiKey: dataSettings.openAiKey || "",
-          geminiKey: dataSettings.aiApiKey || "",
+          openAiKey: dataSettings.openAiKey || "",
+          aiApiKey: dataSettings.aiApiKey || "",
+          elevenLabsKey: dataSettings.elevenLabsKey || "",
           apolloApiKey: dataSettings.apolloApiKey || "",
           snovClientId: dataSettings.snovClientId || "",
           snovClientSecret: dataSettings.snovClientSecret || "",
           googleRefreshToken: dataSettings.googleRefreshToken || "",
           webChatUrl: dataSettings.webChatUrl || "",
-          systemPrompt: dataSettings.systemPrompt || aiConfig.systemPrompt,
-          language: "pt-BR"
+          systemPrompt: dataSettings.systemPrompt || "Você é um SDR de elite focado em qualificação de leads B2B.",
+          language: dataSettings.language || "pt-BR",
         });
 
         setSmtpConfig({
@@ -143,6 +145,7 @@ export default function Settings() {
         headers,
         body: JSON.stringify({
           ...aiConfig,
+          elevenLabsKey: aiConfig.elevenLabsKey,
           smtpHost: smtpConfig.host,
           smtpPort: smtpConfig.port,
           smtpUser: smtpConfig.user,
@@ -368,12 +371,22 @@ export default function Settings() {
                    </div>
                 </Card>
                 <Card className="border-none shadow-xl rounded-[40px] bg-white p-12 space-y-8">
-                   <div className="flex items-center gap-4 text-blue-500 mb-4"><Bot className="w-8 h-8" /><h3 className="text-xl font-black text-slate-900 uppercase">Modelos de IA (LLMs)</h3></div>
-                   <div className="space-y-6">
-                      <div className="space-y-2"><Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Google Gemini API Key</Label><Input type="password" value={aiConfig.geminiKey} onChange={(e) => setAiConfig({...aiConfig, geminiKey: e.target.value})} className="h-16 bg-slate-50 rounded-3xl px-8 font-bold" /></div>
-                      <div className="space-y-2"><Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">OpenAI API Key (Opcional)</Label><Input type="password" value={aiConfig.openaiKey} onChange={(e) => setAiConfig({...aiConfig, openaiKey: e.target.value})} className="h-16 bg-slate-50 rounded-3xl px-8 font-bold" /></div>
-                   </div>
-                </Card>
+                    <div className="flex items-center gap-4 text-blue-500 mb-4"><Bot className="w-8 h-8" /><h3 className="text-xl font-black text-slate-900 uppercase">Modelos de IA (LLMs)</h3></div>
+                    <div className="space-y-6">
+                       <div className="space-y-2"><Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Google Gemini API Key</Label><Input type="password" value={aiConfig.aiApiKey} onChange={(e) => setAiConfig({...aiConfig, aiApiKey: e.target.value})} className="h-16 bg-slate-50 rounded-3xl px-8 font-bold" /></div>
+                       <div className="space-y-2"><Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">OpenAI API Key (Opcional)</Label><Input type="password" value={aiConfig.openAiKey} onChange={(e) => setAiConfig({...aiConfig, openAiKey: e.target.value})} className="h-16 bg-slate-50 rounded-3xl px-8 font-bold" /></div>
+                       
+                       <Separator />
+                       
+                       <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">ElevenLabs API Key (Voz Natural)</Label>
+                            <Badge className="bg-emerald-50 text-emerald-600 border-none text-[8px]">Novo</Badge>
+                          </div>
+                          <Input type="password" value={aiConfig.elevenLabsKey} onChange={(e) => setAiConfig({...aiConfig, elevenLabsKey: e.target.value})} className="h-16 bg-slate-50 rounded-3xl px-8 font-bold" placeholder="Sua chave da ElevenLabs" />
+                       </div>
+                    </div>
+                 </Card>
              </div>
           </TabsContent>
 

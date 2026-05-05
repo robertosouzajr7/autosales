@@ -27,7 +27,12 @@ export const getSettings = async (req, res) => {
       phone: tenant?.phone,
       aiProvider: tenant?.aiProvider,
       aiApiKey: tenant?.aiApiKey,
+      openAiKey: tenant?.openAiKey,
       apolloApiKey: tenant?.apolloApiKey,
+      snovClientId: tenant?.snovClientId,
+      snovClientSecret: tenant?.snovClientSecret,
+      systemPrompt: tenant?.systemPrompt,
+      webChatUrl: tenant?.webChatUrl,
       usedTokens: tenant?.usedTokens || 0,
       qualifiedLeadsCount: tenant?.qualifiedLeadsCount || 0,
       plan: tenant?.plan,
@@ -38,7 +43,8 @@ export const getSettings = async (req, res) => {
       smtpFrom: tenant?.smtpFrom,
       listmonkUrl: tenant?.listmonkUrl,
       listmonkToken: tenant?.listmonkToken,
-      listmonkListId: tenant?.listmonkListId
+      listmonkListId: tenant?.listmonkListId,
+      elevenLabsKey: tenant?.elevenLabsKey
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -47,7 +53,16 @@ export const getSettings = async (req, res) => {
 
 export const updateSettings = async (req, res) => {
   const tenantId = req.headers["x-tenant-id"] || req.tenantId;
-  const { name, phone, aiProvider, aiApiKey, apolloApiKey, smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom, listmonkUrl, listmonkToken, listmonkListId } = req.body;
+  console.log(`[Settings] Updating tenant ${tenantId}. Body:`, req.body);
+  
+  const { 
+    name, phone, aiProvider, aiApiKey, openAiKey, 
+    systemPrompt, googleRefreshToken, webChatUrl,
+    apolloApiKey, snovClientId, snovClientSecret,
+    smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom,
+    listmonkUrl, listmonkToken, listmonkListId, elevenLabsKey
+  } = req.body;
+  
   if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
 
   try {
@@ -58,7 +73,12 @@ export const updateSettings = async (req, res) => {
         phone,
         aiProvider,
         aiApiKey,
+        openAiKey,
         apolloApiKey,
+        snovClientId,
+        snovClientSecret,
+        systemPrompt,
+        webChatUrl,
         smtpHost,
         smtpPort: smtpPort ? parseInt(smtpPort) : null,
         smtpUser,
@@ -66,7 +86,8 @@ export const updateSettings = async (req, res) => {
         smtpFrom,
         listmonkUrl,
         listmonkToken,
-        listmonkListId
+        listmonkListId,
+        elevenLabsKey
       }
     });
     res.json(tenant);
