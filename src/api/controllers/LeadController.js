@@ -141,3 +141,87 @@ export const bulkDeleteLeads = async (req, res) => {
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 };
+
+/**
+ * Webhook interno: recebe mensagens do WhatsApp (via Baileys) e processa o fluxo SDR.
+ * Salva a mensagem do lead no banco e aciona a IA para gerar resposta.
+ * Rota: POST /api/webhook/whatsapp (pública, autenticada por tenantId no body)
+ */
+export const receiveWhatsappWebhook = async (req, res) => {
+  const { tenantId, phone, name, content, source = 'WhatsApp', skipNewLeadTrigger } = req.body;
+
+  if (!tenantId || !phone || !content) {
+    return res.status(400).json({ success: false, error: "Parâmetros obrigatórios: tenantId, phone, content" });
+  }
+
+  try {
+    // 1. Upsert do Lead
+    let lead = await prisma.lead.findFirst({ where: { phone, tenantId } });
+    if (!lead) {
+      lead = await prisma.lead.create({
+        data: { name: name || phone, phone, tenantId, source, status: "NEW" }
+      });
+      if (!skipNewLeadTrigger) {
+        AutomationEngine.dispatchTrigger("NEW_LEAD", { lead, tenantId }).catch(console.error);
+      }
+    }
+
+    // 2. Upsert da Conversa
+    let conversation = await prisma.conversation.findUnique({ where: { leadId: lead.id } });
+    if (!conversation) {
+      conversation = await prisma.conversation.create({
+        data: { leadId: lead.id, tenantId, botActive: true }
+      });
+    }
+
+    // 3. Salva a mensagem do LEAD no banco (role: USER)
+    const userMessage = await prisma.message.create({
+      data: {
+        conversationId: conversation.id,
+        tenantId,
+        content,
+        role: "USER",
+        messageType: "TEXT"
+      }
+    });
+
+    // 4. Emite evento SSE para atualizar a UI em tempo real
+    try {
+      const { messageEvents } = await import("./MessageController.js");
+      messageEvents.emit("new_message", { tenantId, message: userMessage });
+    } catch (_) {}
+
+    // 5. Verifica se o bot está ativo para esta conversa
+    if (!conversation.botActive) {
+      console.log(`[Webhook] 🤖 Bot desativado para ${phone}. Mensagem salva mas sem resposta automática.`);
+      return res.json({ success: true, ai_response: null });
+    }
+
+    // 6. Aciona o SDR para gerar resposta via IA
+    const aiResponse = await AutomationEngine.handleIncomingMessage(lead, content, tenantId);
+
+    // 7. Se houve resposta da IA, salva no banco também
+    if (aiResponse) {
+      const assistantMessage = await prisma.message.create({
+        data: {
+          conversationId: conversation.id,
+          tenantId,
+          content: aiResponse,
+          role: "ASSISTANT",
+          messageType: "TEXT"
+        }
+      });
+      try {
+        const { messageEvents } = await import("./MessageController.js");
+        messageEvents.emit("new_message", { tenantId, message: assistantMessage });
+      } catch (_) {}
+    }
+
+    res.json({ success: true, ai_response: aiResponse || null });
+
+  } catch (error) {
+    console.error("[Webhook] Erro ao processar mensagem WhatsApp:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+

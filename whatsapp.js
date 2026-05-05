@@ -210,19 +210,30 @@ export class WhatsAppManager {
             if (!msg.message || msg.key.fromMe) return;
 
             const remoteJid = msg.key.remoteJid;
-            const phone = remoteJid?.split('@')[0];
+            
+            // WhatsApp migrou para LID (@lid) em vez de @s.whatsapp.net
+            // Quando é @lid, o telefone real vem em msg.key.senderPn
+            let phone;
+            if (remoteJid?.endsWith('@lid')) {
+                // Extrai o número do senderPn (ex: "557185240084@s.whatsapp.net" -> "557185240084")
+                phone = msg.key.senderPn?.split('@')[0] || msg.pushName;
+                console.log(`[WhatsApp] Mensagem LID de ${phone} (lid: ${remoteJid})`);
+            } else {
+                phone = remoteJid?.split('@')[0];
+            }
+            
             const name = msg.pushName || 'Lead';
-            const content = msg.message.conversation || msg.message.extendedTextMessage?.text;
+            const content = msg.message?.conversation || 
+                           msg.message?.extendedTextMessage?.text ||
+                           msg.message?.imageMessage?.caption ||
+                           msg.message?.videoMessage?.caption;
 
-            if (!content || !phone || !remoteJid) return;
-            if (remoteJid.includes('@g.us') || remoteJid === 'status@broadcast') return;
+            if (!content || !phone) return;
+            if (remoteJid?.includes('@g.us') || remoteJid === 'status@broadcast') return;
 
             // 🚫 Prevenção de Loop: Ignorar se a mensagem for para o próprio número do robô
             const myNumber = sock.user?.id?.split(':')[0];
-            if (phone === myNumber) {
-                // console.log(`[WhatsApp] Ignorando mensagem do próprio número para evitar loop.`);
-                return;
-            }
+            if (phone === myNumber) return;
 
             // Usa o tenantId REAL (do Tenant), não o accountId
             const session = whatsappSessions.get(accountId);

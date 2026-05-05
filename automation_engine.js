@@ -1769,6 +1769,79 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
   async sendMessage(tenantId, phone, content) {
     await WhatsAppManager.sendMessage(tenantId, phone, content);
   }
+
+  /**
+   * Aciona automações baseadas em eventos (NEW_LEAD, PIPELINE_MOVE, etc.)
+   */
+  async dispatchTrigger(trigger, payload) {
+    try {
+      const { lead, tenantId } = payload;
+      const auts = await prisma.automation.findMany({
+        where: { tenantId: tenantId || lead?.tenantId, trigger, active: true }
+      });
+      for (const aut of auts) {
+        console.log(`[AutoEngine] ⚡ Disparando automação '${aut.name}' (trigger: ${trigger})`);
+        this.enqueueExecution(aut, lead);
+      }
+    } catch (err) {
+      console.error(`[AutoEngine] Erro ao disparar trigger ${trigger}:`, err);
+    }
+  }
+
+  /**
+   * Processa mensagem recebida de um lead e retorna resposta da IA (SDR).
+   * Usado pelo webhook /api/webhook/whatsapp.
+   */
+  async handleIncomingMessage(lead, content, tenantId) {
+    try {
+      // Verifica se há automações INCOMING_MESSAGE ativas
+      const auts = await prisma.automation.findMany({
+        where: { tenantId, trigger: "INCOMING_MESSAGE", active: true }
+      });
+      for (const aut of auts) {
+        this.enqueueExecution(aut, lead);
+      }
+
+      // Gera resposta do SDR ativo
+      const { sdr, history, kb } = await this._getLeadFullContext(lead, {});
+      if (!sdr) return null;
+
+      const { model } = await this._getAIModel(tenantId);
+      if (!model) return null;
+
+      const fullPrompt = `${sdr.prompt || "Você é um SDR profissional."}
+
+Base de conhecimento:
+${kb}
+
+Dados do lead:
+- Nome: ${lead.name}
+- Telefone: ${lead.phone}
+- Status: ${lead.status}
+
+Histórico da conversa:
+${history}
+
+Última mensagem do lead: "${content}"
+
+Responda de forma profissional, objetiva e humanizada.`;
+
+      const result = await model.generateContent(fullPrompt);
+      const aiResponse = result.response.text();
+
+      // Estima tokens usados
+      const tokens = Math.ceil((fullPrompt.length + aiResponse.length) / 4);
+      await prisma.tenant.update({
+        where: { id: tenantId },
+        data: { usedTokens: { increment: tokens } }
+      }).catch(() => {});
+
+      return aiResponse;
+    } catch (err) {
+      console.error("[AutoEngine] Erro em handleIncomingMessage:", err.message);
+      return null;
+    }
+  }
 }
 
 export default new AutomationEngine();

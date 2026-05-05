@@ -11,6 +11,7 @@ import publicRouter from "./routes/public.js";
 import publicApiRouter from "./routes/publicApi.js";
 import { WhatsAppManager } from "../../whatsapp.js";
 import AutomationEngine from "../../automation_engine.js";
+import { receiveWhatsappWebhook } from "./controllers/LeadController.js";
 import bcrypt from "bcryptjs";
 import { EventEmitter } from "events";
 
@@ -44,6 +45,9 @@ if (process.env.NODE_ENV === "development") {
         next();
     });
 }
+
+// ⚡ Webhook WhatsApp (DEVE ser antes dos routers com authMiddleware)
+app.post("/api/webhook/whatsapp", receiveWhatsappWebhook);
 
 // Routes
 app.use("/api/public", publicApiRouter);
