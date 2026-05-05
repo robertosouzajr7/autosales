@@ -44,8 +44,15 @@ export const importBulk = async (req, res) => {
     const createdLeads = [];
     for (const c of contacts) {
       if (!c.phone && !c.email) continue;
-      const lead = await prisma.lead.create({
-        data: {
+      const lead = await prisma.lead.upsert({
+        where: { 
+          phone_tenantId: { phone: c.phone, tenantId } 
+        },
+        update: {
+          name: c.name || undefined,
+          email: c.email || undefined,
+        },
+        create: {
           name: c.name || "Contato Importado",
           phone: c.phone || null,
           email: c.email || null,
@@ -77,8 +84,17 @@ export const createLead = async (req, res) => {
       ...(stageId !== undefined && stageId !== null && stageId !== '' && { stageId }),
       ...(isToEnrich !== undefined && { isToEnrich }),
     };
-    const lead = await prisma.lead.create({ data });
-    AutomationEngine.dispatchTrigger("NEW_LEAD", { lead, tenantId }).catch(console.error);
+    const lead = await prisma.lead.upsert({
+      where: { 
+        phone_tenantId: { phone, tenantId } 
+      },
+      update: data,
+      create: data
+    });
+    
+    if (lead.createdAt >= new Date(Date.now() - 2000)) {
+      AutomationEngine.dispatchTrigger("NEW_LEAD", { lead, tenantId }).catch(console.error);
+    }
     res.json(lead);
   } catch (e) { res.status(500).json({ error: e.message }); }
 };
@@ -155,15 +171,27 @@ export const receiveWhatsappWebhook = async (req, res) => {
   }
 
   try {
-    // 1. Upsert do Lead
-    let lead = await prisma.lead.findFirst({ where: { phone, tenantId } });
-    if (!lead) {
-      lead = await prisma.lead.create({
-        data: { name: name || phone, phone, tenantId, source, status: "NEW" }
-      });
-      if (!skipNewLeadTrigger) {
-        AutomationEngine.dispatchTrigger("NEW_LEAD", { lead, tenantId }).catch(console.error);
+    // 1. Upsert do Lead (Garante que não existam duplicados por telefone + tenantId)
+    const lead = await prisma.lead.upsert({
+      where: { 
+        phone_tenantId: { phone, tenantId } 
+      },
+      update: { 
+        name: name || undefined, 
+        source: source || undefined 
+      },
+      create: { 
+        name: name || phone, 
+        phone, 
+        tenantId, 
+        source, 
+        status: "NEW" 
       }
+    });
+
+    if (lead.createdAt >= new Date(Date.now() - 5000) && !skipNewLeadTrigger) {
+      // Somente dispara se foi criado agora (nos últimos 5 segundos)
+      AutomationEngine.dispatchTrigger("NEW_LEAD", { lead, tenantId }).catch(console.error);
     }
 
     // 2. Upsert da Conversa

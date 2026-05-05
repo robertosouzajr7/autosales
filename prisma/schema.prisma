@@ -132,6 +132,8 @@ model Lead {
   appointments         Appointment[]
   progressions         AutomationProgress[]
   automationExecutions AutomationExecution[]
+
+  @@unique([phone, tenantId])
 }
 
 model Campaign {
