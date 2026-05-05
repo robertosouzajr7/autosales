@@ -33,7 +33,15 @@ export default function Connections() {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [qrStatus, setQrStatus] = useState<string>("Aguardando...");
   const [loading, setLoading] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const { toast } = useToast();
+
+  // Conta regressiva do cooldown
+  useEffect(() => {
+    if (cooldownSeconds <= 0) return;
+    const timer = setTimeout(() => setCooldownSeconds(s => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldownSeconds]);
 
   const fetchConnections = async () => {
     try {
@@ -92,6 +100,12 @@ export default function Connections() {
           setQrStatus("Desconectado. Tente novamente.");
           eventSource.close();
           fetchConnections();
+        } else if (data.status === "COOLDOWN") {
+          setQrCode(null);
+          setCooldownSeconds(data.remainingSeconds || 300);
+          setQrStatus(`⏳ ${data.message || "Aguarde antes de tentar novamente."}`);
+          toast({ title: "⏳ Aguarde", description: data.message, variant: "destructive" });
+          eventSource.close();
         } else if (data.status === "ERROR") {
           setQrCode(null);
           setQrStatus(`Erro: ${data.message || "Falha na conexão"}`);
@@ -336,6 +350,11 @@ export default function Connections() {
                          <div className="w-48 h-48 bg-white flex items-center justify-center rounded-2xl overflow-hidden border-4 border-slate-900">
                             {qrCode ? (
                                <QRCodeCanvas value={qrCode} size={192} level="H" includeMargin={true} />
+                            ) : cooldownSeconds > 0 ? (
+                               <div className="flex flex-col items-center gap-3 text-orange-500">
+                                  <span className="text-5xl font-black">{Math.floor(cooldownSeconds / 60)}:{String(cooldownSeconds % 60).padStart(2, '0')}</span>
+                                  <span className="text-[10px] font-black uppercase tracking-tighter text-center text-slate-500">Aguarde para tentar novamente</span>
+                               </div>
                             ) : (
                                <div className="flex flex-col items-center gap-2 text-slate-300">
                                   <RefreshCw className="w-12 h-12 animate-spin" />
@@ -347,8 +366,8 @@ export default function Connections() {
                    </div>
                </div>
 
-               <div className="bg-slate-900 text-white px-8 py-4 rounded-3xl font-black flex items-center justify-center gap-3 shadow-xl">
-                  <ShieldCheck className="w-5 h-5 text-primary" /> {qrStatus}
+               <div className={`px-8 py-4 rounded-3xl font-black flex items-center justify-center gap-3 shadow-xl ${cooldownSeconds > 0 ? 'bg-orange-500' : 'bg-slate-900'} text-white`}>
+                  <ShieldCheck className="w-5 h-5 text-white" /> {qrStatus}
                </div>
                
                <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest px-10 leading-relaxed">

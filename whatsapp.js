@@ -9,6 +9,10 @@ const prisma = new PrismaClient();
 
 export const whatsappSessions = new Map();
 
+// Mapa de cooldown: previne tentativas excessivas após erros 405 (rate-limiting WhatsApp)
+const connectionCooldowns = new Map();
+const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutos
+
 // Classe responsável por orquestrar múltiplas conexões de empresas (Multi-tenant SaaS)
 export class WhatsAppManager {
     /**
@@ -72,6 +76,19 @@ export class WhatsAppManager {
             }
         }
 
+        // Verifica cooldown anti-rate-limit do WhatsApp
+        const cooldownUntil = connectionCooldowns.get(accountId);
+        if (cooldownUntil && Date.now() < cooldownUntil) {
+            const remainingSeconds = Math.ceil((cooldownUntil - Date.now()) / 1000);
+            console.log(`[WhatsApp] ⏳ Conta ${accountId} em cooldown. Aguarde ${remainingSeconds}s.`);
+            if (emitQr) emitQr(JSON.stringify({ 
+                status: "COOLDOWN", 
+                message: `Aguarde ${remainingSeconds} segundos antes de tentar novamente.`,
+                remainingSeconds
+            }));
+            return null;
+        }
+
         // Marca como em progresso
         whatsappSessions.set(accountId, { status: 'CONNECTING', sock: null, tenantId: null });
         await this.updateAccountStatus(accountId, 'CONNECTING');
@@ -85,7 +102,7 @@ export class WhatsAppManager {
             return null;
         }
 
-        const authDir = path.resolve(`./instances/${accountId}`);
+        const authDir = `./instances/${accountId}`;
         if (!fs.existsSync(authDir)) fs.mkdirSync(authDir, { recursive: true });
 
         const { state, saveCreds } = await useMultiFileAuthState(authDir);
@@ -95,7 +112,7 @@ export class WhatsAppManager {
             version,
             auth: state,
             printQRInTerminal: false,
-            browser: ['AutoSales SDR', 'Chrome', '1.0.0'],
+            browser: ['VendAi SDR', 'Chrome', '1.0.0'],
             logger: pino({ level: 'warn' })
         });
 
@@ -138,13 +155,41 @@ export class WhatsAppManager {
                     }, 3000);
                 } else {
                     await WhatsAppManager.updateAccountStatus(accountId, 'DISCONNECTED');
-                    if (emitQr) emitQr(JSON.stringify({ status: "DISCONNECTED" }));
                     
-                    // Logout explícito: limpa credenciais
-                    console.log(`[WhatsApp] Logout detectado para ${accountId}. Limpando credenciais.`);
-                    try {
-                        fs.rmSync(authDir, { recursive: true, force: true });
-                    } catch (_) {}
+                    // Erro 405 = rate limit do WhatsApp. Aplica cooldown de 5 minutos.
+                    if (statusCode === 405) {
+                        const cooldownUntil = Date.now() + COOLDOWN_MS;
+                        connectionCooldowns.set(accountId, cooldownUntil);
+                        const remainingSeconds = Math.ceil(COOLDOWN_MS / 1000);
+                        console.log(`[WhatsApp] ⏳ Erro 405 para ${accountId}. Cooldown de ${remainingSeconds}s ativado para evitar bloqueio de IP.`);
+                        if (emitQr) emitQr(JSON.stringify({ 
+                            status: "COOLDOWN", 
+                            message: `WhatsApp recusou a conexão. Aguarde ${Math.ceil(remainingSeconds/60)} minutos antes de tentar novamente.`,
+                            remainingSeconds
+                        }));
+                    } else {
+                        if (emitQr) emitQr(JSON.stringify({ status: "ERROR", message: `Conexão recusada (Erro ${statusCode}). Limpando sessão...` }));
+                    }
+                    
+                    // Logout explícito ou erro fatal: limpa credenciais
+                    console.log(`[WhatsApp] Erro fatal/Logout detectado para ${accountId} (code: ${statusCode}). Limpando credenciais...`);
+                    
+                    // No Windows, precisamos de um pequeno delay para garantir que o Baileys liberou os handles dos arquivos
+                    setTimeout(() => {
+                        try {
+                            if (fs.existsSync(authDir)) {
+                                fs.rmSync(authDir, { recursive: true, force: true });
+                                console.log(`[WhatsApp] ✅ Credenciais de ${accountId} limpas com sucesso.`);
+                            }
+                        } catch (err) {
+                            console.error(`[WhatsApp] ❌ Erro ao limpar credenciais de ${accountId}:`, err.message);
+                            // Tenta remover apenas o creds.json se a pasta toda falhar
+                            try {
+                                const credsFile = path.join(authDir, 'creds.json');
+                                if (fs.existsSync(credsFile)) fs.unlinkSync(credsFile);
+                            } catch (_) {}
+                        }
+                    }, 1500);
                 }
             } else if (connection === 'open') {
                 // Extrai o número de telefone da sessão conectada

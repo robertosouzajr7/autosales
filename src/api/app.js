@@ -22,7 +22,7 @@ const eventEmitter = new EventEmitter();
 AutomationEngine.setEventEmitter(eventEmitter);
 
 // Security
-app.use(helmet());
+// app.use(helmet());
 app.use(cors({
   origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(",") : "*",
   methods: ["GET", "POST", "PUT", "DELETE"],
@@ -35,7 +35,7 @@ const limiter = rateLimit({
   message: { error: "Muitas requisições. Tente novamente mais tarde." }
 });
 
-app.use("/api/", limiter);
+// app.use("/api/", limiter);
 app.use(express.json());
 
 if (process.env.NODE_ENV === "development") {

@@ -6,7 +6,7 @@ import {
   Users, Target, Calendar, MessageSquare, TrendingUp, 
   ArrowUpRight, ArrowDownRight, Bot, Zap, Clock,
   MoreHorizontal, ChevronRight, BarChart3, PieChart as PieChartIcon,
-  ShieldCheck, CheckCircle2, AlertCircle, Phone, Search, Mail
+  ShieldCheck, CheckCircle2, AlertCircle, Phone, Search, Mail, Brain
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
@@ -453,8 +453,8 @@ export default function Dashboard() {
   );
 }
 
-function UsageMetric({ label, used, max, color, icon }: { label: string, used: number, max: number, color: string, icon: React.ReactNode }) {
-  const percentage = Math.min(100, (used / (max || 1)) * 100);
+function UsageMetric({ label, used = 0, max = 0, color, icon }: { label: string, used: number, max: number, color: string, icon: React.ReactNode }) {
+  const percentage = Math.min(100, ((used || 0) / (max || 1)) * 100);
   const isHigh = percentage > 80;
 
   return (
@@ -464,7 +464,7 @@ function UsageMetric({ label, used, max, color, icon }: { label: string, used: n
              <div className="p-1.5 bg-slate-50 rounded-lg">{icon}</div>
              <span className="text-slate-400">{label}</span>
           </div>
-          <span className={isHigh ? "text-orange-500" : "text-slate-900"}>{used.toLocaleString()} / {max.toLocaleString()}</span>
+          <span className={isHigh ? "text-orange-500" : "text-slate-900"}>{(used || 0).toLocaleString()} / {(max || 0).toLocaleString()}</span>
        </div>
        <div className="w-full h-3 bg-slate-50 rounded-full overflow-hidden border border-slate-100 p-0.5">
           <div 
