@@ -25,6 +25,107 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { notificationStore } from "@/lib/notifications";
 
+// Helper para formatar tempo
+const formatTime = (seconds: number) => {
+  if (isNaN(seconds)) return "0:00";
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+};
+
+// Componente de Player de Áudio Profissional
+function AudioPlayer({ url, isOut }: { url: string, isOut: boolean }) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const audio = new Audio(url);
+    audioRef.current = audio;
+
+    const onLoadedMetadata = () => setDuration(audio.duration);
+    const onTimeUpdate = () => {
+      setCurrentTime(audio.currentTime);
+      setProgress((audio.currentTime / audio.duration) * 100);
+    };
+    const onEnded = () => {
+      setIsPlaying(false);
+      setProgress(0);
+      setCurrentTime(0);
+    };
+
+    audio.addEventListener('loadedmetadata', onLoadedMetadata);
+    audio.addEventListener('timeupdate', onTimeUpdate);
+    audio.addEventListener('ended', onEnded);
+
+    return () => {
+      audio.pause();
+      audio.removeEventListener('loadedmetadata', onLoadedMetadata);
+      audio.removeEventListener('timeupdate', onTimeUpdate);
+      audio.removeEventListener('ended', onEnded);
+    };
+  }, [url]);
+
+  const togglePlay = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
+    setIsPlaying(!isPlaying);
+  };
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!audioRef.current) return;
+    const seekTime = (parseFloat(e.target.value) / 100) * duration;
+    audioRef.current.currentTime = seekTime;
+    setProgress(parseFloat(e.target.value));
+  };
+
+  return (
+    <div className="flex items-center gap-3 min-w-[200px]">
+      <button 
+        onClick={togglePlay}
+        className={`w-8 h-8 flex items-center justify-center rounded-full shrink-0 transition-all ${
+          isOut ? 'bg-white text-emerald-600' : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+        }`}
+      >
+        {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+      </button>
+      
+      <div className="flex-1 space-y-1">
+        <input 
+          type="range"
+          min="0"
+          max="100"
+          value={progress || 0}
+          onChange={handleSeek}
+          className={`w-full h-1 rounded-full appearance-none cursor-pointer accent-current ${
+            isOut ? 'text-white/40 bg-white/20' : 'text-emerald-500 bg-slate-100'
+          }`}
+          style={{
+            background: isOut 
+              ? `linear-gradient(to right, rgba(255,255,255,0.8) ${progress}%, rgba(255,255,255,0.2) ${progress}%)`
+              : `linear-gradient(to right, #10b981 ${progress}%, #f1f5f9 ${progress}%)`
+          }}
+        />
+        <div className="flex justify-between items-center px-0.5">
+           <span className={`text-[8px] font-black uppercase tracking-tighter ${isOut ? 'text-white/60' : 'text-slate-400'}`}>
+             {formatTime(currentTime)}
+           </span>
+           <span className={`text-[8px] font-black uppercase tracking-tighter ${isOut ? 'text-white/60' : 'text-slate-400'}`}>
+             {formatTime(duration)}
+           </span>
+        </div>
+      </div>
+      <Volume2 className={`w-3 h-3 opacity-30 shrink-0 ${isOut ? 'text-white' : 'text-slate-900'}`} />
+    </div>
+  );
+}
+
 export default function Conversations() {
   const [chats, setChats] = useState<any[]>([]);
   const [selectedChat, setSelectedChat] = useState<any>(null);
@@ -43,12 +144,8 @@ export default function Conversations() {
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [isPlayingPreview, setIsPlayingPreview] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
-  const [playingMsgId, setPlayingMsgId] = useState<string | null>(null);
-  const audioRefs = useRef<Record<string, HTMLAudioElement>>({});
   // Unread
   const [unreadCount, setUnreadCount] = useState(0);
   const selectedChatRef = useRef(selectedChat);
@@ -209,33 +306,7 @@ export default function Conversations() {
     setAudioUrl(null);
   };
 
-  const togglePreview = () => {
-    if (!audioUrl) return;
-    if (!previewAudioRef.current) previewAudioRef.current = new Audio(audioUrl);
-    if (isPlayingPreview) {
-      previewAudioRef.current.pause();
-      setIsPlayingPreview(false);
-    } else {
-      previewAudioRef.current.play();
-      setIsPlayingPreview(true);
-      previewAudioRef.current.onended = () => setIsPlayingPreview(false);
-    }
-  };
 
-  const toggleMsgAudio = (msgId: string, url: string) => {
-    if (playingMsgId && playingMsgId !== msgId) {
-      audioRefs.current[playingMsgId]?.pause();
-      setPlayingMsgId(null);
-    }
-    if (!audioRefs.current[msgId]) audioRefs.current[msgId] = new Audio(url);
-    const a = audioRefs.current[msgId];
-    if (playingMsgId === msgId) {
-      a.pause(); setPlayingMsgId(null);
-    } else {
-      a.play(); setPlayingMsgId(msgId);
-      a.onended = () => setPlayingMsgId(null);
-    }
-  };
 
   const sendAudio = async () => {
     if (!audioBlob || !selectedChat) return;
@@ -309,19 +380,9 @@ export default function Conversations() {
           }
         }
 
-        // Chat não está aberto → incrementa unread e notifica
+        // Chat não está aberto → incrementa unread (apenas local para badge da lista se quiser)
         if (message.role === 'USER') {
           setUnreadCount(c => c + 1);
-          notificationStore.add({
-            id: message.id || Date.now(),
-            content: message.content,
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            read: false
-          });
-          toast({
-            title: "💬 Nova mensagem recebida",
-            description: (message.content || "").slice(0, 60),
-          });
         }
 
         // Atualiza preview da lista
@@ -498,24 +559,11 @@ export default function Conversations() {
                  <div className="space-y-6 max-w-4xl mx-auto flex flex-col">
                     {messages.map(msg => {
                       const isOut = msg.role === 'SDR' || msg.role === 'ASSISTANT';
-                      const isAudio = msg.messageType === 'AUDIO';
                       return (
                         <div key={msg.id} className={`flex ${isOut ? 'justify-end' : 'justify-start'}`}>
                           <div className={`max-w-[70%] p-4 rounded-3xl text-sm font-medium shadow-sm ${isOut ? 'bg-slate-900 text-white rounded-tr-none' : 'bg-white text-slate-700 rounded-tl-none border border-slate-100'}`}>
-                            {isAudio ? (
-                              <div className="flex items-center gap-3 min-w-[160px]">
-                                <button onClick={() => toggleMsgAudio(msg.id, msg.content)}
-                                  className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${isOut ? 'bg-white/20 hover:bg-white/30' : 'bg-emerald-500 hover:bg-emerald-600 text-white'}`}>
-                                  {playingMsgId === msg.id ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                                </button>
-                                <div className="flex-1">
-                                  <div className={`h-1.5 rounded-full ${isOut ? 'bg-white/20' : 'bg-slate-200'}`}>
-                                    <div className={`h-full w-1/2 rounded-full ${isOut ? 'bg-white/60' : 'bg-emerald-500'}`} />
-                                  </div>
-                                  <p className={`text-[9px] mt-1 ${isOut ? 'text-white/40' : 'text-slate-300'}`}>Áudio</p>
-                                </div>
-                                <Volume2 className="w-3 h-3 opacity-30 shrink-0" />
-                              </div>
+                            {msg.messageType === 'AUDIO' ? (
+                              <AudioPlayer url={msg.content} isOut={isOut} />
                             ) : msg.content}
                             <p className={`text-[8px] font-bold uppercase mt-2 text-right ${isOut ? 'text-white/30' : 'text-slate-300'}`}>
                               {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -554,15 +602,14 @@ export default function Conversations() {
                 {audioUrl ? (
                   // Preview de áudio gravado
                   <div className="flex items-center gap-3 bg-emerald-50 p-3 pl-5 rounded-3xl border border-emerald-100">
-                    <button onClick={togglePreview} className="w-10 h-10 flex items-center justify-center bg-emerald-500 rounded-xl text-white shrink-0">
-                      {isPlayingPreview ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                    </button>
                     <div className="flex-1">
-                      <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Áudio gravado</p>
-                      <div className="h-1.5 bg-emerald-200 rounded-full mt-1"><div className="h-full w-2/3 bg-emerald-500 rounded-full" /></div>
+                      <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest mb-2">Prévia da Mensagem</p>
+                      <AudioPlayer url={audioUrl} isOut={false} />
                     </div>
-                    <Button onClick={cancelAudio} variant="ghost" size="icon" className="text-slate-400 hover:text-red-500 rounded-xl"><MicOff className="w-4 h-4" /></Button>
-                    <Button onClick={sendAudio} className="h-10 px-5 bg-emerald-500 hover:bg-emerald-600 rounded-2xl text-xs font-black"><Send className="w-4 h-4 mr-1" /> Enviar</Button>
+                    <div className="flex items-center gap-2 border-l border-emerald-200 pl-4 ml-2">
+                      <Button onClick={cancelAudio} variant="ghost" size="icon" className="text-slate-400 hover:text-red-500 rounded-xl"><MicOff className="w-4 h-4" /></Button>
+                      <Button onClick={sendAudio} className="h-10 px-5 bg-emerald-500 hover:bg-emerald-600 rounded-2xl text-xs font-black shadow-lg shadow-emerald-500/20"><Send className="w-4 h-4 mr-1" /> Enviar</Button>
+                    </div>
                   </div>
                 ) : isRecording ? (
                   // Gravando

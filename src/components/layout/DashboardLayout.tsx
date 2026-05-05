@@ -53,6 +53,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -279,8 +280,47 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [planData, setPlanData] = useState<any>({ features: {}, name: "Básico", maxTokens: 1 });
   const location = useLocation();
+  const { toast } = useToast();
   const [notifications, setNotifications] = useState<any[]>([]);
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const tenantId = localStorage.getItem("tenantId"); // Certifique-se que o tenantId está no localStorage
+
+    if (!token) return;
+
+    // Conecta ao SSE para notificações globais
+    const eventSource = new EventSource(`/api/events?tenantId=${tenantId}&token=${token}`);
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'new_message' && data.message.role === 'USER') {
+          // Adiciona ao store global
+          notificationStore.add({
+            id: data.message.id || Date.now(),
+            content: data.message.content,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            read: false,
+            messageType: data.message.messageType
+          });
+
+          // Mostra o toast
+          toast({
+            title: "💬 Nova mensagem",
+            description: data.message.messageType === 'AUDIO' 
+              ? "🎙️ Áudio recebido" 
+              : (data.message.content || "").slice(0, 60),
+          });
+        }
+      } catch (e) {
+        console.error("Erro no SSE de notificações:", e);
+      }
+    };
+
+    return () => eventSource.close();
+  }, [toast]);
 
   useEffect(() => {
     // Subscribe to global notification store
