@@ -13,3 +13,12 @@ async function startServer() {
 }
 
 startServer();
+
+// Prevenir queda do processo por erros internos do Baileys/Socket
+process.on('unhandledRejection', (reason, promise) => {
+  console.error(' [CRÍTICO] Rejeição não tratada:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error(' [CRÍTICO] Exceção não capturada:', err);
+});

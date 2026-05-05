@@ -1,16 +1,16 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
-  MessageSquare, Send, Search, Filter, 
+  MessageSquare, Send, Search,
   Circle, MoreVertical, Smartphone, Bot, 
-  CheckCircle2, Clock, Phone, Mail, User,
-  ChevronRight, Calendar
+  Phone, Mail, User,
+  ChevronRight, Calendar, Mic, MicOff, Play, Pause, Volume2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   DropdownMenu,
@@ -23,6 +23,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { notificationStore } from "@/lib/notifications";
 
 export default function Conversations() {
   const [chats, setChats] = useState<any[]>([]);
@@ -38,6 +39,19 @@ export default function Conversations() {
   const [callModalOpen, setCallModalOpen] = useState(false);
   const [callMessage, setCallMessage] = useState("");
   const [callingLoading, setCallingLoading] = useState(false);
+  // Audio recording
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isPlayingPreview, setIsPlayingPreview] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [playingMsgId, setPlayingMsgId] = useState<string | null>(null);
+  const audioRefs = useRef<Record<string, HTMLAudioElement>>({});
+  // Unread
+  const [unreadCount, setUnreadCount] = useState(0);
+  const selectedChatRef = useRef(selectedChat);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -162,47 +176,160 @@ export default function Conversations() {
     } catch (e) {}
   };
 
-  useEffect(() => {
-    fetchData();
-    
-    // Configurar SSE para tempo real
-    const tenantId = localStorage.getItem("tenantId"); // Assumindo que está no localStorage
-    if (!tenantId) return;
+  // Audio recording functions
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunksRef.current = [];
+      const mr = new MediaRecorder(stream);
+      mediaRecorderRef.current = mr;
+      mr.ondataavailable = e => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      mr.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        setAudioBlob(blob);
+        setAudioUrl(URL.createObjectURL(blob));
+        stream.getTracks().forEach(t => t.stop());
+      };
+      mr.start();
+      setIsRecording(true);
+    } catch {
+      toast({ title: "Microfone não disponível", variant: "destructive" });
+    }
+  };
 
-    const eventSource = new EventSource(`/api/events?tenantId=${tenantId}`);
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop();
+    setIsRecording(false);
+  };
+
+  const cancelAudio = () => {
+    if (isRecording) mediaRecorderRef.current?.stop();
+    setIsRecording(false);
+    setAudioBlob(null);
+    setAudioUrl(null);
+  };
+
+  const togglePreview = () => {
+    if (!audioUrl) return;
+    if (!previewAudioRef.current) previewAudioRef.current = new Audio(audioUrl);
+    if (isPlayingPreview) {
+      previewAudioRef.current.pause();
+      setIsPlayingPreview(false);
+    } else {
+      previewAudioRef.current.play();
+      setIsPlayingPreview(true);
+      previewAudioRef.current.onended = () => setIsPlayingPreview(false);
+    }
+  };
+
+  const toggleMsgAudio = (msgId: string, url: string) => {
+    if (playingMsgId && playingMsgId !== msgId) {
+      audioRefs.current[playingMsgId]?.pause();
+      setPlayingMsgId(null);
+    }
+    if (!audioRefs.current[msgId]) audioRefs.current[msgId] = new Audio(url);
+    const a = audioRefs.current[msgId];
+    if (playingMsgId === msgId) {
+      a.pause(); setPlayingMsgId(null);
+    } else {
+      a.play(); setPlayingMsgId(msgId);
+      a.onended = () => setPlayingMsgId(null);
+    }
+  };
+
+  const sendAudio = async () => {
+    if (!audioBlob || !selectedChat) return;
     
-    eventSource.onmessage = (event) => {
-      const data = JSON.parse(event.data);
+    // Convert blob to base64 to send via JSON
+    const reader = new FileReader();
+    reader.readAsDataURL(audioBlob);
+    reader.onloadend = async () => {
+      const base64Audio = reader.result as string;
+      const tenantId = localStorage.getItem("tenantId");
       
-      if (data.type === "new_message") {
-        // Se for o chat selecionado, adiciona ao estado
-        if (selectedChatRef.current && selectedChatRef.current.id === data.leadId) {
-          setMessages(prev => [...prev.filter(m => m.id !== data.message.id), data.message]);
+      try {
+        const res = await fetch("/api/messages", {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "x-tenant-id": tenantId || ""
+          },
+          body: JSON.stringify({ 
+            leadId: selectedChat.id, 
+            content: base64Audio, 
+            role: "SDR",
+            messageType: "AUDIO" 
+          })
+        });
+        
+        if (res.ok) {
+          fetchMessages(selectedChat.id);
+          setAudioBlob(null);
+          setAudioUrl(null);
+          toast({ title: "🎙️ Áudio enviado com sucesso!" });
         }
-        // Atualiza a lista de chats para mostrar o preview
-        fetchData();
-      } else if (data.type === "new_lead") {
-        fetchData();
-      } else if (data.type === "sdr_action") {
-        if (selectedChatRef.current && (selectedChatRef.current.id === data.leadId || selectedChatRef.current.phone === data.leadPhone)) {
-          setSdrTyping(data.action === "typing");
-        }
+      } catch (e) {
+        toast({ title: "Erro ao enviar áudio", variant: "destructive" });
       }
     };
+  };
 
-    return () => {
-      eventSource.close();
-    };
-  }, []);
-
-  // Use ref para acessar selectedChat dentro do useEffect do SSE
-  const selectedChatRef = useRef(selectedChat);
   useEffect(() => {
     selectedChatRef.current = selectedChat;
     if (selectedChat) {
       fetchMessages(selectedChat.id);
+      setUnreadCount(0);
     }
   }, [selectedChat]);
+
+  useEffect(() => {
+    fetchData();
+    const tenantId = localStorage.getItem("tenantId");
+    if (!tenantId) return;
+
+    const eventSource = new EventSource(`/api/events?tenantId=${tenantId}`);
+    eventSource.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        // O servidor emite { conversationId, role, content, ... } ou nested { message: {...} }
+        const message = msg.message || msg;
+        const conversationId = message.conversationId || msg.conversationId;
+
+        // Atualiza mensagens se for o chat ativo
+        const current = selectedChatRef.current;
+        if (current) {
+          const conv = current.conversations?.[0];
+          if (conv && (conv.id === conversationId || !conversationId)) {
+            setMessages(prev => {
+              const exists = prev.find(m => m.id === message.id);
+              if (exists) return prev;
+              return [...prev, message];
+            });
+            return; // não incrementa unread pois está vendo o chat
+          }
+        }
+
+        // Chat não está aberto → incrementa unread e notifica
+        if (message.role === 'USER') {
+          setUnreadCount(c => c + 1);
+          notificationStore.add({
+            id: message.id || Date.now(),
+            content: message.content,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            read: false
+          });
+          toast({
+            title: "💬 Nova mensagem recebida",
+            description: (message.content || "").slice(0, 60),
+          });
+        }
+
+        // Atualiza preview da lista
+        fetchData();
+      } catch {}
+    };
+    return () => eventSource.close();
+  }, []);
 
   return (
     <DashboardLayout>
@@ -369,16 +496,34 @@ export default function Conversations() {
               {/* Mensagens */}
               <ScrollArea className="flex-1 p-10 bg-slate-50/30">
                  <div className="space-y-6 max-w-4xl mx-auto flex flex-col">
-                    {messages.map(msg => (
-                      <div key={msg.id} className={`flex ${msg.role === 'SDR' || msg.role === 'ASSISTANT' ? 'justify-end' : 'justify-start'}`}>
-                         <div className={`max-w-[70%] p-5 rounded-3xl text-sm font-medium shadow-sm ${msg.role === 'SDR' || msg.role === 'ASSISTANT' ? 'bg-slate-900 text-white rounded-tr-none' : 'bg-white text-slate-700 rounded-tl-none border border-slate-100'}`}>
-                            {msg.content}
-                            <p className={`text-[8px] font-bold uppercase mt-2 text-right ${msg.role === 'SDR' || msg.role === 'ASSISTANT' ? 'text-white/30' : 'text-slate-300'}`}>
+                    {messages.map(msg => {
+                      const isOut = msg.role === 'SDR' || msg.role === 'ASSISTANT';
+                      const isAudio = msg.messageType === 'AUDIO';
+                      return (
+                        <div key={msg.id} className={`flex ${isOut ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`max-w-[70%] p-4 rounded-3xl text-sm font-medium shadow-sm ${isOut ? 'bg-slate-900 text-white rounded-tr-none' : 'bg-white text-slate-700 rounded-tl-none border border-slate-100'}`}>
+                            {isAudio ? (
+                              <div className="flex items-center gap-3 min-w-[160px]">
+                                <button onClick={() => toggleMsgAudio(msg.id, msg.content)}
+                                  className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${isOut ? 'bg-white/20 hover:bg-white/30' : 'bg-emerald-500 hover:bg-emerald-600 text-white'}`}>
+                                  {playingMsgId === msg.id ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                                </button>
+                                <div className="flex-1">
+                                  <div className={`h-1.5 rounded-full ${isOut ? 'bg-white/20' : 'bg-slate-200'}`}>
+                                    <div className={`h-full w-1/2 rounded-full ${isOut ? 'bg-white/60' : 'bg-emerald-500'}`} />
+                                  </div>
+                                  <p className={`text-[9px] mt-1 ${isOut ? 'text-white/40' : 'text-slate-300'}`}>Áudio</p>
+                                </div>
+                                <Volume2 className="w-3 h-3 opacity-30 shrink-0" />
+                              </div>
+                            ) : msg.content}
+                            <p className={`text-[8px] font-bold uppercase mt-2 text-right ${isOut ? 'text-white/30' : 'text-slate-300'}`}>
                               {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </p>
-                         </div>
-                      </div>
-                    ))}
+                          </div>
+                        </div>
+                      );
+                    })}
                     
                     {sdrTyping && (
                       <div className="flex justify-start">
@@ -405,21 +550,44 @@ export default function Conversations() {
               </ScrollArea>
 
               {/* Input */}
-              <div className="p-8 px-10 bg-white border-t border-slate-50">
-                 <form 
-                  onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-                  className="flex items-center gap-4 bg-slate-50 p-2 pl-6 rounded-3xl border border-slate-100 focus-within:ring-4 focus-within:ring-emerald-500/5 transition-all"
-                >
-                    <Input 
-                      placeholder="Responda manualmente ou deixe a IA agir..." 
+              <div className="p-6 px-8 bg-white border-t border-slate-50">
+                {audioUrl ? (
+                  // Preview de áudio gravado
+                  <div className="flex items-center gap-3 bg-emerald-50 p-3 pl-5 rounded-3xl border border-emerald-100">
+                    <button onClick={togglePreview} className="w-10 h-10 flex items-center justify-center bg-emerald-500 rounded-xl text-white shrink-0">
+                      {isPlayingPreview ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                    </button>
+                    <div className="flex-1">
+                      <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Áudio gravado</p>
+                      <div className="h-1.5 bg-emerald-200 rounded-full mt-1"><div className="h-full w-2/3 bg-emerald-500 rounded-full" /></div>
+                    </div>
+                    <Button onClick={cancelAudio} variant="ghost" size="icon" className="text-slate-400 hover:text-red-500 rounded-xl"><MicOff className="w-4 h-4" /></Button>
+                    <Button onClick={sendAudio} className="h-10 px-5 bg-emerald-500 hover:bg-emerald-600 rounded-2xl text-xs font-black"><Send className="w-4 h-4 mr-1" /> Enviar</Button>
+                  </div>
+                ) : isRecording ? (
+                  // Gravando
+                  <div className="flex items-center gap-3 bg-red-50 p-3 pl-5 rounded-3xl border border-red-100 animate-pulse">
+                    <div className="w-3 h-3 bg-red-500 rounded-full" />
+                    <p className="flex-1 text-sm font-black text-red-600 uppercase tracking-widest">Gravando áudio...</p>
+                    <Button onClick={stopRecording} className="h-10 px-5 bg-red-500 hover:bg-red-600 rounded-2xl text-xs font-black text-white"><MicOff className="w-4 h-4 mr-1" /> Parar</Button>
+                    <Button onClick={cancelAudio} variant="ghost" size="icon" className="text-slate-400 rounded-xl">✕</Button>
+                  </div>
+                ) : (
+                  // Input normal
+                  <form onSubmit={(e) => { e.preventDefault(); handleSend(); }}
+                    className="flex items-center gap-3 bg-slate-50 p-2 pl-5 rounded-3xl border border-slate-100 focus-within:ring-4 focus-within:ring-emerald-500/5 transition-all">
+                    <Input placeholder="Responda manualmente ou deixe a IA agir..."
                       className="border-none bg-transparent shadow-none focus-visible:ring-0 font-bold text-xs"
-                      value={message}
-                      onChange={e => setMessage(e.target.value)}
-                    />
-                    <Button type="submit" className="h-12 w-12 bg-emerald-500 hover:bg-emerald-600 rounded-2xl shadow-lg shadow-emerald-500/30 shrink-0">
-                       <Send className="w-5 h-5 text-white" />
+                      value={message} onChange={e => setMessage(e.target.value)} />
+                    <button type="button" onClick={startRecording}
+                      className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 transition-colors shrink-0">
+                      <Mic className="w-5 h-5" />
+                    </button>
+                    <Button type="submit" className="h-10 w-10 bg-emerald-500 hover:bg-emerald-600 rounded-2xl shadow-lg shadow-emerald-500/30 shrink-0">
+                      <Send className="w-4 h-4 text-white" />
                     </Button>
-                 </form>
+                  </form>
+                )}
               </div>
                </div>
              </>

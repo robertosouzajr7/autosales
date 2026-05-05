@@ -4,6 +4,7 @@ dotenv.config();
 import express from "express";
 import cors from "cors";
 import prisma from "./config/prisma.js";
+import path from "path";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import apiRouter from "./routes/index.js";
@@ -37,7 +38,8 @@ const limiter = rateLimit({
 });
 
 // app.use("/api/", limiter);
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 if (process.env.NODE_ENV === "development") {
     app.use((req, res, next) => {
@@ -53,6 +55,7 @@ app.post("/api/webhook/whatsapp", receiveWhatsappWebhook);
 app.use("/api/public", publicApiRouter);
 app.use("/api", apiRouter);
 app.use("/api/v2", apiRouter);
+app.use("/uploads", express.static(path.join(process.cwd(), "public", "uploads")));
 app.use("/", publicRouter);
 
 // Database Initialization

@@ -118,7 +118,7 @@ export default function Connections() {
           setQrCode(data.qr);
           setQrStatus("Escaneie o QR Code com seu WhatsApp");
         }
-      } catch {
+      } catch (e) {
         // Fallback para texto puro (compatibilidade)
         if (event.data === "CONNECTED") {
           setQrStatus("✅ Conectado!");

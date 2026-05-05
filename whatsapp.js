@@ -1,4 +1,4 @@
-import { makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, Browsers, DisconnectReason } from '@whiskeysockets/baileys';
+import { makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, Browsers, DisconnectReason, downloadMediaMessage } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import fs from 'fs';
 import path from 'path';
@@ -223,10 +223,31 @@ export class WhatsAppManager {
             }
             
             const name = msg.pushName || 'Lead';
-            const content = msg.message?.conversation || 
+            let content = msg.message?.conversation || 
                            msg.message?.extendedTextMessage?.text ||
                            msg.message?.imageMessage?.caption ||
                            msg.message?.videoMessage?.caption;
+            let messageType = 'TEXT';
+
+            // 🎙️ Suporte a Áudio Recebido
+            if (msg.message?.audioMessage) {
+                try {
+                    console.log(`[WhatsApp] 🎙️ Recebendo áudio de ${phone}...`);
+                    const buffer = await downloadMediaMessage(msg, 'buffer', {});
+                    const filename = `audio_${Date.now()}.ogg`;
+                    const dir = path.join(process.cwd(), 'public', 'uploads');
+                    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+                    
+                    const filePath = path.join(dir, filename);
+                    fs.writeFileSync(filePath, buffer);
+                    
+                    content = `/uploads/${filename}`;
+                    messageType = 'AUDIO';
+                    console.log(`[WhatsApp] ✅ Áudio salvo: ${content}`);
+                } catch (err) {
+                    console.error(`[WhatsApp] ❌ Erro ao baixar áudio:`, err);
+                }
+            }
 
             if (!content || !phone) return;
             if (remoteJid?.includes('@g.us') || remoteJid === 'status@broadcast') return;
@@ -268,6 +289,7 @@ export class WhatsAppManager {
                         phone,
                         name,
                         content,
+                        messageType,
                         source: 'WhatsApp',
                         skipNewLeadTrigger: true // ⚡ FASE 2/4: Evitar disparo duplo de prospecção em chat direto
                     })
@@ -417,27 +439,40 @@ export class WhatsAppManager {
             const jid = phone.includes('@s.whatsapp.net') ? phone : `${phone}@s.whatsapp.net`;
             try {
                 let msgContent = {};
+                let source = mediaUrl;
+
+                // Handle base64 data URLs
+                if (typeof mediaUrl === 'string' && mediaUrl.startsWith('data:')) {
+                    const [meta, base64Data] = mediaUrl.split(',');
+                    source = Buffer.from(base64Data, 'base64');
+                }
+
                 switch (mediaType) {
                     case 'image':
-                        msgContent = { image: { url: mediaUrl }, caption };
+                        msgContent = { image: source, caption };
                         break;
                     case 'video':
-                        msgContent = { video: { url: mediaUrl }, caption };
+                        msgContent = { video: source, caption };
                         break;
                     case 'document':
-                        msgContent = { document: { url: mediaUrl }, caption, fileName: caption || 'document' };
+                        msgContent = { document: source, caption, fileName: caption || 'document' };
                         break;
                     case 'audio':
-                        msgContent = { audio: { url: mediaUrl }, mimetype: 'audio/mpeg' };
+                        msgContent = { 
+                            audio: source, 
+                            mimetype: 'audio/ogg; codecs=opus', // Formato nativo do WhatsApp voice
+                            ptt: true // Envia como mensagem de voz
+                        };
                         break;
                     default:
-                        msgContent = { image: { url: mediaUrl }, caption };
+                        msgContent = { image: source, caption };
                 }
                 await session.sock.sendMessage(jid, msgContent);
                 console.log(`[WhatsApp Baileys] Mídia ${mediaType} enviada p/ ${phone}`);
                 return true;
             } catch (e) {
-                console.error(`[WhatsApp Baileys] Erro no envio de mídia:`, e);
+                console.error(`[WhatsApp Baileys] Erro crítico no envio de mídia:`, e);
+                return false;
             }
         }
 

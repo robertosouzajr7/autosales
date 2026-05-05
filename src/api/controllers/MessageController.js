@@ -28,7 +28,7 @@ export const getMessages = async (req, res) => {
 
 export const sendMessage = async (req, res) => {
   const tenantId = req.headers["x-tenant-id"] || req.tenantId;
-  const { leadId, content } = req.body;
+  const { leadId, content, role = "ASSISTANT", messageType = "TEXT" } = req.body;
 
   try {
     const lead = await prisma.lead.findUnique({
@@ -40,7 +40,12 @@ export const sendMessage = async (req, res) => {
     }
 
     // Try sending via WhatsApp Manager
-    const success = await WhatsAppManager.sendMessage(tenantId, lead.phone, content);
+    let success = false;
+    if (messageType === 'AUDIO') {
+      success = await WhatsAppManager.sendMedia(tenantId, lead.phone, content, 'audio');
+    } else {
+      success = await WhatsAppManager.sendMessage(tenantId, lead.phone, content);
+    }
     
     if (!success) {
       return res.status(500).json({ error: "Falha ao enviar mensagem pelo WhatsApp" });
@@ -61,8 +66,8 @@ export const sendMessage = async (req, res) => {
         conversationId: conversation.id,
         tenantId,
         content,
-        role: "ASSISTANT",
-        messageType: "TEXT"
+        role,
+        messageType
       }
     });
 

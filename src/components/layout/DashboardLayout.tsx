@@ -24,7 +24,11 @@ import {
   Smartphone,
   ShieldCheck,
   BookOpen,
+  MessageCircle,
+  Clock,
+  Sparkles
 } from "lucide-react";
+import { notificationStore } from "@/lib/notifications";
 
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -48,6 +52,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -274,6 +279,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [planData, setPlanData] = useState<any>({ features: {}, name: "Básico", maxTokens: 1 });
   const location = useLocation();
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  useEffect(() => {
+    // Subscribe to global notification store
+    return notificationStore.subscribe((newNotifs) => {
+      setNotifications([...newNotifs]);
+    });
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -377,12 +391,73 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
 
           {/* Notification bell */}
-          <Button variant="ghost" size="icon" className="relative text-slate-500">
-            <Bell className="h-5 w-5" />
-            <Badge className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 p-0 text-[10px] font-bold text-white">
-              3
-            </Badge>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="relative text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
+                <Bell className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <Badge className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 p-0 text-[10px] font-bold text-white animate-bounce border-2 border-white">
+                    {unreadCount}
+                  </Badge>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80 p-0 border-none shadow-3xl rounded-[30px] overflow-hidden bg-white/95 backdrop-blur-md">
+              <div className="p-5 bg-slate-900 text-white flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-widest">Notificações</h3>
+                  <p className="text-[10px] text-white/40 font-bold uppercase mt-0.5">{unreadCount} novas mensagens</p>
+                </div>
+                <Bell className="w-4 h-4 text-emerald-400" />
+              </div>
+              <ScrollArea className="h-[350px]">
+                {notifications.length === 0 ? (
+                  <div className="p-10 text-center space-y-4">
+                    <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto">
+                      <Sparkles className="w-6 h-6 text-slate-200" />
+                    </div>
+                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Tudo limpo por aqui</p>
+                  </div>
+                ) : (
+                  <div className="p-2 space-y-1">
+                    {notifications.map((n) => (
+                      <DropdownMenuItem 
+                        key={n.id} 
+                        className="p-4 rounded-2xl cursor-pointer hover:bg-slate-50 border-none flex items-start gap-4 transition-all group"
+                        onClick={() => {
+                          n.read = true;
+                          navigate("/conversations");
+                        }}
+                      >
+                        <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-emerald-500 transition-colors">
+                          <MessageCircle className="w-5 h-5 text-emerald-500 group-hover:text-white transition-colors" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-center mb-1">
+                            <p className="text-[10px] font-black text-slate-900 uppercase">Nova Mensagem</p>
+                            <div className="flex items-center gap-1 text-[8px] font-bold text-slate-400 uppercase">
+                              <Clock className="w-3 h-3" /> {n.time}
+                            </div>
+                          </div>
+                          <p className="text-xs text-slate-500 font-medium line-clamp-2 leading-relaxed">
+                            {n.content}
+                          </p>
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+              {notifications.length > 0 && (
+                <div className="p-4 border-t border-slate-50">
+                  <Button variant="ghost" className="w-full text-[10px] font-black text-slate-400 hover:text-slate-900 uppercase tracking-widest"
+                    onClick={() => setNotifications([])}>
+                    Limpar Tudo
+                  </Button>
+                </div>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* User dropdown */}
           <DropdownMenu>
