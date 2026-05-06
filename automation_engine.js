@@ -1539,36 +1539,51 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
            // Generate specific prospecting first message via AI
            const icpContext = `O Público Alvo (ICP) deste contato é:
            Indústria: ${icp.industry || 'Geral'}
-           Tamanho da Empresa: ${icp.companySize || 'Qualquer'}
-           Cargo do Contato: ${icp.role || 'Geral'}
-           Dores do Cliente: ${icp.painPoints || 'Não especificado'}
-           Objetivo do Cliente: ${icp.goals || 'Não especificado'}`;
-
+           Tamanho da Empresa: ${icp.companySize || 'N/A'}
+           Cargo Alvo: ${icp.role || 'N/A'}`;
+           
            const prompt = `
-             # IDENTIDADE
-             NOME DO AGENTE: ${sdr.name}
-             FUNÇÃO: ${sdr.role}
-             TOM DE VOZ: ${sdr.voiceTone}
-             
-             # OBJETIVO DA MENSAGEM
-             Você é um SDR e deve iniciar um contato a frio (Cold Outreach) pelo WhatsApp com o lead abaixo.
-             O objetivo é "quebrar o gelo", conectar com a dor do perfil dele e gerar uma resposta inicial.
-             Seja extremamente curto, casual e humano. Como uma mensagem real de WhatsApp. 
-             Não mande "textão". NÃO SE DESPEÇA.
-             
-             ${icpContext}
-             
-             # DADOS DO LEAD
-             Nome do Lead: ${lead.name}
-             
-             Crie a mensagem de introdução perfeita.
-           `;
+              # IDENTIDADE E TREINAMENTO (Baseado nas configurações do SDR)
+              NOME DO AGENTE: ${sdr.name}
+              TREINAMENTO/BASE DE CONHECIMENTO: ${sdr.knowledgeBase || 'SDR focado em qualificação de leads.'}
+              INSTRUÇÕES ESPECÍFICAS: ${sdr.prompt || 'Seja profissional e direto.'}
+              TOM DE VOZ: ${sdr.voiceTone || 'Profissional'}
+              
+              # OBJETIVO DA MENSAGEM
+              Você deve iniciar UM ÚNICO contato a frio (Cold Outreach) pelo WhatsApp com o lead abaixo.
+              - NÃO envie mais de uma mensagem.
+              - NÃO mande "Olá, tudo bem?" em uma mensagem e o resto em outra. Mande TUDO em um único parágrafo curto.
+              - Seja extremamente curto (máximo 3 linhas).
+              - Use uma abordagem humana e personalizada.
+              - Foque em uma dor do ICP e faça uma pergunta rápida.
+              - NUNCA use o termo "AutoSales". Use o nome da empresa definido no seu treinamento.
+              - NUNCA envie textos como "Enviar Texto" ou placeholders.
+              
+              ${icpContext}
+              
+              # DADOS DO LEAD
+              Nome do Lead: ${lead.name}
+              
+              Crie a mensagem de introdução perfeita seguindo rigorosamente sua identidade configurada (APENAS O TEXTO DA MENSAGEM):
+            `;
 
            try {
              const aiMsg = await this.callAI(prompt, lead, { tenantId });
              
-             if (aiMsg && lead.phone) {
-                // Ensure conversation marked as botActive=true exists
+              if (aiMsg && lead.phone) {
+                 // Validação: Se a IA falhou e mandou algo genérico ou vazio
+                 if (aiMsg.length < 10 || aiMsg.includes("Enviar Texto")) {
+                    console.log(`[Prospecting] 🛑 Mensagem inválida gerada pela IA para ${lead.name}. Abortando.`);
+                    continue;
+                 }
+
+                 // Marca como PROSPECTING IMEDIATAMENTE para evitar duplicidade na rotina de 1 min
+                 await prisma.lead.update({
+                    where: { id: lead.id },
+                    data: { status: "PROSPECTING" }
+                 });
+
+                 // Ensure conversation marked as botActive=true exists
                 const conv = await prisma.conversation.upsert({
                   where: { leadId: lead.id },
                   update: { botActive: true },

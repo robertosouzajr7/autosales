@@ -67,13 +67,13 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
   { label: "Conversas", icon: MessageSquare, href: "/conversations" },
-  { label: "CRM / Leads", icon: Users, href: "/crm" },
+  { label: "Funil de Vendas", icon: Users, href: "/crm" },
   { label: "Contatos", icon: BookUser, href: "/contacts" },
-  { label: "Agenda de Negócios", icon: Calendar, href: "/appointments", feature: "calendar" },
+  { label: "Reuniões", icon: Calendar, href: "/appointments", feature: "calendar" },
   { label: "Prospecção", icon: Search, href: "/prospecting" },
-  { label: "Performance Hunter", icon: BarChart3, href: "/prospecting/analytics" },
-  { label: "Jornadas (ICP)", icon: Target, href: "/prospecting/icp" },
-  { label: "Time de SDRs", icon: Bot, href: "/sdrs" },
+  { label: "BDR Agent", icon: BarChart3, href: "/prospecting/analytics" },
+  { label: "Público Alvo", icon: Target, href: "/prospecting/icp" },
+  { label: "SDR Agent", icon: Bot, href: "/sdrs" },
   { label: "Automações", icon: Zap, href: "/automations" },
   { label: "Disparos", icon: Send, href: "/disparos", feature: "bulkMessaging" },
   { label: "Conexões", icon: Smartphone, href: "/connections" },
@@ -101,7 +101,9 @@ function SidebarNav({ collapsed, onNavClick, features }: SidebarNavProps & { fea
         const Icon = item.icon;
         const isActive =
           location.pathname === item.href ||
-          (item.href !== "/dashboard" && location.pathname.startsWith(item.href));
+          (item.href !== "/dashboard" && 
+           item.href !== "/prospecting" && // Evita match duplo com sub-rotas de prospecção
+           location.pathname.startsWith(item.href));
 
         const linkContent = (
           <Link
