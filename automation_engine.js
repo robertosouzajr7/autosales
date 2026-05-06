@@ -5,6 +5,7 @@ import CalendarService from "./calendar_service.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import TTSService from "./src/api/services/TTSService.js";
 import cron from "node-cron";
+import axios from "axios";
 const MAX_STEPS = 100;
 const MAX_CONCURRENT_EXECUTIONS = 10;
 const RATE_LIMIT_PER_MINUTE = 20; // max msgs per tenant per minute
@@ -24,10 +25,15 @@ class AutomationEngine {
     this.inactivityInterval = setInterval(() => this.processInactivityTriggers(), 5 * 60 * 1000);
     this.queueInterval = setInterval(() => this.processQueue(), 1000);
     // Varredura de prospecção (novos leads) - a cada 1 min (mais proativo)
+    // Varredura de prospecção (novos leads) - a cada 1 min (mais proativo)
     setInterval(() => {
-      this.runGlobalProspecting();
+      this.processProspectingRoutines();
     }, 1 * 60 * 1000);
-    this.enrichmentInterval = setInterval(() => this.processEnrichmentRoutine(), 15 * 60 * 1000); // 15 min
+    this.enrichmentInterval = setInterval(() => this.processEnrichmentRoutine(), 1 * 60 * 1000); // 1 min (mais ágil para triggers manuais)
+    // Varredura de caça (novos alvos) - a cada 1 hora
+    setInterval(() => {
+      this.processAutoHunterRoutines();
+    }, 60 * 60 * 1000);
     console.log(`[AutoEngine] ✅ Engine iniciado (concurrency: ${MAX_CONCURRENT_EXECUTIONS}, rate: ${RATE_LIMIT_PER_MINUTE} msg/min).`);
     this.cronJobs = new Map();
     setTimeout(() => this.bootSchedulers(), 2000); // Startup delay
@@ -35,9 +41,10 @@ class AutomationEngine {
 
   setEventEmitter(ee) {
     this.ee = ee;
-    this.ee.on("new_lead", async ({ tenantId, lead }) => {
-       console.log(`[AutoEngine] 🆕 Novo lead detectado: ${lead.name} (${tenantId}). Buscando automações...`);
-       await this.executeEventAutomation("NEW_LEAD", lead);
+    // Listener para encaixe automático (Lista de Espera)
+    this.ee.on("APPOINTMENT_CANCELLED", async ({ tenantId, appointment }) => {
+       console.log(`[Waitlist] 📢 Vaga disponível detectada para o tenant ${tenantId}. Verificando lista de espera...`);
+       await this.handleWaitlistEncaixe(tenantId, appointment);
     });
   }
 
@@ -769,6 +776,12 @@ class AutomationEngine {
           return null;
       }
 
+      // Buscar dados do tenant para pegar links oficiais
+      const tenant = await prisma.tenant.findUnique({ where: { id: lead.tenantId } });
+      const origin = process.env.FRONTEND_URL || "http://localhost:8080";
+      const bookingUrl = `${origin}/b/${lead.tenantId}`;
+      const websiteUrl = tenant?.webChatUrl || "Não configurado";
+
       if (ai.provider === "GEMINI") {
         console.log(`[AutoEngine] 🧪 Diagnóstico AI Object:`, Object.keys(ai.genAI || {}));
         const modelsToTry = [
@@ -788,7 +801,27 @@ class AutomationEngine {
             
             console.log(`[AutoEngine] 📝 Gerando conteúdo para ${lead.name}...`);
             const systemPrompt = customPrompt || sdr.prompt || "Você é um SDR profissional.";
-            const fullPrompt = `${systemPrompt}\n\nBase de conhecimento:\n${kb}\n\nDados do lead:\n- Nome: ${lead.name}\n- Telefone: ${lead.phone}\n\nHistórico:\n${history}\n\nResponda de forma curta e humana.`;
+            const fullPrompt = `
+              ${systemPrompt}
+
+              # RECURSOS OFICIAIS (USE APENAS ESTES LINKS)
+              - Link de Agendamento: ${bookingUrl}
+              - Site da Ferramenta: ${websiteUrl}
+              
+              INSTRUÇÃO CRÍTICA: Nunca invente links. Se precisar enviar um link de agendamento ou do site, use EXATAMENTE os links acima.
+
+              # BASE DE CONHECIMENTO
+              ${kb}
+
+              # DADOS DO LEAD
+              - Nome: ${lead.name}
+              - Telefone: ${lead.phone}
+
+              # HISTÓRICO DA CONVERSA
+              ${history}
+
+              Responda de forma curta e humana.
+            `;
 
             const result = await model.generateContent(fullPrompt);
             const text = result.response.text();
@@ -1488,6 +1521,19 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
         });
 
         for (const lead of coldLeads) {
+           if (!lead.phone) continue;
+
+           // Validação: Somente números que são WhatsApp
+           const isWhatsApp = await WhatsAppManager.checkWhatsAppNumber(tenantId, lead.phone);
+           if (!isWhatsApp) {
+              console.log(`[Prospecting] 🛑 Pulando lead ${lead.name} (${lead.phone}): Não é um número WhatsApp.`);
+              await prisma.lead.update({
+                where: { id: lead.id },
+                data: { status: "FAILED_CONTACT", notes: (lead.notes || "") + "\n[Engine] Contato falhou: Número não é WhatsApp." }
+              });
+              continue;
+           }
+
            console.log(`[Prospecting] Iniciando contato com lead ${lead.name} (${lead.phone}) baseado no ICP: ${icp.name}`);
            
            // Generate specific prospecting first message via AI
@@ -1555,6 +1601,170 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
     }
   }
 
+  // --- AI AUTO-HUNTER ROUTINE (Lead Discovery) ---
+  async processAutoHunterRoutines(targetTenantId = null) {
+    try {
+      const where = { isActive: true, isAutoHunterEnabled: true };
+      if (targetTenantId) where.tenantId = targetTenantId;
+
+      const activeIcps = await prisma.icpProfile.findMany({ where });
+
+      for (const icp of activeIcps) {
+        const tenantId = icp.tenantId;
+        console.log(`[AutoHunter] Perfil '${icp.name}' está caçando novos leads...`);
+
+        // Check prospecting limits
+        const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, include: { plan: true } });
+        if (tenant?.plan && tenant.usedProspects >= tenant.plan.maxProspects) {
+          console.log(`[AutoHunter] 🛑 Limite de prospecção atingido para o tenant ${tenantId}`);
+          continue;
+        }
+
+        const serperKey = process.env.SERPER_API_KEY;
+        console.log(`[AutoHunter] Debug: Chave Serper presente? ${!!serperKey} (prefixo: ${serperKey?.substring(0, 5)}...)`);
+        if (!serperKey) {
+           console.error("[AutoHunter] 🛑 SERPER_API_KEY não configurada no servidor.");
+           continue;
+        }
+
+        // Strategy: Search on Google Maps (Serper Places)
+        const query = `${icp.niche || icp.industry || icp.name} em ${icp.location}`;
+        
+        try {
+           const response = await axios.post('https://google.serper.dev/places', {
+             q: query, gl: 'br', hl: 'pt-br'
+           }, {
+             headers: { 'X-API-KEY': serperKey, 'Content-Type': 'application/json' }
+           });
+
+           const places = response.data.places || [];
+           let importedCount = 0;
+
+           for (const place of places) {
+              if (importedCount >= 5) break; // Batch limit per ICP per run
+
+              // Check if lead already exists
+              const existing = await prisma.lead.findFirst({
+                where: { tenantId, OR: [{ phone: place.phoneNumber }, { name: place.title }] }
+              });
+
+              if (!existing && place.phoneNumber) {
+                 await prisma.lead.create({
+                   data: {
+                     tenantId,
+                     name: place.title,
+                     phone: place.phoneNumber,
+                     source: "AUTO-HUNTER",
+                     status: "DISCOVERED",
+                     notes: `Localizado automaticamente via ICP: ${icp.name}.\nEndereço: ${place.address || 'N/A'}\nRating: ${place.rating || 'N/A'}`,
+                     extractedData: JSON.stringify({
+                       website: place.website,
+                       category: place.category,
+                       icpId: icp.id
+                     })
+                   }
+                 });
+                 importedCount++;
+              }
+           }
+
+           // Log prospection result
+           await prisma.prospectionLog.create({
+              data: {
+                tenantId,
+                icpId: icp.id,
+                query,
+                source: "GOOGLE_MAPS",
+                leadsFound: importedCount,
+                status: "SUCCESS"
+              }
+           });
+
+           if (importedCount > 0) {
+              await prisma.tenant.update({
+                where: { id: tenantId },
+                data: { usedProspects: { increment: 1 } }
+              });
+              console.log(`[AutoHunter] ✅ ${importedCount} novos leads importados para o Perfil: ${icp.name}`);
+           }
+
+        } catch(e) {
+           console.error("[AutoHunter] Erro na busca Serper:", e.message);
+           await prisma.prospectionLog.create({
+              data: {
+                tenantId, icpId: icp.id, query, source: "GOOGLE_MAPS", status: "FAILED", error: e.message
+              }
+           });
+        }
+      }
+    } catch(err) {
+      console.error("[AutoHunter] Erro geral na rotina:", err);
+    }
+  }
+
+  // --- WEB SCRAPER — Extração direta de dados de contato de URLs ---
+  async scrapeUrlForContacts(url, label = '') {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8'
+        }
+      });
+      clearTimeout(timeoutId);
+      if (!res.ok) return null;
+
+      const html = await res.text();
+
+      // --- Extração de Emails ---
+      const emailRaw = html.match(/[\w.+%-]+@[\w.-]+\.[a-z]{2,6}/gi) || [];
+      const emails = [...new Set(emailRaw.filter(e =>
+        !e.match(/\.(png|jpg|gif|svg|css|js|woff)$/i) &&
+        !e.includes('sentry') && !e.includes('example') && !e.includes('noreply') && !e.includes('no-reply')
+      ))].slice(0, 5);
+
+      // --- Extração de Telefones brasileiros ---
+      const phoneRaw = html.match(/(?:\+?55[\s.-]?)?(?:\(?0?\d{2}\)?[\s.-]?)(?:9[\s.-]?)?\d{4}[\s.-]?\d{4}/g) || [];
+      const phones = [...new Set(phoneRaw
+        .map(p => p.replace(/\s/g, '').trim())
+        .filter(p => p.replace(/\D/g, '').length >= 10 && p.replace(/\D/g, '').length <= 13)
+      )].slice(0, 5);
+
+      // --- Extração de Links WhatsApp (wa.me / api.whatsapp.com) ---
+      const waRaw = html.match(/https?:\/\/(?:wa\.me|api\.whatsapp\.com\/send)[^\s"'<>&]+/gi) || [];
+      const waLinks = [...new Set(waRaw)].slice(0, 3);
+      const waNumbers = waLinks.map(l => { const m = l.match(/wa\.me\/(\d+)/); return m ? m[1] : null; }).filter(Boolean);
+
+      // --- Extração de texto limpo (para IA analisar) ---
+      // Bio Instagram: fica no og:description
+      const ogDesc = html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']{0,500})["']/i)?.[1]
+                  || html.match(/<meta[^>]+content=["']([^"']{0,500})["'][^>]+property=["']og:description["']/i)?.[1]
+                  || '';
+      const metaDesc = html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']{0,300})["']/i)?.[1] || '';
+      const titleTag = html.match(/<title[^>]*>([^<]{0,200})<\/title>/i)?.[1]?.trim() || '';
+
+      // Texto limpo da página (remove scripts, styles, tags)
+      const plainText = html
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .substring(0, 3000);
+
+      console.log(`[BDR Scraper] ✅ ${label} (${url}): ${emails.length} emails, ${phones.length} fones, ${waLinks.length} WhatsApp links`);
+
+      return { label, url, title: titleTag, ogDescription: ogDesc, metaDescription: metaDesc, emails, phones, waLinks, waNumbers, plainText };
+    } catch (e) {
+      console.log(`[BDR Scraper] ⚠️ Não acessou ${label} (${url}): ${e.message.substring(0, 60)}`);
+      return null;
+    }
+  }
+
   // --- AI ENRICHMENT ROUTINE (Deep Research) ---
   async processEnrichmentRoutine() {
     try {
@@ -1604,80 +1814,269 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
         return;
       }
 
-      // 1. Search for info using ICP Keywords
-      const keywords = icp?.searchKeywords || "linkedin profile news";
-      const query = `${lead.name} ${lead.company || ''} ${keywords}`;
-      const searchRes = await fetch('https://google.serper.dev/search', {
-        method: 'POST',
-        headers: { 'X-API-KEY': serperKey, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ q: query, num: 5 })
-      });
-      const searchData = await searchRes.json();
-      const organic = searchData.organic || [];
-      const context = organic.map(o => `Título: ${o.title}\nSnippet: ${o.snippet}\nLink: ${o.link}`).join('\n\n');
+      // 1. MULTI-PASS SEARCH — 3 buscas distintas para dados mais confiáveis
+      const doSearch = async (q) => {
+        const r = await fetch('https://google.serper.dev/search', {
+          method: 'POST',
+          headers: { 'X-API-KEY': serperKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q, num: 8, gl: 'br', hl: 'pt' })
+        });
+        const d = await r.json();
+        return (d.organic || []).map(o => `Título: ${o.title}\nSnippet: ${o.snippet}\nLink: ${o.link}`).join('\n\n');
+      };
 
-      // 2. Process with Gemini (Strategic Analysis)
-      const { model } = await this._getAIModel(lead.tenantId);
-      const sdr = await prisma.sdrBot.findFirst({ where: { tenantId: lead.tenantId, active: true } });
+      const companyName = lead.company || lead.name;
+      console.log(`[BDR Engine] 🔍 Iniciando investigação multi-busca para: ${companyName}`);
 
-      const prompt = `
-        Você é um Estrategista de Vendas Outbound de Alta Performance. 
-        Recebi os seguintes resultados de pesquisa sobre o lead "${lead.name}":
-        
-        ${context}
-        
-        PERFIL DE CLIENTE IDEAL (ICP) DA EMPRESA:
-        ${icp ? `Nicho: ${icp.niche}, Cargo: ${icp.role}, Objetivo: ${icp.name}` : "Não definido"}
-        
-        INFORMAÇÕES RELEVANTES PARA BUSCAR (FOCO):
-        ${icp?.relevantInfo || "Informações gerais de negócio e contato"}
-        
-        INSTRUÇÕES:
-        1. Analise se o lead tem fit com o ICP.
-        2. Extraia informações estruturadas focando no que foi pedido nas INFORMAÇÕES RELEVANTES.
-        3. Crie uma MENSAGEM DE ABERTURA (ICE BREAKER) para WhatsApp que seja:
-           - Curta (máximo 3 frases)
-           - Extremamente personalizada citando um dado real encontrado na pesquisa.
-           - Sem parecer um robô ou spam.
-           - Com uma pergunta aberta no final para gerar conversa.
+      // Busca 1: Informações gerais da empresa e contatos
+      const searchContatos = await doSearch(`"${companyName}" contato email telefone site`);
+      // Busca 2: Sócio, dono, diretor decisor
+      const searchDecisor = await doSearch(`"${companyName}" sócio dono proprietário diretor fundador nome`);
+      // Busca 3: Perfis em redes sociais (apenas retorna URLs que aparecerem literalmente)
+      const searchSocial = await doSearch(`"${companyName}" instagram facebook linkedin perfil`);
 
-        Retorne APENAS um JSON no formato:
-        {
-          "companyName": "...",
-          "role": "...",
-          "industry": "...",
-          "potentialPains": "...",
-          "summary": "...",
-          "iceBreaker": "Mensagem personalizada para o WhatsApp",
-          "strategy": "Explicação da abordagem recomendada"
+      // 1b. IDENTIFICAR URLs para scraping direto nos resultados
+      const allSearchText = [searchContatos, searchDecisor, searchSocial].join('\n');
+      const extractUrls = (text, patterns) => {
+        for (const pattern of patterns) {
+          const match = text.match(pattern);
+          if (match) return match[0];
         }
-      `;
+        return null;
+      };
 
-      const result = await model.generateContent(prompt);
-      let aiJson = {};
-      try {
-        const text = result.response.text().replace(/```json|```/g, "").trim();
-        aiJson = JSON.parse(text);
-      } catch(e) { console.error("Erro parse AI Strategy:", e); }
+      // Detecta site, Instagram e LinkedIn dos resultados
+      const websiteUrl = extractUrls(allSearchText, [
+        new RegExp(`https?://(?:www\\.)?${companyName.toLowerCase().replace(/[^a-z0-9]/g, '.*?')}\\.com\\.br[^\\s"'<>]*`, 'i'),
+        /Link: (https?:\/\/(?!.*(?:instagram|linkedin|facebook|google|youtube|serper))[\w.-]+\.(?:com\.br|com|net|br)[^\s]*)/
+      ]);
+      const instagramUrl = extractUrls(allSearchText, [
+        /https?:\/\/(?:www\.)?instagram\.com\/[a-zA-Z0-9._]+\/?/
+      ]);
+      const linkedinUrl = extractUrls(allSearchText, [
+        /https?:\/\/(?:www\.)?linkedin\.com\/(?:company|in)\/[^\s"'<>]+/
+      ]);
 
-      // 3. Update Lead
-      const currentData = JSON.parse(lead.extractedData || "{}");
-      const newData = { ...currentData, ...aiJson, lastEnrichedAt: new Date() };
-      
-      let newNotes = lead.notes || "";
-      if (aiJson.summary) {
-        newNotes += `\n\n--- ESTRATÉGIA IA (${new Date().toLocaleDateString()}) ---\n${aiJson.summary}\n\nABORDAGEM: ${aiJson.strategy || 'N/A'}`;
+      console.log(`[BDR Engine] 🌐 URLs identificadas — Site: ${websiteUrl || 'não encontrado'} | IG: ${instagramUrl || 'não encontrado'} | LI: ${linkedinUrl || 'não encontrado'}`);
+
+      // 1c. IDENTIFICAR PÁGINAS DE EQUIPE/SOBRE (para achar o decisor) via snippets da busca
+      let teamPageUrl = null;
+      if (allSearchText) {
+        // Busca links nos snippets que pareçam ser de "Sobre" ou "Equipe"
+        const teamMatch = allSearchText.match(/https?:\/\/[^\s"'<>]+(?:quem-somos|sobre|equipe|nossa-historia|board|socios)[^\s"'<>]*/i);
+        if (teamMatch) {
+          teamPageUrl = teamMatch[0];
+          console.log(`[BDR Engine] 👥 Página de equipe detectada via snippet: ${teamPageUrl}`);
+        }
       }
 
-      await prisma.lead.update({
-        where: { id: lead.id },
-        data: {
-          extractedData: JSON.stringify(newData),
-          notes: newNotes,
-          isToEnrich: false,
-          status: "PROSPECTING"
+      // 1d. SCRAPING DIRETO das páginas identificadas (em paralelo)
+      const scrapeResults = await Promise.all([
+        websiteUrl ? this.scrapeUrlForContacts(websiteUrl, 'SITE') : Promise.resolve(null),
+        teamPageUrl ? this.scrapeUrlForContacts(teamPageUrl, 'EQUIPE') : Promise.resolve(null),
+        instagramUrl ? this.scrapeUrlForContacts(instagramUrl, 'INSTAGRAM') : Promise.resolve(null),
+        linkedinUrl ? this.scrapeUrlForContacts(linkedinUrl, 'LINKEDIN') : Promise.resolve(null),
+      ]);
+      const [siteDataMain, teamData, igData, liData] = scrapeResults;
+
+      // Compila todos os dados raspados
+      const scrapedEmails = [...new Set([
+        ...(siteDataMain?.emails || []),
+        ...(teamData?.emails || []),
+        ...(igData?.emails || []),
+        ...(liData?.emails || [])
+      ])];
+      const scrapedPhones = [...new Set([
+        ...(siteDataMain?.phones || []),
+        ...(teamData?.phones || []),
+        ...(igData?.phones || []),
+        ...(liData?.phones || [])
+      ])];
+      const scrapedWaNumbers = [...new Set([
+        ...(siteDataMain?.waNumbers || []),
+        ...(teamData?.waNumbers || []),
+        ...(igData?.waNumbers || []),
+        ...(liData?.waNumbers || [])
+      ])];
+      const scrapedWaLinks = [...new Set([
+        ...(siteDataMain?.waLinks || []),
+        ...(teamData?.waLinks || []),
+        ...(igData?.waLinks || []),
+        ...(liData?.waLinks || [])
+      ])];
+
+      // Monta o contexto de scraping para a IA
+      const scrapeContext = [
+        siteDataMain ? `=== SITE PRINCIPAL (${siteDataMain.url}) ===\nTítulo: ${siteDataMain.title}\nTexto: ${siteDataMain.plainText}` : '',
+        teamData ? `=== PÁGINA DE EQUIPE/SOBRE (${teamData.url}) ===\nTexto: ${teamData.plainText}` : '',
+        igData ? `=== INSTAGRAM BIO (${igData.url}) ===\nBio: ${igData.ogDescription}\nTexto: ${igData.plainText}` : '',
+        liData ? `=== LINKEDIN (${liData.url}) ===\nBio: ${liData.ogDescription}\nTexto: ${liData.plainText}` : '',
+      ].filter(Boolean).join('\n\n');
+
+      const allContext = `
+=== BUSCA GOOGLE 1 — CONTATOS E EMPRESA ===
+${searchContatos || 'Nenhum resultado encontrado.'}
+
+=== BUSCA GOOGLE 2 — DECISOR / SÓCIO / DONO ===
+${searchDecisor || 'Nenhum resultado encontrado.'}
+
+=== BUSCA GOOGLE 3 — REDES SOCIAIS ===
+${searchSocial || 'Nenhum resultado encontrado.'}
+
+=== DADOS EXTRAÍDOS DIRETAMENTE DAS PÁGINAS (MAIS CONFIÁVEIS) ===
+Emails encontrados diretamente: ${scrapedEmails.join(', ') || 'nenhum'}
+Telefones encontrados diretamente: ${scrapedPhones.join(', ') || 'nenhum'}
+Links WhatsApp encontrados: ${scrapedWaLinks.join(', ') || 'nenhum'}
+Números WhatsApp (de wa.me): ${scrapedWaNumbers.join(', ') || 'nenhum'}
+
+${scrapeContext}
+      `.trim();
+
+      // 2. PROMPT RIGOROSO — Zero tolerância a invenção de dados
+      const bdrPrompt = `
+        Você é um assistente de pesquisa comercial com uma regra absoluta:
+        NUNCA invente, infira ou suponha dados. Retorne APENAS o que está LITERALMENTE nos resultados abaixo.
+
+        ⚠️ REGRAS CRÍTICAS:
+        - Se não encontrou o email com "@" claramente escrito nos resultados → emails: []
+        - Se não encontrou o nome do sócio/dono claramente → decisionMaker.name: null
+        - Se não encontrou uma URL completa de rede social → socialProfiles: []
+        - Se encontrou um Instagram mas a URL não aparece completa nos resultados → NÃO inclua
+        - Para telefones: inclua apenas números que aparecem literalmente nos snippets ou nos dados extraídos
+        - Os dados da seção "DADOS EXTRAÍDOS DIRETAMENTE DAS PÁGINAS" são os mais confiáveis — priorize-os
+        - Para WhatsApp: os links wa.me são os mais confiáveis — use os números deles
+        - Para decisor/sócio: procure nomes de pessoas em contexto de cargo no LinkedIn ou site
+        - Se em dúvida sobre qualquer dado → NÃO inclua. Prefira retornar null a inventar.
+
+        RESULTADOS DA PESQUISA SOBRE "${companyName}":
+        ${allContext}
+
+        Analise os resultados acima e retorne um JSON com APENAS o que foi confirmado:
+        {
+          "decisionMaker": {
+            "name": null,
+            "role": null,
+            "linkedIn": null
+          },
+          "companyInfo": {
+            "name": "${companyName}",
+            "website": ${websiteUrl ? `"${websiteUrl}"` : 'null'},
+            "industry": null,
+            "socialProfiles": ${instagramUrl ? `["${instagramUrl}"]` : '[]'}
+          },
+          "contacts": {
+            "emails": ${scrapedEmails.length > 0 ? JSON.stringify(scrapedEmails) : '[]'},
+            "phones": ${scrapedPhones.length > 0 ? JSON.stringify(scrapedPhones) : '[]'},
+            "whatsapp": ${scrapedWaNumbers.length > 0 ? JSON.stringify(scrapedWaNumbers) : '[]'}
+          },
+          "strategicInsights": "Descreva apenas o que ficou comprovado sobre o negócio com base nos resultados.",
+          "iceBreaker": null,
+          "strategy": null
         }
+
+        IMPORTANTE: Os campos "emails", "phones" e "whatsapp" JÁ FORAM PRÉ-PREENCHIDOS com os dados extraídos diretamente das páginas.
+        Você pode ADICIONAR mais contatos se encontrar nos snippets, mas NÃO remova os que já estão lá.
+        Para decisionMaker e socialProfiles: preencha APENAS se encontrou evidência clara nos textos acima.
+        LEMBRE: null é melhor que dado falso.
+      `;
+
+      const aiText = await this.callAI(bdrPrompt, lead, { tenantId: lead.tenantId });
+      let aiJson = {};
+      try {
+        const cleanText = (aiText || "").replace(/```json|```/g, "").trim();
+        aiJson = JSON.parse(cleanText);
+
+        // Garante que os dados raspados diretamente sempre estejam no resultado final
+        // (a IA pode ter alterado, então reforçamos)
+        if (!aiJson.contacts) aiJson.contacts = {};
+        aiJson.contacts.emails = [...new Set([...(aiJson.contacts.emails || []), ...scrapedEmails])].filter(Boolean);
+        aiJson.contacts.phones = [...new Set([...(aiJson.contacts.phones || []), ...scrapedPhones])].filter(Boolean);
+        aiJson.contacts.whatsapp = [...new Set([...(aiJson.contacts.whatsapp || []), ...scrapedWaNumbers])].filter(Boolean);
+        if (websiteUrl && !aiJson.companyInfo?.website) {
+          if (!aiJson.companyInfo) aiJson.companyInfo = {};
+          aiJson.companyInfo.website = websiteUrl;
+        }
+
+        const decisor = aiJson.decisionMaker?.name || 'Não identificado';
+        const emails = aiJson.contacts?.emails?.length || 0;
+        const phones = aiJson.contacts?.phones?.length || 0;
+        const waNums = aiJson.contacts?.whatsapp?.length || 0;
+        console.log(`[BDR Engine] ✅ Dossiê para "${lead.name}": Decisor=${decisor} | ${emails} emails | ${phones} fones | ${waNums} WhatsApp`);
+      } catch(e) { console.error("[BDR Engine] Erro ao parsear JSON do dossiê:", e.message); }
+
+      // 3. Montar campos reais a partir dos dados encontrados pelo BDR
+      //    Regra de ouro: NUNCA sobrescreve dados existentes, NUNCA usa dados vazios/nulos
+      const contactData = aiJson.contacts || {};
+      const companyInfo = aiJson.companyInfo || {};
+      const decisionMaker = aiJson.decisionMaker || {};
+
+      // WhatsApp: números extraídos de links wa.me são os mais confiáveis (verificados)
+      const waNumbers = (contactData.whatsapp || []).filter(n => n && n.replace(/\D/g, '').length >= 10);
+      const firstWaNumber = waNumbers[0] || null;
+
+      // Email: preenche apenas se o lead não tem email e a IA encontrou um real
+      const foundEmails = (contactData.emails || []).filter(e => e && e.includes('@') && !e.includes('...'));
+      const firstEmail = foundEmails[0] || null;
+      
+      // Telefone: prioriza número de WhatsApp (wa.me), depois telefones genéricos
+      const foundPhones = (contactData.phones || []).filter(p => p && p.replace(/\D/g, '').length >= 8 && !p.includes('...'));
+      // Se temos número de wa.me, esse é o melhor contato
+      const firstPhone = firstWaNumber || foundPhones[0] || null;
+
+      // Website e Redes Sociais
+      const foundWebsite = (companyInfo.website && !companyInfo.website.includes('...')) ? companyInfo.website : null;
+      const socialProfiles = (companyInfo.socialProfiles || []).filter(s => s && s.startsWith('http') && !s.includes('...'));
+      const linkedInProfile = (decisionMaker.linkedin && decisionMaker.linkedin.startsWith('http')) ? decisionMaker.linkedin : null;
+      const allSocials = {};
+      if (linkedInProfile) allSocials.linkedin = linkedInProfile;
+      socialProfiles.forEach((url, i) => {
+        if (url.includes('instagram')) allSocials.instagram = url;
+        else if (url.includes('facebook')) allSocials.facebook = url;
+        else if (url.includes('linkedin') && !allSocials.linkedin) allSocials.linkedin = url;
+        else allSocials[`social_${i}`] = url;
       });
+
+      // Tenta inferir nome do decisor pelo e-mail se o nome estiver nulo
+      let inferredName = decisionMaker.name;
+      if (!inferredName && firstEmail) {
+        const namePart = firstEmail.split('@')[0].split(/[\._]/)[0];
+        if (namePart && namePart.length > 2 && !['contato', 'vendas', 'sac', 'info', 'admin', 'suporte'].includes(namePart.toLowerCase())) {
+          inferredName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+          console.log(`[BDR Engine] 👤 Nome inferido do e-mail: ${inferredName}`);
+        }
+      }
+
+      // Monta os dados para update
+      const updateData = {
+        extractedData: JSON.stringify({ ...JSON.parse(lead.extractedData || "{}"), ...aiJson, lastEnrichedAt: new Date() }),
+        isToEnrich: false,
+        status: lead.status === "DISCOVERED" ? "ENRICHED" : lead.status,
+        extraPhones: foundPhones.length > 0 ? foundPhones.join(', ') : null,
+        extraEmails: foundEmails.length > 0 ? foundEmails.join(', ') : null
+      };
+
+      // Só atualiza phone se o lead não tem
+      if (firstPhone && (!lead.phone || lead.phone.trim() === '')) {
+        updateData.phone = firstPhone;
+      }
+      // Só atualiza email se o lead não tem
+      if (firstEmail && !lead.email) {
+        updateData.email = firstEmail;
+      }
+      // Website e redes sociais
+      if (foundWebsite && !lead.website) updateData.website = foundWebsite;
+      if (Object.keys(allSocials).length > 0) updateData.socialLinks = JSON.stringify(allSocials);
+
+      // Notas: Agora apenas com Insights Estratégicos (limpo)
+      let newNotes = lead.notes || "";
+      const noteLines = [`\n\n--- INSIGHTS BDR IA (${new Date().toLocaleDateString()}) ---`];
+      if (inferredName) noteLines.push(`👤 Decisor Provável: ${inferredName} (${decisionMaker.role || 'Sócio/Dono'})`);
+      if (aiJson.strategicInsights) noteLines.push(`💡 Insight: ${aiJson.strategicInsights}`);
+      if (aiJson.iceBreaker) noteLines.push(`💬 Abordagem sugerida: ${aiJson.iceBreaker}`);
+      newNotes += noteLines.join('\n');
+      updateData.notes = newNotes;
+
+      await prisma.lead.update({ where: { id: lead.id }, data: updateData });
 
       // Increment Research Usage
       await prisma.tenant.update({
@@ -1685,29 +2084,7 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
         data: { usedResearch: { increment: 1 } }
       });
 
-      // 4. Autonomously Initiate Outreach if SDR is active
-      if (sdr && aiJson.iceBreaker && lead.phone) {
-        console.log(`[Outreach] 🚀 Iniciando contato proativo com ${lead.name}`);
-        
-        const conv = await prisma.conversation.upsert({
-          where: { leadId: lead.id },
-          update: { botActive: true },
-          create: { leadId: lead.id, botActive: true, tenantId: lead.tenantId }
-        });
-
-        await this.sendMessage(lead.tenantId, lead.phone, aiJson.iceBreaker);
-
-        await prisma.message.create({
-          data: {
-            conversationId: conv.id,
-            content: aiJson.iceBreaker,
-            role: "ASSISTANT",
-            tenantId: lead.tenantId
-          }
-        });
-      }
-
-      console.log(`[Enrichment] ✅ Sucesso e Outreach iniciado para ${lead.name}`);
+      console.log(`[Enrichment] ✅ Cadastro estruturado para "${lead.name}". Decisor: ${inferredName || 'N/A'}.`);
     } catch (e) {
       console.error(`[Enrichment] Falha ao enriquecer lead ${lead.id}:`, e);
     }
@@ -1718,66 +2095,145 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
   async processGlobalRoutines() {
     const now = new Date();
     try {
-      const configs = await prisma.automationConfig.findMany();
+      // Processar cada SDR ativo para aplicar suas regras específicas
+      const sdrs = await prisma.sdrBot.findMany({ where: { active: true } });
 
-      for (const config of configs) {
-        const tenantId = config.tenantId;
+      for (const sdr of sdrs) {
+        const tenantId = sdr.tenantId;
 
-        // A. PRÉ-CONFIRMAÇÃO
-        const tomorrow = new Date(now);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const tStart = new Date(tomorrow); tStart.setHours(0, 0, 0, 0);
-        const tEnd = new Date(tomorrow); tEnd.setHours(23, 59, 59, 999);
-
-        const toConfirm = await prisma.appointment.findMany({
-          where: { tenantId, status: "SCHEDULED", date: { gte: tStart, lte: tEnd } },
+        // 1. CONFIRMAÇÃO IMEDIATA (Leads que acabaram de agendar e ainda não foram avisados)
+        const newAppts = await prisma.appointment.findMany({
+          where: { tenantId, status: "SCHEDULED", notes: { not: { contains: "[CONFIRMED_BY_SDR]" } } },
           include: { lead: true }
         });
 
-        for (const appt of toConfirm) {
+        for (const appt of newAppts) {
           const timeStr = appt.date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-          const template = config.confirmMsgTemplate || "Olá {name}! Confirmando seu atendimento amanhã às {time}. ✅";
-          const msg = template.replace("{name}", appt.lead.name).replace("{time}", timeStr);
+          const dateStr = appt.date.toLocaleDateString();
+          const msg = `Olá ${appt.lead.name}! Passando para confirmar que recebi seu agendamento para o dia ${dateStr} às ${timeStr}. Estarei te esperando! ✅`;
+          
           await WhatsAppManager.sendMessage(tenantId, appt.lead.phone, msg);
-          await prisma.appointment.update({ where: { id: appt.id }, data: { status: "CONFIRM_SENT" } });
+          await prisma.appointment.update({
+            where: { id: appt.id },
+            data: { notes: (appt.notes || "") + "\n[CONFIRMED_BY_SDR]" }
+          });
         }
 
-        // B. NO-SHOW
-        const grace = config.lateToleranceMin || 15;
-        const delayLimit = new Date(now.getTime() - grace * 60 * 1000);
-        const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
-
-        const delayed = await prisma.appointment.findMany({
-          where: { tenantId, status: "CONFIRM_SENT", date: { lte: delayLimit, gte: todayStart } },
+        // 2. PRÉ-CONFIRMAÇÃO (Janela configurada no SDR)
+        const preHours = sdr.preConfirmationHours || 12;
+        const preLimit = new Date(now.getTime() + preHours * 60 * 60 * 1000);
+        
+        const toRemind = await prisma.appointment.findMany({
+          where: { 
+            tenantId, 
+            status: "SCHEDULED", 
+            date: { lte: preLimit, gte: now },
+            notes: { not: { contains: "[REMINDER_SENT]" } } 
+          },
           include: { lead: true }
         });
 
-        for (const appt of delayed) {
+        for (const appt of toRemind) {
           const timeStr = appt.date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-          const template = config.lateMsgTemplate || "Oi {name}! Notamos que você ainda não chegou para as {time}. Tudo bem?";
-          const msg = template.replace("{name}", appt.lead.name).replace("{time}", timeStr);
+          const msg = `Oi ${appt.lead.name}! Lembra que temos um compromisso hoje às ${timeStr}? Estaremos te aguardando! 😊`;
+          
           await WhatsAppManager.sendMessage(tenantId, appt.lead.phone, msg);
-          await prisma.appointment.update({ where: { id: appt.id }, data: { status: "LATE_NOTIFIED" } });
+          await prisma.appointment.update({
+            where: { id: appt.id },
+            data: { notes: (appt.notes || "") + "\n[REMINDER_SENT]" }
+          });
         }
 
-        // C. PÓS-VENDA (corrigido: usa horas, não minutos)
-        const postHours = config.postServiceHours || 24;
+        // 3. NO-SHOW (Tolerância configurada no SDR)
+        const grace = sdr.noShowGraceMinutes || 15;
+        const noShowLimit = new Date(now.getTime() - grace * 60 * 1000);
+
+        const missed = await prisma.appointment.findMany({
+          where: { 
+            tenantId, 
+            status: "SCHEDULED", 
+            date: { lte: noShowLimit },
+            notes: { not: { contains: "[NOSHOW_NOTIFIED]" } }
+          },
+          include: { lead: true }
+        });
+
+        for (const appt of missed) {
+          const msg = `Olá ${appt.lead.name}, notamos que você não conseguiu comparecer ao nosso compromisso agora há pouco. Aconteceu algo? Se quiser reagendar, estou à disposição!`;
+          
+          await WhatsAppManager.sendMessage(tenantId, appt.lead.phone, msg);
+          await prisma.appointment.update({
+            where: { id: appt.id },
+            data: { 
+              status: "NOSHOW",
+              notes: (appt.notes || "") + "\n[NOSHOW_NOTIFIED]" 
+            }
+          });
+        }
+
+        // 4. PÓS-ATENDIMENTO / CHECK-UP
+        const postHours = sdr.postServiceCheckHours || 24;
         const postLimit = new Date(now.getTime() - postHours * 60 * 60 * 1000);
 
-        const completed = await prisma.appointment.findMany({
-          where: { tenantId, status: "COMPLETED", updatedAt: { lte: postLimit } },
+        const toFollowUp = await prisma.appointment.findMany({
+          where: { 
+            tenantId, 
+            status: "COMPLETED", 
+            updatedAt: { lte: postLimit },
+            notes: { not: { contains: "[POST_SERVICE_SENT]" } }
+          },
           include: { lead: true }
         });
 
-        for (const appt of completed) {
-          const template = config.postServiceMsgTemplate || "Oi {name}! Como foi sua experiência? ✨";
-          const msg = template.replace("{name}", appt.lead.name);
+        for (const appt of toFollowUp) {
+          const msg = `Oi ${appt.lead.name}! Como foi seu atendimento ontem? Espero que tenha sido excelente! Se precisar de algo mais, conte comigo. ✨`;
+          
           await WhatsAppManager.sendMessage(tenantId, appt.lead.phone, msg);
-          await prisma.appointment.update({ where: { id: appt.id }, data: { status: "FEEDBACK_SENT" } });
+          await prisma.appointment.update({
+            where: { id: appt.id },
+            data: { notes: (appt.notes || "") + "\n[POST_SERVICE_SENT]" }
+          });
         }
       }
-    } catch (e) {
-      console.error("[AutoEngine] Erro nas rotinas globais:", e);
+    } catch (err) {
+      console.error("[AutoEngine] Erro nas rotinas globais:", err);
+    }
+  }
+
+  async handleWaitlistEncaixe(tenantId, cancelledAppt) {
+    try {
+      // 1. Verificar se o SDR tem a lista de espera ativada
+      const sdr = await prisma.sdrBot.findFirst({ where: { tenantId, active: true } });
+      if (!sdr || !sdr.enableWaitlist) return;
+
+      // 2. Buscar o próximo da fila (PENDING, por prioridade e data)
+      const nextOnList = await prisma.waitlist.findFirst({
+        where: { tenantId, status: "PENDING" },
+        include: { lead: true },
+        orderBy: [{ priority: "desc" }, { createdAt: "asc" }]
+      });
+
+      if (!nextOnList) {
+        console.log(`[Waitlist] 📭 Fila vazia para o tenant ${tenantId}.`);
+        return;
+      }
+
+      // 3. Notificar o lead sobre a vaga (via SDR)
+      const timeStr = cancelledAppt.date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const dateStr = cancelledAppt.date.toLocaleDateString();
+      const msg = `Oi ${nextOnList.lead.name}! Acabou de surgir uma vaga para agendamento no dia ${dateStr} às ${timeStr}. Você tem interesse em ocupar esse horário? Me avise aqui! 🚀`;
+
+      await WhatsAppManager.sendMessage(tenantId, nextOnList.lead.phone, msg);
+
+      // 4. Atualizar status na lista de espera
+      await prisma.waitlist.update({
+        where: { id: nextOnList.id },
+        data: { status: "NOTIFIED", notes: (nextOnList.notes || "") + `\n[NOTIFIED_FOR_ENCAIXE] vaga das ${timeStr} do dia ${dateStr}` }
+      });
+
+      console.log(`[Waitlist] ✅ Lead ${nextOnList.lead.name} notificado sobre a vaga disponível.`);
+    } catch (err) {
+      console.error("[Waitlist] Erro ao processar encaixe:", err);
     }
   }
 

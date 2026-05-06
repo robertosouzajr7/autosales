@@ -147,7 +147,7 @@ export default function Conversations() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   // Unread
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [countOfUnread, setCountOfUnread] = useState(0);
   const selectedChatRef = useRef(selectedChat);
 
   const scrollToBottom = () => {
@@ -349,7 +349,7 @@ export default function Conversations() {
     selectedChatRef.current = selectedChat;
     if (selectedChat) {
       fetchMessages(selectedChat.id);
-      setUnreadCount(0);
+      setCountOfUnread(0);
     }
   }, [selectedChat]);
 
@@ -382,7 +382,7 @@ export default function Conversations() {
 
         // Chat não está aberto → incrementa unread (apenas local para badge da lista se quiser)
         if (message.role === 'USER') {
-          setUnreadCount(c => c + 1);
+          setCountOfUnread(c => c + 1);
         }
 
         // Atualiza preview da lista

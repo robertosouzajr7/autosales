@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
-  Target, Plus, Trash2, Brain, Zap, Save, RefreshCw, Sliders, Search, Globe, Layout, ShieldCheck, TrendingUp
+  Target, Plus, Trash2, Brain, Zap, Save, RefreshCw, Sliders, Search, Globe, Layout, ShieldCheck, TrendingUp, Briefcase
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
@@ -27,23 +27,35 @@ export default function IcpManagement() {
     niche: "",
     role: "",
     location: "Brasil",
+    industry: "",
+    companySize: "",
+    painPoints: "",
+    goals: "",
     relevantInfo: "",
     searchKeywords: "",
     dailyResearchLimit: 10,
     dailyLimit: 200,
     isAutoHunterEnabled: true,
     isProspectingActive: true,
-    isActive: true
+    isActive: true,
+    sdrId: ""
   });
+
+  const [sdrs, setSdrs] = useState<any[]>([]);
 
   const fetchData = async () => {
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch("/api/icp-profiles", { 
-        headers: { "Authorization": `Bearer ${token}` } 
-      });
-      const data = await res.json();
-      setProfiles(Array.isArray(data) ? data : []);
+      const [icpRes, sdrRes] = await Promise.all([
+        fetch("/api/icp-profiles", { headers: { "Authorization": `Bearer ${token}` } }),
+        fetch("/api/sdrs", { headers: { "Authorization": `Bearer ${token}` } })
+      ]);
+      
+      const icpData = await icpRes.json();
+      const sdrData = await sdrRes.json();
+      
+      setProfiles(Array.isArray(icpData) ? icpData : []);
+      setSdrs(Array.isArray(sdrData) ? sdrData : []);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
@@ -58,13 +70,18 @@ export default function IcpManagement() {
         niche: profile.niche || "",
         role: profile.role || "",
         location: profile.location || "Brasil",
+        industry: profile.industry || "",
+        companySize: profile.companySize || "",
+        painPoints: profile.painPoints || "",
+        goals: profile.goals || "",
         relevantInfo: profile.relevantInfo || "",
         searchKeywords: profile.searchKeywords || "",
         dailyResearchLimit: profile.dailyResearchLimit || 10,
         dailyLimit: profile.dailyLimit || 200,
         isAutoHunterEnabled: profile.isAutoHunterEnabled ?? true,
         isProspectingActive: profile.isProspectingActive ?? true,
-        isActive: profile.isActive ?? true
+        isActive: profile.isActive ?? true,
+        sdrId: profile.sdrId || ""
       });
     } else {
       setEditingProfile(null);
@@ -73,13 +90,18 @@ export default function IcpManagement() {
         niche: "",
         role: "",
         location: "Brasil",
+        industry: "",
+        companySize: "",
+        painPoints: "Processos manuais, falta de controle de leads, baixa conversão.",
+        goals: "Aumentar agendamentos qualificados e automatizar primeiro contato.",
         relevantInfo: "Stack tecnológica, notícias recentes de expansão, faturamento estimado.",
         searchKeywords: "linkedin, news, expansion, hiring",
         dailyResearchLimit: 10,
         dailyLimit: 200,
         isAutoHunterEnabled: true,
         isProspectingActive: true,
-        isActive: true
+        isActive: true,
+        sdrId: sdrs[0]?.id || ""
       });
     }
     setIsModalOpen(true);
@@ -262,6 +284,51 @@ export default function IcpManagement() {
                            <Input value={form.role} onChange={e => setForm({...form, role: e.target.value})} className="h-14 rounded-2xl border-none bg-slate-50 px-6 font-bold shadow-inner" placeholder="CEO, Diretor, Head de Vendas..." />
                         </div>
                      </div>
+                  </section>
+
+                  <section className="space-y-6">
+                      <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-3">
+                         <Target className="w-4 h-4 text-blue-500" /> Perfil Detalhado (Contexto SDR)
+                      </h4>
+                      <div className="grid grid-cols-2 gap-6">
+                         <div className="space-y-2">
+                            <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Indústria Principal</Label>
+                            <Input value={form.industry} onChange={e => setForm({...form, industry: e.target.value})} className="h-14 rounded-2xl border-none bg-slate-50 px-6 font-bold shadow-inner" placeholder="Ex: Tecnologia, Imobiliário..." />
+                         </div>
+                         <div className="space-y-2">
+                            <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Tamanho da Empresa</Label>
+                            <Input value={form.companySize} onChange={e => setForm({...form, companySize: e.target.value})} className="h-14 rounded-2xl border-none bg-slate-50 px-6 font-bold shadow-inner" placeholder="Ex: 10-50 funcionários..." />
+                         </div>
+                      </div>
+                      <div className="space-y-4">
+                         <div className="space-y-2">
+                            <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Dores do Cliente (Pain Points)</Label>
+                            <Textarea value={form.painPoints} onChange={e => setForm({...form, painPoints: e.target.value})} className="min-h-[80px] rounded-2xl border-none bg-slate-50 p-6 font-medium text-sm shadow-inner" placeholder="O que tira o sono desse cliente?" />
+                         </div>
+                         <div className="space-y-2">
+                            <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Objetivos do Cliente (Goals)</Label>
+                            <Textarea value={form.goals} onChange={e => setForm({...form, goals: e.target.value})} className="min-h-[80px] rounded-2xl border-none bg-slate-50 p-6 font-medium text-sm shadow-inner" placeholder="Onde esse cliente quer chegar?" />
+                         </div>
+                      </div>
+                  </section>
+
+                  <section className="space-y-6">
+                      <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-3">
+                         <Briefcase className="w-4 h-4 text-blue-500" /> Agente Responsável
+                      </h4>
+                      <div className="space-y-2">
+                         <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Selecione o SDR para esta Jornada</Label>
+                         <select 
+                           value={form.sdrId} 
+                           onChange={e => setForm({...form, sdrId: e.target.value})}
+                           className="w-full h-14 rounded-2xl border-none bg-slate-50 px-6 font-bold shadow-inner appearance-none outline-none focus:ring-2 focus:ring-blue-500/20"
+                         >
+                            <option value="">SDR Padrão do Sistema</option>
+                            {sdrs.map(sdr => (
+                              <option key={sdr.id} value={sdr.id}>{sdr.name} ({sdr.role})</option>
+                            ))}
+                         </select>
+                      </div>
                   </section>
 
                   <section className="space-y-6">

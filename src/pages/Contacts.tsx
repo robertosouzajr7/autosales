@@ -28,6 +28,12 @@ interface Lead {
   tags?: string | null;
   notes?: string | null;
   source?: string | null;
+  isToEnrich?: boolean;
+  extractedData?: string | null;
+  website?: string | null;
+  socialLinks?: string | null;
+  extraPhones?: string | null;
+  extraEmails?: string | null;
   createdAt?: string;
 }
 
@@ -193,6 +199,25 @@ export default function Contacts() {
     setSelectedIds(newSet);
   };
 
+  const handleBulkEnrich = async () => {
+    if (!confirm(`🚀 Iniciar investigação profunda (BDR) para ${selectedIds.size} contatos selecionados?`)) return;
+    try {
+      const res = await fetch("/api/leads/bulk-enrich", {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify({ ids: Array.from(selectedIds) })
+      });
+      if (res.ok) {
+        toast({ 
+          title: "🚀 Investigação Iniciada!", 
+          description: "O robô BDR começou a caçar dados profundos sobre os decisores." 
+        });
+        setSelectedIds(new Set());
+        fetchData();
+      }
+    } catch (e) { toast({ title: "Erro no enriquecimento", variant: "destructive" }); }
+  };
+
   const handleBulkDelete = async () => {
     if (!confirm(`Excluir ${selectedIds.size} contatos selecionados?`)) return;
     try {
@@ -234,7 +259,15 @@ export default function Contacts() {
                  <Button variant="outline" size="icon" onClick={handleExport} className="h-12 w-12 rounded-2xl border-2"><Download className="w-4 h-4" /></Button>
                  <Button variant="outline" size="icon" onClick={() => document.getElementById('csvImport')?.click()} className="h-12 w-12 rounded-2xl border-2"><UserPlus className="w-4 h-4" /></Button>
                  {selectedIds.size > 0 && (
-                   <Button variant="destructive" size="icon" onClick={handleBulkDelete} className="h-12 w-12 rounded-2xl animate-in zoom-in"><Trash2 className="w-4 h-4" /></Button>
+                   <>
+                     <Button 
+                       onClick={handleBulkEnrich} 
+                       className="h-12 bg-emerald-500 hover:bg-emerald-600 px-6 rounded-2xl font-black uppercase text-[10px] tracking-widest text-white shadow-lg shadow-emerald-500/20 animate-in slide-in-from-right"
+                     >
+                       Investigação BDR
+                     </Button>
+                     <Button variant="destructive" size="icon" onClick={handleBulkDelete} className="h-12 w-12 rounded-2xl animate-in zoom-in"><Trash2 className="w-4 h-4" /></Button>
+                   </>
                  )}
                </div>
                <Tabs defaultValue="grid" className="w-[120px] h-12" onValueChange={(v) => setViewMode(v as any)}>
@@ -318,6 +351,11 @@ export default function Contacts() {
                              } border-none font-bold text-[8px] uppercase tracking-tighter mt-1`}>
                                 {contact.status || "Ativo"}
                              </Badge>
+                             {contact.isToEnrich && (
+                               <Badge className="bg-emerald-500 text-white animate-pulse border-none font-bold text-[8px] uppercase tracking-tighter mt-1 ml-2 shadow-lg shadow-emerald-500/20">
+                                  BDR Investigando... 🕵️‍♂️
+                               </Badge>
+                             )}
                          </div>
                       </div>
 
@@ -430,6 +468,49 @@ export default function Contacts() {
            </div>
 
            <div className="p-12 space-y-8 bg-white">
+              {/* DOSSIÊ BDR (DEEP RESEARCH RESULTS) */}
+              {selectedContact?.extractedData && (
+                <div className="bg-slate-50 rounded-[30px] p-8 border-2 border-emerald-500/10 animate-in fade-in zoom-in">
+                   <div className="flex items-center gap-3 mb-6">
+                      <div className="bg-emerald-500 p-2 rounded-xl text-white"><Search className="w-4 h-4" /></div>
+                      <h3 className="font-black text-xs uppercase tracking-widest text-slate-900">Dossiê BDR (Inteligência)</h3>
+                   </div>
+                   
+                   {(() => {
+                      try {
+                        const data = JSON.parse(selectedContact.extractedData);
+                        return (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                             {data.decisionMaker && (
+                               <div className="space-y-1">
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Decisor Encontrado</p>
+                                  <p className="font-bold text-slate-800">{data.decisionMaker.name} ({data.decisionMaker.role})</p>
+                                  {data.decisionMaker.linkedIn && <a href={data.decisionMaker.linkedIn} target="_blank" className="text-xs text-emerald-500 font-bold hover:underline">Perfil LinkedIn</a>}
+                               </div>
+                             )}
+                             {data.companyInfo?.socialProfiles?.length > 0 && (
+                               <div className="space-y-1">
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Canais Digitais</p>
+                                  <div className="flex flex-wrap gap-2">
+                                     {data.companyInfo.socialProfiles.map((s: string, i: number) => (
+                                       <a key={i} href={s} target="_blank" className="bg-white p-1 px-3 rounded-lg border text-[10px] font-bold text-slate-500 hover:text-emerald-500 truncate max-w-[150px]">{s}</a>
+                                     ))}
+                                  </div>
+                               </div>
+                             )}
+                             {data.strategicInsights && (
+                               <div className="col-span-2 bg-white/50 p-4 rounded-2xl border border-dashed border-slate-200">
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Visão Estratégica</p>
+                                  <p className="text-xs text-slate-600 italic leading-relaxed">"{data.strategicInsights}"</p>
+                               </div>
+                             )}
+                          </div>
+                        );
+                      } catch (e) { return null; }
+                   })()}
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-8">
                  <div className="space-y-2">
                     <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Nome de Exibição</Label>

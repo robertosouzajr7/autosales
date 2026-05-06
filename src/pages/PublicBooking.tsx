@@ -24,6 +24,7 @@ export default function PublicBooking() {
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [booked, setBooked] = useState(false);
+  const [inWaitlist, setInWaitlist] = useState(false);
 
   const handleBooking = async () => {
     if (!name || !phone || !date || !selectedTime) {
@@ -62,6 +63,31 @@ export default function PublicBooking() {
     }
   };
 
+  const handleWaitlist = async () => {
+    if (!name || !phone) {
+      toast({ title: "Atenção", description: "Preencha seu nome e WhatsApp para entrar na lista.", variant: "destructive" });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch("/api/public/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tenantId, name, phone })
+      });
+
+      if (response.ok) {
+        setInWaitlist(true);
+        toast({ title: "Lista de Espera", description: "Você entrou na fila! Te avisaremos se surgir uma vaga. 🚀" });
+      }
+    } catch (e) {
+      toast({ title: "Erro", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (booked) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-4">
@@ -74,6 +100,23 @@ export default function PublicBooking() {
           </CardDescription>
           <Button onClick={() => window.close()} className="w-full py-6 bg-emerald-600 hover:bg-emerald-500 text-lg font-bold">
             Pode fechar esta janela
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  if (inWaitlist) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-4">
+        <Card className="w-full max-w-md border-indigo-500 bg-slate-900/60 backdrop-blur-xl text-white text-center p-8 animate-in fade-in zoom-in duration-500">
+          <Clock className="w-20 h-20 text-indigo-400 mx-auto mb-6" />
+          <CardTitle className="text-3xl font-bold mb-2">Você está na Fila!</CardTitle>
+          <CardDescription className="text-slate-300 mb-6 text-lg">
+            Registramos seu interesse. Nosso SDR entrará em contato via WhatsApp assim que houver um encaixe disponível. 🚀
+          </CardDescription>
+          <Button onClick={() => window.close()} className="w-full py-6 bg-indigo-600 hover:bg-indigo-500 text-lg font-bold">
+            Até logo!
           </Button>
         </Card>
       </div>
@@ -128,13 +171,22 @@ export default function PublicBooking() {
               </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-800">
+            <div className="pt-4 border-t border-slate-800 space-y-3">
               <Button 
                 onClick={handleBooking}
                 disabled={loading || !date || !selectedTime}
                 className="w-full py-7 bg-indigo-600 hover:bg-indigo-500 text-lg font-bold text-white rounded-2xl shadow-lg shadow-indigo-900/20 transition-all active:scale-95"
               >
                 {loading ? "Confirmando..." : "Confirmar Agendamento ✨"}
+              </Button>
+              
+              <Button 
+                variant="outline"
+                onClick={handleWaitlist}
+                disabled={loading}
+                className="w-full py-6 border-slate-700 bg-transparent text-slate-400 hover:bg-slate-800 hover:text-white rounded-2xl transition-all"
+              >
+                Não achou seu horário? Me avise de vagas 🔔
               </Button>
             </div>
           </CardContent>

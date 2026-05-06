@@ -207,10 +207,16 @@ export class WhatsAppManager {
 
         sock.ev.on('messages.upsert', async (m) => {
             const msg = m.messages[0];
-            if (!msg.message || msg.key.fromMe) return;
-
             const remoteJid = msg.key.remoteJid;
             
+            // FILTRO DE SEGURANÇA: Ignorar mensagens que não sejam de conversas individuais
+            // Ignora Grupos (@g.us), Canais/Newsletters (@newsletter) e Transmissões (@broadcast)
+            if (remoteJid?.endsWith('@g.us') || remoteJid?.endsWith('@newsletter') || remoteJid?.endsWith('@broadcast')) {
+                return;
+            }
+
+            if (!msg.message || msg.key.fromMe) return;
+
             // WhatsApp migrou para LID (@lid) em vez de @s.whatsapp.net
             // Quando é @lid, o telefone real vem em msg.key.senderPn
             let phone;
@@ -416,11 +422,16 @@ export class WhatsAppManager {
             const [_, session] = sessionEntry;
             const jid = phone.includes('@s.whatsapp.net') ? phone : `${phone}@s.whatsapp.net`;
             try {
-                await session.sock.sendMessage(jid, { text });
+                // Timeout de 15 segundos para evitar travamento infinito
+                await Promise.race([
+                    session.sock.sendMessage(jid, { text }),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error("Baileys sendMessage Timeout")), 15000))
+                ]);
                 console.log(`[WhatsApp Baileys] Enviado p/ ${phone}`);
                 return true;
             } catch (e) {
-                console.error(`[WhatsApp Baileys] Erro no envio:`, e);
+                console.error(`[WhatsApp Baileys] Erro no envio para ${phone}:`, e.message);
+                return false;
             }
         }
 
@@ -499,5 +510,27 @@ export class WhatsAppManager {
         // Fallback: texto com link
         console.warn(`[WhatsApp] sendMedia fallback: enviando como texto p/ ${phone}`);
         return this.sendMessage(tenantId, phone, `${caption}\n${mediaUrl}`);
+    }
+
+    /**
+     * Verifica se um número existe no WhatsApp (onWhatsApp).
+     */
+    static async checkWhatsAppNumber(tenantId, phone) {
+        const sessionEntry = Array.from(whatsappSessions.entries()).find(
+            ([_, s]) => s.tenantId === tenantId && s.status === 'CONNECTED'
+        );
+
+        if (!sessionEntry) return false;
+        
+        const [_, session] = sessionEntry;
+        const jid = phone.includes('@s.whatsapp.net') ? phone : `${phone}@s.whatsapp.net`;
+
+        try {
+            const [result] = await session.sock.onWhatsApp(jid);
+            return !!result?.exists;
+        } catch (e) {
+            console.error(`[WhatsApp] Erro ao validar número ${phone}:`, e.message);
+            return false;
+        }
     }
 }

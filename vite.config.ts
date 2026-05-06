@@ -10,7 +10,14 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:3000',
-        changeOrigin: true
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            console.log('proxy error', err);
+          });
+        },
       }
     }
   },

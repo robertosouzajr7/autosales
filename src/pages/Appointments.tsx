@@ -43,7 +43,7 @@ export default function Appointments() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newAppt, setNewAppt] = useState({ title: "", date: "", leadId: "", notes: "" });
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [viewMode, setViewMode] = useState<"day" | "week" | "month">("day");
+  const [viewMode, setViewMode] = useState<"day" | "week" | "month" | "upcoming">("upcoming");
   const { toast } = useToast();
 
   const fetchData = async () => {
@@ -122,30 +122,25 @@ export default function Appointments() {
     } catch (e) { toast({ title: "Ops! Erro ao atualizar", variant: "destructive" }); }
   };
 
-  const calculateShowRate = () => {
-    if (appts.length === 0) return 0;
-    const completed = appts.filter(a => a.status === "COMPLETED").length;
-    return Math.round((completed / appts.length) * 100);
-  };
-
-  const getMonthlyStats = () => {
+  const stats = (() => {
     const now = new Date();
     const monthAppts = appts.filter(a => {
       const d = new Date(a.date);
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     });
-    
     const completed = monthAppts.filter(a => a.status === "COMPLETED").length;
     const rate = monthAppts.length > 0 ? Math.round((completed / monthAppts.length) * 100) : 0;
-    
     return { total: monthAppts.length, rate };
-  };
+  })();
 
-  const stats = getMonthlyStats();
-
-  // Filtragem inteligente baseada no modo de visualização
   const filteredAppts = appts.filter(appt => {
     const apptDate = new Date(appt.date);
+    
+    // Visão "Próximos" mostra TUDO que for futuro ou hoje
+    if (viewMode === "upcoming") {
+      return apptDate >= new Date(new Date().setHours(0,0,0,0)); 
+    }
+    
     if (!selectedDate) return true;
 
     if (viewMode === "day") {
@@ -163,26 +158,30 @@ export default function Appointments() {
     }
   }).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  // Agrupamento por dia para exibição estilo Timetable
   const groupedAppts = filteredAppts.reduce((acc: any, appt) => {
-    const dateStr = format(new Date(appt.date), "yyyy-MM-dd");
-    if (!acc[dateStr]) acc[dateStr] = [];
-    acc[dateStr].push(appt);
+    try {
+      const dateStr = format(new Date(appt.date), "yyyy-MM-dd");
+      if (!acc[dateStr]) acc[dateStr] = [];
+      acc[dateStr].push(appt);
+    } catch (e) {
+      console.warn("[Agenda] Erro ao agrupar agendamento:", appt.id, e.message);
+    }
     return acc;
   }, {});
 
   const getDateLabel = (dateStr: string) => {
-    const d = new Date(dateStr + "T12:00:00");
-    if (isToday(d)) return "Hoje";
-    if (isTomorrow(d)) return "Amanhã";
-    return format(d, "eeee, d 'de' MMMM", { locale: ptBR });
+    try {
+      const d = new Date(dateStr + "T12:00:00");
+      if (isToday(d)) return "Hoje";
+      if (isTomorrow(d)) return "Amanhã";
+      return format(d, "eeee, d 'de' MMMM", { locale: ptBR });
+    } catch (e) { return "Data Inválida"; }
   };
 
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-8 p-6 lg:p-10 max-w-screen-2xl mx-auto">
         
-        {/* TOP BAR: SEARCH & CREATE */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
            <div className="space-y-1">
               <div className="flex items-center gap-3">
@@ -208,7 +207,6 @@ export default function Appointments() {
 
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
            
-           {/* SIDEBAR: MINI CALENDAR & FILTERS */}
            <div className="xl:col-span-1 space-y-6">
               <Card className="border-none shadow-3xl rounded-[40px] bg-white overflow-hidden">
                  <CardHeader className="pb-0 pt-8 px-8">
@@ -243,14 +241,14 @@ export default function Appointments() {
               </Card>
            </div>
 
-           {/* MAIN: AGENDA CONTENT */}
            <div className="xl:col-span-3 space-y-6">
-              <Tabs defaultValue="day" onValueChange={(v) => setViewMode(v as any)} className="w-full">
+              <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)} className="w-full">
                  <div className="flex items-center justify-between bg-white p-2 rounded-3xl shadow-xl border border-slate-50 mb-8">
                     <TabsList className="bg-transparent border-none">
                        <TabsTrigger value="day" className="h-11 px-8 rounded-2xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-black uppercase text-[10px] tracking-widest transition-all">Dia</TabsTrigger>
                        <TabsTrigger value="week" className="h-11 px-8 rounded-2xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-black uppercase text-[10px] tracking-widest transition-all">Semana</TabsTrigger>
                        <TabsTrigger value="month" className="h-11 px-8 rounded-2xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-black uppercase text-[10px] tracking-widest transition-all">Mês</TabsTrigger>
+                       <TabsTrigger value="upcoming" className="h-11 px-8 rounded-2xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-black uppercase text-[10px] tracking-widest transition-all">Próximos</TabsTrigger>
                     </TabsList>
                     
                     <div className="flex items-center gap-3 pr-2">
@@ -279,8 +277,16 @@ export default function Appointments() {
                                       <div className="p-8 flex flex-col md:flex-row items-center justify-between gap-6">
                                          <div className="flex items-center gap-8 w-full md:w-auto">
                                             <div className="flex flex-col items-center justify-center min-w-[80px]">
-                                               <span className="text-3xl font-black text-slate-900 tracking-tighter italic -mb-1">{format(new Date(appt.date), "HH:mm")}</span>
-                                               <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{format(new Date(appt.date), "aaa")}</span>
+                                               <span className="text-3xl font-black text-slate-900 tracking-tighter italic -mb-1">
+                                                 {(() => {
+                                                   try { return format(new Date(appt.date), "HH:mm"); } catch(e) { return "--:--"; }
+                                                 })()}
+                                               </span>
+                                               <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">
+                                                 {(() => {
+                                                   try { return format(new Date(appt.date), "aaa"); } catch(e) { return ""; }
+                                                 })()}
+                                               </span>
                                             </div>
                                             
                                             <div className="h-12 w-px bg-slate-100 hidden md:block" />
@@ -292,10 +298,19 @@ export default function Appointments() {
                                                      <User className="w-3 h-3 text-slate-400" />
                                                      <span className="text-[10px] font-bold text-slate-500 uppercase">{appt.lead?.name || "Contato"}</span>
                                                   </div>
-                                                  <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 rounded-full border border-slate-100">
-                                                     <Smartphone className="w-3 h-3 text-slate-400" />
-                                                     <span className="text-[10px] font-bold text-slate-500 uppercase">{appt.lead?.phone || "--"}</span>
-                                                  </div>
+                                                  <Badge className={cn(
+                                                    "text-[8px] font-black uppercase tracking-tighter px-2 h-5 border-none",
+                                                    appt.status === "SCHEDULED" ? "bg-indigo-500 text-white" :
+                                                    appt.status === "COMPLETED" ? "bg-emerald-500 text-white" :
+                                                    appt.status === "CANCELLED" ? "bg-red-500 text-white" :
+                                                    appt.status === "NOSHOW" ? "bg-orange-500 text-white" :
+                                                    "bg-slate-200 text-slate-600"
+                                                  )}>
+                                                    {appt.status === "SCHEDULED" ? "Agendado" : 
+                                                     appt.status === "COMPLETED" ? "Concluído" :
+                                                     appt.status === "CANCELLED" ? "Cancelado" :
+                                                     appt.status === "NOSHOW" ? "No-Show" : "Pendente"}
+                                                  </Badge>
                                                </div>
                                             </div>
                                          </div>
@@ -344,7 +359,6 @@ export default function Appointments() {
         </div>
       </div>
 
-      {/* MODAL NOVO AGENDAMENTO */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
         <DialogContent className="rounded-[40px] p-10 max-w-lg border-none shadow-3xl bg-white overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl rounded-full" />

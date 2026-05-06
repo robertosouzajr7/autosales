@@ -65,6 +65,8 @@ model Tenant {
   sdrs             SdrBot[]
   appointments     Appointment[]
   whatsappAccounts WhatsAppAccount[]
+  waitlists        Waitlist[]
+  prospectionLogs  ProspectionLog[]
 
   // Custom Pipelines
   pipelineStages PipelineStage[]
@@ -118,6 +120,12 @@ model Lead {
   notes    String?
   tenantId String
 
+  // Contatos e canais adicionais (preenchidos pelo BDR)
+  website     String?
+  socialLinks String? // JSON: { linkedin, instagram, facebook, ... }
+  extraPhones String? // JSON ou Texto: fone1, fone2...
+  extraEmails String? // JSON ou Texto: email1, email2...
+
   isToEnrich Boolean @default(false)
 
   // Fase 3 — IA Avançada
@@ -133,6 +141,7 @@ model Lead {
   appointments         Appointment[]
   progressions         AutomationProgress[]
   automationExecutions AutomationExecution[]
+  waitlists            Waitlist[]
 
   @@unique([phone, tenantId])
 }
@@ -465,14 +474,20 @@ model IcpProfile {
   id   String @id @default(uuid())
   name String // Ex: Donos de Restaurantes em SP
 
-  // Critérios de Busca
+  // Critérios de Busca (Base)
   niche    String? // Ex: Restaurantes, Academias
   role     String? // Ex: CEO, Dono, Gerente Comercial
   location String? // Ex: São Paulo, Brasil
 
+  // Detalhes do Perfil (Contexto para SDR)
+  industry    String? // Ex: Tecnologia, Varejo, Saúde
+  companySize String? // Ex: 1-10, 11-50, 50-200
+  painPoints  String? // Ex: Baixa conversão em anúncios, falta de SDR
+  goals       String? // Ex: Aumentar agendamentos, automatizar vendas
+
   // Configurações de Deep Research (IA Hunter)
-  relevantInfo        String? // Informações específicas que a IA deve buscar (ex: stack tecnológica)
-  searchKeywords      String? // Palavras-chave adicionais para o buscador (ex: "vagas abertas", "aporte")
+  relevantInfo        String? // Informações específicas que a IA deve buscar
+  searchKeywords      String? // Palavras-chave adicionais para o buscador
   dailyResearchLimit  Int     @default(10) // Limite de pesquisas profundas por dia
 
   // Automação
@@ -481,9 +496,40 @@ model IcpProfile {
   isActive            Boolean @default(true)
   dailyLimit          Int     @default(200) // Limite de contatos diários
 
+  // Vinculação específica de SDR (Opcional)
+  sdrId String? 
+
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  prospectionLogs ProspectionLog[]
+}
+
+model Waitlist {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  priority  Int      @default(0)
+  notes     String?
+  status    String   @default("PENDING") // PENDING, NOTIFIED, CONVERTED, EXPIRED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProspectionLog {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  icpId     String?
+  icp       IcpProfile? @relation(fields: [icpId], references: [id], onDelete: SetNull)
+  query     String
+  source    String   // Ex: GOOGLE_MAPS, LINKEDIN, APOLLO
+  leadsFound Int     @default(0)
+  status    String   // SUCCESS, FAILED
+  error     String?
+  createdAt DateTime @default(now())
 }

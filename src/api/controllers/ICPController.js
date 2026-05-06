@@ -11,12 +11,18 @@ export const getProfiles = async (req, res) => {
 export const createProfile = async (req, res) => {
   try {
     const tenantId = req.headers["x-tenant-id"] || req.tenantId;
-    const { name, niche, role, location, isAutoHunterEnabled, isProspectingActive, isActive, dailyLimit, relevantInfo, searchKeywords, dailyResearchLimit } = req.body;
+    const { 
+      name, niche, role, location, 
+      isAutoHunterEnabled, isProspectingActive, isActive, 
+      dailyLimit, relevantInfo, searchKeywords, dailyResearchLimit,
+      industry, companySize, painPoints, goals, sdrId
+    } = req.body;
     const profile = await prisma.icpProfile.create({
       data: { 
         name, niche, role, location, 
         isAutoHunterEnabled, isProspectingActive, isActive, 
         dailyLimit, relevantInfo, searchKeywords, dailyResearchLimit,
+        industry, companySize, painPoints, goals, sdrId,
         tenantId 
       }
     });

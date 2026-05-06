@@ -19,6 +19,7 @@ import BulkMessaging from "@/pages/BulkMessaging";
 import PublicBooking from "@/pages/PublicBooking";
 import PublicWebchat from "@/pages/PublicWebchat";
 import IcpManagement from "@/pages/IcpManagement";
+import ProspectionAnalytics from "@/pages/ProspectionAnalytics";
 import Docs from "@/pages/Docs";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -40,6 +41,7 @@ function App() {
         <Route path="/contacts" element={<Contacts />} />
         <Route path="/appointments" element={<Appointments />} />
         <Route path="/prospecting" element={<Prospecting />} />
+        <Route path="/prospecting/analytics" element={<ProspectionAnalytics />} />
         <Route path="/prospecting/icp" element={<IcpManagement />} />
         <Route path="/sdrs" element={<SdrManagement />} />
         <Route path="/automations" element={<Automations />} />

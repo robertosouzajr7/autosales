@@ -167,6 +167,17 @@ export const deleteLead = async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 };
 
+export const bulkEnrichLeads = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    await prisma.lead.updateMany({
+      where: { id: { in: ids } },
+      data: { isToEnrich: true }
+    });
+    res.json({ success: true, message: "🚀 Investigação profunda iniciada para os leads selecionados." });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
 export const bulkDeleteLeads = async (req, res) => {
   try {
     const { ids } = req.body;

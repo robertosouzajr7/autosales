@@ -10,6 +10,7 @@ import rateLimit from "express-rate-limit";
 import apiRouter from "./routes/index.js";
 import publicRouter from "./routes/public.js";
 import publicApiRouter from "./routes/publicApi.js";
+import prospectionRoutes from "./routes/prospection.js";
 import { WhatsAppManager } from "../../whatsapp.js";
 import AutomationEngine from "../../automation_engine.js";
 import { receiveWhatsappWebhook } from "./controllers/LeadController.js";
@@ -21,6 +22,7 @@ dotenv.config();
 const app = express();
 app.set("trust proxy", 1); // Necessário para o rateLimit funcionar atrás do Nginx/Easypanel proxy
 const eventEmitter = new EventEmitter();
+eventEmitter.setMaxListeners(100); 
 AutomationEngine.setEventEmitter(eventEmitter);
 
 // Security

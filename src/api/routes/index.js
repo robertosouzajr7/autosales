@@ -17,6 +17,7 @@ import * as SdrController from "../controllers/SdrController.js";
 import * as MessageController from "../controllers/MessageController.js";
 import * as ProspectController from "../controllers/ProspectController.js";
 import * as AnalyticsController from "../controllers/AnalyticsController.js";
+import * as ProspectionStatsController from "../controllers/ProspectionStatsController.js";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -37,6 +38,7 @@ router.post("/leads", LeadController.createLead);
 router.put("/leads/:id", LeadController.updateLead);
 router.delete("/leads/:id", LeadController.deleteLead);
 router.post("/contacts/bulk-delete", LeadController.bulkDeleteLeads);
+router.post("/leads/bulk-enrich", LeadController.bulkEnrichLeads);
 router.get("/contacts/export", LeadController.exportContacts);
 router.post("/contacts/import-bulk", LeadController.importBulk);
 
@@ -89,6 +91,8 @@ router.post("/prospect", ProspectController.prospectGeneric);
 router.post("/apollo/search", ProspectController.searchApollo);
 router.post("/prospect/linkedin", ProspectController.prospectLinkedIn);
 router.post("/prospect/enrich", ProspectController.enrichData);
+router.get("/prospect/stats", ProspectionStatsController.getProspectionStats);
+router.post("/prospect/trigger-hunt", ProspectionStatsController.triggerManualHunt);
 
 // Users
 router.get("/users", UserController.getUsers);
