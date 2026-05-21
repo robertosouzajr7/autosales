@@ -681,14 +681,14 @@ export default function AdminDashboard() {
                             <td className="p-4">
                               <div className="flex flex-col">
                                 <span className="font-extrabold text-slate-800">{cc.name}</span>
-                                <span className="text-[10px] font-bold text-[#820AD1]">{cc.planName} (R$ {cc.planPrice})</span>
+                                <span className="text-[10px] font-bold text-[#820AD1]">{cc.planName || "Sem Plano"} (R$ {(cc.planPrice || 0).toFixed(2)})</span>
                               </div>
                             </td>
-                            <td className="p-4 text-center font-bold">{cc.usage.sdrs}</td>
-                            <td className="p-4 text-center text-xs font-semibold text-slate-500">{(cc.usage.tokens / 1000).toFixed(1)}k</td>
-                            <td className="p-4 text-center text-xs font-semibold text-slate-500">{cc.usage.prospects}</td>
+                            <td className="p-4 text-center font-bold">{cc.usage?.sdrs ?? 0}</td>
+                            <td className="p-4 text-center text-xs font-semibold text-slate-500">{((cc.usage?.tokens || 0) / 1000).toFixed(1)}k</td>
+                            <td className="p-4 text-center text-xs font-semibold text-slate-500">{cc.usage?.prospects ?? 0}</td>
                             <td className="p-4 text-right font-black text-slate-900">
-                              R$ {cc.totalCost.toFixed(2)}
+                              R$ {(cc.totalCost ?? 0).toFixed(2)}
                             </td>
                           </tr>
                         ))}

@@ -40,7 +40,29 @@ export const getSummary = async (req, res) => {
 
     let totalClientOperationalCosts = 0;
     const clientCostsList = activeTenants.map(tenant => {
-      if (!tenant.plan) return { tenantId: tenant.id, name: tenant.name, cost: 0 };
+      if (!tenant.plan) {
+        return {
+          tenantId: tenant.id,
+          name: tenant.name,
+          planName: "Sem Plano",
+          planPrice: 0,
+          usage: {
+            sdrs: tenant.sdrs?.length || 0,
+            tokens: tenant.usedTokens || 0,
+            prospects: tenant.usedProspects || 0,
+            research: tenant.usedResearch || 0,
+            messages: tenant.usedMessages || 0
+          },
+          costs: {
+            sdrs: 0,
+            tokens: 0,
+            prospects: 0,
+            research: 0,
+            messages: 0
+          },
+          totalCost: 0
+        };
+      }
       
       const plan = tenant.plan;
       const sdrCost = tenant.sdrs.length * plan.sdrUnitCost;
