@@ -176,9 +176,7 @@ function SidebarContent({
         )}
       >
         <div className="flex items-center gap-3 w-full">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#820AD1] shadow-lg shadow-[#820AD1]/30">
-            <Bot className="h-5 w-5 text-white" />
-          </div>
+          <img src="/logo.png" alt="Logo" className="h-8 w-8 rounded-lg object-cover shadow-lg shadow-[#820AD1]/30" />
           {!collapsed && (
             <span className="text-xl font-black tracking-tighter uppercase text-white">
               Auto<span className="text-[#820AD1] italic">Sales</span>
