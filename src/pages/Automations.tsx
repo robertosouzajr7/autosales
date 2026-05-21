@@ -192,7 +192,7 @@ function AutomationNode({ data, selected }: any) {
     <div className={`relative transition-all duration-200 ${selected ? 'scale-105' : ''}`}>
       <Handle type="target" position={Position.Top} className="!w-3 !h-3 !bg-slate-300 !border-2 !border-white" />
 
-      <div className={`min-w-[220px] max-w-[280px] rounded-2xl bg-white shadow-xl border-2 transition-all ${selected ? 'border-emerald-400 shadow-emerald-500/20' : 'border-slate-100 hover:border-slate-300'}`}>
+      <div className={`min-w-[220px] max-w-[280px] rounded-2xl bg-white shadow-xl border-2 transition-all ${selected ? 'border-emerald-400 shadow-[#820AD1]/20' : 'border-slate-100 hover:border-slate-300'}`}>
         <div className="flex items-center gap-3 p-4">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg shrink-0" style={{ backgroundColor: typeDef?.color || "#64748b" }}>
             {typeDef?.icon || <Zap className="w-4 h-4" />}
@@ -221,7 +221,7 @@ function AutomationNode({ data, selected }: any) {
 
         {isCondition && (
           <div className="px-4 pb-3 grid grid-cols-2 gap-2">
-            <div className="text-center p-1.5 rounded-lg text-[8px] font-black uppercase bg-emerald-50 text-emerald-600">✅ SIM</div>
+            <div className="text-center p-1.5 rounded-lg text-[8px] font-black uppercase bg-purple-50 text-[#820AD1]">✅ SIM</div>
             <div className="text-center p-1.5 rounded-lg text-[8px] font-black uppercase bg-red-50 text-red-500">❌ NÃO</div>
           </div>
         )}
@@ -240,7 +240,7 @@ function AutomationNode({ data, selected }: any) {
           <div className="px-4 pb-3 grid grid-cols-3 gap-1">
             <div className="text-center p-1 rounded-lg text-[7px] font-black uppercase bg-red-50 text-red-500">🥶 Frio</div>
             <div className="text-center p-1 rounded-lg text-[7px] font-black uppercase bg-amber-50 text-amber-600">☀️ Morno</div>
-            <div className="text-center p-1 rounded-lg text-[7px] font-black uppercase bg-emerald-50 text-emerald-600">🔥 Quente</div>
+            <div className="text-center p-1 rounded-lg text-[7px] font-black uppercase bg-purple-50 text-[#820AD1]">🔥 Quente</div>
           </div>
         )}
 
@@ -257,7 +257,7 @@ function AutomationNode({ data, selected }: any) {
 
       {isCondition && (
         <>
-          <Handle type="source" position={Position.Bottom} id="true" className="!w-3 !h-3 !bg-emerald-500 !border-2 !border-white" style={{ left: "30%" }} />
+          <Handle type="source" position={Position.Bottom} id="true" className="!w-3 !h-3 !bg-[#820AD1] !border-2 !border-white" style={{ left: "30%" }} />
           <Handle type="source" position={Position.Bottom} id="false" className="!w-3 !h-3 !bg-red-500 !border-2 !border-white" style={{ left: "70%" }} />
         </>
       )}
@@ -592,8 +592,8 @@ export default function Automations() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-1">
             <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase flex items-center gap-3">
-              <Zap className="w-8 h-8 text-emerald-500" />
-              Hub de <span className="text-emerald-500 italic">Automações</span>
+              <Zap className="w-8 h-8 text-[#820AD1]" />
+              Hub de <span className="text-[#820AD1] italic">Automações</span>
             </h1>
             <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">
               Builder Visual Drag & Drop — Powered by ReactFlow
@@ -604,7 +604,7 @@ export default function Automations() {
             {execStats && (
               <div className="hidden lg:flex items-center gap-6 mr-4">
                 <div className="text-center"><p className="text-[9px] font-black text-slate-300 uppercase">Total</p><p className="text-lg font-black text-slate-900">{execStats.total || 0}</p></div>
-                <div className="text-center"><p className="text-[9px] font-black text-emerald-400 uppercase">OK</p><p className="text-lg font-black text-emerald-600">{execStats.completed || 0}</p></div>
+                <div className="text-center"><p className="text-[9px] font-black text-[#9d4edd] uppercase">OK</p><p className="text-lg font-black text-[#820AD1]">{execStats.completed || 0}</p></div>
                 <div className="text-center"><p className="text-[9px] font-black text-red-400 uppercase">Falhas</p><p className="text-lg font-black text-red-500">{execStats.failed || 0}</p></div>
               </div>
             )}
@@ -619,13 +619,13 @@ export default function Automations() {
                 </Button>
                 <Button 
                   onClick={() => hasSdr ? setIsAddModalOpen(true) : toast({ title: "SDR Necessário", description: "Contrate um SDR antes de criar automações.", variant: "destructive" })} 
-                  className={`h-11 px-6 rounded-2xl font-black uppercase text-[10px] tracking-widest text-white shadow-xl ${!hasSdr ? 'bg-slate-700 cursor-not-allowed' : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20'}`}
+                  className={`h-11 px-6 rounded-2xl font-black uppercase text-[10px] tracking-widest text-white shadow-xl ${!hasSdr ? 'bg-slate-700 cursor-not-allowed' : 'bg-[#820AD1] hover:bg-[#6c08b0] shadow-[#820AD1]/20'}`}
                 >
                   <Plus className="w-4 h-4 mr-2" /> Criar
                 </Button>
               </div>
               {!hasSdr && (
-                <p className="text-[8px] font-black text-emerald-500 uppercase tracking-widest animate-pulse mr-1">Requer SDR Contratado</p>
+                <p className="text-[8px] font-black text-[#820AD1] uppercase tracking-widest animate-pulse mr-1">Requer SDR Contratado</p>
               )}
             </div>
           </div>
@@ -660,7 +660,7 @@ export default function Automations() {
                           </div>
                         </div>
                       </div>
-                      <Switch checked={auto.active} onCheckedChange={() => toggleAuto(auto.id, auto.active)} className="data-[state=checked]:bg-emerald-500" />
+                      <Switch checked={auto.active} onCheckedChange={() => toggleAuto(auto.id, auto.active)} className="data-[state=checked]:bg-[#820AD1]" />
                     </div>
                     <div className="p-6 space-y-4">
                       <div className="grid grid-cols-2 gap-3">
@@ -673,7 +673,7 @@ export default function Automations() {
                           <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg" onClick={() => duplicateAuto(auto.id)}><Copy className="w-3.5 h-3.5 text-slate-300" /></Button>
                           <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg hover:bg-red-50" onClick={() => deleteAuto(auto.id)}><Trash2 className="w-3.5 h-3.5 text-slate-300" /></Button>
                         </div>
-                        <button onClick={() => openBuilder(auto)} className="text-emerald-500 font-black text-[10px] uppercase tracking-widest flex items-center gap-1 hover:gap-2 transition-all">
+                        <button onClick={() => openBuilder(auto)} className="text-[#820AD1] font-black text-[10px] uppercase tracking-widest flex items-center gap-1 hover:gap-2 transition-all">
                           Editar <ArrowRight className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -690,7 +690,7 @@ export default function Automations() {
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
         <DialogContent className="rounded-[32px] p-10 max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black flex items-center gap-2"><Zap className="text-emerald-500" /> Novo Workflow</DialogTitle>
+            <DialogTitle className="text-2xl font-black flex items-center gap-2"><Zap className="text-[#820AD1]" /> Novo Workflow</DialogTitle>
           </DialogHeader>
           <div className="grid gap-5 py-4">
             <div className="space-y-2">
@@ -782,7 +782,7 @@ export default function Automations() {
           </div>
           <DialogFooter>
             <Button onClick={handleCreateAuto} className="w-full h-14 bg-slate-900 hover:bg-slate-800 text-white font-black rounded-2xl uppercase tracking-widest text-sm shadow-2xl">
-              <Save className="w-4 h-4 mr-2 text-emerald-500" /> Criar Automação
+              <Save className="w-4 h-4 mr-2 text-[#820AD1]" /> Criar Automação
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -798,7 +798,7 @@ export default function Automations() {
             {FLOW_TEMPLATES.map((tmpl, i) => {
               const trigDef = TRIGGERS.find(t => t.id === tmpl.trigger);
               return (
-                <div key={i} className="p-6 rounded-2xl border-2 border-slate-100 hover:border-emerald-200 transition-all cursor-pointer group" onClick={() => createFromTemplate(tmpl)}>
+                <div key={i} className="p-6 rounded-2xl border-2 border-slate-100 hover:border-purple-200 transition-all cursor-pointer group" onClick={() => createFromTemplate(tmpl)}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg" style={{ backgroundColor: trigDef?.color || "#10b981" }}>
@@ -813,7 +813,7 @@ export default function Automations() {
                         </div>
                       </div>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-slate-200 group-hover:text-emerald-500 transition-colors" />
+                    <ChevronRight className="w-5 h-5 text-slate-200 group-hover:text-[#820AD1] transition-colors" />
                   </div>
                 </div>
               );
@@ -829,7 +829,7 @@ export default function Automations() {
           {/* Header */}
           <div className="p-5 bg-white border-b border-slate-100 flex items-center justify-between shrink-0 z-10">
             <div className="flex items-center gap-4">
-              <div className="bg-emerald-500 p-2.5 rounded-xl shadow-lg"><Zap className="text-white w-5 h-5" /></div>
+              <div className="bg-[#820AD1] p-2.5 rounded-xl shadow-lg"><Zap className="text-white w-5 h-5" /></div>
               <div>
                 <h2 className="text-lg font-black text-slate-900 tracking-tight leading-none uppercase">{selectedAuto?.name}</h2>
                 <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-widest">
@@ -840,7 +840,7 @@ export default function Automations() {
             <div className="flex gap-3">
               <Button onClick={() => setIsBuilderOpen(false)} variant="ghost" className="h-10 w-10 rounded-xl text-slate-300"><X className="w-5 h-5" /></Button>
               <Button onClick={handleSaveWorkflow} className="h-10 bg-slate-900 hover:bg-black px-6 rounded-xl font-black uppercase text-[10px] tracking-widest text-white shadow-xl">
-                <Save className="w-4 h-4 mr-2 text-emerald-500" /> Salvar
+                <Save className="w-4 h-4 mr-2 text-[#820AD1]" /> Salvar
               </Button>
             </div>
           </div>
@@ -1246,11 +1246,11 @@ export default function Automations() {
                           placeholder="Descreva os critérios de pontuação..."
                         />
                       </div>
-                      <div className="p-3 bg-emerald-50 rounded-xl space-y-1">
+                      <div className="p-3 bg-purple-50 rounded-xl space-y-1">
                         <p className="text-[8px] font-black text-emerald-700 uppercase">Roteamento por Score</p>
-                        <p className="text-[7px] text-emerald-600 font-medium">🔥 Quente: ≥ 70 · ☀️ Morno: 40-69 · 🥶 Frio: &lt; 40</p>
+                        <p className="text-[7px] text-[#820AD1] font-medium">🔥 Quente: ≥ 70 · ☀️ Morno: 40-69 · 🥶 Frio: &lt; 40</p>
                       </div>
-                      <p className="text-[7px] text-emerald-500 font-bold">Score salvo em {"{{ai.score}}"} e no Lead.qualificationScore</p>
+                      <p className="text-[7px] text-[#820AD1] font-bold">Score salvo em {"{{ai.score}}"} e no Lead.qualificationScore</p>
                     </>
                   )}
                 </div>

@@ -242,7 +242,7 @@ export default function Contacts() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
            <div className="space-y-1">
               <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase flex items-center gap-3">
-                 Base de <span className="text-emerald-500 italic">Contatos</span>
+                 Base de <span className="text-[#820AD1] italic">Contatos</span>
               </h1>
               <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Gerenciamento Premium de Pipeline</p>
            </div>
@@ -262,7 +262,7 @@ export default function Contacts() {
                    <>
                      <Button 
                        onClick={handleBulkEnrich} 
-                       className="h-12 bg-emerald-500 hover:bg-emerald-600 px-6 rounded-2xl font-black uppercase text-[10px] tracking-widest text-white shadow-lg shadow-emerald-500/20 animate-in slide-in-from-right"
+                       className="h-12 bg-[#820AD1] hover:bg-[#6c08b0] px-6 rounded-2xl font-black uppercase text-[10px] tracking-widest text-white shadow-lg shadow-[#820AD1]/20 animate-in slide-in-from-right"
                      >
                        Investigação BDR
                      </Button>
@@ -291,7 +291,7 @@ export default function Contacts() {
               onClick={handleSelectAll}
               className={`flex-none w-14 h-14 rounded-2xl border-2 cursor-pointer flex items-center justify-center transition-all ${
                 selectedIds.size > 0 && selectedIds.size === contacts.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.phone.includes(searchTerm)).length
-                ? 'bg-emerald-500 border-emerald-500 text-white' 
+                ? 'bg-[#820AD1] border-emerald-500 text-white' 
                 : 'bg-slate-50 border-slate-100 text-slate-300'
               }`}
             >
@@ -306,7 +306,7 @@ export default function Contacts() {
                 className="h-14 pl-12 w-full border-none bg-slate-50 text-slate-900 rounded-2xl focus:ring-emerald-500/30 font-bold text-xs" 
               />
             </div>
-           <Badge className="h-14 px-8 rounded-2xl bg-emerald-50 text-emerald-600 border-none flex items-center gap-2 font-black text-[10px] uppercase tracking-widest">
+           <Badge className="h-14 px-8 rounded-2xl bg-purple-50 text-[#820AD1] border-none flex items-center gap-2 font-black text-[10px] uppercase tracking-widest">
              {selectedIds.size > 0 ? `${selectedIds.size} Selecionados` : `${contacts.length} Na Base`}
            </Badge>
         </Card>
@@ -326,7 +326,7 @@ export default function Contacts() {
                 <div 
                   onClick={(e) => toggleSelect(contact.id, e)}
                   className={`absolute top-6 left-6 w-6 h-6 rounded-full border-2 z-10 transition-all flex items-center justify-center ${
-                    selectedIds.has(contact.id) ? 'bg-emerald-500 border-emerald-500' : 'bg-white/50 border-slate-200 opacity-0 group-hover:opacity-100'
+                    selectedIds.has(contact.id) ? 'bg-[#820AD1] border-emerald-500' : 'bg-white/50 border-slate-200 opacity-0 group-hover:opacity-100'
                   }`}
                 >
                   {selectedIds.has(contact.id) && <CheckCircle2 className="w-3 h-3 text-white" />}
@@ -343,16 +343,16 @@ export default function Contacts() {
                          <div className="flex-1 min-w-0">
                             <p className="font-black text-lg text-slate-900 leading-tight truncate">{contact.name}</p>
                              <Badge className={`${
-                                contact.status === 'CONVERTED' ? 'bg-emerald-100 text-emerald-600' : 
+                                contact.status === 'CONVERTED' ? 'bg-emerald-100 text-[#820AD1]' : 
                                 contact.status === 'APPOINTMENT' ? 'bg-purple-100 text-purple-600' : 
                                 contact.status === 'QUALIFYING' ? 'bg-orange-100 text-orange-600' : 
-                                contact.status === 'INTERESTED' ? 'bg-emerald-100 text-emerald-600' : 
-                                contact.status === 'NEW' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'
+                                contact.status === 'INTERESTED' ? 'bg-emerald-100 text-[#820AD1]' : 
+                                contact.status === 'NEW' ? 'bg-blue-100 text-[#820AD1]' : 'bg-slate-100 text-slate-400'
                              } border-none font-bold text-[8px] uppercase tracking-tighter mt-1`}>
                                 {contact.status || "Ativo"}
                              </Badge>
                              {contact.isToEnrich && (
-                               <Badge className="bg-emerald-500 text-white animate-pulse border-none font-bold text-[8px] uppercase tracking-tighter mt-1 ml-2 shadow-lg shadow-emerald-500/20">
+                               <Badge className="bg-[#820AD1] text-white animate-pulse border-none font-bold text-[8px] uppercase tracking-tighter mt-1 ml-2 shadow-lg shadow-[#820AD1]/20">
                                   BDR Investigando... 🕵️‍♂️
                                </Badge>
                              )}
@@ -369,8 +369,8 @@ export default function Contacts() {
 
                    {/* Ações (Apenas no Grid ou final da Lista) */}
                    {viewMode === "grid" ? (
-                     <div className="bg-slate-50 p-6 flex justify-between items-center group-hover:bg-emerald-50 transition-colors">
-                        <Button variant="ghost" className="text-slate-400 font-black uppercase text-[10px] tracking-widest hover:text-emerald-600">Ver Perfil</Button>
+                     <div className="bg-slate-50 p-6 flex justify-between items-center group-hover:bg-purple-50 transition-colors">
+                        <Button variant="ghost" className="text-slate-400 font-black uppercase text-[10px] tracking-widest hover:text-[#820AD1]">Ver Perfil</Button>
                         <div className="flex gap-2">
                            <Button 
                               onClick={(e) => { e.stopPropagation(); navigate(`/conversations?phone=${contact.phone}`); }}
@@ -382,7 +382,7 @@ export default function Contacts() {
                            <Button 
                               onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${contact.phone}`; }}
                               size="icon" 
-                              className="w-10 h-10 bg-emerald-500 hover:bg-emerald-600 rounded-xl shadow-lg shadow-emerald-500/20"
+                              className="w-10 h-10 bg-[#820AD1] hover:bg-[#6c08b0] rounded-xl shadow-lg shadow-[#820AD1]/20"
                            >
                               <Phone className="w-4 h-4 text-white" />
                            </Button>
@@ -396,7 +396,7 @@ export default function Contacts() {
                         </div>
                         <div className="flex gap-2">
                            <Button onClick={(e) => { e.stopPropagation(); navigate(`/conversations?phone=${contact.phone}`); }} size="icon" className="w-10 h-10 bg-slate-900 rounded-xl"><MessageSquare className="w-4 h-4 text-white" /></Button>
-                           <Button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${contact.phone}`; }} size="icon" className="w-10 h-10 bg-emerald-500 rounded-xl"><Phone className="w-4 h-4 text-white" /></Button>
+                           <Button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${contact.phone}`; }} size="icon" className="w-10 h-10 bg-[#820AD1] rounded-xl"><Phone className="w-4 h-4 text-white" /></Button>
                         </div>
                      </div>
                    )}
@@ -411,7 +411,7 @@ export default function Contacts() {
         <DialogContent className="max-w-2xl p-10 overflow-hidden border-none shadow-3xl rounded-[40px]">
           <DialogHeader>
             <DialogTitle className="text-2xl font-black flex items-center gap-2">
-              <div className="bg-emerald-500 p-2 rounded-xl"><UserPlus className="text-white w-5 h-5" /></div> Novo Contato
+              <div className="bg-[#820AD1] p-2 rounded-xl"><UserPlus className="text-white w-5 h-5" /></div> Novo Contato
             </DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-8 py-4">
@@ -456,13 +456,13 @@ export default function Contacts() {
               <Button onClick={() => setSelectedContact(null)} variant="ghost" className="absolute top-8 right-8 text-white/50 hover:text-white"><X className="w-6 h-6" /></Button>
               <div className="flex items-center gap-6">
                  <Avatar className="h-24 w-24 border-4 border-white/10">
-                    <AvatarFallback className="bg-emerald-500 text-white font-black text-3xl">
+                    <AvatarFallback className="bg-[#820AD1] text-white font-black text-3xl">
                        {selectedContact?.name?.substring(0,2).toUpperCase()}
                     </AvatarFallback>
                  </Avatar>
                  <div className="space-y-1">
                     <h2 className="text-4xl font-black leading-none uppercase tracking-tighter">{selectedContact?.name}</h2>
-                    <Badge className="bg-emerald-500 text-white border-none font-black text-[10px] tracking-widest uppercase py-1 px-4">{selectedContact?.status || "Novo Lead"}</Badge>
+                    <Badge className="bg-[#820AD1] text-white border-none font-black text-[10px] tracking-widest uppercase py-1 px-4">{selectedContact?.status || "Novo Lead"}</Badge>
                  </div>
               </div>
            </div>
@@ -472,7 +472,7 @@ export default function Contacts() {
               {selectedContact?.extractedData && (
                 <div className="bg-slate-50 rounded-[30px] p-8 border-2 border-emerald-500/10 animate-in fade-in zoom-in">
                    <div className="flex items-center gap-3 mb-6">
-                      <div className="bg-emerald-500 p-2 rounded-xl text-white"><Search className="w-4 h-4" /></div>
+                      <div className="bg-[#820AD1] p-2 rounded-xl text-white"><Search className="w-4 h-4" /></div>
                       <h3 className="font-black text-xs uppercase tracking-widest text-slate-900">Dossiê BDR (Inteligência)</h3>
                    </div>
                    
@@ -485,7 +485,7 @@ export default function Contacts() {
                                <div className="space-y-1">
                                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Decisor Encontrado</p>
                                   <p className="font-bold text-slate-800">{data.decisionMaker.name} ({data.decisionMaker.role})</p>
-                                  {data.decisionMaker.linkedIn && <a href={data.decisionMaker.linkedIn} target="_blank" className="text-xs text-emerald-500 font-bold hover:underline">Perfil LinkedIn</a>}
+                                  {data.decisionMaker.linkedIn && <a href={data.decisionMaker.linkedIn} target="_blank" className="text-xs text-[#820AD1] font-bold hover:underline">Perfil LinkedIn</a>}
                                </div>
                              )}
                              {data.companyInfo?.socialProfiles?.length > 0 && (
@@ -493,7 +493,7 @@ export default function Contacts() {
                                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Canais Digitais</p>
                                   <div className="flex flex-wrap gap-2">
                                      {data.companyInfo.socialProfiles.map((s: string, i: number) => (
-                                       <a key={i} href={s} target="_blank" className="bg-white p-1 px-3 rounded-lg border text-[10px] font-bold text-slate-500 hover:text-emerald-500 truncate max-w-[150px]">{s}</a>
+                                       <a key={i} href={s} target="_blank" className="bg-white p-1 px-3 rounded-lg border text-[10px] font-bold text-slate-500 hover:text-[#820AD1] truncate max-w-[150px]">{s}</a>
                                      ))}
                                   </div>
                                </div>
@@ -541,7 +541,7 @@ export default function Contacts() {
 
               <div className="flex gap-4 pt-4">
                  <Button onClick={handleUpdateContact} className="flex-[3] h-16 bg-slate-900 hover:bg-black text-white font-black rounded-2xl uppercase tracking-widest shadow-2xl transition-all">
-                    <Save className="w-5 h-5 mr-3 text-emerald-500" /> Salvar Alterações
+                    <Save className="w-5 h-5 mr-3 text-[#820AD1]" /> Salvar Alterações
                  </Button>
                  <Button onClick={() => handleDeleteContact(selectedContact.id)} variant="outline" className="flex-1 h-16 border-2 border-red-50 text-red-500 hover:bg-red-50 hover:text-red-600 font-black rounded-2xl uppercase tracking-widest transition-all">
                     <Trash2 className="w-5 h-5" />
@@ -561,8 +561,8 @@ export default function Contacts() {
                   Encontramos {importPreview.length} contatos no seu arquivo
                 </p>
               </div>
-              <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-2xl">
-                 <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Proteção Ativa</p>
+              <div className="bg-[#820AD1]/10 border border-[#820AD1]/20 p-4 rounded-2xl">
+                 <p className="text-[10px] font-black text-[#9d4edd] uppercase tracking-widest">Proteção Ativa</p>
                  <p className="text-[9px] text-white/60 font-medium">IA iniciará desativada</p>
               </div>
            </div>
@@ -599,7 +599,7 @@ export default function Contacts() {
                    onClick={confirmImport} 
                    className="flex-[2] h-16 bg-slate-900 hover:bg-black text-white font-black rounded-2xl uppercase tracking-widest shadow-2xl transition-all"
                  >
-                    <Save className="w-5 h-5 mr-3 text-emerald-500" /> Confirmar e Salvar
+                    <Save className="w-5 h-5 mr-3 text-[#820AD1]" /> Confirmar e Salvar
                  </Button>
               </div>
            </div>
@@ -612,7 +612,7 @@ export default function Contacts() {
 function ContactItem({ icon, value }: { icon: any, value: string }) {
   return (
     <div className="flex items-center gap-3 text-slate-600">
-       <div className="text-emerald-500">{icon}</div>
+       <div className="text-[#820AD1]">{icon}</div>
        <span className="text-xs font-bold truncate">{value}</span>
     </div>
   );

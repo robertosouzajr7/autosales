@@ -268,7 +268,7 @@ export default function AutomationConfig() {
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="bg-emerald-600 hover:bg-emerald-700 gap-2 shrink-0"
+            className="bg-[#6c08b0] hover:bg-emerald-700 gap-2 shrink-0"
           >
             {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             {saving ? "Salvando…" : "Salvar Configurações"}
@@ -431,8 +431,8 @@ export default function AutomationConfig() {
           <TabsContent value="postservice" className="mt-4 space-y-4">
             <ConfigCard
               icon={Handshake}
-              iconColor="text-emerald-600"
-              iconBg="bg-emerald-50"
+              iconColor="text-[#820AD1]"
+              iconBg="bg-purple-50"
               title="Follow-up Pós-Atendimento"
               description="O robô envia uma mensagem após a conclusão do serviço para verificar a satisfação do cliente."
             >
@@ -592,7 +592,7 @@ export default function AutomationConfig() {
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="bg-emerald-600 hover:bg-emerald-700 gap-2"
+            className="bg-[#6c08b0] hover:bg-emerald-700 gap-2"
             size="sm"
           >
             {saving ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}

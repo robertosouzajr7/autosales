@@ -202,10 +202,10 @@ export default function SdrManagement() {
         
         {/* HEADER ESTRATÉGICO */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-slate-900 p-12 rounded-[50px] shadow-3xl relative overflow-hidden">
-           <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/10 blur-[130px] rounded-full translate-x-1/2 -translate-y-1/2" />
+           <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#820AD1]/10 blur-[130px] rounded-full translate-x-1/2 -translate-y-1/2" />
            <div className="space-y-3 relative z-10">
               <h1 className="text-4xl font-black text-white tracking-tighter uppercase flex items-center gap-4">
-                 Frota de <span className="text-emerald-500 italic">SDRs IA</span>
+                 Frota de <span className="text-[#820AD1] italic">SDRs IA</span>
               </h1>
               <p className="text-white/30 font-bold uppercase tracking-widest text-[9px] pl-[56px] leading-relaxed max-w-md">Gerencie e treine seu time de SDRs inteligentes para atuar em qualquer tipo de negócio.</p>
            </div>
@@ -213,19 +213,19 @@ export default function SdrManagement() {
            <div className="flex flex-col items-end gap-2 relative z-10">
               <Button 
                 onClick={() => hasWhatsApp ? handleOpenModal() : toast({ title: "WhatsApp Necessário", description: "Conecte um WhatsApp antes de contratar um SDR.", variant: "destructive" })} 
-                className={`h-16 px-10 rounded-2xl font-black uppercase text-xs tracking-widest shadow-2xl transition-all hover:-translate-y-1 text-white ${!hasWhatsApp ? 'bg-slate-700 cursor-not-allowed border-none' : 'bg-emerald-500 hover:bg-emerald-600'}`}
+                className={`h-16 px-10 rounded-2xl font-black uppercase text-xs tracking-widest shadow-2xl transition-all hover:-translate-y-1 text-white ${!hasWhatsApp ? 'bg-slate-700 cursor-not-allowed border-none' : 'bg-[#820AD1] hover:bg-[#6c08b0]'}`}
               >
                 <Plus className="w-5 h-5 mr-3" /> Contratar SDR
               </Button>
               {!hasWhatsApp && (
-                <p className="text-[8px] font-black text-emerald-500 uppercase tracking-widest animate-pulse">Requer conexão WhatsApp</p>
+                <p className="text-[8px] font-black text-[#820AD1] uppercase tracking-widest animate-pulse">Requer conexão WhatsApp</p>
               )}
            </div>
         </div>
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-40 gap-4 opacity-30">
-             <RefreshCw className="w-12 h-12 text-emerald-500 animate-spin" />
+             <RefreshCw className="w-12 h-12 text-[#820AD1] animate-spin" />
              <p className="text-[10px] font-black uppercase tracking-widest">Sincronizando IA...</p>
           </div>
         ) : (
@@ -234,21 +234,21 @@ export default function SdrManagement() {
               <Card key={sdr.id} className="border-none shadow-2xl rounded-[45px] bg-white overflow-hidden hover:scale-[1.01] transition-all group relative">
                 <div className="p-8 bg-slate-50 flex items-center justify-between group-hover:bg-slate-900 transition-all duration-500">
                    <div className="flex items-center gap-5">
-                      <div className="w-14 h-14 bg-white group-hover:bg-emerald-500 rounded-2xl flex items-center justify-center shadow-lg transition-all">
+                      <div className="w-14 h-14 bg-white group-hover:bg-[#820AD1] rounded-2xl flex items-center justify-center shadow-lg transition-all">
                          <Bot className="w-7 h-7 text-slate-800 group-hover:text-white" />
                       </div>
                       <div>
                          <h3 className="text-slate-900 group-hover:text-white font-black text-lg leading-none uppercase">{sdr.name}</h3>
-                         <Badge className="bg-emerald-500/10 text-emerald-600 font-black text-[8px] mt-1 uppercase border-none">{sdr.role}</Badge>
+                         <Badge className="bg-[#820AD1]/10 text-[#820AD1] font-black text-[8px] mt-1 uppercase border-none">{sdr.role}</Badge>
                       </div>
                    </div>
                    <div className="flex items-center gap-3">
                       <div 
                         onClick={(e) => { e.stopPropagation(); toggleSdrActive(sdr); }}
-                        className={`flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded-full border transition-all ${sdr.active ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/20' : 'bg-slate-800/50 border-slate-700 hover:bg-slate-700 text-slate-400 group-hover:bg-slate-800'}`}
+                        className={`flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded-full border transition-all ${sdr.active ? 'bg-[#820AD1]/10 border-[#820AD1]/20 text-[#820AD1] hover:bg-[#820AD1]/20' : 'bg-slate-800/50 border-slate-700 hover:bg-slate-700 text-slate-400 group-hover:bg-slate-800'}`}
                         title={sdr.active ? "Desativar SDR" : "Ativar SDR"}
                       >
-                         <Power className={`w-4 h-4 ${sdr.active ? 'text-emerald-500' : 'text-slate-400'}`} />
+                         <Power className={`w-4 h-4 ${sdr.active ? 'text-[#820AD1]' : 'text-slate-400'}`} />
                          <span className="text-[9px] font-black uppercase tracking-widest leading-none">{sdr.active ? 'ON' : 'OFF'}</span>
                       </div>
                       <Button variant="ghost" size="icon" className="w-10 h-10 rounded-xl hover:bg-red-50 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all" onClick={(e) => { e.stopPropagation(); deleteSdr(sdr.id); }}>
@@ -260,17 +260,17 @@ export default function SdrManagement() {
                 <div className="p-8 space-y-6">
                    <div className="grid grid-cols-3 gap-2">
                       <div className="bg-slate-50 p-3 rounded-2xl text-center">
-                         <MessageSquare className="w-4 h-4 text-emerald-500 mx-auto mb-1" />
+                         <MessageSquare className="w-4 h-4 text-[#820AD1] mx-auto mb-1" />
                          <span className="text-[9px] font-black text-slate-800 block">{sdr.followUpInterval}m</span>
                          <span className="text-[7px] font-bold text-slate-400 uppercase">Followup</span>
                       </div>
                       <div className="bg-slate-50 p-3 rounded-2xl text-center">
-                         <Clock className="w-4 h-4 text-emerald-500 mx-auto mb-1" />
+                         <Clock className="w-4 h-4 text-[#820AD1] mx-auto mb-1" />
                          <span className="text-[9px] font-black text-slate-800 block">{sdr.preConfirmationHours}h</span>
                          <span className="text-[7px] font-bold text-slate-400 uppercase">Confirm</span>
                       </div>
                       <div className="bg-slate-50 p-3 rounded-2xl text-center">
-                         <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto mb-1" />
+                         <CheckCircle2 className="w-4 h-4 text-[#820AD1] mx-auto mb-1" />
                          <span className="text-[9px] font-black text-slate-800 block">{sdr.enableWaitlist ? "ON" : "OFF"}</span>
                          <span className="text-[7px] font-bold text-slate-400 uppercase">Encaixe</span>
                       </div>
@@ -300,16 +300,16 @@ export default function SdrManagement() {
                  <DialogTitle>Gerenciador de SDR Inteligente</DialogTitle>
                  <DialogDescription>Ajuste os parâmetros de comportamento e conhecimento do seu robô.</DialogDescription>
               </DialogHeader>
-              <div className="absolute top-0 left-0 w-32 h-32 bg-emerald-500/10 blur-3xl rounded-full translate-x-[-50%] translate-y-[-50%]" />
+              <div className="absolute top-0 left-0 w-32 h-32 bg-[#820AD1]/10 blur-3xl rounded-full translate-x-[-50%] translate-y-[-50%]" />
               <div className="space-y-10 relative z-10">
-                 <div className="w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center shadow-lg"><Brain className="w-8 h-8 text-white" /></div>
+                 <div className="w-16 h-16 bg-[#820AD1] rounded-2xl flex items-center justify-center shadow-lg"><Brain className="w-8 h-8 text-white" /></div>
                  <div className="space-y-3">
-                    <h3 className="text-2xl font-black text-white tracking-tighter uppercase leading-tight">Módulo <span className="text-emerald-500 italic font-medium">Global</span></h3>
+                    <h3 className="text-2xl font-black text-white tracking-tighter uppercase leading-tight">Módulo <span className="text-[#820AD1] italic font-medium">Global</span></h3>
                     <p className="text-white/30 text-[9px] font-bold uppercase tracking-widest leading-relaxed">Personalize a inteligência e o comportamento para o fluxo de qualquer negócio.</p>
                  </div>
               </div>
               <div className="p-5 bg-white/5 rounded-3xl border border-white/5 space-y-2">
-                 <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1">Nota Técnica</p>
+                 <p className="text-[9px] font-black text-[#820AD1] uppercase tracking-widest mb-1">Nota Técnica</p>
                  <p className="text-[10px] text-slate-400 leading-relaxed font-medium">Este robô agora gerencia automaticamente a lista de espera e cobrança de vouchers promocionais.</p>
               </div>
             </div>
@@ -347,14 +347,14 @@ export default function SdrManagement() {
 
                   <TabsContent value="knowledge" className="space-y-6 animate-in fade-in slide-in-from-top-4">
                     {editingSdr && (
-                      <div className="p-6 bg-emerald-50 rounded-[30px] border-2 border-dashed border-emerald-200 space-y-4">
+                      <div className="p-6 bg-purple-50 rounded-[30px] border-2 border-dashed border-purple-200 space-y-4">
                         <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center shadow-lg">
+                          <div className="w-12 h-12 bg-[#820AD1] rounded-2xl flex items-center justify-center shadow-lg">
                             <Upload className="w-6 h-6 text-white" />
                           </div>
                           <div>
-                            <h4 className="text-sm font-black text-emerald-900 uppercase tracking-tighter">Treinamento Neural</h4>
-                            <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest">Upload de PDF, DOCX ou TXT</p>
+                            <h4 className="text-sm font-black text-[#2D0052] uppercase tracking-tighter">Treinamento Neural</h4>
+                            <p className="text-[10px] text-[#820AD1] font-bold uppercase tracking-widest">Upload de PDF, DOCX ou TXT</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-4">
@@ -368,7 +368,7 @@ export default function SdrManagement() {
                           />
                           <Button 
                             asChild 
-                            className="w-full h-12 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-xl uppercase text-[10px] tracking-widest cursor-pointer shadow-lg"
+                            className="w-full h-12 bg-[#820AD1] hover:bg-[#6c08b0] text-white font-black rounded-xl uppercase text-[10px] tracking-widest cursor-pointer shadow-lg"
                           >
                             <label htmlFor="training-file">
                               {uploading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
@@ -376,7 +376,7 @@ export default function SdrManagement() {
                             </label>
                           </Button>
                         </div>
-                        <p className="text-[9px] text-emerald-400 italic font-medium text-center">O robô lerá o arquivo e especializará sua base de respostas automaticamente.</p>
+                        <p className="text-[9px] text-[#9d4edd] italic font-medium text-center">O robô lerá o arquivo e especializará sua base de respostas automaticamente.</p>
                       </div>
                     )}
                     
@@ -415,7 +415,7 @@ export default function SdrManagement() {
                           <Label className="text-sm font-black text-slate-900 tracking-tight">Gestão de Encaixe Automático</Label>
                           <p className="text-[10px] font-bold text-slate-400 uppercase leading-none">Busca leads na lista de espera em caso de desistência</p>
                        </div>
-                       <Switch checked={form.enableWaitlist} onCheckedChange={v => setForm({...form, enableWaitlist: v})} className="data-[state=checked]:bg-emerald-500" />
+                       <Switch checked={form.enableWaitlist} onCheckedChange={v => setForm({...form, enableWaitlist: v})} className="data-[state=checked]:bg-[#820AD1]" />
                     </div>
 
                     <div className="space-y-2">
@@ -426,7 +426,7 @@ export default function SdrManagement() {
                     <Separator className="opacity-50" />
 
                     <div className="bg-slate-900 p-8 rounded-[35px] space-y-6">
-                       <div className="flex items-center gap-3 text-emerald-400 mb-2">
+                       <div className="flex items-center gap-3 text-[#9d4edd] mb-2">
                           <Zap className="w-5 h-5" />
                           <h4 className="font-black uppercase text-[11px] tracking-widest">Configuração de Voz (Neural)</h4>
                        </div>
@@ -457,7 +457,7 @@ export default function SdrManagement() {
 
                   <div className="flex gap-4 pt-4 pb-2">
                      <Button onClick={handleSave} className="flex-[3] h-20 bg-slate-900 hover:bg-black text-white font-black rounded-3xl uppercase tracking-widest shadow-2xl transition-all hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3">
-                        <Save className="w-5 h-5 text-emerald-500" /> Salvar Agente Inteligente
+                        <Save className="w-5 h-5 text-[#820AD1]" /> Salvar Agente Inteligente
                      </Button>
                      <Button onClick={() => setIsModalOpen(false)} variant="ghost" className="flex-1 h-20 rounded-3xl font-black uppercase text-xs text-slate-400 leading-none">Cancelar</Button>
                   </div>

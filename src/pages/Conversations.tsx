@@ -90,7 +90,7 @@ function AudioPlayer({ url, isOut }: { url: string, isOut: boolean }) {
       <button 
         onClick={togglePlay}
         className={`w-8 h-8 flex items-center justify-center rounded-full shrink-0 transition-all ${
-          isOut ? 'bg-white text-emerald-600' : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+          isOut ? 'bg-white text-[#820AD1]' : 'bg-[#820AD1] text-white shadow-lg shadow-[#820AD1]/20'
         }`}
       >
         {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
@@ -104,7 +104,7 @@ function AudioPlayer({ url, isOut }: { url: string, isOut: boolean }) {
           value={progress || 0}
           onChange={handleSeek}
           className={`w-full h-1 rounded-full appearance-none cursor-pointer accent-current ${
-            isOut ? 'text-white/40 bg-white/20' : 'text-emerald-500 bg-slate-100'
+            isOut ? 'text-white/40 bg-white/20' : 'text-[#820AD1] bg-slate-100'
           }`}
           style={{
             background: isOut 
@@ -401,7 +401,7 @@ export default function Conversations() {
           <div className="p-8 border-b border-slate-50 bg-slate-50/30 space-y-6">
              <div className="flex items-center justify-between">
                 <h3 className="text-xl font-black text-slate-800 tracking-tight">Conversas</h3>
-                <Badge className={`${hasWhatsApp ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-600"} border-none font-bold text-[9px] uppercase tracking-widest`}>
+                <Badge className={`${hasWhatsApp ? "bg-[#820AD1]/10 text-[#820AD1]" : "bg-red-500/10 text-red-600"} border-none font-bold text-[9px] uppercase tracking-widest`}>
                   {hasWhatsApp ? "WhatsApp Conectado" : "WhatsApp Desconectado"}
                 </Badge>
              </div>
@@ -437,7 +437,7 @@ export default function Conversations() {
                     className={`p-4 rounded-3xl transition-all cursor-pointer flex items-center gap-4 group ${selectedChat?.id === chat.id ? 'bg-slate-900 text-white shadow-xl' : 'hover:bg-slate-50 text-slate-600'}`}
                   >
                     <Avatar className="h-12 w-12 border-2 border-white shadow-sm ring-2 ring-emerald-500/20">
-                      <AvatarFallback className={`${selectedChat?.id === chat.id ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-500'} font-black text-xs`}>
+                      <AvatarFallback className={`${selectedChat?.id === chat.id ? 'bg-[#820AD1] text-white' : 'bg-slate-100 text-slate-500'} font-black text-xs`}>
                         {chat.name.substring(0,2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
@@ -482,13 +482,13 @@ export default function Conversations() {
 
                  <div className="flex items-center gap-4">
                     <Avatar className="h-10 w-10">
-                      <AvatarFallback className="bg-emerald-500 text-white font-black text-xs">
+                      <AvatarFallback className="bg-[#820AD1] text-white font-black text-xs">
                         {selectedChat.name.substring(0,2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div>
                        <p className="font-black text-slate-800 leading-none">{selectedChat.name}</p>
-                       <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-1.5 flex items-center gap-1.5">
+                       <p className="text-[10px] font-bold text-[#820AD1] uppercase tracking-widest mt-1.5 flex items-center gap-1.5">
                          {selectedChat.conversations?.[0]?.botActive !== false ? (
                             <><Circle className="w-2 h-2 fill-emerald-500" /> Atendimento via IA</>
                          ) : (
@@ -501,15 +501,15 @@ export default function Conversations() {
                     <Button 
                       onClick={toggleBot} 
                       variant="outline" 
-                      className={`rounded-xl border-slate-100 font-bold text-xs ${selectedChat.conversations?.[0]?.botActive !== false ? 'hover:bg-slate-50' : 'bg-emerald-50 border-emerald-100 text-emerald-600 hover:bg-emerald-100'}`}
+                      className={`rounded-xl border-slate-100 font-bold text-xs ${selectedChat.conversations?.[0]?.botActive !== false ? 'hover:bg-slate-50' : 'bg-purple-50 border-emerald-100 text-[#820AD1] hover:bg-emerald-100'}`}
                     >
                       {selectedChat.conversations?.[0]?.botActive !== false ? "Pausar SDR" : "Retomar SDR"}
                     </Button>
-                      <Button variant="outline" size="icon" className="rounded-xl border-slate-100 hover:bg-emerald-50 hover:border-emerald-200 group/call transition-colors"
+                      <Button variant="outline" size="icon" className="rounded-xl border-slate-100 hover:bg-purple-50 hover:border-purple-200 group/call transition-colors"
                         onClick={handleOpenCallModal}
                         title="Iniciar contato por WhatsApp"
                       >
-                        <Phone className="w-4 h-4 text-slate-400 group-hover/call:text-emerald-500 transition-colors" />
+                        <Phone className="w-4 h-4 text-slate-400 group-hover/call:text-[#820AD1] transition-colors" />
                       </Button>
                      <DropdownMenu>
                        <DropdownMenuTrigger asChild>
@@ -522,7 +522,7 @@ export default function Conversations() {
                            className="rounded-xl font-bold text-xs cursor-pointer"
                            onClick={() => navigate(`/crm?lead=${selectedChat?.id}`)}
                          >
-                           <User className="w-4 h-4 mr-2 text-emerald-500" />
+                           <User className="w-4 h-4 mr-2 text-[#820AD1]" />
                            Ver no CRM
                          </DropdownMenuItem>
                          <DropdownMenuItem
@@ -534,7 +534,7 @@ export default function Conversations() {
                              }
                            }}
                          >
-                           <Phone className="w-4 h-4 mr-2 text-blue-500" />
+                           <Phone className="w-4 h-4 mr-2 text-[#820AD1]" />
                            Copiar Telefone
                          </DropdownMenuItem>
                          <DropdownMenuSeparator />
@@ -601,14 +601,14 @@ export default function Conversations() {
               <div className="p-6 px-8 bg-white border-t border-slate-50">
                 {audioUrl ? (
                   // Preview de áudio gravado
-                  <div className="flex items-center gap-3 bg-emerald-50 p-3 pl-5 rounded-3xl border border-emerald-100">
+                  <div className="flex items-center gap-3 bg-purple-50 p-3 pl-5 rounded-3xl border border-emerald-100">
                     <div className="flex-1">
                       <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest mb-2">Prévia da Mensagem</p>
                       <AudioPlayer url={audioUrl} isOut={false} />
                     </div>
-                    <div className="flex items-center gap-2 border-l border-emerald-200 pl-4 ml-2">
+                    <div className="flex items-center gap-2 border-l border-purple-200 pl-4 ml-2">
                       <Button onClick={cancelAudio} variant="ghost" size="icon" className="text-slate-400 hover:text-red-500 rounded-xl"><MicOff className="w-4 h-4" /></Button>
-                      <Button onClick={sendAudio} className="h-10 px-5 bg-emerald-500 hover:bg-emerald-600 rounded-2xl text-xs font-black shadow-lg shadow-emerald-500/20"><Send className="w-4 h-4 mr-1" /> Enviar</Button>
+                      <Button onClick={sendAudio} className="h-10 px-5 bg-[#820AD1] hover:bg-[#6c08b0] rounded-2xl text-xs font-black shadow-lg shadow-[#820AD1]/20"><Send className="w-4 h-4 mr-1" /> Enviar</Button>
                     </div>
                   </div>
                 ) : isRecording ? (
@@ -627,10 +627,10 @@ export default function Conversations() {
                       className="border-none bg-transparent shadow-none focus-visible:ring-0 font-bold text-xs"
                       value={message} onChange={e => setMessage(e.target.value)} />
                     <button type="button" onClick={startRecording}
-                      className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 transition-colors shrink-0">
+                      className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-[#820AD1] hover:bg-purple-50 transition-colors shrink-0">
                       <Mic className="w-5 h-5" />
                     </button>
-                    <Button type="submit" className="h-10 w-10 bg-emerald-500 hover:bg-emerald-600 rounded-2xl shadow-lg shadow-emerald-500/30 shrink-0">
+                    <Button type="submit" className="h-10 w-10 bg-[#820AD1] hover:bg-[#6c08b0] rounded-2xl shadow-lg shadow-[#820AD1]/30 shrink-0">
                       <Send className="w-4 h-4 text-white" />
                     </Button>
                   </form>
@@ -654,13 +654,13 @@ export default function Conversations() {
              <div className="space-y-10">
                 <div className="text-center space-y-4">
                    <Avatar className="h-20 w-20 mx-auto border-4 border-white/10">
-                      <AvatarFallback className="bg-emerald-500 text-white font-black text-xl">
+                      <AvatarFallback className="bg-[#820AD1] text-white font-black text-xl">
                         {selectedChat.name.substring(0,2).toUpperCase()}
                       </AvatarFallback>
                    </Avatar>
                    <div>
                       <p className="text-lg font-black tracking-tight">{selectedChat.name}</p>
-                      <Badge className="bg-white/10 text-emerald-400 border-none font-bold text-[9px] uppercase tracking-widest mt-1">Interessado</Badge>
+                      <Badge className="bg-white/10 text-[#9d4edd] border-none font-bold text-[9px] uppercase tracking-widest mt-1">Interessado</Badge>
                    </div>
                 </div>
 
@@ -671,11 +671,11 @@ export default function Conversations() {
                 </div>
 
                 <div className="p-6 bg-white/5 rounded-3xl space-y-3">
-                   <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Resumo da IA</p>
+                   <p className="text-[10px] font-black text-[#820AD1] uppercase tracking-widest">Resumo da IA</p>
                    <p className="text-[11px] font-bold text-white/50 leading-relaxed italic">"Lead demonstrou interesse no plano PRO mas tem dúvidas sobre o faturamento via boleto corporativo."</p>
                 </div>
 
-                <Button className="w-full h-14 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-2xl uppercase tracking-widest text-[10px] shadow-xl shadow-emerald-500/20">Ver Perfil no CRM</Button>
+                <Button className="w-full h-14 bg-[#820AD1] hover:bg-[#6c08b0] text-white font-black rounded-2xl uppercase tracking-widest text-[10px] shadow-xl shadow-[#820AD1]/20">Ver Perfil no CRM</Button>
              </div>
           </Card>
         )}
@@ -687,7 +687,7 @@ export default function Conversations() {
           {/* Header */}
           <div className="bg-slate-900 p-10 text-white">
             <div className="flex items-center gap-4 mb-2">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+              <div className="w-12 h-12 rounded-2xl bg-[#820AD1] flex items-center justify-center shadow-lg shadow-[#820AD1]/30">
                 <Phone className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -696,7 +696,7 @@ export default function Conversations() {
               </div>
             </div>
             <div className="mt-4 p-4 bg-white/5 rounded-2xl border border-white/10">
-              <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Como funciona</p>
+              <p className="text-[10px] font-black text-[#9d4edd] uppercase tracking-widest mb-1">Como funciona</p>
               <p className="text-[11px] text-white/60 font-medium leading-relaxed">
                 O sistema envia esta mensagem ao lead pelo WhatsApp e abre a conversa no WhatsApp Web para você continuar o contato manualmente.
               </p>
@@ -716,7 +716,7 @@ export default function Conversations() {
                 className="rounded-2xl border-slate-100 bg-slate-50 font-medium text-sm resize-none focus-visible:ring-emerald-500/30"
               />
               <p className="text-[10px] text-slate-400 font-bold">
-                Para: <span className="text-emerald-600">{selectedChat?.phone}</span>
+                Para: <span className="text-[#820AD1]">{selectedChat?.phone}</span>
               </p>
             </div>
 
@@ -729,7 +729,7 @@ export default function Conversations() {
                 Cancelar
               </Button>
               <Button
-                className="flex-[2] h-14 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-emerald-500/20 transition-all"
+                className="flex-[2] h-14 bg-[#820AD1] hover:bg-[#6c08b0] text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-[#820AD1]/20 transition-all"
                 onClick={handleCallIntent}
                 disabled={callingLoading || !callMessage.trim()}
               >
@@ -759,7 +759,7 @@ function InfoRow({ icon, label, value }: { icon: any, label: string, value: stri
     <div className="space-y-1">
        <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">{label}</p>
        <div className="flex items-center gap-2 text-sm font-bold">
-          <div className="text-emerald-500">{icon}</div>
+          <div className="text-[#820AD1]">{icon}</div>
           <span className="truncate">{value}</span>
        </div>
     </div>

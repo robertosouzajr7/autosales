@@ -223,7 +223,7 @@ export default function Settings() {
       } catch (e) {}
   }
 
-  if (loading) return <div className="flex h-screen items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-emerald-500" /></div>;
+  if (loading) return <div className="flex h-screen items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-[#820AD1]" /></div>;
 
   return (
     <DashboardLayout>
@@ -233,12 +233,12 @@ export default function Settings() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
             <div className="space-y-1">
                 <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase mb-1 flex items-center gap-3">
-                   Configurações <span className="text-emerald-500 italic">SaaS</span>
+                   Configurações <span className="text-[#820AD1] italic">SaaS</span>
                 </h1>
                 <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px]">Ecossistema de SDR & Vendas Automáticas</p>
             </div>
             <Button onClick={handleSaveSettings} disabled={saving} className="h-16 px-10 bg-slate-900 text-white rounded-[22px] font-black uppercase text-[10px] tracking-widest flex items-center gap-3 shadow-2xl hover:scale-105 transition-all outline-none">
-                {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5 text-emerald-400" />}
+                {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5 text-[#9d4edd]" />}
                 Salvar Painel
             </Button>
         </div>
@@ -249,13 +249,13 @@ export default function Settings() {
               <Zap className="w-4 h-4 mr-2 text-rose-500" /> Geral
             </TabsTrigger>
             <TabsTrigger value="hunter" className="rounded-[18px] h-full px-8 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg">
-              <Target className="w-4 h-4 mr-2 text-blue-500" /> Hunter System
+              <Target className="w-4 h-4 mr-2 text-[#820AD1]" /> Hunter System
             </TabsTrigger>
             <TabsTrigger value="integrations" className="rounded-[18px] h-full px-8 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg">
-              <Database className="w-4 h-4 mr-2 text-emerald-500" /> Integrações
+              <Database className="w-4 h-4 mr-2 text-[#820AD1]" /> Integrações
             </TabsTrigger>
             <TabsTrigger value="channels" className="rounded-[18px] h-full px-8 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg">
-              <Mail className="w-4 h-4 mr-2 text-emerald-500" /> Canais de Disparo
+              <Mail className="w-4 h-4 mr-2 text-[#820AD1]" /> Canais de Disparo
             </TabsTrigger>
             <TabsTrigger value="connections" className="rounded-[18px] h-full px-8 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg">
               <Share2 className="w-4 h-4 mr-2 text-amber-500" /> Conexões & API
@@ -282,7 +282,7 @@ export default function Settings() {
                 <Card className="border-none shadow-xl rounded-[40px] overflow-hidden bg-white p-12 space-y-8 relative">
                     <div className="flex items-center justify-between mb-2">
                         <h3 className="text-xl font-black text-slate-900 uppercase">Seu Hub Digital</h3>
-                        <Badge className="bg-emerald-500 text-white border-none font-black text-[9px] uppercase tracking-widest px-4">Gerado Automaticamente</Badge>
+                        <Badge className="bg-[#820AD1] text-white border-none font-black text-[9px] uppercase tracking-widest px-4">Gerado Automaticamente</Badge>
                     </div>
                     <div className="space-y-6">
                        <div className="space-y-4">
@@ -298,7 +298,7 @@ export default function Settings() {
                                 }}
                                 className="h-16 px-10 bg-slate-900 text-white rounded-[28px] font-black uppercase text-[10px] tracking-widest flex items-center gap-3 shadow-xl hover:scale-105 active:scale-95 transition-all outline-none"
                              >
-                                <ExternalLink className="w-5 h-5 text-emerald-400" /> Copiar Link
+                                <ExternalLink className="w-5 h-5 text-[#9d4edd]" /> Copiar Link
                              </Button>
                           </div>
                           <p className="text-[10px] text-slate-400 italic pl-2">Este é o seu link único de SDR que a IA enviará para qualificar e agendar com novos leads.</p>
@@ -321,11 +321,11 @@ export default function Settings() {
                 <div className="flex justify-between items-center bg-slate-900 p-10 rounded-[45px] text-white">
                    <div>
                       <h3 className="text-2xl font-black uppercase tracking-tighter italic">Prospecção Hunter</h3>
-                      <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mt-1">Busca automática de leads baseada no ICP</p>
+                      <p className="text-[10px] font-bold text-[#9d4edd] uppercase tracking-widest mt-1">Busca automática de leads baseada no ICP</p>
                    </div>
                    <Dialog>
                       <DialogTrigger asChild>
-                         <Button className="bg-white text-slate-900 hover:bg-emerald-500 hover:text-white rounded-3xl h-14 px-8 font-black uppercase text-[10px] tracking-widest transition-all">
+                         <Button className="bg-white text-slate-900 hover:bg-[#820AD1] hover:text-white rounded-3xl h-14 px-8 font-black uppercase text-[10px] tracking-widest transition-all">
                             <Plus className="w-5 h-5 mr-2" /> Novo ICP
                          </Button>
                       </DialogTrigger>
@@ -355,7 +355,7 @@ export default function Settings() {
                            <Button size="icon" variant="ghost" onClick={() => handleDeleteIcp(profile.id)} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></Button>
                         </div>
                         <div className="flex flex-wrap gap-2 mb-8">
-                           <Badge className="bg-blue-50 text-blue-600 px-4 py-1.5 rounded-full text-[9px] uppercase font-black tracking-widest">{profile.location}</Badge>
+                           <Badge className="bg-purple-50 text-[#820AD1] px-4 py-1.5 rounded-full text-[9px] uppercase font-black tracking-widest">{profile.location}</Badge>
                            <Badge className="bg-slate-100 text-slate-600 px-4 py-1.5 rounded-full text-[9px] uppercase font-black tracking-widest">{profile.role}</Badge>
                         </div>
                         <div className="flex items-center justify-between border-t border-slate-50 pt-8">
@@ -380,7 +380,7 @@ export default function Settings() {
                    </div>
                 </Card>
                 <Card className="border-none shadow-xl rounded-[40px] bg-white p-12 space-y-8">
-                    <div className="flex items-center gap-4 text-blue-500 mb-4"><Bot className="w-8 h-8" /><h3 className="text-xl font-black text-slate-900 uppercase">Modelos de IA (LLMs)</h3></div>
+                    <div className="flex items-center gap-4 text-[#820AD1] mb-4"><Bot className="w-8 h-8" /><h3 className="text-xl font-black text-slate-900 uppercase">Modelos de IA (LLMs)</h3></div>
                     <div className="space-y-6">
                        <div className="space-y-2"><Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Google Gemini API Key</Label><Input type="password" value={aiConfig.aiApiKey} onChange={(e) => setAiConfig({...aiConfig, aiApiKey: e.target.value})} className="h-16 bg-slate-50 rounded-3xl px-8 font-bold" /></div>
                        <div className="space-y-2"><Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">OpenAI API Key (Opcional)</Label><Input type="password" value={aiConfig.openAiKey} onChange={(e) => setAiConfig({...aiConfig, openAiKey: e.target.value})} className="h-16 bg-slate-50 rounded-3xl px-8 font-bold" /></div>
@@ -390,7 +390,7 @@ export default function Settings() {
                        <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">ElevenLabs API Key (Voz Natural)</Label>
-                            <Badge className="bg-emerald-50 text-emerald-600 border-none text-[8px]">Novo</Badge>
+                            <Badge className="bg-purple-50 text-[#820AD1] border-none text-[8px]">Novo</Badge>
                           </div>
                           <Input type="password" value={aiConfig.elevenLabsKey} onChange={(e) => setAiConfig({...aiConfig, elevenLabsKey: e.target.value})} className="h-16 bg-slate-50 rounded-3xl px-8 font-bold" placeholder="Sua chave da ElevenLabs" />
                        </div>
@@ -418,7 +418,7 @@ export default function Settings() {
 
                 <Card className="border-none shadow-xl rounded-[40px] bg-white p-12 space-y-8 relative overflow-hidden">
                    <div className="absolute top-0 right-0 p-8 opacity-5"><Smartphone className="w-48 h-48" /></div>
-                   <div className="flex items-center gap-4 text-blue-600 mb-4"><Smartphone className="w-8 h-8" /><h3 className="text-xl font-black text-slate-900 uppercase underline decoration-blue-600 decoration-4">WhatsApp Cloud API (Meta)</h3></div>
+                   <div className="flex items-center gap-4 text-[#820AD1] mb-4"><Smartphone className="w-8 h-8" /><h3 className="text-xl font-black text-slate-900 uppercase underline decoration-[#6c08b0] decoration-4">WhatsApp Cloud API (Meta)</h3></div>
                    <div className="space-y-6">
                       <div className="grid grid-cols-2 gap-6">
                          <div className="space-y-2"><Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Phone Number ID</Label><Input value={metaConfig.phoneId} onChange={(e) => setMetaConfig({...metaConfig, phoneId: e.target.value})} className="h-14 bg-slate-50 rounded-2xl px-6 font-bold" /></div>
@@ -430,10 +430,10 @@ export default function Settings() {
                       </div>
                       <Separator />
                       <div className="p-6 bg-slate-900 rounded-3xl space-y-4">
-                         <div className="flex items-center gap-2 text-emerald-400"><Code2 className="w-4 h-4" /><p className="text-[10px] font-black uppercase tracking-widest">Webhook URL Configuration</p></div>
+                         <div className="flex items-center gap-2 text-[#9d4edd]"><Code2 className="w-4 h-4" /><p className="text-[10px] font-black uppercase tracking-widest">Webhook URL Configuration</p></div>
                          <div className="space-y-2">
                              <p className="text-[11px] text-slate-400 font-bold">Callback URL:</p>
-                             <div className="bg-black/50 p-3 rounded-xl text-emerald-500 font-mono text-[10px] break-all border border-emerald-500/20">https://{window.location.hostname}/api/webhooks/meta</div>
+                             <div className="bg-black/50 p-3 rounded-xl text-[#820AD1] font-mono text-[10px] break-all border border-[#820AD1]/20">https://{window.location.hostname}/api/webhooks/meta</div>
                          </div>
                          <div className="space-y-2">
                              <p className="text-[11px] text-slate-400 font-bold">Verify Token:</p>
@@ -450,7 +450,7 @@ export default function Settings() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                   <Card className="border-none shadow-xl rounded-[40px] bg-white p-12 space-y-8 relative overflow-hidden">
                       <div className="absolute top-0 right-0 p-8 opacity-5"><Mail className="w-48 h-48" /></div>
-                      <div className="flex items-center gap-4 text-emerald-500 mb-4"><Mail className="w-8 h-8" /><h3 className="text-xl font-black text-slate-900 uppercase underline decoration-emerald-500 decoration-4">Servidor de E-mail (SMTP)</h3></div>
+                      <div className="flex items-center gap-4 text-[#820AD1] mb-4"><Mail className="w-8 h-8" /><h3 className="text-xl font-black text-slate-900 uppercase underline decoration-[#820AD1] decoration-4">Servidor de E-mail (SMTP)</h3></div>
                       
                       <div className="space-y-6">
                           <div className="grid grid-cols-1 gap-6">
@@ -482,15 +482,15 @@ export default function Settings() {
 
                   <Card className="border-none shadow-xl rounded-[40px] bg-slate-900 text-white p-12 space-y-8 relative overflow-hidden">
                       <div className="absolute top-0 right-0 p-8 opacity-5"><Smartphone className="w-48 h-48" /></div>
-                      <div className="flex items-center gap-4 text-emerald-400 mb-4"><Smartphone className="w-8 h-8" /><h3 className="text-xl font-black uppercase underline decoration-emerald-400 decoration-4">WhatsApp Sender</h3></div>
+                      <div className="flex items-center gap-4 text-[#9d4edd] mb-4"><Smartphone className="w-8 h-8" /><h3 className="text-xl font-black uppercase underline decoration-[#9d4edd] decoration-4">WhatsApp Sender</h3></div>
                       
                       <div className="space-y-6">
                         <p className="text-slate-400 text-sm font-medium leading-relaxed">
-                          O remetente de WhatsApp é configurado automaticamente através das conexões ativas no seu painel de <span className="text-emerald-400 font-black">Conexões Diárias</span>.
+                          O remetente de WhatsApp é configurado automaticamente através das conexões ativas no seu painel de <span className="text-[#9d4edd] font-black">Conexões Diárias</span>.
                         </p>
                         <div className="p-6 bg-white/5 rounded-3xl border border-white/10 space-y-4">
                            <div className="flex items-center gap-3">
-                              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                              <CheckCircle2 className="w-5 h-5 text-[#9d4edd]" />
                               <span className="text-[10px] font-black uppercase tracking-widest">Multi-Instância Ativa</span>
                            </div>
                            <p className="text-[11px] text-white/40 font-bold italic">
@@ -508,13 +508,13 @@ export default function Settings() {
                   <Card className="border-none shadow-xl rounded-[40px] bg-slate-50 p-12 space-y-8 relative overflow-hidden">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4 text-slate-800 mb-4">
-                          <div className="p-4 bg-white rounded-3xl shadow-sm"><RefreshCw className="w-8 h-8 text-blue-500" /></div>
+                          <div className="p-4 bg-white rounded-3xl shadow-sm"><RefreshCw className="w-8 h-8 text-[#820AD1]" /></div>
                           <div>
-                            <h3 className="text-xl font-black uppercase underline decoration-blue-500 decoration-4">E-mail em Massa (Listmonk API)</h3>
+                            <h3 className="text-xl font-black uppercase underline decoration-[#820AD1] decoration-4">E-mail em Massa (Listmonk API)</h3>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Conecte sua infraestrutura de prospecção em massa</p>
                           </div>
                         </div>
-                        <Badge className="bg-blue-100 text-blue-600 border-none font-black px-4 py-2 rounded-full text-[9px] uppercase tracking-widest">Enterprise Ready</Badge>
+                        <Badge className="bg-blue-100 text-[#820AD1] border-none font-black px-4 py-2 rounded-full text-[9px] uppercase tracking-widest">Enterprise Ready</Badge>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -532,7 +532,7 @@ export default function Settings() {
                           </div>
                       </div>
                       
-                      <div className="p-6 bg-blue-50 rounded-3xl border border-blue-100 flex items-center gap-4 text-blue-800">
+                      <div className="p-6 bg-purple-50 rounded-3xl border border-purple-100 flex items-center gap-4 text-[#2D0052]">
                         <AlertCircle className="w-6 h-6 shrink-0" />
                         <p className="text-[11px] font-bold leading-relaxed italic">
                           Ao configurar o Listmonk, Agentes Virtuais passará a gerenciar seus contatos e campanhas através dele, permitindo maior taxa de entrega e controle de bounces automático.
@@ -611,7 +611,7 @@ export default function Settings() {
 
       <Dialog open={isNewUserModalOpen} onOpenChange={setIsNewUserModalOpen}>
          <DialogContent className="rounded-[40px] p-10 max-w-md border-none shadow-3xl">
-            <h2 className="text-2xl font-black uppercase tracking-tighter mb-6">Novo <span className="text-emerald-500">Colaborador</span></h2>
+            <h2 className="text-2xl font-black uppercase tracking-tighter mb-6">Novo <span className="text-[#820AD1]">Colaborador</span></h2>
             <div className="space-y-4">
                <div className="space-y-1">
                   <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">Nome Completo</Label>
@@ -638,7 +638,7 @@ export default function Settings() {
                   </Select>
                </div>
                <Button 
-                  className="w-full h-16 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-2xl uppercase tracking-widest mt-4 shadow-xl shadow-emerald-500/20"
+                  className="w-full h-16 bg-[#820AD1] hover:bg-[#6c08b0] text-white font-black rounded-2xl uppercase tracking-widest mt-4 shadow-xl shadow-[#820AD1]/20"
                   onClick={async () => {
                      const token = localStorage.getItem("token");
                      const res = await fetch("/api/users", {

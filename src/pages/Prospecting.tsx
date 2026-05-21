@@ -194,11 +194,11 @@ export default function Prospecting() {
            <div className="space-y-2">
               <div className="flex items-center gap-3">
                  <div className="p-3 bg-slate-900 rounded-[22px] shadow-2xl overflow-hidden relative">
-                    <Target className="w-8 h-8 text-emerald-400 relative z-10" />
+                    <Target className="w-8 h-8 text-[#9d4edd] relative z-10" />
                     <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/20 to-transparent" />
                  </div>
                  <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase leading-none">
-                    Prospector <span className="text-emerald-500 italic">Ultra</span>
+                    Prospector <span className="text-[#820AD1] italic">Ultra</span>
                  </h1>
               </div>
               <p className="text-slate-400 font-bold uppercase tracking-[0.3em] text-[8px] pl-1">Vendas & Inteligência Corporativa</p>
@@ -206,10 +206,10 @@ export default function Prospecting() {
            
            <Tabs value={source} onValueChange={(v: any) => setSource(v)} className="bg-slate-50 p-1.5 rounded-[22px] border border-slate-100 shadow-sm">
               <TabsList className="flex h-12 bg-transparent gap-2">
-                 <TabsTrigger value="linkedin" className="rounded-[18px] h-full px-6 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg data-[state=active]:text-blue-600">
+                 <TabsTrigger value="linkedin" className="rounded-[18px] h-full px-6 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg data-[state=active]:text-[#820AD1]">
                     <Linkedin className="w-4 h-4 mr-2" /> LinkedIn Pro
                  </TabsTrigger>
-                 <TabsTrigger value="apollo" className="rounded-[18px] h-full px-6 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg data-[state=active]:text-emerald-600">
+                 <TabsTrigger value="apollo" className="rounded-[18px] h-full px-6 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg data-[state=active]:text-[#820AD1]">
                     <Zap className="w-4 h-4 mr-2" /> Apollo Search
                  </TabsTrigger>
                  <TabsTrigger value="maps" className="rounded-[18px] h-full px-6 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg data-[state=active]:text-rose-500">
@@ -240,7 +240,7 @@ export default function Prospecting() {
                       <Button 
                         onClick={handleSearch} 
                         disabled={searching}
-                        className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-[28px] font-black uppercase tracking-widest text-xs shadow-2xl active:scale-95 transition-all flex items-center gap-3"
+                        className="w-full h-16 bg-[#6c08b0] hover:bg-blue-700 text-white rounded-[28px] font-black uppercase tracking-widest text-xs shadow-2xl active:scale-95 transition-all flex items-center gap-3"
                       >
                          {searching ? <Loader2 className="w-5 h-5 animate-spin" /> : <Linkedin className="w-5 h-5 text-blue-200" />}
                          {searching ? "Procurando..." : "Varredura LinkedIn"}
@@ -273,12 +273,12 @@ export default function Prospecting() {
           <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
              <div className="flex items-center justify-between border-b border-slate-100 pb-10">
                 <div className="flex items-center gap-6">
-                   <div className="bg-emerald-50 text-emerald-600 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest border-2 border-emerald-100/50">
+                   <div className="bg-purple-50 text-[#820AD1] px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest border-2 border-emerald-100/50">
                       IDENTIFICADOS: <span className="text-lg ml-2">{results.length}</span>
                    </div>
                    {selectedIds.size > 0 && (
                      <Button onClick={handleImportSelected} disabled={importing} className="bg-slate-900 text-white rounded-3xl h-14 px-10 font-black uppercase text-[10px] tracking-widest flex items-center gap-4 animate-in zoom-in shadow-xl">
-                        {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 text-emerald-400" />}
+                        {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 text-[#9d4edd]" />}
                         Mover para CRM ({selectedIds.size})
                      </Button>
                    )}
@@ -300,7 +300,7 @@ export default function Prospecting() {
                             <div className="h-16 w-16 bg-slate-900 rounded-3xl flex items-center justify-center text-white font-black text-2xl uppercase shadow-lg group-hover:rotate-6 transition-transform">
                                {lead.name.substring(0,2)}
                             </div>
-                            <div className={`w-10 h-10 rounded-2xl border-2 flex items-center justify-center transition-all ${selectedIds.has(lead.id) ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-50 bg-slate-50 text-transparent'}`}>
+                            <div className={`w-10 h-10 rounded-2xl border-2 flex items-center justify-center transition-all ${selectedIds.has(lead.id) ? 'bg-[#820AD1] border-emerald-500 text-white' : 'border-slate-50 bg-slate-50 text-transparent'}`}>
                                <CheckCircle2 className="w-5 h-5" />
                             </div>
                          </div>
@@ -316,14 +316,14 @@ export default function Prospecting() {
                          <div className="space-y-3 pt-2">
                             <div className="flex items-center justify-between gap-3 text-xs font-black text-slate-600 bg-slate-50 p-4 rounded-3xl group/phone">
                                <div className="flex items-center gap-2">
-                                  <Phone className="w-4 h-4 text-emerald-500" /> {lead.displayPhone}
+                                  <Phone className="w-4 h-4 text-[#820AD1]" /> {lead.displayPhone}
                                </div>
                                {!lead.imported && (lead.source === 'LinkedIn Pro' || lead.source === 'LinkedIn Search') && lead.displayPhone === 'Aguardando Enriquecimento' && (
                                  <Button 
                                    onClick={(e) => { e.stopPropagation(); handleEnrich(lead); }}
                                    size="sm" 
                                    disabled={enrichingIds.has(lead.id)}
-                                   className="h-8 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-[9px] uppercase tracking-tighter"
+                                   className="h-8 rounded-xl bg-[#820AD1] hover:bg-[#6c08b0] text-white font-black text-[9px] uppercase tracking-tighter"
                                  >
                                     {enrichingIds.has(lead.id) ? (
                                       <Loader2 className="w-3 h-3 animate-spin mr-1" />
@@ -339,7 +339,7 @@ export default function Prospecting() {
 
                       <div className="mt-8 flex items-center justify-between">
                          {lead.url ? (
-                           <a href={lead.url} target="_blank" onClick={(e) => e.stopPropagation()} className="text-[10px] font-black uppercase text-blue-600 flex items-center gap-2 hover:underline">
+                           <a href={lead.url} target="_blank" onClick={(e) => e.stopPropagation()} className="text-[10px] font-black uppercase text-[#820AD1] flex items-center gap-2 hover:underline">
                               <Linkedin className="w-4 h-4" /> Perfil LinkedIn
                            </a>
                          ) : <span></span>}
@@ -357,7 +357,7 @@ export default function Prospecting() {
         {searching && (
           <div className="py-48 flex flex-col items-center justify-center gap-12 bg-white shadow-3xl rounded-[80px] border-4 border-dashed border-slate-50">
              <div className="relative">
-                <div className="absolute inset-0 bg-blue-500/10 rounded-full animate-ping duration-[3s]" />
+                <div className="absolute inset-0 bg-[#820AD1]/10 rounded-full animate-ping duration-[3s]" />
                 <div className="w-36 h-36 bg-slate-900 text-white rounded-[50px] flex items-center justify-center shadow-3xl relative z-10 rotate-6">
                    <Linkedin className="w-16 h-16 text-blue-400" />
                 </div>
@@ -374,7 +374,7 @@ export default function Prospecting() {
       {/* MODAL DETALHE LEAD */}
       <Dialog open={!!selectedLead} onOpenChange={(open) => !open && setSelectedLead(null)}>
         <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-3xl rounded-[50px]">
-           <div className={`p-16 text-white relative ${source === 'linkedin' ? 'bg-blue-600' : 'bg-slate-900'}`}>
+           <div className={`p-16 text-white relative ${source === 'linkedin' ? 'bg-[#6c08b0]' : 'bg-slate-900'}`}>
               <div className="absolute top-0 right-0 p-8 opacity-10">
                  <Rocket className="w-32 h-32 rotate-12" />
               </div>
@@ -391,7 +391,7 @@ export default function Prospecting() {
                  {selectedLead?.email && (
                    <div className="space-y-1">
                       <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">E-mail</p>
-                      <p className="text-sm font-black text-blue-600 truncate">{selectedLead.email}</p>
+                      <p className="text-sm font-black text-[#820AD1] truncate">{selectedLead.email}</p>
                    </div>
                  )}
               </div>

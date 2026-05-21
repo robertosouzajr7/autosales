@@ -101,8 +101,8 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 lg:p-12 font-sans overflow-hidden relative">
-      <div className="absolute top-0 right-0 w-1/3 h-full bg-emerald-500/5 blur-3xl rounded-full translate-x-1/2" />
-      <div className="absolute bottom-0 left-0 w-1/4 h-1/2 bg-blue-500/5 blur-3xl rounded-full -translate-x-1/2" />
+      <div className="absolute top-0 right-0 w-1/3 h-full bg-[#820AD1]/5 blur-3xl rounded-full translate-x-1/2" />
+      <div className="absolute bottom-0 left-0 w-1/4 h-1/2 bg-[#820AD1]/5 blur-3xl rounded-full -translate-x-1/2" />
 
       <div className="max-w-4xl w-full grid grid-cols-1 lg:grid-cols-2 bg-white rounded-[40px] shadow-3xl border border-slate-100 overflow-hidden relative z-10">
         
@@ -113,8 +113,8 @@ export default function Register() {
               <div className="absolute bottom-20 right-10 w-64 h-64 border border-white rounded-full translate-x-1/2" />
            </div>
            <div className="flex items-center gap-3 relative z-10">
-              <Target className="w-8 h-8 text-emerald-500" />
-              <span className="text-2xl font-black tracking-tighter">Agentes Virtuais <span className="text-emerald-500 italic">AI</span></span>
+              <Target className="w-8 h-8 text-[#820AD1]" />
+              <span className="text-2xl font-black tracking-tighter">Agentes Virtuais <span className="text-[#820AD1] italic">AI</span></span>
            </div>
            <div className="space-y-6 relative z-10">
               <h2 className="text-4xl font-black leading-none tracking-tight">Comece sua jornada de escala.</h2>
@@ -122,7 +122,7 @@ export default function Register() {
               <div className="space-y-4 pt-10">
                  {["Trial Grátis de 7 Dias", "Cobrança apenas após o teste", "Cancele em um clique no painel", "Acesso imediato ao Prospector Pro"].map(t => (
                    <div key={t} className="flex items-center gap-3 text-xs font-black text-white/50">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" /> {t}
+                      <CheckCircle2 className="w-4 h-4 text-[#9d4edd] shrink-0" /> {t}
                    </div>
                  ))}
               </div>
@@ -134,7 +134,7 @@ export default function Register() {
         <div className="p-8 lg:p-12 flex flex-col justify-center">
             <div className="flex gap-2 mb-8">
                {[1,2,3,4].map(i => (
-                 <div key={i} className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${step >= i ? 'bg-emerald-500' : 'bg-slate-100'}`} />
+                 <div key={i} className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${step >= i ? 'bg-[#820AD1]' : 'bg-slate-100'}`} />
                ))}
             </div>
 
@@ -193,7 +193,7 @@ export default function Register() {
                     />
                  </div>
                  <div className="space-y-3 pt-6">
-                   <Button onClick={handleVerifyCode} disabled={loading} className="w-full h-14 bg-emerald-500 hover:bg-emerald-600 rounded-2xl font-black text-base gap-3 text-white shadow-xl shadow-emerald-500/20">
+                   <Button onClick={handleVerifyCode} disabled={loading} className="w-full h-14 bg-[#820AD1] hover:bg-[#6c08b0] rounded-2xl font-black text-base gap-3 text-white shadow-xl shadow-[#820AD1]/20">
                       {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Validar Código"}
                    </Button>
                    <Button variant="ghost" onClick={() => setStep(1)} className="w-full text-xs font-bold text-slate-400 hover:text-slate-700 h-10">Voltar e corrigir e-mail</Button>
@@ -208,22 +208,22 @@ export default function Register() {
                     <p className="text-slate-400 font-bold text-xs">7 dias grátis em qualquer opção.</p>
                  </div>
                  <div className="grid grid-cols-1 gap-3">
-                    <div onClick={() => setFormData({...formData, plan: 'BASIC'})} className={`p-5 rounded-3xl border-2 cursor-pointer transition-all ${formData.plan === 'BASIC' ? 'border-emerald-500 bg-emerald-500/5' : 'border-slate-100 hover:bg-slate-50'}`}>
+                    <div onClick={() => setFormData({...formData, plan: 'BASIC'})} className={`p-5 rounded-3xl border-2 cursor-pointer transition-all ${formData.plan === 'BASIC' ? 'border-emerald-500 bg-[#820AD1]/5' : 'border-slate-100 hover:bg-slate-50'}`}>
                        <div className="flex justify-between items-center text-slate-900">
                           <span className="font-black">BASIC</span>
                           <span className="font-black text-sm">R$ 197/mês</span>
                        </div>
                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">100 Buscas + 1 SDR de IA.</p>
                     </div>
-                    <div onClick={() => setFormData({...formData, plan: 'PRO'})} className={`p-5 rounded-3xl border-2 cursor-pointer relative overflow-hidden transition-all ${formData.plan === 'PRO' ? 'border-emerald-500 bg-emerald-500/5 shadow-xl' : 'border-slate-100 hover:bg-slate-50'}`}>
+                    <div onClick={() => setFormData({...formData, plan: 'PRO'})} className={`p-5 rounded-3xl border-2 cursor-pointer relative overflow-hidden transition-all ${formData.plan === 'PRO' ? 'border-emerald-500 bg-[#820AD1]/5 shadow-xl' : 'border-slate-100 hover:bg-slate-50'}`}>
                        <div className="flex justify-between items-center text-slate-900">
                           <span className="font-black flex items-center gap-1.5">PRO <Zap className="w-3 h-3 text-orange-500 fill-orange-500" /></span>
                           <span className="font-black text-sm">R$ 797/mês</span>
                        </div>
                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">1k Buscas + 5 SDRs + Deep Research.</p>
-                       {formData.plan === 'PRO' && <div className="absolute top-0 right-0 h-1 bg-emerald-500 w-full" />}
+                       {formData.plan === 'PRO' && <div className="absolute top-0 right-0 h-1 bg-[#820AD1] w-full" />}
                     </div>
-                    <div onClick={() => setFormData({...formData, plan: 'ENTERPRISE'})} className={`p-5 rounded-3xl border-2 cursor-pointer transition-all ${formData.plan === 'ENTERPRISE' ? 'border-emerald-500 bg-emerald-500/5' : 'border-slate-100 hover:bg-slate-50'}`}>
+                    <div onClick={() => setFormData({...formData, plan: 'ENTERPRISE'})} className={`p-5 rounded-3xl border-2 cursor-pointer transition-all ${formData.plan === 'ENTERPRISE' ? 'border-emerald-500 bg-[#820AD1]/5' : 'border-slate-100 hover:bg-slate-50'}`}>
                        <div className="flex justify-between items-center text-slate-900">
                           <span className="font-black">ENTERPRISE</span>
                           <span className="font-black text-sm">R$ 997/mês</span>
@@ -244,7 +244,7 @@ export default function Register() {
                     <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Acesso liberado na hora.</p>
                  </div>
                  <div className="p-6 bg-slate-900 rounded-3xl text-white space-y-6 shadow-2xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/20 blur-2xl rounded-full pointer-events-none" />
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-[#820AD1]/20 blur-2xl rounded-full pointer-events-none" />
                     <div className="flex justify-between items-start relative z-10">
                        <CreditCard className="w-6 h-6 opacity-50" />
                     </div>
@@ -268,18 +268,18 @@ export default function Register() {
                        </div>
                     </div>
                  </div>
-                 <div className="flex items-center gap-3 bg-emerald-50 p-4 rounded-2xl">
-                    <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+                 <div className="flex items-center gap-3 bg-purple-50 p-4 rounded-2xl">
+                    <ShieldCheck className="w-5 h-5 text-[#820AD1] shrink-0" />
                     <p className="text-[9px] font-bold text-emerald-700 uppercase leading-snug">Você não será cobrado agora. Período de teste válido até {new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()}.</p>
                  </div>
-                 <Button onClick={handleFinish} className="w-full h-14 bg-emerald-500 hover:bg-emerald-600 rounded-2xl font-black text-base shadow-xl shadow-emerald-500/20" disabled={loading}>
+                 <Button onClick={handleFinish} className="w-full h-14 bg-[#820AD1] hover:bg-[#6c08b0] rounded-2xl font-black text-base shadow-xl shadow-[#820AD1]/20" disabled={loading}>
                     {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Iniciar Meu Trial Agora"}
                  </Button>
               </div>
             )}
 
             <div className="mt-8 text-center pb-4">
-               <p className="text-xs font-bold text-slate-400">Já tem conta? <Link to="/login" className="text-emerald-500 hover:underline">Fazer Login</Link></p>
+               <p className="text-xs font-bold text-slate-400">Já tem conta? <Link to="/login" className="text-[#820AD1] hover:underline">Fazer Login</Link></p>
             </div>
         </div>
 

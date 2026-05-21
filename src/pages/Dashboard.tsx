@@ -62,6 +62,12 @@ export default function Dashboard() {
     funnel: [],
     usedTokens: 0,
     maxTokens: 0,
+    usedMessages: 0,
+    maxMessages: 0,
+    usedProspects: 0,
+    maxProspects: 0,
+    usedResearch: 0,
+    maxResearch: 0,
     maxSdrs: 0,
     planName: "...",
     qualifiedLeadsCount: 0,
@@ -125,10 +131,12 @@ export default function Dashboard() {
     fetchData(); 
   }, [fetchData]);
 
+  // Nubank Palette Conversion Colors
   const funnelDisplayData = (stats.funnel || []).map((item, idx: number) => ({
     name: item.label,
     value: stats.totalLeads > 0 ? Math.round((item.value / stats.totalLeads) * 100) : 0,
-    color: ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#0f172a'][idx] || '#cbd5e1'
+    // Nubank color progression from light purple to deep dark violet
+    color: ['#A033FF', '#820AD1', '#5F00A3', '#4C0677', '#2D0052'][idx] || '#820AD1'
   }));
 
   return (
@@ -138,18 +146,18 @@ export default function Dashboard() {
         {/* HEADER DASHBOARD */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
            <div className="space-y-1">
-              <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase flex items-center gap-3">
-                 Painel <span className="text-emerald-500 italic">Estratégico</span>
+              <h1 className="text-4xl font-black text-[#2D0052] dark:text-white tracking-tighter uppercase flex items-center gap-3">
+                 Painel <span className="text-[#820AD1] italic">Estratégico</span>
               </h1>
               <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Real-time Performance Metrics & AI Insights</p>
            </div>
            <div className="flex gap-3">
-              <Button onClick={fetchData} variant="outline" className="h-12 rounded-2xl border-2 font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95">
-                <Clock className="w-4 h-4 mr-2" /> {loading ? "Sincronizando..." : "Sincronizar Agora"}
+              <Button onClick={fetchData} variant="outline" className="h-12 rounded-2xl border-2 border-purple-100 dark:border-purple-950 font-black text-xs uppercase tracking-widest hover:bg-purple-50 dark:hover:bg-purple-950/20 transition-all active:scale-95 text-[#2D0052] dark:text-purple-200">
+                 <Clock className="w-4 h-4 mr-2" /> {loading ? "Sincronizando..." : "Sincronizar"}
               </Button>
               <Button 
                 onClick={() => window.location.href = "/crm"}
-                className="h-12 bg-slate-900 hover:bg-slate-800 rounded-2xl px-8 font-black text-xs uppercase tracking-widest text-white shadow-2xl"
+                className="h-12 bg-[#820AD1] hover:bg-[#6c08b0] rounded-2xl px-8 font-black text-xs uppercase tracking-widest text-white shadow-2xl shadow-[#820AD1]/10 border-none"
               >
                  Ver Pipeline
               </Button>
@@ -163,42 +171,42 @@ export default function Dashboard() {
               value={loading ? "..." : stats.totalLeads} 
               trend={`${stats.trends.leads >= 0 ? '+' : ''}${stats.trends.leads}%`} 
               up={stats.trends.leads >= 0}
-              icon={<Users className="text-blue-500 w-6 h-6" />} 
+              icon={<Users className="text-[#820AD1] w-6 h-6" />} 
            />
            <KpiCard 
               label="Leads Qualificados" 
               value={loading ? "..." : stats.qualifiedLeads} 
               trend={`${stats.trends.qualified >= 0 ? '+' : ''}${stats.trends.qualified}%`} 
               up={stats.trends.qualified >= 0}
-              icon={<Bot className="text-emerald-500 w-6 h-6" />} 
+              icon={<Bot className="text-[#820AD1] w-6 h-6" />} 
            />
            <KpiCard 
               label="Agendamentos" 
               value={loading ? "..." : stats.appointments} 
               trend={`${stats.trends.appointments >= 0 ? '+' : ''}${stats.trends.appointments}%`} 
               up={stats.trends.appointments >= 0}
-              icon={<Calendar className="text-purple-500 w-6 h-6" />} 
+              icon={<Calendar className="text-[#820AD1] w-6 h-6" />} 
            />
            <KpiCard 
               label="Conversão Geral" 
               value={loading ? "..." : `${stats.conversionRate.toFixed(1)}%`} 
               trend={`${stats.trends.conversion >= 0 ? '+' : ''}${stats.trends.conversion}%`} 
               up={stats.trends.conversion >= 0}
-              icon={<TrendingUp className="text-orange-500 w-6 h-6" />} 
+              icon={<TrendingUp className="text-[#820AD1] w-6 h-6" />} 
            />
         </div>
 
         {/* RESOURCE USAGE / SUBSCRIPTION */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-           <Card className="lg:col-span-2 border-none shadow-3xl rounded-[45px] bg-white p-10 flex flex-col gap-10 border-t-8 border-t-blue-500">
+           <Card className="lg:col-span-2 border-none shadow-xl dark:shadow-none rounded-[45px] bg-white dark:bg-[#1c0133] p-10 flex flex-col gap-10 border-t-8 border-t-[#820AD1]">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                  <div className="space-y-1">
-                    <h3 className="text-2xl font-black text-slate-800 tracking-tighter uppercase italic flex items-center gap-3">
-                       <Zap className="text-blue-500 w-6 h-6" /> Créditos & Consumo
+                    <h3 className="text-2xl font-black text-[#2D0052] dark:text-white tracking-tighter uppercase italic flex items-center gap-3">
+                       <Zap className="text-[#820AD1] w-6 h-6" /> Créditos & Consumo
                     </h3>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Acompanhe o uso dos recursos do seu plano {stats.planName}</p>
                  </div>
-                 <Button variant="outline" className="h-10 rounded-xl border-2 font-black text-[10px] uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all shadow-lg">
+                 <Button variant="outline" className="h-10 rounded-xl border-2 border-purple-100 dark:border-purple-950 font-black text-[10px] uppercase tracking-widest hover:bg-[#820AD1] hover:text-white dark:text-purple-200 transition-all shadow-md">
                     Upgrade de Plano
                  </Button>
               </div>
@@ -206,63 +214,63 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
                  {/* TOKENS IA */}
                  <UsageMetric 
-                   label="Tokens de IA (Gemini/GPT)"
-                   used={stats.usedTokens}
-                   max={stats.maxTokens}
-                   color="bg-blue-600"
-                   icon={<Brain className="w-4 h-4 text-blue-500" />}
+                    label="Tokens de IA (Gemini)"
+                    used={stats.usedTokens}
+                    max={stats.maxTokens}
+                    color="bg-[#820AD1]"
+                    icon={<Brain className="w-4 h-4 text-[#820AD1]" />}
                  />
                  
                  {/* MENSAGENS */}
                  <UsageMetric 
-                   label="Mensagens (WhatsApp/E-mail)"
-                   used={stats.usedMessages}
-                   max={stats.maxMessages}
-                   color="bg-emerald-500"
-                   icon={<MessageSquare className="w-4 h-4 text-emerald-500" />}
+                    label="Mensagens (WhatsApp)"
+                    used={stats.usedMessages}
+                    max={stats.maxMessages}
+                    color="bg-[#820AD1]"
+                    icon={<MessageSquare className="w-4 h-4 text-[#820AD1]" />}
                  />
 
                  {/* PROSPECTING */}
                  <UsageMetric 
-                   label="Buscas de Prospecção"
-                   used={stats.usedProspects}
-                   max={stats.maxProspects}
-                   color="bg-purple-500"
-                   icon={<Search className="w-4 h-4 text-purple-500" />}
+                    label="Buscas BDR Agent"
+                    used={stats.usedProspects}
+                    max={stats.maxProspects}
+                    color="bg-[#820AD1]"
+                    icon={<Search className="w-4 h-4 text-[#820AD1]" />}
                  />
 
                  {/* DEEP RESEARCH */}
                  <UsageMetric 
-                   label="Investigações (Deep Research)"
-                   used={stats.usedResearch}
-                   max={stats.maxResearch}
-                   color="bg-orange-500"
-                   icon={<Zap className="w-4 h-4 text-orange-500" />}
+                    label="Deep Research"
+                    used={stats.usedResearch}
+                    max={stats.maxResearch}
+                    color="bg-[#820AD1]"
+                    icon={<Zap className="w-4 h-4 text-[#820AD1]" />}
                  />
               </div>
            </Card>
 
-           <Card className="border-none shadow-3xl rounded-[45px] bg-slate-900 p-10 flex flex-col justify-between items-center text-center relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[50px] rounded-full translate-x-1/2 -translate-y-1/2" />
+           <Card className="border-none shadow-xl dark:shadow-none rounded-[45px] bg-[#230440]/90 p-10 flex flex-col justify-between items-center text-center relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[#820AD1]/15 blur-[50px] rounded-full translate-x-1/2 -translate-y-1/2" />
               <div className="space-y-6 relative z-10 w-full">
                  <div className="p-5 bg-white/5 rounded-[30px] border border-white/5 inline-flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                    <Target className="w-10 h-10 text-emerald-500" />
+                    <Target className="w-10 h-10 text-[#820AD1]" />
                  </div>
                  <div className="space-y-1">
-                    <p className="text-[10px] font-black text-emerald-500/50 uppercase tracking-[0.3em]">SDR Intelligence</p>
+                    <p className="text-[10px] font-black text-purple-300 uppercase tracking-[0.3em]">SDR Agent</p>
                     <h4 className="text-5xl font-black text-white italic tracking-tighter">{stats.qualifiedLeadsCount}</h4>
-                    <p className="text-white/40 font-bold uppercase tracking-widest text-[10px]">Leads Qualificados</p>
+                    <p className="text-purple-200/40 font-bold uppercase tracking-widest text-[10px]">Leads Qualificados</p>
                  </div>
               </div>
 
               <div className="w-full space-y-4 pt-10 border-t border-white/5">
-                 <div className="flex items-center justify-between text-[10px] font-black uppercase text-white/30">
+                 <div className="flex items-center justify-between text-[10px] font-black uppercase text-purple-300">
                     <span>Vagas SDR</span>
                     <span>{stats.activeSdrs} / {stats.maxSdrs}</span>
                  </div>
                  <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-emerald-500 rounded-full transition-all duration-1000" 
+                      className="h-full bg-[#820AD1] rounded-full transition-all duration-1000" 
                       style={{ width: `${(stats.activeSdrs / (stats.maxSdrs || 1)) * 100}%` }}
                     />
                  </div>
@@ -270,41 +278,41 @@ export default function Dashboard() {
            </Card>
         </div>
 
-        {/* PROSPECTING STATS (FASE 1 & 2) */}
+        {/* PROSPECTING STATS */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-           <Card className="border-none shadow-3xl rounded-[45px] bg-slate-900 overflow-hidden group transition-all duration-500 hover:shadow-2xl relative">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-[60px] rounded-full translate-x-1/2 -translate-y-1/2" />
+           <Card className="border-none shadow-xl dark:shadow-none rounded-[45px] bg-[#230440] overflow-hidden group transition-all duration-500 hover:shadow-2xl relative">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[#820AD1]/10 blur-[60px] rounded-full translate-x-1/2 -translate-y-1/2" />
               <CardContent className="p-10 flex items-center justify-between relative z-10">
                  <div className="space-y-2">
-                    <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.25em] mb-2 flex items-center gap-2">
-                       <Mail className="w-3 h-3 text-blue-400" /> Abordagem (Fase 1)
+                    <p className="text-[10px] font-black text-purple-200/40 uppercase tracking-[0.25em] mb-2 flex items-center gap-2">
+                       <Mail className="w-3 h-3 text-purple-300" /> Abordagem (Fase 1)
                     </p>
                     <div className="flex items-baseline gap-4">
                        <p className="text-6xl font-black text-white tracking-tighter italic">{stats.emailsSent}</p>
-                       <span className="text-white/30 font-bold text-xs uppercase tracking-widest">E-mails Enviados</span>
+                       <span className="text-purple-200/30 font-bold text-xs uppercase tracking-widest">E-mails Enviados</span>
                     </div>
                  </div>
                  <div className="h-24 w-1 bg-white/5 mx-6" />
-                 <div className="p-8 bg-white/5 rounded-[35px] border border-white/5 group-hover:bg-blue-600 group-hover:border-blue-500 transition-all duration-500">
+                 <div className="p-8 bg-white/5 rounded-[35px] border border-white/5 group-hover:bg-[#820AD1] group-hover:border-[#820AD1] transition-all duration-500">
                     <Mail className="w-10 h-10 text-white" />
                  </div>
               </CardContent>
            </Card>
 
-           <Card className="border-none shadow-3xl rounded-[45px] bg-slate-900 overflow-hidden group transition-all duration-500 hover:shadow-2xl relative">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[60px] rounded-full translate-x-1/2 -translate-y-1/2" />
+           <Card className="border-none shadow-xl dark:shadow-none rounded-[45px] bg-[#230440] overflow-hidden group transition-all duration-500 hover:shadow-2xl relative">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[#820AD1]/10 blur-[60px] rounded-full translate-x-1/2 -translate-y-1/2" />
               <CardContent className="p-10 flex items-center justify-between relative z-10">
                  <div className="space-y-2">
-                    <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.25em] mb-2 flex items-center gap-2">
-                       <Phone className="w-3 h-3 text-emerald-400" /> Reengajamento (Fase 2)
+                    <p className="text-[10px] font-black text-purple-200/40 uppercase tracking-[0.25em] mb-2 flex items-center gap-2">
+                       <Phone className="w-3 h-3 text-purple-300" /> Reengajamento (Fase 2)
                     </p>
                     <div className="flex items-baseline gap-4">
                        <p className="text-6xl font-black text-white tracking-tighter italic">{stats.whatsappFollowups}</p>
-                       <span className="text-white/30 font-bold text-xs uppercase tracking-widest">Wpp Follow-ups</span>
+                       <span className="text-purple-200/30 font-bold text-xs uppercase tracking-widest">Wpp Follow-ups</span>
                     </div>
                  </div>
                  <div className="h-24 w-1 bg-white/5 mx-6" />
-                 <div className="p-8 bg-white/5 rounded-[35px] border border-white/5 group-hover:bg-emerald-600 group-hover:border-emerald-500 transition-all duration-500">
+                 <div className="p-8 bg-white/5 rounded-[35px] border border-white/5 group-hover:bg-[#820AD1] group-hover:border-[#820AD1] transition-all duration-500">
                     <Phone className="w-10 h-10 text-white" />
                  </div>
               </CardContent>
@@ -313,15 +321,15 @@ export default function Dashboard() {
 
         {/* ANALYTICS SECTION */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-           <Card className="lg:col-span-2 border-none shadow-3xl rounded-[45px] bg-white overflow-hidden p-10 flex flex-col justify-between">
+           <Card className="lg:col-span-2 border-none shadow-xl dark:shadow-none rounded-[45px] bg-white dark:bg-[#1c0133] overflow-hidden p-10 flex flex-col justify-between">
               <div className="flex items-center justify-between mb-10">
                  <div className="space-y-1">
-                    <h3 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-                       <BarChart3 className="w-6 h-6 text-emerald-500" /> Fluxo de Atividade
+                    <h3 className="text-2xl font-black text-[#2D0052] dark:text-white tracking-tight flex items-center gap-3">
+                       <BarChart3 className="w-6 h-6 text-[#820AD1]" /> Fluxo de Atividade
                     </h3>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Distribuição por estágio do funil</p>
                  </div>
-                 <Badge className="bg-emerald-50 text-emerald-600 border-none font-black px-4 py-1.5 rounded-xl text-[10px]">REAL-TIME</Badge>
+                 <Badge className="bg-purple-50 dark:bg-purple-950/45 text-[#820AD1] dark:text-purple-300 border-none font-black px-4 py-1.5 rounded-xl text-[10px]">REAL-TIME</Badge>
               </div>
               
               <div className="h-[300px] w-full">
@@ -329,15 +337,15 @@ export default function Dashboard() {
                     <BarChart data={stats.funnel.map((f: any) => ({ name: f.label, leads: f.value }))} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
                        <defs>
                           <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                             <stop offset="0%" stopColor="#10b981" stopOpacity={1}/>
-                             <stop offset="100%" stopColor="#34d399" stopOpacity={0.8}/>
+                             <stop offset="0%" stopColor="#820AD1" stopOpacity={1}/>
+                             <stop offset="100%" stopColor="#A033FF" stopOpacity={0.8}/>
                           </linearGradient>
                        </defs>
-                       <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 900, fill: '#cbd5e1'}} dy={15} />
+                       <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 900, fill: '#8b5cf6'}} dy={15} />
                        <Tooltip 
                           cursor={{fill: 'transparent'}}
-                          contentStyle={{borderRadius: '25px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.15)', padding: '20px'}}
-                          itemStyle={{fontSize: '14px', fontWeight: '900', color: '#0f172a'}}
+                          contentStyle={{borderRadius: '25px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.15)', padding: '20px', backgroundColor: '#1c0133', color: '#fff'}}
+                          itemStyle={{fontSize: '14px', fontWeight: '900', color: '#820AD1'}}
                        />
                        <Bar dataKey="leads" radius={[15, 15, 15, 15]} barSize={60}>
                           {(stats.funnel || []).map((entry: any, index: number) => (
@@ -349,19 +357,19 @@ export default function Dashboard() {
               </div>
            </Card>
 
-           <Card className="border-none shadow-3xl rounded-[45px] bg-slate-900 text-white p-10 relative overflow-hidden flex flex-col justify-between">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-[100px] rounded-full translate-x-1/2 -translate-y-1/2" />
+           <Card className="border-none shadow-xl dark:shadow-none rounded-[45px] bg-[#230440] text-white p-10 relative overflow-hidden flex flex-col justify-between">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-[#820AD1]/15 blur-[100px] rounded-full translate-x-1/2 -translate-y-1/2" />
               
               <div className="space-y-2 relative z-10">
-                 <h3 className="text-xl font-black tracking-tight uppercase italic text-emerald-400">Conversão de Funil</h3>
-                 <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-10">Efetividade da Qualificação IA</p>
+                 <h3 className="text-xl font-black tracking-tight uppercase italic text-purple-200">Conversão de Funil</h3>
+                 <p className="text-purple-200/30 text-[10px] font-bold uppercase tracking-widest mb-10">Efetividade da Qualificação IA</p>
               </div>
 
               <div className="space-y-8 relative z-10">
                  {funnelDisplayData.map((item) => (
                     <div key={item.name} className="space-y-3">
                        <div className="flex justify-between items-center text-[10px] font-black px-1 uppercase tracking-[0.1em]">
-                          <span className="text-white/40">{item.name}</span>
+                          <span className="text-purple-200/50">{item.name}</span>
                           <span className="text-white">{item.value}%</span>
                        </div>
                        <div className="w-full h-3.5 bg-white/5 rounded-full overflow-hidden p-1 border border-white/5 shadow-inner">
@@ -374,7 +382,7 @@ export default function Dashboard() {
                  ))}
                  
                  <div className="mt-8 p-6 bg-white/5 rounded-3xl border border-white/5 text-center backdrop-blur-xl">
-                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1 leading-none">Oportunidades em Aberto</p>
+                    <p className="text-[10px] font-black text-purple-300 uppercase tracking-widest mb-1 leading-none">Oportunidades em Aberto</p>
                     <p className="text-3xl font-black text-white italic tracking-tighter">{stats.openOpportunities} Oportunidades</p>
                  </div>
               </div>
@@ -383,28 +391,28 @@ export default function Dashboard() {
 
         {/* BOTTOM SECTION */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-           <Card className="border-none shadow-3xl rounded-[45px] bg-white overflow-hidden p-2">
-              <div className="p-8 border-b border-slate-50 flex items-center justify-between">
-                 <h3 className="text-xl font-black text-slate-800 tracking-tight uppercase flex items-center gap-3">
-                    <Clock className="w-5 h-5 text-emerald-500" /> Atividade Recente
+           <Card className="border-none shadow-xl dark:shadow-none rounded-[45px] bg-white dark:bg-[#1c0133] overflow-hidden p-2">
+              <div className="p-8 border-b border-purple-50 dark:border-purple-950/45 flex items-center justify-between">
+                 <h3 className="text-xl font-black text-[#2D0052] dark:text-white tracking-tight uppercase flex items-center gap-3">
+                    <Clock className="w-5 h-5 text-[#820AD1]" /> Atividade Recente
                  </h3>
-                 <Button variant="ghost" className="text-[10px] font-black text-slate-400 uppercase tracking-widest" onClick={() => window.location.href = "/crm"}>Ver CRM Completo</Button>
+                 <Button variant="ghost" className="text-[10px] font-black text-slate-400 hover:text-[#820AD1] uppercase tracking-widest" onClick={() => window.location.href = "/crm"}>Ver CRM Completo</Button>
               </div>
               <div className="p-6 space-y-3">
                  {recentLeads.map((lead: { id: string, name: string, status: string, source: string }) => (
-                    <div key={lead.id} className="flex items-center gap-4 p-5 hover:bg-slate-50 rounded-[30px] transition-all duration-300 group cursor-pointer border-l-4 border-l-transparent hover:border-l-emerald-500">
-                       <div className="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center font-black text-white group-hover:bg-emerald-500 shadow-xl transition-all hvr-pop">
+                    <div key={lead.id} className="flex items-center gap-4 p-5 hover:bg-purple-50/30 dark:hover:bg-purple-950/20 rounded-[30px] transition-all duration-300 group cursor-pointer border-l-4 border-l-transparent hover:border-l-[#820AD1]">
+                       <div className="w-14 h-14 bg-[#2D0052] rounded-2xl flex items-center justify-center font-black text-white group-hover:bg-[#820AD1] shadow-xl transition-all">
                           {lead.name?.substring(0,2).toUpperCase() || "L"}
                        </div>
                        <div className="flex-1 min-w-0">
-                          <p className="text-[15px] font-black text-slate-900 group-hover:text-emerald-600 transition-colors">{lead.name}</p>
+                          <p className="text-[15px] font-black text-[#2D0052] dark:text-white group-hover:text-[#820AD1] transition-colors">{lead.name}</p>
                           <div className="flex items-center gap-3 mt-1">
-                             <Badge variant="outline" className="text-[9px] font-black uppercase text-slate-400 border-slate-200 px-2 leading-none">{lead.status || "Novo"}</Badge>
-                             <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest truncate">{lead.source || "Manual"}</span>
+                             <Badge variant="outline" className="text-[9px] font-black uppercase text-purple-400 border-purple-100 dark:border-purple-950 px-2 leading-none">{lead.status || "Novo"}</Badge>
+                             <span className="text-[10px] font-bold text-slate-400 dark:text-purple-300/40 uppercase tracking-widest truncate">{lead.source || "Manual"}</span>
                           </div>
                        </div>
                        <div className="text-right flex flex-col items-end">
-                          <div className="bg-emerald-500/10 p-2 rounded-xl text-emerald-600">
+                          <div className="bg-purple-50 dark:bg-purple-950/40 p-2 rounded-xl text-[#820AD1]">
                              <MessageSquare className="w-4 h-4" />
                           </div>
                        </div>
@@ -419,7 +427,7 @@ export default function Dashboard() {
               </div>
            </Card>
 
-           <Card className="border-none shadow-3xl rounded-[45px] bg-gradient-to-br from-emerald-500 to-emerald-600 text-white p-12 relative overflow-hidden group">
+           <Card className="border-none shadow-xl dark:shadow-none rounded-[45px] bg-gradient-to-br from-[#820AD1] to-[#4C0677] text-white p-12 relative overflow-hidden group">
               <div className="absolute bottom-0 right-0 w-80 h-80 bg-white/10 blur-[120px] rounded-full translate-x-1/2 translate-y-1/2" />
               <div className="relative z-10 h-full flex flex-col justify-between gap-12">
                  <div className="space-y-6">
@@ -428,20 +436,20 @@ export default function Dashboard() {
                     </div>
                     <div>
                        <h3 className="text-3xl font-black tracking-tighter uppercase italic leading-none">SDR Intelligence <br/>Monitoring</h3>
-                       <p className="text-white/60 font-bold uppercase text-[10px] tracking-widest mt-3">Análise Preditiva de Conversão</p>
+                       <p className="text-purple-200/60 font-bold uppercase text-[10px] tracking-widest mt-3">Análise Preditiva de Conversão</p>
                     </div>
                  </div>
                  
                  <div className="space-y-5">
-                      <InsightRow icon={<Bot className="w-4 h-4" />} text={stats.activeSdrs > 0 ? `${stats.activeSdrs} SDRs IAs estão prospectando agora.` : "Nenhum SDR ativo no momento."} />
-                      <InsightRow icon={<Target className="w-4 h-4" />} text={stats.qualifiedLeadsCount > 0 ? `Taxa de qualificação atual em ${((stats.qualifiedLeadsCount / (stats.totalLeads || 1)) * 100).toFixed(1)}%.` : "Aguardando primeiras qualificações."} />
-                      <InsightRow icon={<CheckCircle2 className="w-4 h-4" />} text={`Taxa de Show de reuniões em ${stats.showRate}%.`} />
-                      <InsightRow icon={<Calendar className="w-4 h-4" />} text={stats.appointments > 0 ? `${stats.appointments} reuniões confirmadas na agenda.` : "Sem agendamentos pendentes."} />
-                   </div>
+                       <InsightRow icon={<Bot className="w-4 h-4" />} text={stats.activeSdrs > 0 ? `${stats.activeSdrs} SDRs IAs estão prospectando agora.` : "Nenhum SDR ativo no momento."} />
+                       <InsightRow icon={<Target className="w-4 h-4" />} text={stats.qualifiedLeadsCount > 0 ? `Taxa de qualificação atual em ${((stats.qualifiedLeadsCount / (stats.totalLeads || 1)) * 100).toFixed(1)}%.` : "Aguardando primeiras qualificações."} />
+                       <InsightRow icon={<CheckCircle2 className="w-4 h-4" />} text={`Taxa de Show de reuniões em ${stats.showRate}%.`} />
+                       <InsightRow icon={<Calendar className="w-4 h-4" />} text={stats.appointments > 0 ? `${stats.appointments} reuniões confirmadas na agenda.` : "Sem agendamentos pendentes."} />
+                    </div>
 
                  <Button 
                    onClick={() => window.location.href = "/sdrs"}
-                   className="w-full h-16 bg-white text-emerald-600 hover:bg-emerald-50 hover:scale-[1.02] font-black rounded-3xl uppercase tracking-widest text-sm transition-all shadow-3xl"
+                   className="w-full h-16 bg-white text-[#820AD1] hover:bg-purple-50 hover:scale-[1.02] font-black rounded-3xl uppercase tracking-widest text-sm transition-all shadow-3xl border-none"
                  >
                     Acessar Central SDR
                  </Button>
@@ -461,12 +469,12 @@ function UsageMetric({ label, used = 0, max = 0, color, icon }: { label: string,
     <div className="space-y-3">
        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
           <div className="flex items-center gap-2">
-             <div className="p-1.5 bg-slate-50 rounded-lg">{icon}</div>
+             <div className="p-1.5 bg-slate-50 dark:bg-purple-950/40 rounded-lg">{icon}</div>
              <span className="text-slate-400">{label}</span>
           </div>
-          <span className={isHigh ? "text-orange-500" : "text-slate-900"}>{(used || 0).toLocaleString()} / {(max || 0).toLocaleString()}</span>
+          <span className={isHigh ? "text-orange-500" : "text-slate-900 dark:text-purple-200"}>{(used || 0).toLocaleString()} / {(max || 0).toLocaleString()}</span>
        </div>
-       <div className="w-full h-3 bg-slate-50 rounded-full overflow-hidden border border-slate-100 p-0.5">
+       <div className="w-full h-3 bg-slate-50 dark:bg-purple-950/20 rounded-full overflow-hidden border border-slate-100 dark:border-purple-950 p-0.5">
           <div 
             className={`h-full rounded-full transition-all duration-1000 ${isHigh ? 'bg-orange-500' : color}`}
             style={{ width: `${percentage}%` }}
@@ -478,17 +486,17 @@ function UsageMetric({ label, used = 0, max = 0, color, icon }: { label: string,
 
 function KpiCard({ label, value, trend, up, icon }: { label: string, value: string | number, trend: string, up: boolean, icon: React.ReactNode }) {
   return (
-    <Card className="border-none shadow-xl rounded-[40px] bg-white p-10 hover:shadow-2xl hover:translate-y-[-8px] transition-all duration-500 group border-b-8 border-transparent hover:border-emerald-500">
+    <Card className="border-none shadow-xl dark:shadow-none rounded-[40px] bg-white dark:bg-[#1c0133] p-10 hover:shadow-2xl dark:hover:bg-[#230440]/40 hover:translate-y-[-8px] transition-all duration-500 group border-b-8 border-transparent hover:border-[#820AD1]">
        <div className="flex justify-between items-start mb-8">
-          <div className="p-5 bg-slate-50 rounded-[25px] group-hover:bg-slate-900 group-hover:shadow-xl transition-all duration-500">{icon}</div>
-          <div className={`flex items-center gap-1.5 text-[9px] font-black px-3 py-1.5 rounded-full ${up ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'} shadow-sm`}>
+          <div className="p-5 bg-slate-50 dark:bg-[#230440] rounded-[25px] group-hover:bg-[#820AD1] group-hover:shadow-xl transition-all duration-500 group-hover:text-white">{icon}</div>
+          <div className={`flex items-center gap-1.5 text-[9px] font-black px-3 py-1.5 rounded-full ${up ? 'bg-purple-50 dark:bg-purple-950/45 text-[#820AD1]' : 'bg-red-50 text-red-600'} shadow-sm`}>
              {up ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
              {trend}
           </div>
        </div>
        <div className="space-y-1">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{label}</p>
-          <p className="text-4xl font-black text-slate-900 tracking-tighter italic">{value}</p>
+          <p className="text-[10px] font-black text-slate-400 dark:text-purple-300/40 uppercase tracking-widest pl-1">{label}</p>
+          <p className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter italic">{value}</p>
        </div>
   </Card>
   );

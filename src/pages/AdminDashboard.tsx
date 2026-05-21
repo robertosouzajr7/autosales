@@ -241,10 +241,10 @@ export default function AdminDashboard() {
     <DashboardLayout>
       <div className="flex flex-col gap-10 p-6 lg:p-10 max-w-[1600px] mx-auto animate-in fade-in duration-700">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-slate-900 p-12 rounded-[50px] shadow-3xl relative overflow-hidden">
-           <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 blur-[100px] rounded-full" />
+           <div className="absolute top-0 right-0 w-96 h-96 bg-[#820AD1]/10 blur-[100px] rounded-full" />
            <div className="space-y-2 relative z-10">
               <h1 className="text-4xl font-black text-white tracking-tighter uppercase flex items-center gap-3">
-                 SaaS <span className="text-emerald-500 italic">Central</span>
+                 SaaS <span className="text-[#820AD1] italic">Central</span>
               </h1>
               <p className="text-white/30 font-bold uppercase tracking-widest text-[9px]">Painel de Controle do Fundador</p>
            </div>
@@ -252,7 +252,7 @@ export default function AdminDashboard() {
            <div className="flex gap-4 relative z-10">
               <Button 
                 onClick={() => { setSelectedTenant(null); setIsEditTenantModalOpen(true); }} 
-                className="h-14 bg-emerald-500 hover:bg-emerald-600 px-8 rounded-2xl font-black uppercase text-[10px] tracking-widest text-white shadow-xl shadow-emerald-500/20 active:scale-95 transition-all"
+                className="h-14 bg-[#820AD1] hover:bg-[#6c08b0] px-8 rounded-2xl font-black uppercase text-[10px] tracking-widest text-white shadow-xl shadow-[#820AD1]/20 active:scale-95 transition-all"
               >
                 <Plus className="w-5 h-5 mr-3" /> Novo Cliente
               </Button>
@@ -268,8 +268,8 @@ export default function AdminDashboard() {
 
           <TabsContent value="general" className="space-y-10 animate-in slide-in-from-bottom-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-               <StatCard icon={<Building2 className="text-blue-500" />} label="Clientes SaaS" value={tenants.length} color="blue" />
-               <StatCard icon={<TrendingUp className="text-emerald-500" />} label="MRR Estimado" value={`R$ ${tenants.reduce((acc, t) => acc + (t.plan?.priceMonthly || 0), 0)}`} color="emerald" />
+               <StatCard icon={<Building2 className="text-[#820AD1]" />} label="Clientes SaaS" value={tenants.length} color="blue" />
+               <StatCard icon={<TrendingUp className="text-[#820AD1]" />} label="MRR Estimado" value={`R$ ${tenants.reduce((acc, t) => acc + (t.plan?.priceMonthly || 0), 0)}`} color="emerald" />
                <StatCard icon={<Package className="text-purple-500" />} label="Planos Ativos" value={plans.length} color="purple" />
                <StatCard icon={<Activity className="text-orange-500" />} label="Status Infra" value="Online" color="orange" />
             </div>
@@ -313,7 +313,7 @@ export default function AdminDashboard() {
                                 </td>
                                 <td className="p-6 text-right">
                                    <div className="flex justify-end gap-2">
-                                      <Button variant="ghost" size="icon" className="group-hover:text-emerald-500" onClick={(e) => { e.stopPropagation(); setSelectedTenant(tenant); setIsEditTenantModalOpen(true); }}>
+                                      <Button variant="ghost" size="icon" className="group-hover:text-[#820AD1]" onClick={(e) => { e.stopPropagation(); setSelectedTenant(tenant); setIsEditTenantModalOpen(true); }}>
                                          <SettingsIcon className="w-4 h-4" />
                                       </Button>
                                       <Button variant="ghost" size="icon" className="hover:text-red-500" onClick={(e) => { e.stopPropagation(); handleDeleteTenant(tenant.id); }}>
@@ -334,7 +334,7 @@ export default function AdminDashboard() {
             {/* Same Plans UI */}
             <div className="flex justify-between items-center mb-8">
               <h3 className="text-2xl font-black text-slate-800 flex items-center gap-3">
-                <Package className="w-8 h-8 text-emerald-500" /> Modelos de Planos
+                <Package className="w-8 h-8 text-[#820AD1]" /> Modelos de Planos
               </h3>
               <Button onClick={() => setIsPlanModalOpen(true)} className="h-14 bg-slate-900 hover:bg-black px-8 rounded-2xl font-black uppercase text-[10px] tracking-widest text-white shadow-xl transition-all">
                 <Plus className="w-5 h-5 mr-3" /> Criar Novo Plano
@@ -344,7 +344,7 @@ export default function AdminDashboard() {
                 {plans.map(plan => (
                   <Card key={plan.id} className="border-none shadow-xl rounded-[40px] bg-white p-8 group hover:bg-slate-900 transition-all duration-500 cursor-pointer" onClick={() => handleEditPlan(plan)}>
                     <h4 className="text-2xl font-black text-slate-800 group-hover:text-white mb-2">{plan.name}</h4>
-                    <p className="text-2xl font-black text-emerald-500 italic">R$ {plan.priceMonthly}</p>
+                    <p className="text-2xl font-black text-[#820AD1] italic">R$ {plan.priceMonthly}</p>
                     <div className="mt-6 flex gap-2">
                        <Button variant="ghost" size="icon" className="group-hover:text-white" onClick={(e) => { e.stopPropagation(); handleEditPlan(plan); }}><SettingsIcon className="w-4 h-4" /></Button>
                        <Button variant="ghost" size="icon" className="group-hover:text-red-400" onClick={(e) => { e.stopPropagation(); handleDeletePlan(plan.id); }}><Trash2 className="w-4 h-4" /></Button>
@@ -357,7 +357,7 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-20">
                   <Card className="lg:col-span-2 border-none shadow-3xl rounded-[40px] bg-white p-10">
                       <h3 className="text-2xl font-black text-slate-800 mb-8 uppercase italic flex items-center gap-3">
-                          <Globe className="w-8 h-8 text-blue-500" /> Configurações Visuais
+                          <Globe className="w-8 h-8 text-[#820AD1]" /> Configurações Visuais
                       </h3>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -383,7 +383,7 @@ export default function AdminDashboard() {
                           <div className="space-y-2">
                               <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">WhatsApp de Contato</Label>
                               <div className="relative">
-                                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
+                                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#820AD1]" />
                                   <Input value={lpSettings.contactWhatsApp} onChange={e => setLpSettings({...lpSettings, contactWhatsApp: e.target.value})} className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold" placeholder="5511..." />
                               </div>
                           </div>
@@ -404,7 +404,7 @@ export default function AdminDashboard() {
                           <div className="space-y-2">
                               <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">LinkedIn</Label>
                               <div className="relative">
-                                  <Linkedin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-600" />
+                                  <Linkedin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#820AD1]" />
                                   <Input value={lpSettings.contactLinkedIn} onChange={e => setLpSettings({...lpSettings, contactLinkedIn: e.target.value})} className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold" />
                               </div>
                           </div>
@@ -435,7 +435,7 @@ export default function AdminDashboard() {
                                   <div key={p.id} className={`p-5 rounded-2xl flex items-center justify-between border-2 transition-all ${isVisible ? 'bg-white border-emerald-500 shadow-lg' : 'bg-slate-100 border-transparent opacity-60'}`}>
                                       <div className="flex flex-col">
                                           <span className="font-black text-slate-800">{p.name}</span>
-                                          <span className="text-[10px] font-bold text-emerald-500 italic">R$ {p.priceMonthly}/mês</span>
+                                          <span className="text-[10px] font-bold text-[#820AD1] italic">R$ {p.priceMonthly}/mês</span>
                                       </div>
                                       <Checkbox 
                                           checked={isVisible} 
@@ -462,7 +462,7 @@ export default function AdminDashboard() {
       {/* MODAL NOVO CLIENTE */}
       <Dialog open={isEditTenantModalOpen && !selectedTenant} onOpenChange={(v) => { if(!v) setIsEditTenantModalOpen(false); }}>
         <DialogContent className="rounded-[50px] p-12 max-w-lg border-none shadow-3xl">
-          <DialogHeader><DialogTitle className="text-3xl font-black">Novo <span className="text-emerald-500">Cliente</span></DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-3xl font-black">Novo <span className="text-[#820AD1]">Cliente</span></DialogTitle></DialogHeader>
           <div className="grid gap-6 py-4">
             <Input value={newTenant.name} onChange={e => setNewTenant({...newTenant, name: e.target.value})} placeholder="Nome da Empresa" className="h-14 rounded-2xl bg-slate-50 border-none font-bold" />
             <Input value={newTenant.email} onChange={e => setNewTenant({...newTenant, email: e.target.value})} placeholder="E-mail" className="h-14 rounded-2xl bg-slate-50 border-none font-bold" />
@@ -482,7 +482,7 @@ export default function AdminDashboard() {
           {selectedTenant && (
             <div className="flex flex-col h-[80vh]">
                <div className="p-8 bg-slate-900 text-white flex justify-between items-center">
-                  <h2 className="text-2xl font-black uppercase">Gerenciar <span className="text-emerald-400">{selectedTenant.name}</span></h2>
+                  <h2 className="text-2xl font-black uppercase">Gerenciar <span className="text-[#9d4edd]">{selectedTenant.name}</span></h2>
                   <Button variant="ghost" size="icon" onClick={() => setIsEditTenantModalOpen(false)} className="text-white hover:bg-white/10"><X className="w-6 h-6" /></Button>
                </div>
                <Tabs defaultValue="company" className="flex-1 flex flex-col overflow-hidden">
@@ -564,7 +564,7 @@ export default function AdminDashboard() {
                     </TabsContent>
                   </div>
                   <div className="p-8 border-t flex justify-end gap-3">
-                     <Button className="h-14 bg-emerald-500 text-white font-black rounded-2xl px-12" onClick={async () => {
+                     <Button className="h-14 bg-[#820AD1] text-white font-black rounded-2xl px-12" onClick={async () => {
                         const res = await fetch(`/api/admin/tenants/${selectedTenant.id}`, { method: "PUT", headers: {"Content-Type":"application/json"}, body: JSON.stringify(selectedTenant) });
                         if (res.ok) { toast({title:"✅ Sucesso!"}); setIsEditTenantModalOpen(false); fetchData(); }
                      }}>Salvar Alterações</Button>
@@ -588,14 +588,14 @@ export default function AdminDashboard() {
                 <FeatureToggle id="f-bulk" label="Massa" checked={newPlan.features.bulkMessaging} onChange={v => setNewPlan({...newPlan, features: {...newPlan.features, bulkMessaging: v}})} />
              </div>
           </div>
-          <DialogFooter><Button onClick={handleCreateOrUpdatePlan} className="w-full h-16 bg-emerald-500 font-black text-white rounded-2xl">Confirmar</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleCreateOrUpdatePlan} className="w-full h-16 bg-[#820AD1] font-black text-white rounded-2xl">Confirmar</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* MODAL ADICIONAR USUÁRIO (ADMIN SIDE) */}
       <Dialog open={isAddUserModalOpen} onOpenChange={setIsAddUserModalOpen}>
         <DialogContent className="rounded-[40px] p-10 max-w-md border-none shadow-3xl bg-white">
-          <h2 className="text-2xl font-black uppercase tracking-tighter mb-6 italic">Novo <span className="text-emerald-500">Acesso</span></h2>
+          <h2 className="text-2xl font-black uppercase tracking-tighter mb-6 italic">Novo <span className="text-[#820AD1]">Acesso</span></h2>
           <div className="space-y-4">
              <div className="space-y-1">
                 <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">Nome do Colaborador</Label>

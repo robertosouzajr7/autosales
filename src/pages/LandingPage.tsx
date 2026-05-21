@@ -3,8 +3,8 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
   Zap, Check, Target, MessageSquare, ArrowRight, Shield, TrendingUp, Users,
-  BarChart, Globe, Mail, Phone, ExternalLink, Star, Play, 
-  Instagram, Linkedin, Youtube, Send, X
+  BarChart, Globe, Mail, Phone, Star, Send, X, Play, Clock, Sparkles, AlertCircle,
+  Sun, Moon
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -19,6 +19,11 @@ export default function LandingPage() {
     return sessionStorage.getItem("landing_lead_id") || null;
   });
 
+  // Theme state: defaults to dark theme as requested (using Nubank Deep Dark)
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    const savedTheme = localStorage.getItem("landing_theme");
+    return savedTheme !== "light"; // true if dark (default), false if light
+  });
 
   const [chatHistory, setChatHistory] = useState<{role: string, content: string}[]>(() => {
     const savedHistory = sessionStorage.getItem("landing_chat_history");
@@ -43,6 +48,21 @@ export default function LandingPage() {
       sessionStorage.setItem("landing_chat_history", JSON.stringify(chatHistory));
     }
   }, [chatHistory]);
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (isDarkMode) {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+  }, [isDarkMode]);
+
+  const toggleTheme = () => {
+    const nextTheme = !isDarkMode;
+    setIsDarkMode(nextTheme);
+    localStorage.setItem("landing_theme", nextTheme ? "dark" : "light");
+  };
 
   const handleSendMessage = async () => {
     if (!chatMessage.trim() || !settings?.selectedSdrId) return;
@@ -81,210 +101,425 @@ export default function LandingPage() {
     }
   };
 
-
   const visiblePlans = plans.filter(p => !settings?.visiblePlanIds || settings.visiblePlanIds.split(",").includes(p.id));
 
+  // Dynamic Theme Styling Variables - Nubank Palette Theme (#820AD1 purple based)
+  const sBg = isDarkMode ? "bg-[#120024] text-slate-100" : "bg-[#F8F6FC] text-[#2D0052]";
+  const sHeader = isDarkMode ? "bg-[#120024]/85 border-purple-950/40" : "bg-white/85 border-purple-100";
+  const sHeaderText = isDarkMode ? "text-purple-200 hover:text-[#820AD1]" : "text-[#2D0052] hover:text-[#820AD1]";
+  const sLogoText = isDarkMode ? "text-white" : "text-[#2D0052]";
+  
+  const sHero = isDarkMode ? "bg-[#120024] border-b border-purple-950/40" : "bg-white border-b border-purple-100/60";
+  const sHeroTitle = isDarkMode ? "text-white" : "text-[#2D0052]";
+  const sHeroDesc = isDarkMode ? "text-purple-200/70" : "text-purple-950/70";
+  const sButtonSecondary = isDarkMode ? "bg-white/5 border-purple-900/30 text-purple-200 hover:bg-white/10" : "bg-purple-50 border-purple-100 text-[#820AD1] hover:bg-purple-100";
+  
+  const sSectionProblem = isDarkMode ? "bg-[#17002e] border-b border-purple-950/40" : "bg-[#F0ECF8] border-b border-purple-100/40";
+  const sSectionTitle = isDarkMode ? "text-white" : "text-[#2D0052]";
+  const sSectionDesc = isDarkMode ? "text-purple-200/70" : "text-purple-950/70";
+  const sProblemCard = isDarkMode ? "bg-[#230440]/65 border-purple-950/40" : "bg-white border-purple-100 shadow-xl shadow-purple-950/5";
+  const sProblemTitle = isDarkMode ? "text-white" : "text-[#2D0052]";
+  const sProblemDesc = isDarkMode ? "text-purple-200/60" : "text-purple-950/60";
+
+  const sHowItWorks = isDarkMode ? "bg-[#120024] border-b border-purple-950/40" : "bg-white border-b border-purple-100";
+  const sHowNumberText = isDarkMode ? "text-purple-950/10" : "text-[#820AD1]/5";
+  const sHowTitle = isDarkMode ? "text-white" : "text-[#2D0052]";
+  
+  const sFeatures = isDarkMode ? "bg-[#17002e] border-b border-purple-950/40" : "bg-[#F8F6FC] border-b border-purple-100";
+  const sFeatureCard = isDarkMode ? "bg-[#230440]/65 border-purple-950/40 hover:border-[#820AD1]/40" : "bg-white border-purple-100 hover:border-[#820AD1]/30 hover:shadow-xl hover:shadow-purple-950/5";
+  const sFeatureTitle = isDarkMode ? "text-white" : "text-[#2D0052]";
+  const sFeatureDesc = isDarkMode ? "text-purple-200/60" : "text-purple-950/60";
+
+  const sTestimonials = isDarkMode ? "bg-[#120024] border-b border-purple-950/40" : "bg-white border-b border-purple-100";
+  const sTestimonialCard = isDarkMode ? "bg-[#230440]/65 border-purple-950/40 text-white" : "bg-[#F8F6FC] border-purple-100 text-[#2D0052] shadow-md";
+  const sTestimonialText = isDarkMode ? "text-purple-100" : "text-purple-950/80";
+  const sTestimonialAuthor = isDarkMode ? "text-white" : "text-[#2D0052]";
+  const sTestimonialRole = isDarkMode ? "text-purple-300" : "text-purple-950/50";
+
+  const sPricing = isDarkMode ? "bg-[#17002e] border-b border-purple-950/40" : "bg-[#F0ECF8] border-b border-purple-100";
+  const sPricingCardRecommended = "bg-[#820AD1] text-white border-none shadow-2xl shadow-[#820AD1]/30";
+  const sPricingCardStandard = isDarkMode ? "bg-[#230440]/80 border-purple-950/40 text-white" : "bg-white border-purple-100 text-[#2D0052] shadow-xl shadow-purple-950/5";
+  const sPricingTextMuted = (recom: boolean) => recom ? "text-purple-100" : (isDarkMode ? "text-purple-300" : "text-purple-950/50");
+  const sPricingBorderMuted = (recom: boolean) => recom ? "border-white/10" : (isDarkMode ? "border-purple-950/30" : "border-purple-100");
+
+  const sFaq = isDarkMode ? "bg-[#120024] border-b border-purple-950/40" : "bg-white border-b border-purple-100";
+  const sFaqItem = isDarkMode ? "bg-[#230440]/65 border-purple-950/40" : "bg-[#F8F6FC] border-purple-100";
+  const sFaqTitle = isDarkMode ? "text-white" : "text-[#2D0052]";
+  const sFaqDesc = isDarkMode ? "text-purple-200/60" : "text-purple-950/60";
+
+  const sCTA = isDarkMode ? "bg-[#17002e]" : "bg-[#2D0052] text-white";
+  const sCTADesc = isDarkMode ? "text-purple-200/70" : "text-purple-200";
+  
+  const sFooter = isDarkMode ? "bg-[#120024] border-t border-purple-950 text-purple-400" : "bg-white border-t border-purple-100 text-purple-950/65";
+  const sFooterTitle = isDarkMode ? "text-white" : "text-[#2D0052]";
+  const sFooterDesc = isDarkMode ? "text-purple-300" : "text-purple-950/55";
+
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      {/* HEADER PREMIUM */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100 px-6 lg:px-20 h-20 flex items-center justify-between">
+    <div className={`min-h-screen ${sBg} flex flex-col font-sans overflow-x-hidden selection:bg-[#820AD1] selection:text-white transition-colors duration-300`}>
+      
+      {/* HEADER */}
+      <header className={`sticky top-0 z-50 ${sHeader} backdrop-blur-xl border-b px-6 lg:px-20 h-20 flex items-center justify-between transition-colors duration-300`}>
         <div className="flex items-center gap-3">
           {settings?.logoUrl ? (
             <img src={settings.logoUrl} alt="Logo" className="h-10 w-auto" />
           ) : (
             <>
-              <div className="bg-primary p-2 rounded-xl shadow-lg shadow-primary/20">
+              <div className="bg-[#820AD1] p-2.5 rounded-xl shadow-lg shadow-[#820AD1]/20">
                 <Target className="w-6 h-6 text-white" />
               </div>
-              <span className="text-2xl font-black text-slate-900 tracking-tighter uppercase italic">Agentes <span className="text-primary">Virtuais</span></span>
+              <span className={`text-2xl font-black ${sLogoText} tracking-tighter uppercase italic`}>Vend<span className="text-[#820AD1]">Ai</span></span>
             </>
           )}
         </div>
         
-        <nav className="hidden md:flex items-center gap-8 text-sm font-bold text-slate-600">
-           <a href="#features" className="hover:text-primary transition-colors">Funcionalidades</a>
-           <a href="#solutions" className="hover:text-primary transition-colors">Soluções</a>
-           <a href="#pricing" className="hover:text-primary transition-colors">Planos</a>
+        <nav className="hidden md:flex items-center gap-8 text-sm font-bold">
+           <a href="#problem" className={`${sHeaderText} transition-colors`}>O Problema</a>
+           <a href="#how-it-works" className={`${sHeaderText} transition-colors`}>Como Funciona</a>
+           <a href="#features" className={`${sHeaderText} transition-colors`}>Funcionalidades</a>
+           <a href="#testimonials" className={`${sHeaderText} transition-colors`}>Casos de Sucesso</a>
+           <a href="#pricing" className={`${sHeaderText} transition-colors`}>Planos</a>
+           <a href="#faq" className={`${sHeaderText} transition-colors`}>FAQ</a>
         </nav>
 
         <div className="flex items-center gap-4">
-           <Link to="/login" className="text-sm font-bold text-slate-600 hover:text-primary transition-colors pr-4">Entrar</Link>
+           {/* THEME TOGGLE BUTTON */}
+           <button 
+             onClick={toggleTheme} 
+             className={`p-2.5 rounded-xl border ${isDarkMode ? 'border-purple-950/40 hover:bg-white/5 text-[#820AD1]' : 'border-purple-100 hover:bg-purple-50 text-[#820AD1]'} transition-all`}
+             title={isDarkMode ? "Ativar Modo Claro" : "Ativar Modo Escuro"}
+           >
+             {isDarkMode ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-purple-800" />}
+           </button>
+
+           <Link to="/login" className={`text-sm font-bold ${isDarkMode ? 'text-purple-200 hover:text-[#820AD1]' : 'text-[#2D0052] hover:text-[#820AD1]'} transition-colors pr-2`}>Entrar</Link>
            <Link to="/register">
-             <Button className="font-black h-11 px-8 rounded-xl bg-slate-900 hover:bg-black shadow-xl shadow-slate-200">Começar Trial Grátis</Button>
+             <Button className="font-black h-11 px-6 rounded-xl bg-[#820AD1] hover:bg-[#6c08b0] text-white shadow-xl shadow-[#820AD1]/20 hover:scale-105 transition-transform border-none">Testar Grátis</Button>
            </Link>
         </div>
       </header>
 
       {/* HERO SECTION */}
-      <section className="relative pt-20 pb-32 lg:pt-32 lg:pb-40 overflow-hidden px-6 lg:px-20">
-         <div className="absolute top-0 right-0 w-2/3 h-full bg-gradient-to-l from-primary/5 via-primary/0 to-transparent -z-10 rounded-full translate-x-1/2 blur-3xl opacity-50" />
+      <section className={`relative pt-24 pb-32 lg:pt-36 lg:pb-44 overflow-hidden px-6 lg:px-20 ${sHero} transition-colors duration-300`}>
+         <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(130,10,209,0.08),transparent_50%)]" />
+         <div className="absolute top-10 right-10 w-96 h-96 bg-[#820AD1]/10 rounded-full blur-[150px] pointer-events-none" />
          
-         <div className="max-w-4xl mx-auto text-center space-y-10">
-            <Badge className="bg-primary/10 text-primary border-none py-1.5 px-4 font-black text-xs uppercase tracking-widest leading-loose">
-               A NOVA GERAÇÃO DE VENDAS B2B ESTÁ AQUI
+         <div className="max-w-5xl mx-auto text-center space-y-8 relative z-10">
+            <Badge className="bg-[#820AD1]/10 text-[#820AD1] border-none py-1.5 px-4 font-black text-xs uppercase tracking-widest leading-loose">
+               ⚡ A REVOLUÇÃO DA PROSPECÇÃO COM AGENTES INTELIGENTES
             </Badge>
-            <h1 className="text-5xl lg:text-7xl font-black text-slate-900 tracking-tighter leading-[0.9] text-balance">
-               Scale suas Vendas com <span className="text-primary italic">SDRs Infinitos</span> de IA.
+            <h1 className={`text-5xl lg:text-7xl font-black ${sHeroTitle} tracking-tighter leading-[0.95] text-balance`}>
+               Pare de perseguir leads.<br/>Construa uma <span className="text-[#820AD1] italic">Máquina de Vendas</span> Autônoma.
             </h1>
-            <p className="text-xl text-slate-500 font-medium max-w-2xl mx-auto leading-relaxed">
-               Automatize seu WhatsApp, qualifique leads 24h por dia e deixe nossos Agentes de Inteligência Artificial cuidarem da prospecção e do seu funil. Você foca apenas em fechar negócios.
+            <p className={`text-lg lg:text-xl ${sHeroDesc} font-medium max-w-3xl mx-auto leading-relaxed`}>
+               Enquanto seu time dorme, nosso **BDR Agent** mapeia decisores e enriquece contatos direto do Google Maps, e nosso **SDR Agent** qualifica e agenda reuniões diretamente na sua agenda comercial via WhatsApp.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-6">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
                <Link to="/register">
-                 <Button className="h-16 px-10 text-lg font-black bg-primary hover:bg-primary/90 text-white rounded-2xl shadow-[0_20px_40px_-5px_rgba(var(--primary-rgb),0.3)] hover:scale-105 transition-all">
-                   Testar a Plataforma Agora
+                 <Button className="h-16 px-10 text-lg font-black bg-[#820AD1] hover:bg-[#6c08b0] text-white rounded-2xl shadow-[0_20px_40px_-5px_rgba(130,10,209,0.4)] hover:scale-105 transition-all border-none">
+                   Criar Minha Máquina de Vendas
                  </Button>
                </Link>
-               <a href="#features" className="h-16 px-10 flex items-center justify-center text-sm font-bold text-slate-600 hover:text-slate-900 bg-white border-2 border-slate-100 hover:border-slate-200 rounded-2xl transition-all">
+               <a href="#how-it-works" className={`h-16 px-10 flex items-center justify-center text-sm font-bold border rounded-2xl ${sButtonSecondary} transition-all`}>
                  Ver Como Funciona <ArrowRight className="ml-2 w-4 h-4" />
                </a>
             </div>
          </div>
       </section>
 
-      {/* RECURSOS COMPLETOS (Mapeamento Funcionalidades) */}
-      <section id="features" className="py-32 bg-white px-6 lg:px-20 relative">
-        <div className="max-w-7xl mx-auto space-y-20">
-          <div className="text-center space-y-6">
-            <h2 className="text-4xl lg:text-5xl font-black text-slate-900 tracking-tighter">O Ecossistema Completo que sua <span className="text-primary italic">Máquina de Vendas</span> precisa.</h2>
-            <p className="text-xl text-slate-500 font-medium max-w-2xl mx-auto">Deixamos as integrações difíceis resolvidos. Tudo o que você precisa está unificado para aumentar conversões imediatamente.</p>
+      {/* PAIN SECTION */}
+      <section id="problem" className={`py-24 ${sSectionProblem} px-6 lg:px-20 transition-colors duration-300`}>
+        <div className="max-w-6xl mx-auto space-y-16">
+          <div className="text-center space-y-4">
+            <h2 className={`text-3xl lg:text-5xl font-black tracking-tighter ${sSectionTitle}`}>Por que o funil tradicional de prospecção está <span className="text-red-500 italic">quebrado</span>?</h2>
+            <p className={`${sSectionDesc} font-medium max-w-2xl mx-auto`}>Três grandes gargalos comercialmente drenam sua energia comercial e impedem sua empresa de escalar:</p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className={`p-8 border rounded-3xl space-y-4 ${sProblemCard} transition-all`}>
+              <div className="bg-red-500/10 p-3 w-fit rounded-xl text-red-500"><Clock className="w-6 h-6" /></div>
+              <h3 className={`text-xl font-black ${sProblemTitle}`}>Tempo de Resposta Lento</h3>
+              <p className={`${sProblemDesc} text-sm leading-relaxed`}>
+                Um lead morre após 5 minutos sem atendimento. Vendedores humanos não conseguem dar respostas instantâneas 24h por dia, perdendo até 80% das chances de conversão.
+              </p>
+            </div>
+            <div className={`p-8 border rounded-3xl space-y-4 ${sProblemCard} transition-all`}>
+              <div className="bg-red-500/10 p-3 w-fit rounded-xl text-red-500"><Users className="w-6 h-6" /></div>
+              <h3 className={`text-xl font-black ${sProblemTitle}`}>Custo Alto de Pré-Vendas (SDR)</h3>
+              <p className={`${sProblemDesc} text-sm leading-relaxed`}>
+                Contratar, treinar e manter SDRs humanos é caro. O turnover na área é gigante e a maior parte do dia é desperdiçada em tarefas manuais e cadastros de leads.
+              </p>
+            </div>
+            <div className={`p-8 border rounded-3xl space-y-4 ${sProblemCard} transition-all`}>
+              <div className="bg-red-500/10 p-3 w-fit rounded-xl text-red-500"><AlertCircle className="w-6 h-6" /></div>
+              <h3 className={`text-xl font-black ${sProblemTitle}`}>Bancos de Dados Frios</h3>
+              <p className={`${sProblemDesc} text-sm leading-relaxed`}>
+                Comprar listas de leads gera apenas spam. Mapear empresas manualmente no Google Maps para achar telefones reais de decisores e e-mails atualizados toma dias de trabalho comercial.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* HOW IT WORKS */}
+      <section id="how-it-works" className={`py-28 ${sHowItWorks} px-6 lg:px-20 transition-colors duration-300`}>
+         <div className="max-w-6xl mx-auto space-y-20">
+            <div className="text-center space-y-4">
+               <h2 className={`text-3xl lg:text-5xl font-black tracking-tighter ${sHowTitle}`}>Sua jornada comercial automatizada em <span className="text-[#820AD1] italic">3 passos simples</span></h2>
+               <p className={`${sSectionDesc} font-medium max-w-xl mx-auto`}>Colocamos a inteligência autônoma para trabalhar para você.</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 relative">
+               <div className="space-y-6 relative">
+                  <div className={`absolute -top-6 -left-6 text-9xl font-black ${sHowNumberText} pointer-events-none select-none`}>01</div>
+                  <div className="text-[#820AD1] font-black text-xs uppercase tracking-widest">PASSO 1: MAPEAMENTO AUTÔNOMO</div>
+                  <h3 className={`text-2xl font-black ${sHowTitle} tracking-tight`}>O BDR Agent Encontra e Enriquece</h3>
+                  <p className={`${sSectionDesc} text-sm leading-relaxed`}>
+                     O BDR Agent busca as empresas no Google Maps conforme seu público-alvo (ICP). Ele entra no site de cada lead, busca de forma profunda no código por telefones adicionais, e-mails diretos e decisores reais, tudo de maneira automática.
+                  </p>
+               </div>
+               
+               <div className="space-y-6 relative">
+                  <div className={`absolute -top-6 -left-6 text-9xl font-black ${sHowNumberText} pointer-events-none select-none`}>02</div>
+                  <div className="text-[#820AD1] font-black text-xs uppercase tracking-widest">PASSO 2: CONTATO E QUALIFICAÇÃO</div>
+                  <h3 className={`text-2xl font-black ${sHowTitle} tracking-tight`}>O SDR Agent Inicia e Qualifica</h3>
+                  <p className={`${sSectionDesc} text-sm leading-relaxed`}>
+                     O SDR Agent aborda o lead de forma humana, enviando mensagens estratégicas únicas no WhatsApp. A IA conversa, contorna objeções, pontua o lead de 0 a 100 baseada na urgência e extrai os dados cruciais para o seu funil.
+                  </p>
+               </div>
+               
+               <div className="space-y-6 relative">
+                  <div className={`absolute -top-6 -left-6 text-9xl font-black ${sHowNumberText} pointer-events-none select-none`}>03</div>
+                  <div className="text-[#820AD1] font-black text-xs uppercase tracking-widest">PASSO 3: FECHAMENTO</div>
+                  <h3 className={`text-2xl font-black ${sHowTitle} tracking-tight`}>Agendamento Automático de Reuniões</h3>
+                  <p className={`${sSectionDesc} text-sm leading-relaxed`}>
+                     Assim que o lead demonstra real interesse, o SDR Agent envia seu link de agenda integrada. O próprio lead escolhe o horário, o sistema confirma o agendamento no ato e faz lembretes automáticos no WhatsApp para garantir o show-rate.
+                  </p>
+               </div>
+            </div>
+         </div>
+      </section>
+
+      {/* CORE FEATURES */}
+      <section id="features" className={`py-28 ${sFeatures} px-6 lg:px-20 transition-colors duration-300`}>
+        <div className="max-w-6xl mx-auto space-y-20">
+          <div className="text-center space-y-4">
+            <h2 className={`text-3xl lg:text-5xl font-black tracking-tighter ${sSectionTitle}`}>Desenvolvido para gerar <span className="text-[#820AD1] italic">resultados operacionais reais</span></h2>
+            <p className={`${sSectionDesc} font-medium max-w-xl mx-auto`}>Funcionalidades nativas, maduras e prontas para rodar no seu negócio.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card className="p-10 border-2 border-slate-50 shadow-md hover:shadow-2xl hover:border-primary/20 transition-all rounded-[40px] space-y-6 group">
-              <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-3xl flex items-center justify-center group-hover:scale-110 group-hover:bg-blue-500 group-hover:text-white transition-all">
-                <Target className="w-8 h-8" />
+            <Card className={`p-8 border rounded-[30px] space-y-6 transition-all group ${sFeatureCard}`}>
+              <div className="w-12 h-12 bg-[#820AD1]/10 text-[#820AD1] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Target className="w-6 h-6" />
               </div>
-              <h3 className="text-2xl font-black text-slate-800 tracking-tighter">Workflow No-Code</h3>
-              <p className="text-slate-500 font-medium leading-relaxed">Crie suas automações arrastando blocos na tela. Conecte dezenas de gatilhos visuais e decida exatamente cada mensagem ou verificação condicional.</p>
+              <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>BDR Agent (Performance Hunter)</h3>
+              <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
+                Varre o Google Maps a partir de palavras-chave, extraindo nomes de decisores, telefones secundários e e-mails reais do código das páginas web sem criar informações fictícias.
+              </p>
             </Card>
 
-            <Card className="p-10 border-2 border-slate-50 shadow-md hover:shadow-2xl hover:border-primary/20 transition-all rounded-[40px] space-y-6 group">
-              <div className="w-16 h-16 bg-purple-50 text-purple-500 rounded-3xl flex items-center justify-center group-hover:scale-110 group-hover:bg-purple-500 group-hover:text-white transition-all">
-                <Globe className="w-8 h-8" />
+            <Card className={`p-8 border rounded-[30px] space-y-6 transition-all group ${sFeatureCard}`}>
+              <div className="w-12 h-12 bg-[#820AD1]/10 text-[#820AD1] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Sparkles className="w-6 h-6" />
               </div>
-              <h3 className="text-2xl font-black text-slate-800 tracking-tighter">Agentes IA & Score GenAI</h3>
-              <p className="text-slate-500 font-medium leading-relaxed">Use SDRs inteligentes com personalidade. A IA não apenas responde o WhatsApp, ela qualifica e pontua o Lead (Score de 0 a 100) extraindo os dados cruciais para o CRM.</p>
+              <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>SDR Agent (Qualificação WhatsApp)</h3>
+              <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
+                Mensagens únicas e estratégicas com identidade e base de conhecimento (Prompt/Knowledge Base) próprias. Qualifica de forma natural, sem sobrecarregar a fila com múltiplas mensagens.
+              </p>
             </Card>
 
-            <Card className="p-10 border-2 border-slate-50 shadow-md hover:shadow-2xl hover:border-primary/20 transition-all rounded-[40px] space-y-6 group">
-              <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-3xl flex items-center justify-center group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all">
-                <Users className="w-8 h-8" />
+            <Card className={`p-8 border rounded-[30px] space-y-6 transition-all group ${sFeatureCard}`}>
+              <div className="w-12 h-12 bg-[#820AD1]/10 text-[#820AD1] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <BarChart className="w-6 h-6" />
               </div>
-              <h3 className="text-2xl font-black text-slate-800 tracking-tighter">Multi-Atendentes</h3>
-              <p className="text-slate-500 font-medium leading-relaxed">Centralize todas as mensagens. Conecte seu WhatsApp de forma oficial através da Cloud API. Seu time inteiro responde pelo mesmo número através de uma tela.</p>
+              <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>Funil de Vendas (CRM/Kanban)</h3>
+              <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
+                Pipeline estruturado para monitorar a transição de status dos leads enriquecidos, qualificados e agendados. Mova estágios do funil com total visibilidade comercial.
+              </p>
             </Card>
 
-            <Card className="p-10 border-2 border-slate-50 shadow-md hover:shadow-2xl hover:border-primary/20 transition-all rounded-[40px] space-y-6 group">
-              <div className="w-16 h-16 bg-orange-50 text-orange-500 rounded-3xl flex items-center justify-center group-hover:scale-110 group-hover:bg-orange-500 group-hover:text-white transition-all">
-                <BarChart className="w-8 h-8" />
+            <Card className={`p-8 border rounded-[30px] space-y-6 transition-all group ${sFeatureCard}`}>
+              <div className="w-12 h-12 bg-[#820AD1]/10 text-[#820AD1] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Clock className="w-6 h-6" />
               </div>
-              <h3 className="text-2xl font-black text-slate-800 tracking-tighter">Pipeline & Integração Nativa</h3>
-              <p className="text-slate-500 font-medium leading-relaxed">Mova os clientes pelo Funil (Kanban). Acesse dashboards completos em tempo real e dispare campanhas em massa de remarketing segmentado.</p>
+              <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>Reuniões (Agenda Integrada)</h3>
+              <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
+                Página pública customizada para o lead agendar um horário direto na sua conta. O SDR confirma a reunião pelo WhatsApp automaticamente em tempo real.
+              </p>
             </Card>
 
-            <Card className="p-10 border-2 border-slate-50 shadow-md hover:shadow-2xl hover:border-primary/20 transition-all rounded-[40px] space-y-6 group">
-              <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-3xl flex items-center justify-center group-hover:scale-110 group-hover:bg-rose-500 group-hover:text-white transition-all">
-                <Zap className="w-8 h-8" />
+            <Card className={`p-8 border rounded-[30px] space-y-6 transition-all group ${sFeatureCard}`}>
+              <div className="w-12 h-12 bg-[#820AD1]/10 text-[#820AD1] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Zap className="w-6 h-6" />
               </div>
-              <h3 className="text-2xl font-black text-slate-800 tracking-tighter">Webhooks Premium</h3>
-              <p className="text-slate-500 font-medium leading-relaxed">A comunicação não é um fim. Crie requisições HTTP para a PagSeguro ou receba triggers instantâneos quando seu site notificar que o cliente completou o formulário.</p>
+              <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>Workflows No-Code & ICP</h3>
+              <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
+                Monte fluxos de prospecção ligando gatilhos e etapas lógicas de vendas de forma no-code, definindo exatamente a segmentação de seu Público Alvo.
+              </p>
             </Card>
 
-            <Card className="p-10 border-2 border-slate-50 shadow-md hover:shadow-2xl hover:border-primary/20 transition-all rounded-[40px] space-y-6 group">
-              <div className="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-3xl flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-500 group-hover:text-white transition-all">
-                <Shield className="w-8 h-8" />
+            <Card className={`p-8 border rounded-[30px] space-y-6 transition-all group ${sFeatureCard}`}>
+              <div className="w-12 h-12 bg-[#820AD1]/10 text-[#820AD1] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <MessageSquare className="w-6 h-6" />
               </div>
-              <h3 className="text-2xl font-black text-slate-800 tracking-tighter">Agendamento & Calendly Integrado</h3>
-              <p className="text-slate-500 font-medium leading-relaxed">Página pública elegante para o Lead agendar um horário com seu time. O próprio sistema avisa via WhatsApp confirmando o evento e lida com lembretes automáticos!</p>
+              <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>Central Multi-atendimento</h3>
+              <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
+                Central de mensagens integrada do WhatsApp Oficial. Seus atendentes humanos podem intervir a qualquer momento, assumindo a conversa onde a IA parou.
+              </p>
             </Card>
           </div>
         </div>
       </section>
 
-      {/* PRICING - DYNAMIC */}
-      <section id="pricing" className="py-40 bg-slate-900 px-6 lg:px-20">
-         <div className="max-w-7xl mx-auto space-y-20">
-            <div className="text-center space-y-6">
-               <h2 className="text-4xl lg:text-6xl font-black text-white tracking-tighter leading-none">Preço Justo para <span className="text-blue-400 italic">Resultados Reais</span>.</h2>
-               <p className="text-white/40 text-lg font-medium">Escolha o plano ideal para o seu momento de escala.</p>
+      {/* TESTIMONIALS */}
+      <section id="testimonials" className={`py-24 ${sTestimonials} px-6 lg:px-20 transition-colors duration-300`}>
+        <div className="max-w-6xl mx-auto space-y-16">
+          <div className="text-center space-y-4">
+             <h2 className={`text-3xl lg:text-5xl font-black tracking-tighter ${sSectionTitle}`}>Empresas que escalaram sua <span className="text-[#820AD1] italic">prospecção comercial</span></h2>
+             <p className={`${sSectionDesc} font-medium max-w-xl mx-auto`}>Histórias de quem parou de perder tempo com tarefas repetitivas e focou em fechar negócios.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+             <Card className={`p-8 border rounded-3xl space-y-6 flex flex-col justify-between ${sTestimonialCard}`}>
+                <div className="space-y-4">
+                   <div className="flex text-amber-500"><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/></div>
+                   <p className={`${sTestimonialText} text-sm italic leading-relaxed`}>
+                      "Com o BDR Agent, conseguimos mapear todas as construtoras da nossa região. O sistema encontrou o e-mail real dos decisores e os telefones extras. O SDR Agent qualificou mais de 450 leads em 2 semanas."
+                   </p>
+                </div>
+                <div className={`flex items-center gap-3 pt-4 border-t ${isDarkMode ? 'border-purple-950/30' : 'border-purple-100'}`}>
+                   <div className="w-10 h-10 bg-[#820AD1]/20 rounded-full flex items-center justify-center font-black text-[#820AD1]">TF</div>
+                   <div>
+                      <p className={`text-sm font-black ${sTestimonialAuthor}`}>Thiago Fonseca</p>
+                      <p className={`text-[10px] uppercase font-black ${sTestimonialRole}`}>Diretor Comercial - Construtora Real</p>
+                   </div>
+                </div>
+             </Card>
+
+             <Card className={`p-8 border rounded-3xl space-y-6 flex flex-col justify-between ${sTestimonialCard}`}>
+                <div className="space-y-4">
+                   <div className="flex text-amber-500"><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/></div>
+                   <p className={`${sTestimonialText} text-sm italic leading-relaxed`}>
+                      "Nossa maior dor era o tempo de resposta no WhatsApp. Os leads chegavam e demoravam horas para serem respondidos. Agora, com a qualificação da Risia 24h, o lead recebe retorno instantâneo e agenda a reunião sozinho."
+                   </p>
+                </div>
+                <div className={`flex items-center gap-3 pt-4 border-t ${isDarkMode ? 'border-purple-950/30' : 'border-purple-100'}`}>
+                   <div className="w-10 h-10 bg-[#820AD1]/20 rounded-full flex items-center justify-center font-black text-[#820AD1]">AM</div>
+                   <div>
+                      <p className={`text-sm font-black ${sTestimonialAuthor}`}>Aline Mendes</p>
+                      <p className={`text-[10px] uppercase font-black ${sTestimonialRole}`}>Fundadora - CRM Flow SaaS</p>
+                   </div>
+                </div>
+             </Card>
+
+             <Card className={`p-8 border rounded-3xl space-y-6 flex flex-col justify-between ${sTestimonialCard}`}>
+                <div className="space-y-4">
+                   <div className="flex text-amber-500"><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/></div>
+                   <p className={`${sTestimonialText} text-sm italic leading-relaxed`}>
+                      "Reduzimos nosso custo comercial pela metade. Em vez de manter 3 SDRs qualificando no manual, mantemos a IA fazendo o primeiro contato e nosso comercial humano foca 100% do tempo em fechar o contrato."
+                   </p>
+                </div>
+                <div className={`flex items-center gap-3 pt-4 border-t ${isDarkMode ? 'border-purple-950/30' : 'border-purple-100'}`}>
+                   <div className="w-10 h-10 bg-[#820AD1]/20 rounded-full flex items-center justify-center font-black text-[#820AD1]">RC</div>
+                   <div>
+                      <p className={`text-sm font-black ${sTestimonialAuthor}`}>Ricardo Cruz</p>
+                      <p className={`text-[10px] uppercase font-black ${sTestimonialRole}`}>Gerente de Vendas - HubTech</p>
+                   </div>
+                </div>
+             </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* PRICING */}
+      <section id="pricing" className={`py-28 ${sPricing} px-6 lg:px-20 transition-colors duration-300`}>
+         <div className="max-w-6xl mx-auto space-y-20">
+            <div className="text-center space-y-4">
+               <h2 className={`text-3xl lg:text-5xl font-black ${sSectionTitle} tracking-tighter leading-none`}>Preço Justo para <span className="text-[#820AD1] italic">Resultados Reais</span></h2>
+               <p className={`${sSectionDesc} text-lg font-medium`}>Sem taxas ocultas. Escolha o plano ideal para a sua escala comercial.</p>
             </div>
             
-            <div className={`grid grid-cols-1 ${visiblePlans.length === 2 ? 'md:grid-cols-2' : visiblePlans.length >= 3 ? 'md:grid-cols-3' : 'md:grid-cols-1'} gap-10 max-w-6xl mx-auto items-end pt-12`}>
+            <div className={`grid grid-cols-1 ${visiblePlans.length === 2 ? 'md:grid-cols-2' : visiblePlans.length >= 3 ? 'md:grid-cols-3' : 'md:grid-cols-1'} gap-10 max-w-5xl mx-auto items-end pt-8`}>
                {visiblePlans.length > 0 ? visiblePlans.sort((a,b) => a.priceMonthly - b.priceMonthly).map((plan) => {
                   const isRecommended = plan.priceMonthly === 797;
                   let featuresData = {};
                   try { featuresData = JSON.parse(plan.features || "{}"); } catch(e){}
 
                   return (
-                    <Card key={plan.id} className={`p-10 border-none ${isRecommended ? 'bg-primary text-white scale-110 shadow-3xl z-10' : 'bg-white/5 text-white shadow-xl'} rounded-[40px] space-y-8 relative overflow-hidden transition-all duration-500 group`}>
-                       {isRecommended && <div className="absolute top-0 right-0 bg-white/20 px-8 py-3 rounded-bl-3xl font-black text-[10px] uppercase tracking-widest">RECOMENDADO</div>}
+                    <Card key={plan.id} className={`p-10 ${isRecommended ? sPricingCardRecommended : sPricingCardStandard} rounded-[40px] space-y-8 relative overflow-hidden transition-all duration-300 group`}>
+                       {isRecommended && <div className="absolute top-0 right-0 bg-white/20 px-8 py-3 rounded-bl-3xl font-black text-[10px] uppercase tracking-widest text-white">RECOMENDADO</div>}
+                       
                        <div className="space-y-2">
-                          <Badge className={`${isRecommended ? 'bg-black/20' : 'bg-white/10'} text-white border-none py-1 px-4 font-black text-[10px] uppercase tracking-widest`}>{plan.name}</Badge>
-                          <h3 className="text-5xl font-black tracking-tighter">R$ {plan.priceMonthly}<span className="text-sm font-medium text-white/40">/mês</span></h3>
+                          <Badge className={`${isRecommended ? 'bg-black/20 text-white' : 'bg-[#820AD1]/15 text-[#820AD1]'} border-none py-1 px-4 font-black text-[10px] uppercase tracking-widest`}>{plan.name}</Badge>
+                          <h3 className="text-5xl font-black tracking-tighter">
+                            R$ {plan.priceMonthly}
+                            <span className={`text-sm font-medium ${sPricingTextMuted(isRecommended)}`}>/mês</span>
+                          </h3>
                        </div>
-                       <ul className="space-y-3 pt-4 border-t border-white/5">
-                          <li className="flex items-center gap-2 text-[11px] font-bold">
-                             <Check className={`w-4 h-4 ${isRecommended ? 'text-white' : 'text-primary'}`} /> 
-                             <span className={isRecommended ? 'text-white' : 'text-white/60'}>CRM & Pipeline (Kanban)</span>
+                       
+                       <ul className={`space-y-3 pt-4 border-t ${sPricingBorderMuted(isRecommended)}`}>
+                          <li className="flex items-center gap-2 text-xs font-bold">
+                             <Check className="w-4 h-4 shrink-0" /> 
+                             <span>CRM & Funil de Vendas (Kanban)</span>
                           </li>
-                          <li className="flex items-center gap-2 text-[11px] font-bold">
-                             <Check className={`w-4 h-4 ${isRecommended ? 'text-white' : 'text-primary'}`} /> 
-                             <span className={isRecommended ? 'text-white' : 'text-white/60'}>Agendador de Reuniões</span>
+                          <li className="flex items-center gap-2 text-xs font-bold">
+                             <Check className="w-4 h-4 shrink-0" /> 
+                             <span>Agendador de Reuniões</span>
                           </li>
-                          <li className="flex items-center gap-2 text-[11px] font-bold">
-                             <Check className={`w-4 h-4 ${isRecommended ? 'text-white' : 'text-primary'}`} /> 
-                             <span className={isRecommended ? 'text-white' : 'text-white/60'}>Central de Conversas</span>
+                          <li className="flex items-center gap-2 text-xs font-bold">
+                             <Check className="w-4 h-4 shrink-0" /> 
+                             <span>Central de Conversas</span>
                           </li>
-                          <li className="flex items-center gap-2 text-[11px] font-bold">
-                             <Check className={`w-4 h-4 ${isRecommended ? 'text-white' : 'text-primary'}`} /> 
-                             <span className={isRecommended ? 'text-white' : 'text-white/60'}>Prospector Pro (Maps/LinkedIn)</span>
+                          <li className="flex items-center gap-2 text-xs font-bold">
+                             <Check className="w-4 h-4 shrink-0" /> 
+                             <span>BDR Agent (Buscas Google Maps)</span>
                           </li>
-                          <li className="flex items-center gap-2 text-[11px] font-bold">
-                             <Check className={`w-4 h-4 ${isRecommended ? 'text-white' : 'text-primary'}`} /> 
-                             <span className={isRecommended ? 'text-white' : 'text-white/60'}>Automações {featuresData.automations || "Inclusas"}</span>
-                          </li>
-                          <li className="flex items-center gap-2 text-[11px] font-bold">
-                             <Check className={`w-4 h-4 ${isRecommended ? 'text-white' : 'text-primary'}`} /> 
-                             <span className={isRecommended ? 'text-white' : 'text-white/60'}>Canais: {featuresData.channels || "1 Canal"}</span>
+                          <li className="flex items-center gap-2 text-xs font-bold">
+                             <Check className="w-4 h-4 shrink-0" /> 
+                             <span>Automações {featuresData.automations || "Inclusas"}</span>
                           </li>
                           {featuresData.massMessaging && (
-                            <li className="flex items-center gap-2 text-[11px] font-bold">
-                               <Check className={`w-4 h-4 ${isRecommended ? 'text-white' : 'text-primary'}`} /> 
-                               <span className={isRecommended ? 'text-white' : 'text-white/60'}>Disparos em Massa</span>
+                            <li className="flex items-center gap-2 text-xs font-bold">
+                               <Check className="w-4 h-4 shrink-0" /> 
+                               <span>Disparos em Massa</span>
                             </li>
                           )}
                           {featuresData.webhooks && (
-                            <li className="flex items-center gap-2 text-[11px] font-bold">
-                               <Check className={`w-4 h-4 ${isRecommended ? 'text-white' : 'text-primary'}`} /> 
-                               <span className={isRecommended ? 'text-white' : 'text-white/60'}>Webhooks & API</span>
+                            <li className="flex items-center gap-2 text-xs font-bold">
+                               <Check className="w-4 h-4 shrink-0" /> 
+                               <span>Webhooks & API de Integração</span>
                             </li>
                           )}
                        </ul>
 
-                       <div className="space-y-3 pt-6 border-t border-white/5">
-                          <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em] mb-4">Limites de Consumo</p>
-                          <div className="flex justify-between items-center text-[10px] font-black">
-                             <span className="text-white/40 italic">Créditos de IA</span>
+                       <div className={`space-y-3 pt-6 border-t ${sPricingBorderMuted(isRecommended)}`}>
+                          <p className={`text-[9px] font-black uppercase tracking-[0.2em] mb-4 ${sPricingTextMuted(isRecommended)}`}>Limites do Plano</p>
+                          <div className="flex justify-between items-center text-xs font-bold">
+                             <span className={sPricingTextMuted(isRecommended)}>Agentes SDR Ativos</span>
+                             <span>Até {plan.maxSdrs} Bots</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs font-bold">
+                             <span className={sPricingTextMuted(isRecommended)}>Créditos de Tokens/IA</span>
                              <span>{(plan.maxTokens / 1000).toLocaleString()}k Tokens</span>
                           </div>
-                          <div className="flex justify-between items-center text-[10px] font-black">
-                             <span className="text-white/40 italic">Buscas de Prospecção</span>
+                          <div className="flex justify-between items-center text-xs font-bold">
+                             <span className={sPricingTextMuted(isRecommended)}>Varreduras de BDR/mês</span>
                              <span>{plan.maxProspects.toLocaleString()} Buscas</span>
                           </div>
-                          <div className="flex justify-between items-center text-[10px] font-black">
-                             <span className="text-white/40 italic">Deep Research</span>
-                             <span>{plan.maxResearch.toLocaleString()} Pesquisas</span>
+                          <div className="flex justify-between items-center text-xs font-bold">
+                             <span className={sPricingTextMuted(isRecommended)}>Pesquisas de Deep Research</span>
+                             <span>{plan.maxResearch.toLocaleString()} Unidades</span>
                           </div>
-                          <div className="flex justify-between items-center text-[10px] font-black">
-                             <span className="text-white/40 italic">Mensagens/mês</span>
-                             <span>{plan.maxMessages.toLocaleString()} Msgs</span>
+                          <div className="flex justify-between items-center text-xs font-bold">
+                             <span className={sPricingTextMuted(isRecommended)}>Mensagens/mês</span>
+                             <span>{plan.maxMessages.toLocaleString()} Envios</span>
                           </div>
                        </div>
+                       
                        <Link to="/register" className="block w-full">
-                         <Button className={`w-full h-16 ${isRecommended ? 'bg-white text-primary hover:bg-slate-50 shadow-2xl' : 'bg-white/10 text-white hover:bg-white/20'} font-black rounded-2xl text-lg transition-transform active:scale-95`}>
-                           Começar Agora
-                         </Button>
+                          <Button className={`w-full h-16 ${isRecommended ? 'bg-white text-[#820AD1] hover:bg-slate-50 shadow-2xl' : 'bg-[#820AD1] text-white hover:bg-[#6c08b0]'} font-black rounded-2xl text-lg transition-transform active:scale-95 border-none`}>
+                            Começar Agora
+                          </Button>
                        </Link>
                     </Card>
                   );
@@ -295,25 +530,80 @@ export default function LandingPage() {
          </div>
       </section>
 
-      {/* FOOTER COM LINKS SOCIAIS DINÂMICOS */}
-      <footer className="py-20 bg-white px-6 lg:px-20 border-t border-slate-100">
-         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-10">
-            <div className="flex flex-col gap-4">
-               <div className="flex items-center gap-3">
-                  {settings?.logoUrl ? <img src={settings.logoUrl} className="h-8 grayscale opacity-60" /> : <Target className="w-6 h-6 text-slate-900" />}
-                  <span className="text-xl font-black text-slate-900 tracking-tighter uppercase italic">Agentes Virtuais</span>
+      {/* FAQ SECTION */}
+      <section id="faq" className={`py-24 ${sFaq} px-6 lg:px-20 transition-colors duration-300`}>
+         <div className="max-w-4xl mx-auto space-y-16">
+            <div className="text-center space-y-4">
+               <h2 className={`text-3xl lg:text-5xl font-black tracking-tighter ${sSectionTitle}`}>Perguntas <span className="text-[#820AD1] italic">Frequentes</span></h2>
+               <p className={`${sSectionDesc} font-medium`}>Esclareça suas dúvidas e ative sua operação com total segurança.</p>
+            </div>
+
+            <div className="space-y-6">
+               <div className={`p-6 border rounded-2xl space-y-2 ${sFaqItem}`}>
+                  <h4 className={`font-black ${sFaqTitle} text-base`}>Os leads percebem que estão conversando com uma Inteligência Artificial?</h4>
+                  <p className={`${sFaqDesc} text-sm leading-relaxed`}>
+                     Não. O SDR Agent foi desenhado para enviar apenas uma mensagem estratégica e humanizada por interação (evitando spams e mensagens picadas). O fluxo é natural, profissional, e responde exatamente conforme a sua base de conhecimento e diretrizes da empresa.
+                  </p>
                </div>
-               <div className="flex gap-4">
-                  {settings?.contactInstagram && <a href={settings.contactInstagram} target="_blank" className="text-slate-300 hover:text-pink-500"><Instagram className="w-5 h-5" /></a>}
-                  {settings?.contactLinkedIn && <a href={settings.contactLinkedIn} target="_blank" className="text-slate-300 hover:text-blue-600"><Linkedin className="w-5 h-5" /></a>}
-                  {settings?.contactYouTube && <a href={settings.contactYouTube} target="_blank" className="text-slate-300 hover:text-red-600"><Youtube className="w-5 h-5" /></a>}
+               
+               <div className={`p-6 border rounded-2xl space-y-2 ${sFaqItem}`}>
+                  <h4 className={`font-black ${sFaqTitle} text-base`}>Como o BDR Agent busca as informações de e-mails e telefones?</h4>
+                  <p className={`${sFaqDesc} text-sm leading-relaxed`}>
+                     Ele usa o Google Maps a partir das suas palavras-chave e faz uma varredura completa. Ele entra no site de cada empresa e mapeia o código-fonte em busca de telefones de contato secundários, e-mails comerciais e decisores mapeados, atualizando os dados diretamente no CRM.
+                  </p>
+               </div>
+
+               <div className={`p-6 border rounded-2xl space-y-2 ${sFaqItem}`}>
+                  <h4 className={`font-black ${sFaqTitle} text-base`}>Posso conectar meu WhatsApp comercial de uso diário?</h4>
+                  <p className={`${sFaqDesc} text-sm leading-relaxed`}>
+                     Sim, você conecta via QR Code oficial no painel em segundos. A IA só responde os leads que entram pelas automações e o seu time humano pode intervir na conversa a qualquer momento a partir da Central de Atendimento.
+                  </p>
+               </div>
+
+               <div className={`p-6 border rounded-2xl space-y-2 ${sFaqItem}`}>
+                  <h4 className={`font-black ${sFaqTitle} text-base`}>Consigo integrar com outros CRMs e sistemas?</h4>
+                  <p className={`${sFaqDesc} text-sm leading-relaxed`}>
+                     Sim! A partir do plano ENTERPRISE, você tem acesso completo a Webhooks e API nativos para enviar informações de leads qualificados ou reuniões agendadas para o ActiveCampaign, Hubspot, Pipefy ou qualquer outro sistema de vendas.
+                  </p>
                </div>
             </div>
-            <div className="text-slate-400 text-sm font-bold text-center md:text-left space-y-2">
-               <div>E-mail: contato@agentesvirtuais.com</div>
-               <div>WhatsApp: 71 99204-2802</div>
+         </div>
+      </section>
+
+      {/* FINAL CTA */}
+      <section className={`py-28 text-center relative overflow-hidden ${sCTA} transition-colors duration-300`}>
+         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#820AD1]/10 rounded-full blur-[180px] pointer-events-none" />
+         <div className="max-w-4xl mx-auto space-y-8 relative z-10">
+            <h2 className="text-4xl lg:text-6xl font-black tracking-tighter">Chegou a hora de transformar seu processo de prospecção.</h2>
+            <p className={`font-medium text-lg lg:text-xl max-w-2xl mx-auto leading-relaxed ${sCTADesc}`}>
+               Automatize a busca de contatos e a qualificação comercial. Pare de perder leads frios no WhatsApp e coloque reuniões diretamente na agenda do seu time comercial.
+            </p>
+            <div className="pt-4">
+               <Link to="/register">
+                 <Button className="h-16 px-12 text-lg font-black bg-[#820AD1] hover:bg-[#6c08b0] text-white rounded-2xl shadow-xl shadow-[#820AD1]/20 hover:scale-105 transition-all border-none">
+                   Testar a Plataforma Grátis
+                 </Button>
+               </Link>
+               <p className="text-xs text-purple-300 font-bold uppercase tracking-widest mt-4">Teste grátis por 7 dias • Sem burocracia comercial</p>
+            </div>
+         </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer className={`py-16 px-6 lg:px-20 ${sFooter} transition-colors duration-300`}>
+         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+            <div className="flex flex-col gap-3">
+               <div className="flex items-center gap-3">
+                  {settings?.logoUrl ? <img src={settings.logoUrl} className="h-8 grayscale opacity-60" /> : <Target className="w-6 h-6 text-[#820AD1]" />}
+                  <span className={`text-xl font-black ${sFooterTitle} tracking-tighter uppercase italic`}>Vend<span className="text-[#820AD1]">Ai</span></span>
+               </div>
+               <p className={`text-xs font-bold ${sFooterDesc}`}>Acelere sua tração com agentes autônomos de vendas.</p>
+            </div>
+            <div className="text-xs font-bold text-center md:text-right space-y-2">
+               <div>E-mail oficial: contato@agentesvirtuais.com</div>
+               <div>Suporte via WhatsApp: 71 99204-2802</div>
                <div>Endereço: Rua Vereador Zezeu Ribeiro, 1117, Boca da Mata, Salvador - Ba. Cep: 41.345-100</div>
-               <div className="pt-2">© 2026 Agentes Virtuais. Todos os direitos reservados.</div>
+               <div className={`pt-2 ${sFooterDesc}`}>© 2026 VendAi. Todos os direitos reservados.</div>
             </div>
          </div>
       </footer>
@@ -324,15 +614,15 @@ export default function LandingPage() {
          <a 
            href={`https://wa.me/5571992042802`} 
            target="_blank" 
-           className="w-16 h-16 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all animate-bounce"
+           className="w-16 h-16 bg-[#820AD1] hover:bg-emerald-400 text-slate-950 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all animate-bounce"
          >
-            <Phone className="w-8 h-8" />
+            <Phone className="w-8 h-8 fill-current" />
          </a>
 
          {/* SDR CHAT BUTTON */}
          <button 
            onClick={() => setIsChatOpen(!isChatOpen)}
-           className="w-16 h-16 bg-slate-900 text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all"
+           className={`w-16 h-16 ${isDarkMode ? 'bg-[#120024] border-purple-950/40 text-white' : 'bg-white border-purple-100 text-slate-900'} border rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all`}
          >
             {isChatOpen ? <X className="w-8 h-8" /> : <MessageSquare className="w-8 h-8" />}
          </button>
@@ -340,40 +630,40 @@ export default function LandingPage() {
 
       {/* SDR CHAT BOX */}
       {isChatOpen && (
-        <div className="fixed bottom-32 right-10 w-96 bg-white rounded-[30px] shadow-[0_50px_100px_rgba(0,0,0,0.2)] border border-slate-100 flex flex-col overflow-hidden z-[9999] animate-in slide-in-from-bottom-10 duration-500">
-           <div className="bg-slate-900 p-6 text-white flex items-center gap-4">
-              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center font-black">AI</div>
+        <div className={`fixed bottom-32 right-10 w-96 ${isDarkMode ? 'bg-[#120024] border-purple-950/40' : 'bg-white border-purple-100'} border rounded-[30px] shadow-[0_50px_100px_rgba(0,0,0,0.4)] flex flex-col overflow-hidden z-[9999] animate-in slide-in-from-bottom-10 duration-500`}>
+           <div className={`p-6 text-white flex items-center gap-4 border-b ${isDarkMode ? 'bg-[#1c0133] border-purple-950/40' : 'bg-purple-50 border-purple-100'}`}>
+              <div className="w-12 h-12 bg-[#820AD1] rounded-full flex items-center justify-center font-black text-white">AI</div>
               <div>
-                 <h4 className="font-black text-sm uppercase tracking-widest">Consultor Estratégico</h4>
-                 <p className="text-[10px] text-white/40 font-bold flex items-center gap-1"><span className="w-2 h-2 bg-emerald-500 rounded-full" /> Online para ajudar você</p>
+                 <h4 className={`font-black text-sm uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-[#2D0052]'}`}>Consultor Estratégico</h4>
+                 <p className="text-[10px] text-[#820AD1] font-bold flex items-center gap-1"><span className="w-2 h-2 bg-[#820AD1] rounded-full animate-ping" /> Especialista online agora</p>
               </div>
            </div>
            
-           <div className="flex-1 h-96 p-6 overflow-y-auto space-y-4 bg-slate-50/50">
+           <div className={`flex-1 h-96 p-6 overflow-y-auto space-y-4 ${isDarkMode ? 'bg-[#120024]' : 'bg-[#F8F6FC]'}`}>
               {chatHistory.length === 0 && (
-                <div className="bg-white p-4 rounded-2xl border border-slate-100 text-xs font-bold text-slate-500 italic">
-                  Olá! Sou o especialista da Agentes Virtuais. Como posso ajudar você a escalar suas vendas hoje?
+                <div className={`p-4 rounded-2xl border text-xs font-bold italic ${isDarkMode ? 'bg-[#1c0133] border-purple-950/40 text-purple-200' : 'bg-white border-purple-100 text-purple-950/70'}`}>
+                   Olá! Sou o consultor de prospecção da VendAi. Como posso ajudar você a construir sua máquina comercial hoje?
                 </div>
               )}
               {chatHistory.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                   <div className={`max-w-[80%] p-4 rounded-3xl text-sm font-bold whitespace-pre-wrap leading-relaxed ${msg.role === 'user' ? 'bg-primary text-white' : 'bg-white border border-slate-100 text-slate-800'}`}>
+                   <div className={`max-w-[80%] p-4 rounded-3xl text-sm font-bold whitespace-pre-wrap leading-relaxed ${msg.role === 'user' ? 'bg-[#820AD1] text-white' : (isDarkMode ? 'bg-[#1c0133] border border-purple-950/40 text-purple-100' : 'bg-white border border-purple-100 text-[#2D0052]')}`}>
                       {msg.content}
                    </div>
                 </div>
               ))}
-              {loadingChat && <div className="text-[10px] font-black text-slate-400 animate-pulse">SDR está digitando...</div>}
+              {loadingChat && <div className="text-[10px] font-black text-purple-500 animate-pulse pl-2">SDR está elaborando resposta...</div>}
            </div>
 
-           <div className="p-4 bg-white border-t border-slate-50 flex gap-2">
+           <div className={`p-4 border-t ${isDarkMode ? 'bg-[#120024] border-purple-950/40' : 'bg-[#F8F6FC] border-purple-100'} flex gap-2`}>
               <input 
                 value={chatMessage}
                 onChange={e => setChatMessage(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
-                placeholder="Tire suas dúvidas..."
-                className="flex-1 h-12 px-6 rounded-xl bg-slate-50 border-none text-xs font-bold focus:ring-2 ring-primary/20 transition-all outline-none"
+                placeholder="Tire suas dúvidas conosco..."
+                className={`flex-1 h-12 px-6 rounded-xl border-none text-xs font-bold focus:ring-1 ring-[#820AD1]/40 transition-all outline-none ${isDarkMode ? 'bg-[#1c0133] text-white' : 'bg-white text-[#2D0052]'}`}
               />
-              <Button onClick={handleSendMessage} disabled={loadingChat} className="bg-slate-900 w-12 h-12 rounded-xl p-0">
+              <Button onClick={handleSendMessage} disabled={loadingChat} className="bg-[#820AD1] hover:bg-[#6c08b0] text-white w-12 h-12 rounded-xl p-0 shrink-0">
                  <Send className="w-5 h-5" />
               </Button>
            </div>

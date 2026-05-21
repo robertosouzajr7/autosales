@@ -139,8 +139,8 @@ export default function BulkMessaging() {
         <div className="flex justify-between items-start">
           <div className="space-y-1">
             <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase flex items-center gap-2">
-              <Send className="w-8 h-8 text-emerald-500" />
-              Campanha <span className="text-emerald-500 italic">Multicanal</span>
+              <Send className="w-8 h-8 text-[#820AD1]" />
+              Campanha <span className="text-[#820AD1] italic">Multicanal</span>
             </h1>
             <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Passo {step} de 6: {STEPS[step-1].description}</p>
           </div>
@@ -149,7 +149,7 @@ export default function BulkMessaging() {
             {STEPS.map((s) => (
               <div 
                 key={s.id} 
-                className={`h-2 w-12 rounded-full transition-all ${s.id <= step ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                className={`h-2 w-12 rounded-full transition-all ${s.id <= step ? 'bg-[#820AD1]' : 'bg-slate-200'}`}
               />
             ))}
           </div>
@@ -185,26 +185,26 @@ export default function BulkMessaging() {
                   <button 
                     disabled={!hasWhatsApp}
                     onClick={() => setChannel("WHATSAPP")}
-                    className={`p-10 rounded-[40px] border-4 transition-all flex flex-col items-center gap-4 relative ${channel === 'WHATSAPP' ? 'border-emerald-500 bg-emerald-50/30' : 'border-slate-50 hover:border-slate-100'} ${!hasWhatsApp ? 'opacity-40 cursor-not-allowed grayscale' : ''}`}
+                    className={`p-10 rounded-[40px] border-4 transition-all flex flex-col items-center gap-4 relative ${channel === 'WHATSAPP' ? 'border-emerald-500 bg-purple-50/30' : 'border-slate-50 hover:border-slate-100'} ${!hasWhatsApp ? 'opacity-40 cursor-not-allowed grayscale' : ''}`}
                   >
                     {!hasWhatsApp && <div className="absolute top-4 right-4"><AlertTriangle className="w-5 h-5 text-orange-500" /></div>}
                     <div className="p-4 bg-emerald-100 rounded-3xl">
-                      <Smartphone className="w-10 h-10 text-emerald-600" />
+                      <Smartphone className="w-10 h-10 text-[#820AD1]" />
                     </div>
                     <span className="font-black uppercase tracking-widest text-slate-800">WhatsApp</span>
-                    <Badge className={hasWhatsApp ? "bg-emerald-500" : "bg-slate-300"}>{hasWhatsApp ? "Disponível" : "Desconectado"}</Badge>
+                    <Badge className={hasWhatsApp ? "bg-[#820AD1]" : "bg-slate-300"}>{hasWhatsApp ? "Disponível" : "Desconectado"}</Badge>
                   </button>
                   <button 
                     disabled={!hasEmail}
                     onClick={() => setChannel("EMAIL")}
-                    className={`p-10 rounded-[40px] border-4 transition-all flex flex-col items-center gap-4 relative ${channel === 'EMAIL' ? 'border-blue-500 bg-blue-50/30' : 'border-slate-50 hover:border-slate-100'} ${!hasEmail ? 'opacity-40 cursor-not-allowed grayscale' : ''}`}
+                    className={`p-10 rounded-[40px] border-4 transition-all flex flex-col items-center gap-4 relative ${channel === 'EMAIL' ? 'border-blue-500 bg-purple-50/30' : 'border-slate-50 hover:border-slate-100'} ${!hasEmail ? 'opacity-40 cursor-not-allowed grayscale' : ''}`}
                   >
                     {!hasEmail && <div className="absolute top-4 right-4"><AlertTriangle className="w-5 h-5 text-orange-500" /></div>}
                     <div className="p-4 bg-blue-100 rounded-3xl">
-                      <Mail className="w-10 h-10 text-blue-600" />
+                      <Mail className="w-10 h-10 text-[#820AD1]" />
                     </div>
                     <span className="font-black uppercase tracking-widest text-slate-800">E-mail</span>
-                    <Badge variant="outline" className={hasEmail ? "text-blue-500 border-blue-200" : "text-slate-400 border-slate-200"}>{hasEmail ? "Disponível" : "Indisponível"}</Badge>
+                    <Badge variant="outline" className={hasEmail ? "text-[#820AD1] border-blue-200" : "text-slate-400 border-slate-200"}>{hasEmail ? "Disponível" : "Indisponível"}</Badge>
                   </button>
                 </div>
               </Card>
@@ -244,7 +244,7 @@ export default function BulkMessaging() {
                     <p className="text-white/40 font-medium">Suba um arquivo CSV ou Excel com seus contatos.</p>
                   </div>
                   <Label htmlFor="csv-upload" className="cursor-pointer">
-                    <div className="h-20 px-10 bg-emerald-500 hover:bg-emerald-600 rounded-3xl flex items-center gap-4 transition-all shadow-xl shadow-emerald-500/20">
+                    <div className="h-20 px-10 bg-[#820AD1] hover:bg-[#6c08b0] rounded-3xl flex items-center gap-4 transition-all shadow-xl shadow-[#820AD1]/20">
                       <FileUp className="w-8 h-8 text-white" />
                       <span className="text-lg font-black uppercase tracking-widest">Selecionar Arquivo</span>
                     </div>
@@ -287,7 +287,7 @@ export default function BulkMessaging() {
             {step === 4 && (
               <Card className="border-none shadow-2xl rounded-[40px] bg-white p-12 space-y-8 animate-in fade-in slide-in-from-bottom-4">
                 <div className="space-y-2">
-                  <h2 className="text-2xl font-black text-slate-900 uppercase text-center text-emerald-500 italic">Visualização Final</h2>
+                  <h2 className="text-2xl font-black text-slate-900 uppercase text-center text-[#820AD1] italic">Visualização Final</h2>
                   <p className="text-slate-400 font-medium text-center">É assim que seu lead receberá a mensagem.</p>
                 </div>
                 
@@ -337,7 +337,7 @@ export default function BulkMessaging() {
                             </p>
                          </div>
                          <div className="pt-10 border-t border-slate-100 mt-10">
-                            <div className="w-32 h-10 bg-emerald-500 rounded-xl" />
+                            <div className="w-32 h-10 bg-[#820AD1] rounded-xl" />
                          </div>
                       </div>
                    </div>
@@ -348,8 +348,8 @@ export default function BulkMessaging() {
             {/* STEP 5: AGENDAMENTO */}
             {step === 5 && (
               <Card className="border-none shadow-2xl rounded-[40px] bg-white p-20 text-center space-y-8 animate-in fade-in slide-in-from-bottom-4">
-                <div className="p-6 bg-emerald-50 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-4">
-                   <Calendar className="w-12 h-12 text-emerald-500" />
+                <div className="p-6 bg-purple-50 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-4">
+                   <Calendar className="w-12 h-12 text-[#820AD1]" />
                 </div>
                 <div className="space-y-2">
                   <h2 className="text-3xl font-black text-slate-900 uppercase">Quando disparar?</h2>
@@ -361,7 +361,7 @@ export default function BulkMessaging() {
                    <Input type="datetime-local" className="h-20 rounded-3xl border-2 font-black uppercase text-xs px-6" />
                 </div>
                 <div className="pt-10 flex flex-col items-center">
-                  <Badge className="bg-emerald-100 text-emerald-600 hover:bg-emerald-100 border-none px-6 py-2 rounded-full font-black uppercase tracking-widest text-[10px]">Custo Estimado: R$ {channel === "WHATSAPP" ? "0,08" : "0,01"} / envio</Badge>
+                  <Badge className="bg-emerald-100 text-[#820AD1] hover:bg-emerald-100 border-none px-6 py-2 rounded-full font-black uppercase tracking-widest text-[10px]">Custo Estimado: R$ {channel === "WHATSAPP" ? "0,08" : "0,01"} / envio</Badge>
                 </div>
               </Card>
             )}
@@ -371,8 +371,8 @@ export default function BulkMessaging() {
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                    {[
-                     { label: "Enviados", value: "0", color: "text-blue-600", icon: Send },
-                     { label: "Entregues", value: "0", color: "text-emerald-600", icon: CheckCircle2 },
+                     { label: "Enviados", value: "0", color: "text-[#820AD1]", icon: Send },
+                     { label: "Entregues", value: "0", color: "text-[#820AD1]", icon: CheckCircle2 },
                      { label: "Vistos", value: "0", color: "text-purple-600", icon: Eye },
                      { label: "Cliques/Erros", value: "0", color: "text-rose-600", icon: AlertCircle },
                    ].map((stat, i) => (
@@ -397,7 +397,7 @@ export default function BulkMessaging() {
                  {sending && (
                    <Card className="border-none shadow-2xl rounded-[40px] bg-white p-12 space-y-6">
                      <div className="flex items-center justify-between font-black uppercase tracking-widest text-xs text-slate-800">
-                       <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> Progresso da Campanha</span>
+                       <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#820AD1] animate-pulse" /> Progresso da Campanha</span>
                        <span>{progress}%</span>
                      </div>
                      <Progress value={progress} className="h-4 bg-slate-100 rounded-full" />
@@ -405,7 +405,7 @@ export default function BulkMessaging() {
                      <div className="pt-8 grid grid-cols-2 gap-8">
                         <div className="space-y-4">
                            <Label className="font-black uppercase tracking-widest text-[10px] text-slate-400">Status</Label>
-                           <Badge className="bg-emerald-50 text-emerald-600 px-4 py-1 rounded-full border-none font-black animate-pulse">EM EXECUÇÃO</Badge>
+                           <Badge className="bg-purple-50 text-[#820AD1] px-4 py-1 rounded-full border-none font-black animate-pulse">EM EXECUÇÃO</Badge>
                         </div>
                      </div>
                    </Card>
@@ -435,7 +435,7 @@ export default function BulkMessaging() {
                 <Button 
                   onClick={startCampaign}
                   disabled={sending}
-                  className="h-20 px-16 rounded-[30px] bg-emerald-600 hover:bg-emerald-700 text-white gap-3 font-black uppercase tracking-widest text-sm shadow-2xl shadow-emerald-500/30 transition-all"
+                  className="h-20 px-16 rounded-[30px] bg-[#6c08b0] hover:bg-emerald-700 text-white gap-3 font-black uppercase tracking-widest text-sm shadow-2xl shadow-[#820AD1]/30 transition-all"
                 >
                   {sending ? <RefreshCw className="w-6 h-6 animate-spin" /> : <Play className="w-6 h-6 fill-current" />}
                   Lançar Campanha
@@ -459,13 +459,13 @@ export default function BulkMessaging() {
                <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-3xl -mr-16 -mt-16" />
                <div className="space-y-4 relative z-10">
                   <div className="flex items-center gap-3">
-                     <BarChart3 className="w-5 h-5 text-emerald-400" />
+                     <BarChart3 className="w-5 h-5 text-[#9d4edd]" />
                      <span className="text-[10px] font-black uppercase tracking-tighter text-white/50">Resumo da Campanha</span>
                   </div>
                   <div className="space-y-6 pt-4 border-t border-white/10">
                     <div className="flex justify-between items-center">
                       <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">Canal</span>
-                      <Badge className={channel === 'WHATSAPP' ? 'bg-emerald-500' : 'bg-blue-500'}>{channel}</Badge>
+                      <Badge className={channel === 'WHATSAPP' ? 'bg-[#820AD1]' : 'bg-[#820AD1]'}>{channel}</Badge>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">Contatos</span>
@@ -473,7 +473,7 @@ export default function BulkMessaging() {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">Investimento</span>
-                      <span className="text-sm font-black text-emerald-400">R$ {(selectedContacts.length * (channel === "WHATSAPP" ? 0.08 : 0.01)).toFixed(2)}</span>
+                      <span className="text-sm font-black text-[#9d4edd]">R$ {(selectedContacts.length * (channel === "WHATSAPP" ? 0.08 : 0.01)).toFixed(2)}</span>
                     </div>
                   </div>
                </div>
