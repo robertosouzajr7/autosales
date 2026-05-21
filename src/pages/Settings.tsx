@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ interface IcpProfile {
 }
 
 export default function Settings() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("general");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -76,60 +78,67 @@ export default function Settings() {
 
   const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      const token = localStorage.getItem("token");
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
+  const fetchData = async () => {
+    setLoading(true);
+    const token = localStorage.getItem("token");
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      try {
-        const [resSettings, resIcp, resUsers] = await Promise.all([
-          fetch("/api/settings", { headers }),
-          fetch("/api/icp-profiles", { headers }),
-          fetch("/api/users", { headers })
-        ]);
-        
-        const dataSettings = await resSettings.json();
-        const dataIcp = await resIcp.json();
-        const dataUsers = await resUsers.json();
-        
-        setAiConfig({
-          openAiKey: dataSettings.openAiKey || "",
-          aiApiKey: dataSettings.aiApiKey || "",
-          elevenLabsKey: dataSettings.elevenLabsKey || "",
-          apolloApiKey: dataSettings.apolloApiKey || "",
-          snovClientId: dataSettings.snovClientId || "",
-          snovClientSecret: dataSettings.snovClientSecret || "",
-          googleRefreshToken: dataSettings.googleRefreshToken || "",
-          webChatUrl: dataSettings.webChatUrl || "",
-          systemPrompt: dataSettings.systemPrompt || "Você é um SDR de elite focado em qualificação de leads B2B.",
-          language: dataSettings.language || "pt-BR",
-        });
+    try {
+      const [resSettings, resIcp, resUsers] = await Promise.all([
+        fetch("/api/settings", { headers }),
+        fetch("/api/icp-profiles", { headers }),
+        fetch("/api/users", { headers })
+      ]);
 
-        setSmtpConfig({
-          host: dataSettings.smtpHost || "",
-          port: dataSettings.smtpPort || 587,
-          user: dataSettings.smtpUser || "",
-          pass: dataSettings.smtpPass || "",
-          from: dataSettings.smtpFrom || ""
-        });
-
-        setListmonkConfig({
-          url: dataSettings.listmonkUrl || "",
-          token: dataSettings.listmonkToken || "",
-          listId: dataSettings.listmonkListId || ""
-        });
-
-        setIcpProfiles(dataIcp);
-        setUsers(Array.isArray(dataUsers) ? dataUsers : []);
-
-      } catch (e) {
-        toast({ title: "Erro ao carregar configurações", variant: "destructive" });
+      // Token expirado → redireciona para login
+      if (resSettings.status === 401) {
+        localStorage.clear();
+        navigate("/login");
+        return;
       }
-      setLoading(false);
-    };
+      
+      const dataSettings = await resSettings.json();
+      const dataIcp = await resIcp.json();
+      const dataUsers = await resUsers.json();
+      
+      setAiConfig({
+        openAiKey: dataSettings.openAiKey || "",
+        aiApiKey: dataSettings.aiApiKey || "",
+        elevenLabsKey: dataSettings.elevenLabsKey || "",
+        apolloApiKey: dataSettings.apolloApiKey || "",
+        snovClientId: dataSettings.snovClientId || "",
+        snovClientSecret: dataSettings.snovClientSecret || "",
+        googleRefreshToken: dataSettings.googleRefreshToken || "",
+        webChatUrl: dataSettings.webChatUrl || "",
+        systemPrompt: dataSettings.systemPrompt || "Você é um SDR de elite focado em qualificação de leads B2B.",
+        language: dataSettings.language || "pt-BR",
+      });
 
+      setSmtpConfig({
+        host: dataSettings.smtpHost || "",
+        port: dataSettings.smtpPort || 587,
+        user: dataSettings.smtpUser || "",
+        pass: dataSettings.smtpPass || "",
+        from: dataSettings.smtpFrom || ""
+      });
+
+      setListmonkConfig({
+        url: dataSettings.listmonkUrl || "",
+        token: dataSettings.listmonkToken || "",
+        listId: dataSettings.listmonkListId || ""
+      });
+
+      setIcpProfiles(Array.isArray(dataIcp) ? dataIcp : []);
+      setUsers(Array.isArray(dataUsers) ? dataUsers : []);
+
+    } catch (e) {
+      toast({ title: "Erro ao carregar configurações", variant: "destructive" });
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
     fetchData();
   }, []);
 
