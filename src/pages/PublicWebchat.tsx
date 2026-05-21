@@ -14,7 +14,17 @@ export default function PublicWebchat() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
-  const [chatHistory, setChatHistory] = useState<{role: string, content: string}[]>([]);
+  
+  // Restore leadId and chatHistory from sessionStorage
+  const [leadId, setLeadId] = useState<string | null>(() => {
+    return sessionStorage.getItem(`webchat_lead_id_${tenantId}`) || null;
+  });
+  
+  const [chatHistory, setChatHistory] = useState<{role: string, content: string}[]>(() => {
+    const savedHistory = sessionStorage.getItem(`webchat_history_${tenantId}`);
+    return savedHistory ? JSON.parse(savedHistory) : [];
+  });
+  
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -33,6 +43,12 @@ export default function PublicWebchat() {
   }, [tenantId]);
 
   useEffect(() => {
+    if (chatHistory.length > 0) {
+      sessionStorage.setItem(`webchat_history_${tenantId}`, JSON.stringify(chatHistory));
+    }
+  }, [chatHistory, tenantId]);
+
+  useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
@@ -43,7 +59,8 @@ export default function PublicWebchat() {
     
     const userMsg = message;
     setMessage("");
-    setChatHistory(prev => [...prev, { role: "user", content: userMsg }]);
+    const newHistory = [...chatHistory, { role: "user", content: userMsg }];
+    setChatHistory(newHistory);
     setSending(true);
 
     try {
@@ -53,10 +70,17 @@ export default function PublicWebchat() {
         body: JSON.stringify({ 
           sdrId: data.sdr.id, 
           message: userMsg,
-          history: chatHistory 
+          history: chatHistory,
+          leadId: leadId
         })
       });
       const resJson = await res.json();
+      
+      if (resJson.leadId && !leadId) {
+        setLeadId(resJson.leadId);
+        sessionStorage.setItem(`webchat_lead_id_${tenantId}`, resJson.leadId);
+      }
+
       if (resJson.response) {
         setChatHistory(prev => [...prev, { role: "assistant", content: resJson.response }]);
       }
@@ -66,6 +90,7 @@ export default function PublicWebchat() {
       setSending(false);
     }
   };
+
 
   if (loading) {
     return (

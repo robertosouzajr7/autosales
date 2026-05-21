@@ -1,5 +1,6 @@
 import prisma from "../config/prisma.js";
 import { WhatsAppManager } from "../../../whatsapp.js";
+import AutomationEngine from "../../../automation_engine.js";
 
 export const getLandingPage = async (req, res) => {
   try {
@@ -28,24 +29,51 @@ export const getWebchat = async (req, res) => {
     
     if (!tenant) return res.status(404).json({ error: "Tenant not found" });
     
-    res.json({ tenant });
+    // Fetch active SDR bot for the tenant to show in the webchat portal
+    const sdr = await prisma.sdrBot.findFirst({
+      where: { tenantId: id, active: true }
+    });
+    
+    res.json({ 
+      tenantName: tenant.name, 
+      logo: tenant.logoUrl, 
+      sdr 
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
 export const submitChat = async (req, res) => {
-  const { tenantId, message, visitorId, name, email, phone } = req.body;
+  const { tenantId, message, visitorId, name, email, phone, sdrId, leadId } = req.body;
   try {
+    let resolvedTenantId = tenantId;
+    
+    // If tenantId is not provided, resolve it from the sdrId
+    if (!resolvedTenantId && sdrId) {
+      const sdr = await prisma.sdrBot.findUnique({ where: { id: sdrId } });
+      if (sdr) {
+        resolvedTenantId = sdr.tenantId;
+      }
+    }
+
+    if (!resolvedTenantId) {
+      return res.status(400).json({ error: "Falta tenantId ou sdrId na requisição." });
+    }
+
     // 1. Find or create lead
     let lead;
-    if (email) lead = await prisma.lead.findFirst({ where: { email, tenantId } });
-    if (!lead && phone) lead = await prisma.lead.findFirst({ where: { phone, tenantId } });
+    if (leadId) {
+      lead = await prisma.lead.findUnique({ where: { id: leadId } });
+    }
+    
+    if (!lead && email) lead = await prisma.lead.findFirst({ where: { email, tenantId: resolvedTenantId } });
+    if (!lead && phone) lead = await prisma.lead.findFirst({ where: { phone, tenantId: resolvedTenantId } });
     
     if (!lead) {
       lead = await prisma.lead.create({
         data: {
-          tenantId,
+          tenantId: resolvedTenantId,
           name: name || "Visitante Web",
           email,
           phone,
@@ -62,7 +90,7 @@ export const submitChat = async (req, res) => {
 
     if (!conversation) {
       conversation = await prisma.conversation.create({
-        data: { leadId: lead.id, tenantId, botActive: true }
+        data: { leadId: lead.id, tenantId: resolvedTenantId, botActive: true }
       });
     }
 
@@ -70,17 +98,39 @@ export const submitChat = async (req, res) => {
     const newMessage = await prisma.message.create({
       data: {
         conversationId: conversation.id,
-        tenantId,
+        tenantId: resolvedTenantId,
         content: message,
         role: "USER"
       }
     });
 
-    res.json({ success: true, message: newMessage, leadId: lead.id });
+    // 4. Generate AI SDR response
+    const aiResponse = await AutomationEngine.callAI(null, lead, { tenantId: resolvedTenantId });
+    
+    // 5. Save assistant message if generated
+    if (aiResponse) {
+      await prisma.message.create({
+        data: {
+          conversationId: conversation.id,
+          tenantId: resolvedTenantId,
+          content: aiResponse,
+          role: "ASSISTANT"
+        }
+      });
+    }
+
+    res.json({ 
+      success: true, 
+      message: newMessage, 
+      leadId: lead.id,
+      response: aiResponse || "Desculpe, não consegui processar a resposta agora." 
+    });
   } catch (error) {
+    console.error("[PublicWebchat] Erro ao enviar mensagem:", error);
     res.status(500).json({ error: error.message });
   }
 };
+
 
 export const bookAppointment = async (req, res) => {
   const { tenantId, name, email, phone, date, title } = req.body;

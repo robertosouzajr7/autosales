@@ -15,7 +15,16 @@ export default function LandingPage() {
   const [plans, setPlans] = useState<any[]>([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMessage, setChatMessage] = useState("");
-  const [chatHistory, setChatHistory] = useState<{role: string, content: string}[]>([]);
+  const [leadId, setLeadId] = useState<string | null>(() => {
+    return sessionStorage.getItem("landing_lead_id") || null;
+  });
+
+
+  const [chatHistory, setChatHistory] = useState<{role: string, content: string}[]>(() => {
+    const savedHistory = sessionStorage.getItem("landing_chat_history");
+    return savedHistory ? JSON.parse(savedHistory) : [];
+  });
+
   const [loadingChat, setLoadingChat] = useState(false);
   const { toast } = useToast();
 
@@ -29,12 +38,19 @@ export default function LandingPage() {
       .catch(err => console.error("Error loading landing data:", err));
   }, []);
 
+  useEffect(() => {
+    if (chatHistory.length > 0) {
+      sessionStorage.setItem("landing_chat_history", JSON.stringify(chatHistory));
+    }
+  }, [chatHistory]);
+
   const handleSendMessage = async () => {
     if (!chatMessage.trim() || !settings?.selectedSdrId) return;
     
     const userMsg = chatMessage;
     setChatMessage("");
-    setChatHistory(prev => [...prev, { role: "user", content: userMsg }]);
+    const newHistory = [...chatHistory, { role: "user", content: userMsg }];
+    setChatHistory(newHistory);
     setLoadingChat(true);
 
     try {
@@ -44,10 +60,17 @@ export default function LandingPage() {
         body: JSON.stringify({ 
           sdrId: settings.selectedSdrId, 
           message: userMsg,
-          history: chatHistory 
+          history: chatHistory,
+          leadId: leadId
         })
       });
       const data = await res.json();
+      
+      if (data.leadId && !leadId) {
+        setLeadId(data.leadId);
+        sessionStorage.setItem("landing_lead_id", data.leadId);
+      }
+
       if (data.response) {
         setChatHistory(prev => [...prev, { role: "assistant", content: data.response }]);
       }
@@ -57,6 +80,7 @@ export default function LandingPage() {
       setLoadingChat(false);
     }
   };
+
 
   const visiblePlans = plans.filter(p => !settings?.visiblePlanIds || settings.visiblePlanIds.split(",").includes(p.id));
 
