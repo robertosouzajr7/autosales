@@ -50,10 +50,8 @@ export default function Login() {
       <div className="absolute top-0 left-0 w-64 h-64 bg-primary/20 -translate-x-1/2 -translate-y-1/2 blur-3xl opacity-30 rounded-full" />
       <div className="max-w-md w-full space-y-10 relative z-10">
         
-        <div className="text-center space-y-3">
-          <div className="inline-flex bg-primary p-3 rounded-2xl shadow-2xl shadow-primary/20 mb-4">
-             <Target className="w-8 h-8 text-white" />
-          </div>
+        <div className="text-center space-y-3 flex flex-col items-center">
+          <img src="/logo.png" alt="AutoSales Logo" className="h-12 w-auto mb-2" />
           <h1 className="text-4xl font-black text-slate-900 tracking-tighter">Bem-vindo de volta.</h1>
           <p className="text-slate-500 font-bold">Faça login para gerenciar seus SDRs e Leads.</p>
         </div>

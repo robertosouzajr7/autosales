@@ -113,8 +113,8 @@ export default function Register() {
               <div className="absolute bottom-20 right-10 w-64 h-64 border border-white rounded-full translate-x-1/2" />
            </div>
            <div className="flex items-center gap-3 relative z-10">
-              <Target className="w-8 h-8 text-[#820AD1]" />
-              <span className="text-2xl font-black tracking-tighter">Agentes Virtuais <span className="text-[#820AD1] italic">AI</span></span>
+              <img src="/logo.png" alt="AutoSales Logo" className="h-8 w-auto" />
+              <span className="text-2xl font-black tracking-tighter text-white">Auto<span className="text-[#820AD1] italic">Sales</span></span>
            </div>
            <div className="space-y-6 relative z-10">
               <h2 className="text-4xl font-black leading-none tracking-tight">Comece sua jornada de escala.</h2>

@@ -164,7 +164,7 @@ export default function LandingPage() {
             <img src={settings.logoUrl} alt="Logo" className="h-10 w-auto" />
           ) : (
             <>
-              <img src="/logo.png" alt="AutoSales Logo" className="h-10 w-10 rounded-xl object-cover shadow-lg shadow-[#820AD1]/20" />
+              <img src="/logo.png" alt="AutoSales Logo" className="h-10 w-auto" />
               <span className={`text-2xl font-black ${sLogoText} tracking-tighter uppercase italic`}>Auto<span className="text-[#820AD1]">Sales</span></span>
             </>
           )}
@@ -592,7 +592,7 @@ export default function LandingPage() {
          <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
             <div className="flex flex-col gap-3">
                <div className="flex items-center gap-3">
-                  {settings?.logoUrl ? <img src={settings.logoUrl} className="h-8 grayscale opacity-60" /> : <img src="/logo.png" className="h-8 w-8 rounded-lg object-cover grayscale opacity-60" />}
+                  {settings?.logoUrl ? <img src={settings.logoUrl} className="h-8 grayscale opacity-60" /> : <img src="/logo.png" className="h-8 w-auto grayscale opacity-60" />}
                   <span className={`text-xl font-black ${sFooterTitle} tracking-tighter uppercase italic`}>Auto<span className="text-[#820AD1]">Sales</span></span>
                </div>
                <p className={`text-xs font-bold ${sFooterDesc}`}>Acelere sua tração com agentes autônomos de vendas.</p>
