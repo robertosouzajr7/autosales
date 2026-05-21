@@ -121,7 +121,7 @@ export default function AdminDashboard() {
     frequency: "MONTHLY",
     dueDate: "",
     paidAt: "",
-    tenantId: ""
+    tenantId: "none"
   });
   const [isTriggeringBilling, setIsTriggeringBilling] = useState(false);
 
@@ -352,7 +352,7 @@ export default function AdminDashboard() {
         amount: Number(newTransaction.amount),
         dueDate: newTransaction.dueDate ? new Date(newTransaction.dueDate).toISOString() : null,
         paidAt: newTransaction.paidAt ? new Date(newTransaction.paidAt).toISOString() : null,
-        tenantId: newTransaction.tenantId || null
+        tenantId: newTransaction.tenantId && newTransaction.tenantId !== "none" ? newTransaction.tenantId : null
       };
 
       const method = newTransaction.id ? "PUT" : "POST";
@@ -377,7 +377,7 @@ export default function AdminDashboard() {
           frequency: "MONTHLY",
           dueDate: "",
           paidAt: "",
-          tenantId: ""
+          tenantId: "none"
         });
         fetchFinancialData();
       }
@@ -474,7 +474,7 @@ export default function AdminDashboard() {
                         frequency: "MONTHLY",
                         dueDate: "",
                         paidAt: "",
-                        tenantId: ""
+                        tenantId: "none"
                       });
                       setIsTxModalOpen(true);
                     }} 
@@ -1148,7 +1148,7 @@ export default function AdminDashboard() {
                         <SelectValue placeholder="Geral" />
                      </SelectTrigger>
                      <SelectContent className="rounded-xl">
-                        <SelectItem value="">Geral / Sem Cliente</SelectItem>
+                        <SelectItem value="none">Geral / Sem Cliente</SelectItem>
                         {tenants.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
                      </SelectContent>
                   </Select>
