@@ -167,7 +167,7 @@ export default function LandingPage() {
               <div className="bg-[#820AD1] p-2.5 rounded-xl shadow-lg shadow-[#820AD1]/20">
                 <Target className="w-6 h-6 text-white" />
               </div>
-              <span className={`text-2xl font-black ${sLogoText} tracking-tighter uppercase italic`}>Vend<span className="text-[#820AD1]">Ai</span></span>
+              <span className={`text-2xl font-black ${sLogoText} tracking-tighter uppercase italic`}>Auto<span className="text-[#820AD1]">Sales</span></span>
             </>
           )}
         </div>
@@ -595,7 +595,7 @@ export default function LandingPage() {
             <div className="flex flex-col gap-3">
                <div className="flex items-center gap-3">
                   {settings?.logoUrl ? <img src={settings.logoUrl} className="h-8 grayscale opacity-60" /> : <Target className="w-6 h-6 text-[#820AD1]" />}
-                  <span className={`text-xl font-black ${sFooterTitle} tracking-tighter uppercase italic`}>Vend<span className="text-[#820AD1]">Ai</span></span>
+                  <span className={`text-xl font-black ${sFooterTitle} tracking-tighter uppercase italic`}>Auto<span className="text-[#820AD1]">Sales</span></span>
                </div>
                <p className={`text-xs font-bold ${sFooterDesc}`}>Acelere sua tração com agentes autônomos de vendas.</p>
             </div>
@@ -603,7 +603,7 @@ export default function LandingPage() {
                <div>E-mail oficial: contato@agentesvirtuais.com</div>
                <div>Suporte via WhatsApp: 71 99204-2802</div>
                <div>Endereço: Rua Vereador Zezeu Ribeiro, 1117, Boca da Mata, Salvador - Ba. Cep: 41.345-100</div>
-               <div className={`pt-2 ${sFooterDesc}`}>© 2026 VendAi. Todos os direitos reservados.</div>
+               <div className={`pt-2 ${sFooterDesc}`}>© 2026 AutoSales. Todos os direitos reservados.</div>
             </div>
          </div>
       </footer>
@@ -642,7 +642,7 @@ export default function LandingPage() {
            <div className={`flex-1 h-96 p-6 overflow-y-auto space-y-4 ${isDarkMode ? 'bg-[#120024]' : 'bg-[#F8F6FC]'}`}>
               {chatHistory.length === 0 && (
                 <div className={`p-4 rounded-2xl border text-xs font-bold italic ${isDarkMode ? 'bg-[#1c0133] border-purple-950/40 text-purple-200' : 'bg-white border-purple-100 text-purple-950/70'}`}>
-                   Olá! Sou o consultor de prospecção da VendAi. Como posso ajudar você a construir sua máquina comercial hoje?
+                   Olá! Sou o consultor de prospecção da AutoSales. Como posso ajudar você a construir sua máquina comercial hoje?
                 </div>
               )}
               {chatHistory.map((msg, i) => (

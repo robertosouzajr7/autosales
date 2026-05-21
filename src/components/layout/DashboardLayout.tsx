@@ -168,30 +168,42 @@ function SidebarContent({
 }: SidebarContentProps & { features: any, planName: string, planData: any, navigate: any }) {
   return (
     <div className="flex h-full flex-col bg-slate-900 font-sans">
-      {/* Logo */}
+      {/* Logo e Info da Conta */}
       <div
         className={cn(
-          "flex h-16 items-center border-b border-slate-700/60 px-4",
-          collapsed ? "justify-center" : "gap-3"
+          "flex flex-col justify-center border-b border-slate-700/60 px-4",
+          collapsed ? "h-16 items-center" : "h-24 items-start gap-1.5"
         )}
       >
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#820AD1] shadow-lg shadow-[#820AD1]/30">
-          <Bot className="h-5 w-5 text-white" />
+        <div className="flex items-center gap-3 w-full">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#820AD1] shadow-lg shadow-[#820AD1]/30">
+            <Bot className="h-5 w-5 text-white" />
+          </div>
+          {!collapsed && (
+            <span className="text-xl font-black tracking-tighter uppercase text-white">
+              Auto<span className="text-[#820AD1] italic">Sales</span>
+            </span>
+          )}
+          {!collapsed && showCollapseButton && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onToggleCollapse}
+              className="ml-auto h-7 w-7 text-slate-400 hover:bg-slate-700 hover:text-white"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+          )}
         </div>
         {!collapsed && (
-          <span className="text-xl font-black tracking-tighter uppercase text-white">
-            Vend<span className="text-[#820AD1] italic">Ai</span>
-          </span>
-        )}
-        {!collapsed && showCollapseButton && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onToggleCollapse}
-            className="ml-auto h-7 w-7 text-slate-400 hover:bg-slate-700 hover:text-white"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
+          <div className="w-full text-left truncate">
+            <p className="text-[10px] font-black text-purple-300 uppercase tracking-wide leading-none truncate">
+              {localStorage.getItem("companyName") || "Minha Empresa"}
+            </p>
+            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-1">
+              Plano {planName || "Básico"}
+            </p>
+          </div>
         )}
       </div>
 
@@ -413,10 +425,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </Button>
 
           {/* Page title / breadcrumb */}
-          <div className="flex flex-1 items-center gap-2">
+          <div className="flex flex-1 flex-col md:flex-row md:items-center gap-1 md:gap-3">
             <h1 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tighter md:text-base">
               {currentPage}
             </h1>
+            <span className="hidden md:inline text-slate-300 dark:text-purple-950/40">|</span>
+            <span className="text-[10px] font-bold text-slate-400 dark:text-purple-300/40 uppercase truncate max-w-[200px] md:max-w-none">
+              {localStorage.getItem("companyName") || "Minha Empresa"} • Plano {planData.name || "Básico"}
+            </span>
           </div>
 
           {/* Search */}
