@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -21,6 +21,10 @@ model Tenant {
   trialEnd           DateTime?
   mercadoPagoId      String?
   cardLast4          String?
+  nextBillingDate    DateTime?
+
+  financialRecords   FinancialRecord[]
+  invoices           Invoice[]
 
   // Customization
   webChatUrl         String?
@@ -202,6 +206,20 @@ model Plan {
   maxMessages  Int     @default(1000)
   maxProspects Int     @default(100)
   maxResearch  Int     @default(20)
+
+  // Granular Switches
+  enableSdr       Boolean @default(true)
+  enableTokens    Boolean @default(true)
+  enableProspects Boolean @default(true)
+  enableResearch  Boolean @default(true)
+  enableMessages  Boolean @default(true)
+
+  // Unit Operating Costs (for margins)
+  sdrUnitCost      Float   @default(15.0)   // Cost per bot/month
+  tokenUnitCost    Float   @default(0.08)   // Cost per 1k tokens
+  prospectUnitCost Float   @default(0.15)   // Cost per prospect sweep
+  researchUnitCost Float   @default(1.00)   // Cost per deep research
+  messageUnitCost  Float   @default(0.05)   // Cost per message
 
   features     String? // JSON list of features
   active       Boolean @default(true)
@@ -532,4 +550,32 @@ model ProspectionLog {
   status    String   // SUCCESS, FAILED
   error     String?
   createdAt DateTime @default(now())
+}
+
+model FinancialRecord {
+  id          String    @id @default(uuid())
+  description String
+  amount      Float
+  type        String    // REVENUE, EXPENSE
+  category    String    // Ex: Servidor, API OpenAI, Licença, Plano SaaS, etc.
+  isRecurring Boolean   @default(false)
+  frequency   String?   // MONTHLY, YEARLY
+  dueDate     DateTime?
+  paidAt      DateTime?
+  tenantId    String?
+  tenant      Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Invoice {
+  id          String    @id @default(uuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  amount      Float
+  status      String    @default("PENDING") // PENDING, PAID, OVERDUE, CANCELED
+  dueDate     DateTime
+  paidAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }

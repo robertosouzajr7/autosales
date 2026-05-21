@@ -491,28 +491,28 @@ export default function LandingPage() {
                        </ul>
 
                        <div className={`space-y-3 pt-6 border-t ${sPricingBorderMuted(isRecommended)}`}>
-                          <p className={`text-[9px] font-black uppercase tracking-[0.2em] mb-4 ${sPricingTextMuted(isRecommended)}`}>Limites do Plano</p>
-                          <div className="flex justify-between items-center text-xs font-bold">
-                             <span className={sPricingTextMuted(isRecommended)}>Agentes SDR Ativos</span>
-                             <span>Até {plan.maxSdrs} Bots</span>
-                          </div>
-                          <div className="flex justify-between items-center text-xs font-bold">
-                             <span className={sPricingTextMuted(isRecommended)}>Créditos de Tokens/IA</span>
-                             <span>{(plan.maxTokens / 1000).toLocaleString()}k Tokens</span>
-                          </div>
-                          <div className="flex justify-between items-center text-xs font-bold">
-                             <span className={sPricingTextMuted(isRecommended)}>Varreduras de BDR/mês</span>
-                             <span>{plan.maxProspects.toLocaleString()} Buscas</span>
-                          </div>
-                          <div className="flex justify-between items-center text-xs font-bold">
-                             <span className={sPricingTextMuted(isRecommended)}>Pesquisas de Deep Research</span>
-                             <span>{plan.maxResearch.toLocaleString()} Unidades</span>
-                          </div>
-                          <div className="flex justify-between items-center text-xs font-bold">
-                             <span className={sPricingTextMuted(isRecommended)}>Mensagens/mês</span>
-                             <span>{plan.maxMessages.toLocaleString()} Envios</span>
-                          </div>
-                       </div>
+                           <p className={`text-[9px] font-black uppercase tracking-[0.2em] mb-4 ${sPricingTextMuted(isRecommended)}`}>Limites do Plano</p>
+                           <div className={`flex justify-between items-center text-xs font-bold ${!plan.enableSdr ? 'opacity-40' : ''}`}>
+                              <span className={`${sPricingTextMuted(isRecommended)} ${!plan.enableSdr ? 'line-through' : ''}`}>Agentes SDR Ativos</span>
+                              <span>{plan.enableSdr ? `Até ${plan.maxSdrs} Bots` : 'Não disponível'}</span>
+                           </div>
+                           <div className={`flex justify-between items-center text-xs font-bold ${!plan.enableTokens ? 'opacity-40' : ''}`}>
+                              <span className={`${sPricingTextMuted(isRecommended)} ${!plan.enableTokens ? 'line-through' : ''}`}>Créditos de Tokens/IA</span>
+                              <span>{plan.enableTokens ? `${(plan.maxTokens / 1000).toLocaleString()}k Tokens` : 'Não disponível'}</span>
+                           </div>
+                           <div className={`flex justify-between items-center text-xs font-bold ${!plan.enableProspects ? 'opacity-40' : ''}`}>
+                              <span className={`${sPricingTextMuted(isRecommended)} ${!plan.enableProspects ? 'line-through' : ''}`}>Varreduras de BDR/mês</span>
+                              <span>{plan.enableProspects ? `${plan.maxProspects.toLocaleString()} Buscas` : 'Não disponível'}</span>
+                           </div>
+                           <div className={`flex justify-between items-center text-xs font-bold ${!plan.enableResearch ? 'opacity-40' : ''}`}>
+                              <span className={`${sPricingTextMuted(isRecommended)} ${!plan.enableResearch ? 'line-through' : ''}`}>Pesquisas de Deep Research</span>
+                              <span>{plan.enableResearch ? `${plan.maxResearch.toLocaleString()} Unidades` : 'Não disponível'}</span>
+                           </div>
+                           <div className={`flex justify-between items-center text-xs font-bold ${!plan.enableMessages ? 'opacity-40' : ''}`}>
+                              <span className={`${sPricingTextMuted(isRecommended)} ${!plan.enableMessages ? 'line-through' : ''}`}>Mensagens/mês</span>
+                              <span>{plan.enableMessages ? `${plan.maxMessages.toLocaleString()} Envios` : 'Não disponível'}</span>
+                           </div>
+                        </div>
                        
                        <Link to="/register" className="block w-full">
                           <Button className={`w-full h-16 ${isRecommended ? 'bg-white text-[#820AD1] hover:bg-slate-50 shadow-2xl' : 'bg-[#820AD1] text-white hover:bg-[#6c08b0]'} font-black rounded-2xl text-lg transition-transform active:scale-95 border-none`}>

@@ -18,6 +18,9 @@ import * as MessageController from "../controllers/MessageController.js";
 import * as ProspectController from "../controllers/ProspectController.js";
 import * as AnalyticsController from "../controllers/AnalyticsController.js";
 import * as ProspectionStatsController from "../controllers/ProspectionStatsController.js";
+import * as FinancialController from "../controllers/FinancialController.js";
+import * as BillingController from "../controllers/BillingController.js";
+import BillingService from "../services/BillingService.js";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -133,5 +136,26 @@ router.delete("/admin/plans/:id", adminMiddleware, AdminController.deletePlan);
 
 router.get("/admin/landing-settings", adminMiddleware, AdminController.getLandingSettings);
 router.put("/admin/landing-settings", adminMiddleware, AdminController.updateLandingSettings);
+
+// SaaS Financial Admin Dashboard
+router.get("/admin/financial/summary", adminMiddleware, FinancialController.getSummary);
+router.get("/admin/financial/transactions", adminMiddleware, FinancialController.getTransactions);
+router.post("/admin/financial/transactions", adminMiddleware, FinancialController.createTransaction);
+router.put("/admin/financial/transactions/:id", adminMiddleware, FinancialController.updateTransaction);
+router.delete("/admin/financial/transactions/:id", adminMiddleware, FinancialController.deleteTransaction);
+router.post("/admin/financial/trigger-billing", adminMiddleware, async (req, res) => {
+  try {
+    await BillingService.runBillingCheck();
+    res.json({ success: true, message: "Faturamento mensal processado com sucesso de forma manual." });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// SaaS Billing Portal (Customer)
+router.get("/billing/portal", BillingController.getBillingPortalData);
+router.get("/billing/plans", BillingController.getActivePlans);
+router.post("/billing/pay-invoice/:invoiceId", BillingController.payInvoiceMock);
+router.post("/billing/upgrade", BillingController.upgradePlan);
 
 export default router;

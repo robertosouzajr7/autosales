@@ -32,8 +32,13 @@ export const prospectGeneric = async (req, res) => {
 
     const tenantId = req.headers["x-tenant-id"] || req.tenantId;
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, include: { plan: true } });
-    if (tenant?.plan && tenant.usedProspects >= tenant.plan.maxProspects) {
-      return res.status(403).json({ error: "Limite de prospecção mensal atingido para o seu plano." });
+    if (tenant?.plan) {
+      if (!tenant.plan.enableProspects) {
+        return res.status(403).json({ error: "O recurso de prospecção não está habilitado no seu plano." });
+      }
+      if (tenant.usedProspects >= tenant.plan.maxProspects) {
+        return res.status(403).json({ error: "Limite de prospecção mensal atingido para o seu plano." });
+      }
     }
 
     const response = await axios.post('https://google.serper.dev/places', {
@@ -84,8 +89,13 @@ export const searchApollo = async (req, res) => {
 
     const tenantId = req.headers["x-tenant-id"] || req.tenantId;
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, include: { plan: true } });
-    if (tenant?.plan && tenant.usedProspects >= tenant.plan.maxProspects) {
-      return res.status(403).json({ error: "Limite de prospecção mensal atingido." });
+    if (tenant?.plan) {
+      if (!tenant.plan.enableProspects) {
+        return res.status(403).json({ error: "O recurso de prospecção não está habilitado no seu plano." });
+      }
+      if (tenant.usedProspects >= tenant.plan.maxProspects) {
+        return res.status(403).json({ error: "Limite de prospecção mensal atingido." });
+      }
     }
 
     // Proxy Apollo search via Serper Google Search focusing on LinkedIn/Company data
@@ -132,8 +142,13 @@ export const prospectLinkedIn = async (req, res) => {
 
     const tenantId = req.headers["x-tenant-id"] || req.tenantId;
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, include: { plan: true } });
-    if (tenant?.plan && tenant.usedProspects >= tenant.plan.maxProspects) {
-      return res.status(403).json({ error: "Limite de prospecção mensal atingido." });
+    if (tenant?.plan) {
+      if (!tenant.plan.enableProspects) {
+        return res.status(403).json({ error: "O recurso de prospecção não está habilitado no seu plano." });
+      }
+      if (tenant.usedProspects >= tenant.plan.maxProspects) {
+        return res.status(403).json({ error: "Limite de prospecção mensal atingido." });
+      }
     }
 
     const query = `site:linkedin.com/in/ "${title}" "${location}"`;

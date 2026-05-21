@@ -122,4 +122,57 @@ export class EmailService {
       return { success: false, error: error.message };
     }
   }
+
+  /**
+   * Envia uma notificação de cobrança
+   */
+  static async sendBillingNotification(email, tenantName, invoice) {
+    try {
+      const transport = await this.getTransporter();
+      const dueDateFormatted = new Date(invoice.dueDate).toLocaleDateString("pt-BR");
+      const amountFormatted = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(invoice.amount);
+
+      const html = `
+        <div style="font-family: sans-serif; padding: 20px; color: #333; max-width: 600px; border: 1px solid #ddd; border-radius: 8px;">
+          <h2 style="color: #820AD1;">AutoSales AI - Faturamento</h2>
+          <p>Olá, <strong>${tenantName}</strong>!</p>
+          <p>Lembramos que a sua fatura recorrente do plano contratado está disponível para pagamento.</p>
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 8px 0; color: #666;">Fatura ID:</td>
+              <td style="padding: 8px 0; font-weight: bold; text-align: right;">#${invoice.id.slice(0, 8)}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666;">Valor:</td>
+              <td style="padding: 8px 0; font-weight: bold; text-align: right; color: #820AD1;">${amountFormatted}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666;">Vencimento:</td>
+              <td style="padding: 8px 0; font-weight: bold; text-align: right;">${dueDateFormatted}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666;">Status:</td>
+              <td style="padding: 8px 0; font-weight: bold; text-align: right; color: ${invoice.status === 'OVERDUE' ? '#d32f2f' : '#f57c00'}">${invoice.status}</td>
+            </tr>
+          </table>
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+          <p>Para pagar e manter a sua conta ativa, acesse a aba <strong>Assinatura & Faturamento</strong> nas configurações do seu painel e efetue o pagamento simulado.</p>
+          <p style="font-size: 12px; color: #999; margin-top: 30px;">Esta é uma mensagem automática enviada pelo sistema de faturamento da AutoSales.</p>
+        </div>
+      `;
+
+      await transport.sendMail({
+        from: '"AutoSales AI | Faturamento" <financeiro@autosales.ai>',
+        to: email,
+        subject: `AutoSales AI - Fatura #${invoice.id.slice(0, 8)} - ${invoice.status === 'OVERDUE' ? 'Atrasada' : 'Pendente'}`,
+        html
+      });
+      console.log(`[EmailService] ✅ Email de cobrança enviado para ${email} (Fatura #${invoice.id.slice(0,8)})`);
+      return true;
+    } catch (e) {
+      console.error(`[EmailService] ❌ Erro ao enviar email de cobrança:`, e);
+      return false;
+    }
+  }
 }

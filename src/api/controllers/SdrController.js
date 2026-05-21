@@ -28,6 +28,25 @@ export const createSdr = async (req, res) => {
   } = req.body;
 
   try {
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      include: { plan: true }
+    });
+
+    if (tenant && tenant.plan) {
+      if (!tenant.plan.enableSdr) {
+        return res.status(403).json({ error: "O recurso de SDRs não está habilitado no seu plano." });
+      }
+      
+      const sdrCount = await prisma.sdrBot.count({
+        where: { tenantId, active: true }
+      });
+
+      if (sdrCount >= tenant.plan.maxSdrs && active !== false) {
+        return res.status(403).json({ error: `Você atingiu o limite máximo de SDRs ativos do seu plano (${tenant.plan.maxSdrs}).` });
+      }
+    }
+
     const sdr = await prisma.sdrBot.create({
       data: {
         name,
@@ -69,6 +88,27 @@ export const updateSdr = async (req, res) => {
   } = req.body;
 
   try {
+    if (active === true) {
+      const tenant = await prisma.tenant.findUnique({
+        where: { id: tenantId },
+        include: { plan: true }
+      });
+
+      if (tenant && tenant.plan) {
+        if (!tenant.plan.enableSdr) {
+          return res.status(403).json({ error: "O recurso de SDRs não está habilitado no seu plano." });
+        }
+        
+        const sdrCount = await prisma.sdrBot.count({
+          where: { tenantId, active: true, id: { not: id } }
+        });
+
+        if (sdrCount >= tenant.plan.maxSdrs) {
+          return res.status(403).json({ error: `Você atingiu o limite máximo de SDRs ativos do seu plano (${tenant.plan.maxSdrs}).` });
+        }
+      }
+    }
+
     const sdr = await prisma.sdrBot.update({
       where: { id, tenantId },
       data: {

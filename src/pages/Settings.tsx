@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Settings as SettingsIcon, Shield, Bell, Database, Globe, Sliders, Save, CheckCircle2, 
   Trash2, Plus, Zap, Bot, Target, HelpCircle, Loader2, Sparkles, MapPin, Search, Linkedin,
-  ExternalLink, Mail, Smartphone, Phone, Calendar, Share2, Terminal, Code2, Key, RefreshCw, AlertCircle
+  ExternalLink, Mail, Smartphone, Phone, Calendar, Share2, Terminal, Code2, Key, RefreshCw, AlertCircle,
+  CreditCard, DollarSign, Wallet, AlertTriangle, Check
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
@@ -41,6 +42,20 @@ export default function Settings() {
   const [users, setUsers] = useState<any[]>([]);
   const [isNewUserModalOpen, setIsNewUserModalOpen] = useState(false);
   const [newUser, setNewUser] = useState({ name: "", email: "", password: "", role: "AGENT" });
+
+  // SaaS Billing & Subscription States
+  const [billingData, setBillingData] = useState<any>(null);
+  const [plans, setPlans] = useState<any[]>([]);
+  const [isPayModalOpen, setIsPayModalOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+  const [cardDetails, setCardDetails] = useState({
+    cardHolder: "",
+    cardNumber: "",
+    cvv: "",
+    expiry: ""
+  });
+  const [isPaying, setIsPaying] = useState(false);
+  const [isUpgrading, setIsUpgrading] = useState(false);
 
   const [aiConfig, setAiConfig] = useState({
     openAiKey: "",
@@ -132,10 +147,90 @@ export default function Settings() {
       setIcpProfiles(Array.isArray(dataIcp) ? dataIcp : []);
       setUsers(Array.isArray(dataUsers) ? dataUsers : []);
 
+      // Fetch SaaS Billing details dynamically
+      try {
+        const resBilling = await fetch("/api/billing/portal", { headers });
+        if (resBilling.ok) {
+          const billingPortalData = await resBilling.json();
+          setBillingData(billingPortalData);
+        }
+      } catch (err) {
+        console.error("Error loading billing details:", err);
+      }
+
+      try {
+        const resPlans = await fetch("/api/billing/plans", { headers });
+        if (resPlans.ok) {
+          const activePlansData = await resPlans.json();
+          setPlans(activePlansData);
+        }
+      } catch (err) {
+        console.error("Error loading plans:", err);
+      }
+
     } catch (e) {
       toast({ title: "Erro ao carregar configurações", variant: "destructive" });
     }
     setLoading(false);
+  };
+
+  const handlePayInvoice = async (invoiceId: string) => {
+    setIsPaying(true);
+    const token = localStorage.getItem("token");
+    const headers: any = { 
+      "Content-Type": "application/json",
+      "x-tenant-id": localStorage.getItem("tenantId") || ""
+    };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    try {
+      const res = await fetch(`/api/billing/pay-invoice/${invoiceId}`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(cardDetails)
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast({ title: "Fatura paga com sucesso!", description: "Seu plano foi atualizado/confirmado e o consumo resetado." });
+        setIsPayModalOpen(false);
+        setCardDetails({ cardHolder: "", cardNumber: "", cvv: "", expiry: "" });
+        fetchData(); // Refresh all billing details
+      } else {
+        toast({ title: "Erro ao pagar fatura", description: data.error || "Dados inválidos", variant: "destructive" });
+      }
+    } catch (e) {
+      toast({ title: "Erro na transação de pagamento", variant: "destructive" });
+    }
+    setIsPaying(false);
+  };
+
+  const handleUpgradePlan = async (planId: string, planName: string) => {
+    if (!confirm(`Confirmar upgrade para o plano ${planName}? Uma nova fatura será gerada.`)) return;
+    setIsUpgrading(true);
+    const token = localStorage.getItem("token");
+    const headers: any = { 
+      "Content-Type": "application/json",
+      "x-tenant-id": localStorage.getItem("tenantId") || ""
+    };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    try {
+      const res = await fetch("/api/billing/upgrade", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ planId })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast({ title: `Plano atualizado para ${planName}!`, description: data.message });
+        fetchData(); // Refresh all details
+      } else {
+        toast({ title: "Erro ao atualizar plano", description: data.error || "Tente novamente mais tarde.", variant: "destructive" });
+      }
+    } catch (e) {
+      toast({ title: "Erro ao realizar upgrade", variant: "destructive" });
+    }
+    setIsUpgrading(false);
   };
 
   useEffect(() => {
@@ -262,6 +357,9 @@ export default function Settings() {
             </TabsTrigger>
             <TabsTrigger value="users" className="rounded-[18px] h-full px-8 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg">
               <Shield className="w-4 h-4 mr-2 text-purple-500" /> Equipe
+            </TabsTrigger>
+            <TabsTrigger value="billing" className="rounded-[18px] h-full px-8 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg">
+              <CreditCard className="w-4 h-4 mr-2 text-indigo-500" /> Assinatura & Cobrança
             </TabsTrigger>
           </TabsList>
 
@@ -604,9 +702,350 @@ export default function Settings() {
                      </table>
                   </div>
                </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+             </Card>
+           </TabsContent>
+
+           <TabsContent value="billing" className="space-y-8 animate-in slide-in-from-bottom-4">
+             {/* Visão Geral da Assinatura */}
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+               <Card className="border-none shadow-xl rounded-[30px] bg-gradient-to-tr from-slate-900 to-indigo-950 text-white p-8 relative overflow-hidden">
+                 <div className="absolute right-0 bottom-0 opacity-10 translate-x-4 translate-y-4">
+                   <Zap className="w-48 h-48 text-indigo-400" />
+                 </div>
+                 <div className="space-y-4">
+                   <span className="text-[10px] font-black uppercase tracking-widest text-indigo-300 bg-indigo-500/20 px-3 py-1 rounded-full">Plano Atual</span>
+                   <h2 className="text-3xl font-black uppercase tracking-tight">{billingData?.plan?.name || "Nenhum Plano"}</h2>
+                   <p className="text-sm font-semibold text-slate-300">
+                     {billingData?.plan?.priceMonthly ? `R$ ${billingData.plan.priceMonthly.toFixed(2)}/mês` : "Sem custo associado"}
+                   </p>
+                   <div className="pt-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                     Status: <span className={`font-black ${billingData?.tenant?.subscriptionStatus === 'ACTIVE' ? 'text-emerald-400' : 'text-amber-400'}`}>{billingData?.tenant?.subscriptionStatus || "TRIAL"}</span>
+                   </div>
+                 </div>
+               </Card>
+
+               <Card className="border-none shadow-xl rounded-[30px] bg-white p-8 relative overflow-hidden">
+                 <div className="space-y-4">
+                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Próxima Cobrança</span>
+                   <h2 className="text-2xl font-black text-slate-800">
+                     {billingData?.tenant?.nextBillingDate ? new Date(billingData.tenant.nextBillingDate).toLocaleDateString("pt-BR") : "Não agendada"}
+                   </h2>
+                   <p className="text-xs text-slate-400 font-bold uppercase">Ciclo mensal recorrente</p>
+                   <div className="pt-2">
+                     <span className="text-[10px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 px-3 py-1.5 rounded-full">Renovação Automática</span>
+                   </div>
+                 </div>
+               </Card>
+
+               <Card className="border-none shadow-xl rounded-[30px] bg-white p-8 relative overflow-hidden">
+                 <div className="space-y-4">
+                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Status da Assinatura</span>
+                   <div className="flex items-center gap-2">
+                     <div className={`w-3 h-3 rounded-full ${billingData?.tenant?.subscriptionStatus === 'ACTIVE' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                     <h2 className="text-xl font-black uppercase text-slate-800">{billingData?.tenant?.subscriptionStatus || "TESTE GRÁTIS"}</h2>
+                   </div>
+                   <p className="text-xs text-slate-400 font-medium">Controle de limites renovado todo dia {billingData?.tenant?.nextBillingDate ? new Date(billingData.tenant.nextBillingDate).getDate() : "1"}</p>
+                   <div className="pt-2">
+                     {billingData?.tenant?.subscriptionStatus === 'OVERDUE' && (
+                       <Badge className="bg-rose-500 text-white font-black text-[9px] uppercase px-3 py-1">Atraso no Pagamento</Badge>
+                     )}
+                   </div>
+                 </div>
+               </Card>
+             </div>
+
+             {/* Consumo e Limites Detalhados */}
+             <Card className="border-none shadow-xl rounded-[40px] bg-white p-12 space-y-8">
+               <div>
+                 <h3 className="text-xl font-black text-slate-900 uppercase">Métricas de Consumo do Período</h3>
+                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Uso de limites em tempo real conforme plano ativo</p>
+               </div>
+               
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                 {/* SDRs Actives */}
+                 <div className="p-6 bg-slate-50 rounded-3xl space-y-4">
+                   <div className="flex justify-between items-center">
+                     <div className="flex items-center gap-2">
+                       <Bot className="w-5 h-5 text-indigo-500" />
+                       <span className="text-xs font-black uppercase tracking-widest text-slate-700">Agentes SDR Ativos</span>
+                     </div>
+                     <span className="text-xs font-black text-slate-900">
+                       {billingData?.plan?.enableSdr ? `${billingData?.tenant?.activeSdrs || 0} / ${billingData?.plan?.maxSdrs || 0}` : "Bloqueado"}
+                     </span>
+                   </div>
+                   {billingData?.plan?.enableSdr ? (
+                     <div className="w-full bg-slate-200 h-3 rounded-full overflow-hidden">
+                       <div 
+                         className="bg-indigo-600 h-full rounded-full transition-all duration-500" 
+                         style={{ width: `${Math.min(100, ((billingData?.tenant?.activeSdrs || 0) / (billingData?.plan?.maxSdrs || 1)) * 100)}%` }} 
+                       />
+                     </div>
+                   ) : (
+                     <div className="text-[10px] font-black uppercase text-slate-400 bg-slate-100 p-2.5 rounded-xl border border-dashed text-center">
+                       Disponível apenas a partir do plano Pro
+                     </div>
+                   )}
+                 </div>
+
+                 {/* Tokens IA */}
+                 <div className="p-6 bg-slate-50 rounded-3xl space-y-4">
+                   <div className="flex justify-between items-center">
+                     <div className="flex items-center gap-2">
+                       <Zap className="w-5 h-5 text-[#820AD1]" />
+                       <span className="text-xs font-black uppercase tracking-widest text-slate-700">Créditos de Tokens / IA</span>
+                     </div>
+                     <span className="text-xs font-black text-slate-900">
+                       {billingData?.plan?.enableTokens ? `${billingData?.tenant?.usedTokens || 0} / ${billingData?.plan?.maxTokens || 0}` : "Bloqueado"}
+                     </span>
+                   </div>
+                   {billingData?.plan?.enableTokens ? (
+                     <div className="w-full bg-slate-200 h-3 rounded-full overflow-hidden">
+                       <div 
+                         className="bg-[#820AD1] h-full rounded-full transition-all duration-500" 
+                         style={{ width: `${Math.min(100, ((billingData?.tenant?.usedTokens || 0) / (billingData?.plan?.maxTokens || 1)) * 100)}%` }} 
+                       />
+                     </div>
+                   ) : (
+                     <div className="text-[10px] font-black uppercase text-slate-400 bg-slate-100 p-2.5 rounded-xl border border-dashed text-center">
+                       Disponível apenas em planos pagos
+                     </div>
+                   )}
+                 </div>
+
+                 {/* Prospects Search (BDR) */}
+                 <div className="p-6 bg-slate-50 rounded-3xl space-y-4">
+                   <div className="flex justify-between items-center">
+                     <div className="flex items-center gap-2">
+                       <Target className="w-5 h-5 text-emerald-500" />
+                       <span className="text-xs font-black uppercase tracking-widest text-slate-700">Varreduras BDR / Mês</span>
+                     </div>
+                     <span className="text-xs font-black text-slate-900">
+                       {billingData?.plan?.enableProspects ? `${billingData?.tenant?.usedProspects || 0} / ${billingData?.plan?.maxProspects || 0}` : "Bloqueado"}
+                     </span>
+                   </div>
+                   {billingData?.plan?.enableProspects ? (
+                     <div className="w-full bg-slate-200 h-3 rounded-full overflow-hidden">
+                       <div 
+                         className="bg-emerald-500 h-full rounded-full transition-all duration-500" 
+                         style={{ width: `${Math.min(100, ((billingData?.tenant?.usedProspects || 0) / (billingData?.plan?.maxProspects || 1)) * 100)}%` }} 
+                       />
+                     </div>
+                   ) : (
+                     <div className="text-[10px] font-black uppercase text-slate-400 bg-slate-100 p-2.5 rounded-xl border border-dashed text-center">
+                       Recurso Desativado
+                     </div>
+                   )}
+                 </div>
+
+                 {/* Deep Research */}
+                 <div className="p-6 bg-slate-50 rounded-3xl space-y-4">
+                   <div className="flex justify-between items-center">
+                     <div className="flex items-center gap-2">
+                       <Search className="w-5 h-5 text-amber-500" />
+                       <span className="text-xs font-black uppercase tracking-widest text-slate-700">Deep Research / Mês</span>
+                     </div>
+                     <span className="text-xs font-black text-slate-900">
+                       {billingData?.plan?.enableResearch ? `${billingData?.tenant?.usedResearch || 0} / ${billingData?.plan?.maxResearch || 0}` : "Bloqueado"}
+                     </span>
+                   </div>
+                   {billingData?.plan?.enableResearch ? (
+                     <div className="w-full bg-slate-200 h-3 rounded-full overflow-hidden">
+                       <div 
+                         className="bg-amber-500 h-full rounded-full transition-all duration-500" 
+                         style={{ width: `${Math.min(100, ((billingData?.tenant?.usedResearch || 0) / (billingData?.plan?.maxResearch || 1)) * 100)}%` }} 
+                       />
+                     </div>
+                   ) : (
+                     <div className="text-[10px] font-black uppercase text-slate-400 bg-slate-100 p-2.5 rounded-xl border border-dashed text-center">
+                       Recurso Desativado
+                     </div>
+                   )}
+                 </div>
+
+                 {/* Messages/month */}
+                 <div className="p-6 bg-slate-50 rounded-3xl space-y-4 col-span-1 md:col-span-2">
+                   <div className="flex justify-between items-center">
+                     <div className="flex items-center gap-2">
+                       <Mail className="w-5 h-5 text-blue-500" />
+                       <span className="text-xs font-black uppercase tracking-widest text-slate-700">Mensagens Disparadas / Mês</span>
+                     </div>
+                     <span className="text-xs font-black text-slate-900">
+                       {billingData?.plan?.enableMessages ? `${billingData?.tenant?.usedMessages || 0} / ${billingData?.plan?.maxMessages || 0}` : "Bloqueado"}
+                     </span>
+                   </div>
+                   {billingData?.plan?.enableMessages ? (
+                     <div className="w-full bg-slate-200 h-3 rounded-full overflow-hidden">
+                       <div 
+                         className="bg-blue-500 h-full rounded-full transition-all duration-500" 
+                         style={{ width: `${Math.min(100, ((billingData?.tenant?.usedMessages || 0) / (billingData?.plan?.maxMessages || 1)) * 100)}%` }} 
+                       />
+                     </div>
+                   ) : (
+                     <div className="text-[10px] font-black uppercase text-slate-400 bg-slate-100 p-2.5 rounded-xl border border-dashed text-center">
+                       Disparos Bloqueados
+                     </div>
+                   )}
+                 </div>
+               </div>
+             </Card>
+
+             {/* Histórico de Invoices */}
+             <Card className="border-none shadow-xl rounded-[40px] bg-white p-12 space-y-8">
+               <div>
+                 <h3 className="text-xl font-black text-slate-900 uppercase">Histórico de Cobrança</h3>
+                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Acompanhe suas mensalidades e faturas pendentes</p>
+               </div>
+
+               <div className="overflow-x-auto">
+                 <table className="w-full text-left">
+                   <thead>
+                     <tr className="border-b border-slate-100">
+                       <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Identificador</th>
+                       <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor</th>
+                       <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Data de Vencimento</th>
+                       <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Data de Pagamento</th>
+                       <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                       <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ação</th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     {(billingData?.invoices || []).length === 0 ? (
+                       <tr>
+                         <td colSpan={6} className="py-8 text-center text-xs font-bold text-slate-400 uppercase">
+                           Nenhuma fatura encontrada.
+                         </td>
+                       </tr>
+                     ) : (
+                       (billingData.invoices).map((invoice: any) => (
+                         <tr key={invoice.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                           <td className="py-4 font-mono text-xs text-slate-500">#{invoice.id.slice(0, 8)}</td>
+                           <td className="py-4 font-black text-slate-800">R$ {invoice.amount.toFixed(2)}</td>
+                           <td className="py-4 text-xs font-semibold text-slate-600">
+                             {new Date(invoice.dueDate).toLocaleDateString("pt-BR")}
+                           </td>
+                           <td className="py-4 text-xs font-semibold text-slate-600">
+                             {invoice.paidAt ? new Date(invoice.paidAt).toLocaleDateString("pt-BR") : "-"}
+                           </td>
+                           <td className="py-4">
+                             <Badge className={`font-black text-[9px] uppercase tracking-widest border-none ${
+                               invoice.status === 'PAID' ? 'bg-emerald-50 text-emerald-600' :
+                               invoice.status === 'PENDING' ? 'bg-amber-50 text-amber-600' :
+                               'bg-rose-50 text-rose-600'
+                             }`}>
+                               {invoice.status === 'PAID' ? 'PAGO' : invoice.status === 'PENDING' ? 'PENDENTE' : 'ATRASADO'}
+                             </Badge>
+                           </td>
+                           <td className="py-4 text-right">
+                             {invoice.status !== 'PAID' && (
+                               <Button 
+                                 size="sm"
+                                 onClick={() => {
+                                   setSelectedInvoice(invoice);
+                                   setIsPayModalOpen(true);
+                                 }}
+                                 className="bg-[#820AD1] hover:bg-[#6c08b0] text-white font-black uppercase text-[10px] tracking-widest rounded-xl px-4 h-9 shadow-md shadow-[#820AD1]/20 active:scale-95 transition-all"
+                               >
+                                 Pagar Fatura
+                               </Button>
+                             )}
+                           </td>
+                         </tr>
+                       ))
+                     )}
+                   </tbody>
+                 </table>
+               </div>
+             </Card>
+
+             {/* Upgrade de Planos */}
+             <Card className="border-none shadow-xl rounded-[40px] bg-slate-900 text-white p-12 space-y-10">
+               <div className="text-center space-y-2 max-w-2xl mx-auto">
+                 <Badge className="bg-[#820AD1] text-white border-none font-black px-4 py-1.5 rounded-full text-[9px] uppercase tracking-widest">Nossos Planos</Badge>
+                 <h2 className="text-3xl font-black uppercase tracking-tight">Eleve seus resultados com mais performance</h2>
+                 <p className="text-sm text-slate-400 font-medium">Faça upgrade a qualquer momento. Mudanças são aplicadas instantaneamente.</p>
+               </div>
+
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                 {plans.map((p: any) => {
+                   const isCurrent = billingData?.plan?.id === p.id;
+                   return (
+                     <Card 
+                       key={p.id} 
+                       className={`border-none shadow-2xl rounded-[35px] overflow-hidden flex flex-col p-8 ${
+                         isCurrent 
+                           ? 'bg-slate-850 ring-4 ring-[#820AD1] text-white' 
+                           : 'bg-white text-slate-900'
+                       }`}
+                     >
+                       <div className="space-y-4 flex-1">
+                         <div className="flex justify-between items-start">
+                           <h4 className="text-xl font-black uppercase tracking-tight">{p.name}</h4>
+                           {isCurrent && (
+                             <Badge className="bg-[#820AD1] text-white border-none font-black text-[9px] uppercase px-3 py-1 rounded-full">Atual</Badge>
+                           )}
+                         </div>
+
+                         <div className="py-2">
+                           <span className="text-3xl font-black">R$ {p.priceMonthly.toFixed(2)}</span>
+                           <span className={`text-xs font-bold ${isCurrent ? 'text-slate-400' : 'text-slate-500'}`}>/mês</span>
+                         </div>
+
+                         <Separator className={isCurrent ? 'bg-slate-700' : 'bg-slate-100'} />
+
+                         {/* Recursos list */}
+                         <ul className="space-y-3 pt-4 text-xs font-bold">
+                           <li className="flex items-center gap-2">
+                             <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-indigo-400' : 'text-indigo-600'}`} />
+                             <span>Até {p.maxSdrs} SDRs Ativos</span>
+                           </li>
+                           <li className="flex items-center gap-2">
+                             <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-indigo-400' : 'text-indigo-600'}`} />
+                             <span>{p.maxTokens.toLocaleString("pt-BR")} Tokens IA/mês</span>
+                           </li>
+                           <li className="flex items-center gap-2">
+                             <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-indigo-400' : 'text-indigo-600'}`} />
+                             <span>{p.maxProspects} Varreduras BDR/mês</span>
+                           </li>
+                           <li className="flex items-center gap-2">
+                             <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-indigo-400' : 'text-indigo-600'}`} />
+                             <span>{p.maxResearch} Deep Research/mês</span>
+                           </li>
+                           <li className="flex items-center gap-2">
+                             <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-indigo-400' : 'text-indigo-600'}`} />
+                             <span>{p.maxMessages} Mensagens/mês</span>
+                           </li>
+                         </ul>
+                       </div>
+
+                       <div className="pt-8">
+                         {isCurrent ? (
+                           <Button 
+                             disabled 
+                             className="w-full h-14 rounded-2xl bg-slate-700 text-slate-400 font-black uppercase text-[10px] tracking-widest cursor-not-allowed"
+                           >
+                             Plano Ativo
+                           </Button>
+                         ) : (
+                           <Button 
+                             onClick={() => handleUpgradePlan(p.id, p.name)}
+                             disabled={isUpgrading}
+                             className={`w-full h-14 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all ${
+                               isCurrent 
+                                 ? 'bg-slate-700 text-white' 
+                                 : 'bg-[#820AD1] hover:bg-[#6c08b0] text-white shadow-xl shadow-[#820AD1]/20 hover:scale-105 active:scale-95'
+                             }`}
+                           >
+                             Contratar Plano
+                           </Button>
+                         )}
+                       </div>
+                     </Card>
+                   );
+                 })}
+               </div>
+             </Card>
+           </TabsContent>
+         </Tabs>
       </div>
 
       <Dialog open={isNewUserModalOpen} onOpenChange={setIsNewUserModalOpen}>

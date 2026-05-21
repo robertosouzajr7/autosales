@@ -160,9 +160,15 @@ class AutomationEngine {
 
     // Check Plan Monthly Message Limit
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, include: { plan: true } });
-    if (tenant?.plan && tenant.usedMessages >= tenant.plan.maxMessages) {
-       console.log(`[AutoEngine] 🛑 Limite mensal de mensagens atingido para o tenant ${tenantId}`);
-       return { error: "LIMIT_REACHED" };
+    if (tenant?.plan) {
+      if (!tenant.plan.enableMessages) {
+        console.log(`[AutoEngine] 🛑 Mensagens desabilitadas no plano para o tenant ${tenantId}`);
+        return { error: "FEATURE_DISABLED" };
+      }
+      if (tenant.usedMessages >= tenant.plan.maxMessages) {
+        console.log(`[AutoEngine] 🛑 Limite mensal de mensagens atingido para o tenant ${tenantId}`);
+        return { error: "LIMIT_REACHED" };
+      }
     }
 
     bucket.count++;
@@ -882,10 +888,10 @@ class AutomationEngine {
         include: { plan: true }
       });
       let aiEnabled = false;
-      if (tenantUsage && tenantUsage.plan && tenantUsage.plan.features) {
-         try { aiEnabled = JSON.parse(tenantUsage.plan.features).aiEnabled === true; } catch(e){}
+      if (tenantUsage && tenantUsage.plan) {
+        aiEnabled = tenantUsage.plan.enableTokens === true && tenantUsage.usedTokens < tenantUsage.plan.maxTokens;
       }
-      if (!aiEnabled) return { text: "IA Desabilitada no Plano", toolCalls: [] };
+      if (!aiEnabled) return { text: "IA Desabilitada no Plano (ou Limite de Tokens atingido)", toolCalls: [] };
 
       const toolDeclarations = [
         {
@@ -946,9 +952,14 @@ class AutomationEngine {
       const fullPrompt = `${systemPrompt}\n\nBase de conhecimento:\n${kb}\n\nDados do lead:\n- Nome: ${lead.name}\n- Telefone: ${lead.phone}\n- Status: ${lead.status}\n\nHistórico:\n${history}\n\nUse as ferramentas quando necessário para atender o lead.`;
 
       // Check Token Limit
-      if (tenantUsage && tenantUsage.plan && tenantUsage.usedTokens >= tenantUsage.plan.maxTokens) {
-        console.log(`[AutoEngine] 🛑 Limite de tokens atingido para o tenant ${lead.tenantId}.`);
-        return { text: "Limite de processamento atingido.", toolCalls: [] };
+      if (tenantUsage && tenantUsage.plan) {
+        if (!tenantUsage.plan.enableTokens) {
+          return { text: "IA Desabilitada no Plano.", toolCalls: [] };
+        }
+        if (tenantUsage.usedTokens >= tenantUsage.plan.maxTokens) {
+          console.log(`[AutoEngine] 🛑 Limite de tokens atingido para o tenant ${lead.tenantId}.`);
+          return { text: "Limite de processamento atingido.", toolCalls: [] };
+        }
       }
 
       const chat = toolModel.startChat();
@@ -1042,8 +1053,8 @@ class AutomationEngine {
       // Check Plan Feature: AI
       const tenantUsage = await prisma.tenant.findUnique({ where: { id: lead.tenantId }, include: { plan: true } });
       let aiEnabled = false;
-      if (tenantUsage?.plan?.features) {
-         try { aiEnabled = JSON.parse(tenantUsage.plan.features).aiEnabled === true; } catch(e){}
+      if (tenantUsage && tenantUsage.plan) {
+        aiEnabled = tenantUsage.plan.enableTokens === true && tenantUsage.usedTokens < tenantUsage.plan.maxTokens;
       }
       if (!aiEnabled) return fields.reduce((acc, f) => ({ ...acc, [f]: null }), {});
 
@@ -1085,8 +1096,8 @@ Retorne apenas o JSON, sem markdown, sem explicação.`;
       // Check Plan Feature: AI
       const tenantUsage = await prisma.tenant.findUnique({ where: { id: lead.tenantId }, include: { plan: true } });
       let aiEnabled = false;
-      if (tenantUsage?.plan?.features) {
-         try { aiEnabled = JSON.parse(tenantUsage.plan.features).aiEnabled === true; } catch(e){}
+      if (tenantUsage && tenantUsage.plan) {
+        aiEnabled = tenantUsage.plan.enableTokens === true && tenantUsage.usedTokens < tenantUsage.plan.maxTokens;
       }
       if (!aiEnabled) return { intent: intents[intents.length - 1].id, confidence: 0, reasoning: "IA Desabilitada" };
 
@@ -1132,8 +1143,8 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
       // Check Plan Feature: AI
       const tenantUsage = await prisma.tenant.findUnique({ where: { id: lead.tenantId }, include: { plan: true } });
       let aiEnabled = false;
-      if (tenantUsage?.plan?.features) {
-         try { aiEnabled = JSON.parse(tenantUsage.plan.features).aiEnabled === true; } catch(e){}
+      if (tenantUsage && tenantUsage.plan) {
+        aiEnabled = tenantUsage.plan.enableTokens === true && tenantUsage.usedTokens < tenantUsage.plan.maxTokens;
       }
       if (!aiEnabled) return { score: 50, reasoning: "IA Desabilitada no Plano", bant: {}, signals: [] };
 
@@ -1630,9 +1641,15 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
 
         // Check prospecting limits
         const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, include: { plan: true } });
-        if (tenant?.plan && tenant.usedProspects >= tenant.plan.maxProspects) {
-          console.log(`[AutoHunter] 🛑 Limite de prospecção atingido para o tenant ${tenantId}`);
-          continue;
+        if (tenant?.plan) {
+          if (!tenant.plan.enableProspects) {
+            console.log(`[AutoHunter] 🛑 Recurso de prospecção desabilitado no plano para o tenant ${tenantId}`);
+            continue;
+          }
+          if (tenant.usedProspects >= tenant.plan.maxProspects) {
+            console.log(`[AutoHunter] 🛑 Limite de prospecção atingido para o tenant ${tenantId}`);
+            continue;
+          }
         }
 
         const serperKey = process.env.SERPER_API_KEY;
@@ -1806,9 +1823,15 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
       const icp = await prisma.icpProfile.findFirst({ where: { tenantId: lead.tenantId, isActive: true } });
       
       // A. Check Plan Monthly Research Limit
-      if (tenant?.plan && tenant.usedResearch >= tenant.plan.maxResearch) {
-        console.log(`[Enrichment] 🛑 Limite MENSAL do plano atingido para o tenant ${lead.tenantId}`);
-        return;
+      if (tenant?.plan) {
+        if (!tenant.plan.enableResearch) {
+          console.log(`[Enrichment] 🛑 Recurso de Deep Research desabilitado no plano para o tenant ${lead.tenantId}`);
+          return;
+        }
+        if (tenant.usedResearch >= tenant.plan.maxResearch) {
+          console.log(`[Enrichment] 🛑 Limite MENSAL do plano atingido para o tenant ${lead.tenantId}`);
+          return;
+        }
       }
 
       // B. Check ICP Daily Research Limit
