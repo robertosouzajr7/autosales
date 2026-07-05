@@ -1,0 +1,426 @@
+<style>
+  :root {
+    --paper:   #F1F5F2;
+    --surface: #FFFFFF;
+    --ink:     #12211C;
+    --muted:   #566A61;
+    --faint:   #7C8E86;
+    --line:    #DBE6E0;
+    --accent:  #0E6B52;
+    --accent-ink: #0A5240;
+    --accent-soft: #E4EFE9;
+    --signal:  #B4552E;
+    --signal-soft: #F4E6DE;
+
+    --font-display: "Iowan Old Style","Palatino Linotype","Palatino",Georgia,"Times New Roman",serif;
+    --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+
+    --maxw: 960px;
+    --step: clamp(2.4rem, 5vw, 3.6rem);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper:   #0C1411;
+      --surface: #111C18;
+      --ink:     #E9F2ED;
+      --muted:   #9DB2A9;
+      --faint:   #6E8379;
+      --line:    #22332D;
+      --accent:  #53C299;
+      --accent-ink: #7FD6B5;
+      --accent-soft: #15271F;
+      --signal:  #E08A5F;
+      --signal-soft: #2A1B13;
+    }
+  }
+  :root[data-theme="light"] {
+    --paper:#F1F5F2; --surface:#FFFFFF; --ink:#12211C; --muted:#566A61; --faint:#7C8E86;
+    --line:#DBE6E0; --accent:#0E6B52; --accent-ink:#0A5240; --accent-soft:#E4EFE9;
+    --signal:#B4552E; --signal-soft:#F4E6DE;
+  }
+  :root[data-theme="dark"] {
+    --paper:#0C1411; --surface:#111C18; --ink:#E9F2ED; --muted:#9DB2A9; --faint:#6E8379;
+    --line:#22332D; --accent:#53C299; --accent-ink:#7FD6B5; --accent-soft:#15271F;
+    --signal:#E08A5F; --signal-soft:#2A1B13;
+  }
+
+  * { box-sizing: border-box; }
+  .brief {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    padding: clamp(1.2rem, 4vw, 3rem) 1.2rem 4rem;
+  }
+  .wrap { max-width: var(--maxw); margin: 0 auto; }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: .72rem;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 .9rem;
+  }
+  .brief h1, .brief h2, .brief h3 { font-family: var(--font-display); font-weight: 600; text-wrap: balance; margin: 0; }
+
+  /* ---- Masthead ---- */
+  .masthead {
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end;
+    gap: 1rem; padding-bottom: 1.4rem; border-bottom: 1px solid var(--line);
+  }
+  .logo { display: flex; align-items: center; gap: .6rem; }
+  .logo .mark {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: var(--accent); color: #fff;
+    display: grid; place-items: center; font-size: 1.15rem; flex: none;
+  }
+  .logo .name { font-family: var(--font-display); font-size: 1.28rem; font-weight: 600; letter-spacing: .01em; }
+  .logo .name b { color: var(--accent); font-weight: 600; }
+  .meta {
+    font-family: var(--font-mono); font-size: .7rem; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--faint); text-align: right; line-height: 1.9;
+  }
+  .meta span { color: var(--muted); }
+
+  /* ---- Thesis ---- */
+  .thesis { padding: clamp(1.8rem,4vw,2.8rem) 0 var(--step); border-bottom: 1px solid var(--line); }
+  .thesis h1 {
+    font-size: clamp(1.9rem, 4.6vw, 3rem);
+    line-height: 1.1; letter-spacing: -0.015em;
+    max-width: 20ch;
+  }
+  .thesis h1 em { font-style: italic; color: var(--accent); }
+  .thesis .lede { margin: 1.4rem 0 0; font-size: 1.12rem; color: var(--muted); max-width: 60ch; }
+
+  /* ---- Section scaffold ---- */
+  section.block { padding: var(--step) 0; border-bottom: 1px solid var(--line); }
+  .block > h2 { font-size: clamp(1.4rem,3vw,1.9rem); letter-spacing: -0.01em; margin-bottom: .4rem; }
+  .block > .sub { color: var(--muted); max-width: 62ch; margin: 0 0 1.8rem; }
+
+  /* ---- Cards grid ---- */
+  .grid { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+  .cell { background: var(--surface); padding: 1.5rem 1.4rem; }
+  .cell .k {
+    font-family: var(--font-mono); font-size: .68rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--faint); margin: 0 0 .7rem; display: flex; align-items: center; gap: .5rem;
+  }
+  .cell .k .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none; }
+  .cell h3 { font-size: 1.12rem; margin-bottom: .45rem; line-height: 1.25; }
+  .cell p { margin: 0; color: var(--muted); font-size: .96rem; line-height: 1.55; }
+
+  /* ---- Pricing / model ---- */
+  .model { display: grid; grid-template-columns: 1.1fr 1fr; gap: 1.6rem; align-items: start; }
+  .price-card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 1.6rem;
+  }
+  .price-card .row { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; padding: .7rem 0; border-bottom: 1px dashed var(--line); }
+  .price-card .row:last-child { border-bottom: 0; padding-bottom: 0; }
+  .price-card .row:first-child { padding-top: 0; }
+  .price-card .lab { font-size: .95rem; }
+  .price-card .lab small { display: block; color: var(--faint); font-size: .8rem; }
+  .price-card .val { font-family: var(--font-mono); font-size: .92rem; color: var(--accent-ink); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+  .principles { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1rem; }
+  .principles li { display: flex; gap: .8rem; align-items: flex-start; color: var(--muted); font-size: .98rem; }
+  .principles li .b { color: var(--ink); font-weight: 600; font-family: var(--font-body); }
+  .principles li::before { content: "→"; color: var(--accent); font-weight: 700; flex: none; margin-top: .05rem; }
+
+  /* ---- Roadmap ---- */
+  .phases { display: grid; gap: 1rem; }
+  .phase {
+    display: grid; grid-template-columns: auto 1fr; gap: 1.3rem;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 1.5rem 1.5rem;
+  }
+  .phase .idx {
+    font-family: var(--font-mono); font-size: .78rem; letter-spacing: .04em;
+    color: var(--accent); border: 1px solid var(--accent); border-radius: 999px;
+    padding: .28rem .7rem; height: fit-content; white-space: nowrap;
+  }
+  .phase h3 { font-size: 1.16rem; margin-bottom: .25rem; }
+  .phase .when { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin-bottom: .7rem; }
+  .phase p { margin: 0; color: var(--muted); font-size: .97rem; }
+  .phase .goal { margin-top: .8rem; font-size: .88rem; color: var(--accent-ink); font-family: var(--font-mono); }
+
+  /* ---- Cut list ---- */
+  .cut { background: var(--signal-soft); border: 1px solid color-mix(in srgb, var(--signal) 30%, transparent); border-radius: 14px; padding: 1.7rem; }
+  .cut h2 { color: var(--signal); font-size: 1.35rem; margin-bottom: .3rem; }
+  .cut .sub { color: var(--muted); margin: 0 0 1.3rem; }
+  .cut ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2,1fr); gap: .8rem 1.6rem; }
+  .cut li { display: flex; gap: .7rem; align-items: flex-start; font-size: .96rem; }
+  .cut li .x { color: var(--signal); font-weight: 700; flex: none; }
+  .cut li s { text-decoration-color: color-mix(in srgb, var(--signal) 55%, transparent); color: var(--ink); }
+  .cut li em { font-style: normal; color: var(--faint); display: block; font-size: .84rem; }
+
+  /* ---- North star + risk split ---- */
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 1.6rem; }
+  .northstar { background: var(--accent); color: #fff; border-radius: 14px; padding: 1.7rem; }
+  :root[data-theme="dark"] .northstar, .northstar { color:#fff; }
+  @media (prefers-color-scheme: dark) { .northstar { color: #04140E; } }
+  :root[data-theme="dark"] .northstar { color: #04140E; }
+  :root[data-theme="light"] .northstar { color: #fff; }
+  .northstar .k { font-family: var(--font-mono); font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; opacity: .8; margin: 0 0 .8rem; }
+  .northstar .metric { font-family: var(--font-display); font-size: 1.5rem; line-height: 1.2; font-weight: 600; margin-bottom: 1rem; }
+  .northstar .guards { display: flex; flex-direction: column; gap: .5rem; font-size: .9rem; opacity: .95; }
+  .northstar .guards div { display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid rgba(255,255,255,.22); padding-top: .5rem; }
+  .northstar .guards .gv { font-family: var(--font-mono); }
+  .risks { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 1.7rem; }
+  .risks h2 { font-size: 1.2rem; margin-bottom: 1rem; }
+  .risks .r { padding: .8rem 0; border-top: 1px solid var(--line); }
+  .risks .r:first-of-type { border-top: 0; padding-top: 0; }
+  .risks .r .rt { font-weight: 600; font-size: .95rem; }
+  .risks .r .rm { color: var(--muted); font-size: .9rem; }
+  .risks .r .rm b { color: var(--accent-ink); font-weight: 600; }
+
+  footer.foot { padding-top: 2rem; color: var(--faint); font-family: var(--font-mono); font-size: .72rem; letter-spacing: .04em; display: flex; flex-wrap: wrap; justify-content: space-between; gap: .6rem; }
+
+  @media (max-width: 720px) {
+    .grid.cols-3, .grid.cols-2, .model, .split, .cut ul { grid-template-columns: 1fr; }
+    .meta { text-align: left; }
+    .masthead { align-items: flex-start; }
+  }
+</style>
+
+<div class="brief">
+  <div class="wrap">
+
+    <header class="masthead">
+      <div class="logo">
+        <div class="mark">🩺</div>
+        <div class="name">Vend<b>AI</b> · Saúde</div>
+      </div>
+      <div class="meta">
+        Estratégia de reposicionamento<br>
+        Vertical <span>Clínicas &amp; Saúde</span> · Brasil<br>
+        v1 · Jul 2026 · Confidencial
+      </div>
+    </header>
+
+    <section class="thesis">
+      <p class="eyebrow">A tese</p>
+      <h1>O recepcionista de IA que <em>nenhuma clínica pode se dar ao luxo de perder.</em></h1>
+      <p class="lede">Responde cada paciente no WhatsApp em segundos, 24 horas por dia, tira dúvidas de procedimento e preço, e agenda direto na agenda da clínica — pelo canal <strong>oficial da Meta</strong>. Uma cunha estreita, num mercado enorme, feita para ser cobrada em 60 dias.</p>
+    </section>
+
+    <section class="block">
+      <p class="eyebrow">O problema</p>
+      <h2>Toda clínica sangra o mesmo dinheiro, todo dia.</h2>
+      <p class="sub">O gargalo não é gerar leads — é responder os que já chegaram. E é aí que a receita vaza.</p>
+      <div class="grid cols-3">
+        <div class="cell">
+          <p class="k"><span class="dot"></span>Fuga de leads</p>
+          <h3>Quem não responde em minutos, perde.</h3>
+          <p>O paciente manda mensagem, ninguém responde na hora, e ele marca na clínica do lado. Speed-to-lead é lei — e a recepção humana não vence o relógio.</p>
+        </div>
+        <div class="cell">
+          <p class="k"><span class="dot"></span>Não escala</p>
+          <h3>Recepção não cobre 24/7.</h3>
+          <p>Madrugada, fim de semana, horário de pico e almoço: são justamente as janelas em que o tráfego pago entrega mais lead — e em que não há ninguém para atender.</p>
+        </div>
+        <div class="cell">
+          <p class="k"><span class="dot"></span>Custo cego</p>
+          <h3>Paga-se por lead que morre parado.</h3>
+          <p>A clínica investe em Instagram e Google Ads, o lead chega no WhatsApp e apodrece na fila. O custo de aquisição é real; a conversão, não.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="block">
+      <p class="eyebrow">A cunha</p>
+      <h2>Um SDR de IA que só faz uma coisa — e faz muito bem.</h2>
+      <p class="sub">Não é uma plataforma de tudo. É o atendimento inbound que converte, no canal certo, sem risco de ban.</p>
+      <div class="grid cols-2">
+        <div class="cell">
+          <p class="k"><span class="dot"></span>Resposta instantânea</p>
+          <h3>Atende, qualifica e agenda em segundos.</h3>
+          <p>Responde na hora, entende o procedimento desejado, informa preço e disponibilidade, e marca na agenda da clínica — sem intervenção humana no caso simples.</p>
+        </div>
+        <div class="cell">
+          <p class="k"><span class="dot"></span>Oficial &amp; seguro</p>
+          <h3>WhatsApp Cloud API da Meta.</h3>
+          <p>Nada de biblioteca não-oficial que derruba o número da clínica. Canal oficial, com templates aprovados e opt-in — vendido como garantia, não como risco.</p>
+        </div>
+        <div class="cell">
+          <p class="k"><span class="dot"></span>Controle humano</p>
+          <h3>Handoff quando importa.</h3>
+          <p>Casos delicados, reclamações ou dúvidas clínicas vão para uma pessoa, com todo o histórico. A IA nunca dá conselho médico — fica no agendamento e na qualificação.</p>
+        </div>
+        <div class="cell">
+          <p class="k"><span class="dot"></span>Por que agora</p>
+          <h3>A janela abriu.</h3>
+          <p>WhatsApp é onipresente no Brasil, a IA amadureceu o suficiente para conversas de qualificação, e o custo de recepção só sobe. Os três se encontram agora.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="block">
+      <p class="eyebrow">Para quem, exatamente</p>
+      <h2>Um ICP afiado, não "qualquer empresa".</h2>
+      <p class="sub">A cunha entra onde a dor é medível e o decisor é acessível.</p>
+      <div class="grid cols-3">
+        <div class="cell">
+          <p class="k"><span class="dot"></span>Segmento</p>
+          <h3>Estética, odonto, dermato.</h3>
+          <p>Clínicas pequenas e médias (1–10 unidades) com alto volume de agendamento inbound e ticket que justifica automação.</p>
+        </div>
+        <div class="cell">
+          <p class="k"><span class="dot"></span>Sinal de compra</p>
+          <h3>Já roda tráfego pago.</h3>
+          <p>Quem investe em Instagram/Google e recebe leads no WhatsApp já sente a dor da fuga — e tem orçamento de marketing de onde o custo sai.</p>
+        </div>
+        <div class="cell">
+          <p class="k"><span class="dot"></span>Decisor</p>
+          <h3>Dono ou gestor.</h3>
+          <p>Ciclo de venda curto, decisão rápida, ROI demonstrável na primeira semana: "esse lead você respondeu à meia-noite e virou consulta".</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="block">
+      <p class="eyebrow">Como se ganha dinheiro</p>
+      <h2>Preço atrelado a valor, medido com honestidade.</h2>
+      <p class="sub">Tiers fixos que não mapeiam custo variável de IA são uma armadilha. Aqui a conta fecha por construção.</p>
+      <div class="model">
+        <div class="price-card">
+          <div class="row">
+            <div class="lab">Base mensal<small>Plataforma + 1 número oficial + agente treinado</small></div>
+            <div class="val">R$ 297–497 / mês</div>
+          </div>
+          <div class="row">
+            <div class="lab">Consumo<small>Por conversa qualificada / atendida</small></div>
+            <div class="val">medido, com teto</div>
+          </div>
+          <div class="row">
+            <div class="lab">Trial<small>14 dias, número de teste, sem cartão travado</small></div>
+            <div class="val">grátis · sem plano vitalício</div>
+          </div>
+          <div class="row">
+            <div class="lab">Âncora de valor<small>Comparado a contratar recepção</small></div>
+            <div class="val">&lt; ½ salário · atende 24/7</div>
+          </div>
+        </div>
+        <ul class="principles">
+          <li><span><span class="b">Medição desde o dia 1.</span> Sem instrumentar consumo de IA, o SaaS voa cego rumo ao prejuízo. Uso atômico e visível para você e para o cliente.</span></li>
+          <li><span><span class="b">Sem grátis-para-sempre.</span> O plano vitalício de limites infinitos é destruição de valor e bomba de custo. Morre agora.</span></li>
+          <li><span><span class="b">Cobrança real, confirmada.</span> Gateway de verdade (Pagar.me/Mercado Pago) com confirmação por webhook — fatura só vira "paga" no callback.</span></li>
+          <li><span><span class="b">Valores são hipótese.</span> Números para validar com os 10 primeiros clientes, não dogma.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="block">
+      <p class="eyebrow">Onde está o fosso</p>
+      <h2>O código copia-se em 3 meses. O resto, não.</h2>
+      <p class="sub">A engenharia se concentra no único lugar defensável: a qualidade do agente de saúde. Todo o resto — billing, auth, envio — a gente compra.</p>
+      <div class="grid cols-3">
+        <div class="cell">
+          <p class="k"><span class="dot"></span>Flywheel</p>
+          <h3>Cada conversa treina o nicho.</h3>
+          <p>Mais clínicas → mais conversas de saúde → agente melhor → mais difícil de alcançar. O dado é o fosso, não o software.</p>
+        </div>
+        <div class="cell">
+          <p class="k"><span class="dot"></span>Verticalização</p>
+          <h3>Um agente que já sabe vender consulta.</h3>
+          <p>Sabe falar de procedimento, convênio, objeção de preço e reagendamento de estética. Um SDR genérico compete com todo mundo; este, não.</p>
+        </div>
+        <div class="cell">
+          <p class="k"><span class="dot"></span>Confiança</p>
+          <h3>LGPD de saúde como feature.</h3>
+          <p>Dados sensíveis tratados com cuidado, opt-in, e um agente que não passa vergonha. Em B2B de saúde, isso vende.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="block">
+      <p class="eyebrow">O caminho</p>
+      <h2>Três fases, começando por "cobrar de verdade".</h2>
+      <p class="sub">Nada de construir dez features antes de validar que alguém paga pela primeira.</p>
+      <div class="phases">
+        <div class="phase">
+          <div class="idx">Fase 1</div>
+          <div>
+            <div class="when">0–60 dias · MVP vendável</div>
+            <h3>O SDR inbound que já dá para cobrar.</h3>
+            <p>Atendimento oficial (Meta) + agendamento + handoff humano. Isolamento de tenant corrigido, medição de uso funcionando, gateway de pagamento real. Escopo mínimo, compliant, confiável.</p>
+            <div class="goal">Meta: 10 clínicas pagantes e apaixonadas.</div>
+          </div>
+        </div>
+        <div class="phase">
+          <div class="idx">Fase 2</div>
+          <div>
+            <div class="when">60–180 dias · Retenção &amp; expansão</div>
+            <h3>Fazer o cliente não conseguir sair.</h3>
+            <p>Follow-up automático (no-show, reativação de paciente), integração com agendas e sistemas de clínica, painel de resultados que prova o ROI, RBAC e trilha de auditoria para equipe.</p>
+            <div class="goal">Meta: churn baixo + expansão de receita por conta.</div>
+          </div>
+        </div>
+        <div class="phase">
+          <div class="idx">Fase 3</div>
+          <div>
+            <div class="when">180 dias+ · Escala</div>
+            <h3>Multiplicar sem quebrar.</h3>
+            <p>Multiunidade, prospecção morna com opt-in, novas verticais de saúde, e a infraestrutura multi-instância com fila durável que suporta volume comercial.</p>
+            <div class="goal">Meta: crescer receita sem crescer o caos operacional.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="cut">
+        <p class="eyebrow" style="color:var(--signal)">A disciplina de cortar</p>
+        <h2>O que NÃO vamos construir (agora).</h2>
+        <p class="sub">Estratégia é tanto o que se recusa quanto o que se faz. Cada item aqui é energia devolvida à cunha.</p>
+        <ul>
+          <li><span class="x">✕</span><span><s>Disparo em massa &amp; prospecção fria</s><em>Ímã de ban e problema de LGPD. O ouro é o inbound morno.</em></span></li>
+          <li><span class="x">✕</span><span><s>Baileys como base do produto</s><em>Não-oficial derruba o número do cliente. Só modo experimental.</em></span></li>
+          <li><span class="x">✕</span><span><s>Painel financeiro / ERP interno</s><em>Não é o problema do cliente. Distrai a engenharia.</em></span></li>
+          <li><span class="x">✕</span><span><s>Plano VITALÍCIO grátis</s><em>Destrói valor e queima caixa. Sai do catálogo.</em></span></li>
+          <li><span class="x">✕</span><span><s>Dois backends (Express + Nest)</s><em>Escolhe um, deleta o outro. Uma conta de manutenção, não duas.</em></span></li>
+          <li><span class="x">✕</span><span><s>CRM genérico "para qualquer setor"</s><em>Vertical de saúde primeiro. Amplitude vem depois da profundidade.</em></span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="block" style="border-bottom:0">
+      <p class="eyebrow">Como saberemos que está funcionando</p>
+      <div class="split">
+        <div class="northstar">
+          <p class="k">North-star metric</p>
+          <p class="metric">Consultas agendadas pelo agente, por clínica, por mês.</p>
+          <div class="guards">
+            <div><span>Leads respondidos em &lt; 1 min</span><span class="gv">&gt; 95%</span></div>
+            <div><span>Taxa de handoff para humano</span><span class="gv">saudável, não zero</span></div>
+            <div><span>CSAT do paciente</span><span class="gv">monitorado</span></div>
+          </div>
+        </div>
+        <div class="risks">
+          <h2>Riscos &amp; mitigação</h2>
+          <div class="r">
+            <div class="rt">Aprovação/limites da Meta Cloud API</div>
+            <div class="rm">Entrar via <b>BSP oficial</b> (Zenvia/Gupshup) para acelerar aprovação e templates.</div>
+          </div>
+          <div class="r">
+            <div class="rt">IA dando conselho médico</div>
+            <div class="rm">Escopo <b>restrito a agendamento e qualificação</b> + guardrails de saída + handoff.</div>
+          </div>
+          <div class="r">
+            <div class="rt">Custo variável de IA corroendo margem</div>
+            <div class="rm">Preço <b>atrelado a uso medido</b>, com teto e alerta de overage por conta.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <span>VendAI · Saúde — Estratégia de reposicionamento</span>
+      <span>Cunha estreita · Oficial · Vertical · Medida</span>
+    </footer>
+
+  </div>
+</div>
