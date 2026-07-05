@@ -1,7 +1,7 @@
 import prisma from "../config/prisma.js";
 
 export const getAnalytics = async (req, res) => {
-  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const tenantId = req.tenantId;
   if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
 
   try {

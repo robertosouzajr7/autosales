@@ -30,7 +30,7 @@ export const prospectGeneric = async (req, res) => {
       return res.status(400).json({ error: "Configuração SERPER_API_KEY ausente no servidor. Verifique o arquivo .env" });
     }
 
-    const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+    const tenantId = req.tenantId;
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, include: { plan: true } });
     if (tenant?.plan) {
       if (!tenant.plan.enableProspects) {
@@ -87,7 +87,7 @@ export const searchApollo = async (req, res) => {
       return res.status(400).json({ error: "Configuração SERPER_API_KEY ausente para busca Apollo." });
     }
 
-    const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+    const tenantId = req.tenantId;
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, include: { plan: true } });
     if (tenant?.plan) {
       if (!tenant.plan.enableProspects) {
@@ -140,7 +140,7 @@ export const prospectLinkedIn = async (req, res) => {
       return res.status(400).json({ error: "Configuração SERPER_API_KEY ausente." });
     }
 
-    const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+    const tenantId = req.tenantId;
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, include: { plan: true } });
     if (tenant?.plan) {
       if (!tenant.plan.enableProspects) {

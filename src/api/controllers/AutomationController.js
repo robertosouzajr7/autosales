@@ -1,7 +1,7 @@
 import prisma from "../config/prisma.js";
 
 export const getAutomations = async (req, res) => {
-  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const tenantId = req.tenantId;
   if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
 
   try {
@@ -16,7 +16,7 @@ export const getAutomations = async (req, res) => {
 };
 
 export const createAutomation = async (req, res) => {
-  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const tenantId = req.tenantId;
   if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
 
   const { name, trigger, description, triggerConfig, nodes, edges } = req.body;
@@ -40,7 +40,7 @@ export const createAutomation = async (req, res) => {
 };
 
 export const updateAutomation = async (req, res) => {
-  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const tenantId = req.tenantId;
   if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
 
   const { id } = req.params;
@@ -66,7 +66,7 @@ export const updateAutomation = async (req, res) => {
 };
 
 export const deleteAutomation = async (req, res) => {
-  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const tenantId = req.tenantId;
   if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
 
   const { id } = req.params;
@@ -82,7 +82,7 @@ export const deleteAutomation = async (req, res) => {
 };
 
 export const duplicateAutomation = async (req, res) => {
-  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const tenantId = req.tenantId;
   if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
 
   const { id } = req.params;
@@ -115,7 +115,7 @@ export const duplicateAutomation = async (req, res) => {
 };
 
 export const getStats = async (req, res) => {
-  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const tenantId = req.tenantId;
   if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
 
   try {
@@ -141,7 +141,7 @@ export const getStats = async (req, res) => {
 };
 
 export const getConfig = async (req, res) => {
-  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const tenantId = req.tenantId;
   if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
 
   try {
@@ -162,7 +162,7 @@ export const getConfig = async (req, res) => {
 };
 
 export const updateConfig = async (req, res) => {
-  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const tenantId = req.tenantId;
   if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
 
   const {

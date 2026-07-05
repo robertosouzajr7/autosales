@@ -26,20 +26,42 @@ eventEmitter.setMaxListeners(100);
 AutomationEngine.setEventEmitter(eventEmitter);
 
 // Security
-// app.use(helmet());
+app.use(helmet({
+  // CSP desligada por ora (a default pode quebrar a SPA/uploads); configurar à parte.
+  contentSecurityPolicy: false,
+  // Permite servir /uploads a outras origens (ex.: frontend em domínio separado).
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+// CORS: em produção exige ALLOWED_ORIGINS explícito; nunca "*" com credenciais.
+// Sem a variável, produção bloqueia cross-origin (same-origin continua ok).
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim())
+  : (process.env.NODE_ENV === "production" ? [] : "*");
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(",") : "*",
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  origin: allowedOrigins,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  // x-tenant-id é IGNORADO pelo backend (tenant vem só do JWT). Mantido no
+  // allowlist apenas para não quebrar chamadas legadas do frontend que ainda
+  // o enviam; remover assim que o frontend parar de mandá-lo. Ver TODO front.
   allowedHeaders: ["Content-Type", "Authorization", "x-tenant-id"]
 }));
 
+// Rate limiting: limite estrito em autenticação (anti brute-force) + geral em /api.
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: "Muitas tentativas. Tente novamente mais tarde." }
+});
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 300,
   message: { error: "Muitas requisições. Tente novamente mais tarde." }
 });
+app.use("/api/auth/login", authLimiter);
+app.use("/api/auth/register", authLimiter);
+app.use("/api/", limiter);
 
-// app.use("/api/", limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
@@ -78,24 +100,36 @@ export async function initDB() {
 
     const superAdmin = await prisma.user.findFirst({ where: { role: "SUPERADMIN" } });
     if (!superAdmin) {
-      const hashedPassword = await bcrypt.hash("admin", 10);
-      const vitalicioPlan = await prisma.plan.findFirst({ where: { name: "VITALICIO" } });
-      const systemTenant = await prisma.tenant.upsert({
-        where: { email: "admin@agentesvirtuais.com" },
-        update: { planId: vitalicioPlan?.id },
-        create: { name: "Agentes Virtuais Global", email: "admin@agentesvirtuais.com", planId: vitalicioPlan?.id }
-      });
+      // SEGURANÇA: nada de senha padrão "admin". A senha do admin inicial vem de
+      // SUPERADMIN_PASSWORD; sem ela, o admin não é criado (evita conta god-mode
+      // com credencial trivial). Nunca logamos a credencial.
+      const adminEmail = process.env.SUPERADMIN_EMAIL || "admin@agentesvirtuais.com";
+      const adminPassword = process.env.SUPERADMIN_PASSWORD;
+      if (!adminPassword) {
+        console.warn(
+          "[INIT] Nenhum SUPERADMIN existe e SUPERADMIN_PASSWORD não foi definido. " +
+          "Defina SUPERADMIN_PASSWORD (e opcionalmente SUPERADMIN_EMAIL) e reinicie para criar o admin inicial."
+        );
+      } else {
+        const hashedPassword = await bcrypt.hash(adminPassword, 10);
+        const vitalicioPlan = await prisma.plan.findFirst({ where: { name: "VITALICIO" } });
+        const systemTenant = await prisma.tenant.upsert({
+          where: { email: adminEmail },
+          update: { planId: vitalicioPlan?.id },
+          create: { name: "Agentes Virtuais Global", email: adminEmail, planId: vitalicioPlan?.id }
+        });
 
-      await prisma.user.create({
-        data: {
-          name: "Super Administrator",
-          email: "admin@agentesvirtuais.com",
-          password: hashedPassword,
-          role: "SUPERADMIN",
-          tenantId: systemTenant.id
-        }
-      });
-      console.log("👑 SuperAdmin criado com sucesso (admin@agentesvirtuais.com / admin)");
+        await prisma.user.create({
+          data: {
+            name: "Super Administrator",
+            email: adminEmail,
+            password: hashedPassword,
+            role: "SUPERADMIN",
+            tenantId: systemTenant.id
+          }
+        });
+        console.log(`👑 SuperAdmin criado (${adminEmail}). Troque a senha no primeiro login.`);
+      }
     }
   } catch (e) {
     console.error("❌ Erro na inicialização do banco:", e);

@@ -5,12 +5,13 @@ import { EventEmitter } from "events";
 export const messageEvents = new EventEmitter();
 
 export const getMessages = async (req, res) => {
-  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const tenantId = req.tenantId;
   const { leadId } = req.params;
 
   try {
-    const conversation = await prisma.conversation.findUnique({
-      where: { leadId }
+    // findFirst com tenantId garante que a conversa pertence ao tenant (evita IDOR)
+    const conversation = await prisma.conversation.findFirst({
+      where: { leadId, tenantId }
     });
 
     if (!conversation) return res.json([]);
@@ -27,7 +28,7 @@ export const getMessages = async (req, res) => {
 };
 
 export const sendMessage = async (req, res) => {
-  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const tenantId = req.tenantId;
   const { leadId, content, role = "ASSISTANT", messageType = "TEXT" } = req.body;
 
   try {
@@ -81,17 +82,26 @@ export const sendMessage = async (req, res) => {
 };
 
 export const toggleBot = async (req, res) => {
-  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const tenantId = req.tenantId;
   const { leadId } = req.params;
   const { botActive } = req.body;
 
   try {
-    const conversation = await prisma.conversation.upsert({
-      where: { leadId },
-      update: { botActive },
-      create: { leadId, tenantId, botActive }
+    // Só permite alternar o bot de conversas do próprio tenant
+    const existing = await prisma.conversation.findFirst({ where: { leadId, tenantId } });
+    if (existing) {
+      const conversation = await prisma.conversation.update({
+        where: { leadId },
+        data: { botActive }
+      });
+      return res.json(conversation);
+    }
+    // Sem conversa ainda: confirma posse do lead antes de criar
+    const lead = await prisma.lead.findFirst({ where: { id: leadId, tenantId } });
+    if (!lead) return res.status(404).json({ error: "Lead não encontrado" });
+    const conversation = await prisma.conversation.create({
+      data: { leadId, tenantId, botActive }
     });
-
     res.json(conversation);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -99,7 +109,7 @@ export const toggleBot = async (req, res) => {
 };
 
 export const sseEvents = (req, res) => {
-  const tenantId = req.query.tenantId || req.tenantId || req.headers["x-tenant-id"];
+  const tenantId = req.tenantId;
   
   res.writeHead(200, {
     "Content-Type": "text/event-stream",
@@ -121,7 +131,7 @@ export const sseEvents = (req, res) => {
 };
 
 export const callIntent = async (req, res) => {
-  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const tenantId = req.tenantId;
   const { leadId, customMessage } = req.body;
 
   try {

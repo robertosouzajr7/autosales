@@ -41,17 +41,23 @@ export const deleteTenant = async (req, res) => {
 export const createTenantUser = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
+    // Esta rota cria usuário DE um tenant: só papéis de tenant (nunca SUPERADMIN)
+    const ASSIGNABLE_ROLES = ["OWNER", "ADMIN", "AGENT"];
+    const safeRole = ASSIGNABLE_ROLES.includes(role) ? role : "AGENT";
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { name, email, password: hashedPassword, role, tenantId: req.params.id }
+      data: { name, email, password: hashedPassword, role: safeRole, tenantId: req.params.id }
     });
-    res.json(user);
+    const { password: _pw, ...safeUser } = user;
+    res.json(safeUser);
   } catch (e) { res.status(500).json({ error: e.message }); }
 };
 
 export const deleteTenantUser = async (req, res) => {
   try {
-    await prisma.user.delete({ where: { id: req.params.userId } });
+    // Garante que o usuário pertence ao tenant da rota
+    const result = await prisma.user.deleteMany({ where: { id: req.params.userId, tenantId: req.params.id } });
+    if (result.count === 0) return res.status(404).json({ error: "Usuário não encontrado" });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 };

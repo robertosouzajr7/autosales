@@ -1,7 +1,7 @@
 import prisma from "../config/prisma.js";
 
 export const getSettings = async (req, res) => {
-  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const tenantId = req.tenantId;
   if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
 
   try {
@@ -52,7 +52,7 @@ export const getSettings = async (req, res) => {
 };
 
 export const updateSettings = async (req, res) => {
-  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const tenantId = req.tenantId;
   console.log(`[Settings] Updating tenant ${tenantId}. Body:`, req.body);
   
   const { 

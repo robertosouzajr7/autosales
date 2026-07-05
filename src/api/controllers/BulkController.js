@@ -5,7 +5,7 @@ import axios from "axios";
 
 export const getCampaigns = async (req, res) => {
   try {
-    const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+    const tenantId = req.tenantId;
     const campaigns = await prisma.campaign.findMany({
       where: { tenantId },
       include: { template: true },
@@ -17,7 +17,7 @@ export const getCampaigns = async (req, res) => {
 
 export const createCampaign = async (req, res) => {
   try {
-    const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+    const tenantId = req.tenantId;
     const { name, channel, message, scheduledAt, targetTagIds } = req.body;
 
     const template = await prisma.messageTemplate.create({
@@ -42,11 +42,11 @@ export const createCampaign = async (req, res) => {
 
 export const sendCampaign = async (req, res) => {
   try {
-    const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+    const tenantId = req.tenantId;
     const { leadIds } = req.body;
     
-    const campaign = await prisma.campaign.findUnique({
-      where: { id: req.params.id },
+    const campaign = await prisma.campaign.findFirst({
+      where: { id: req.params.id, tenantId },
       include: { template: true }
     });
     if (!campaign) return res.status(404).json({ error: "Campanha não encontrada" });
@@ -194,7 +194,7 @@ export const sendCampaign = async (req, res) => {
 
 export const importCSV = async (req, res) => {
   try {
-    const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+    const tenantId = req.tenantId;
     const { contacts } = req.body;
     const createdLeads = [];
     for (const c of contacts) {

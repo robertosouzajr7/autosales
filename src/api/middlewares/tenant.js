@@ -1,11 +1,8 @@
+// SEGURANÇA: o tenant é derivado EXCLUSIVAMENTE do JWT no authMiddleware
+// (req.tenantId). Nunca resolver tenant a partir de header/query/body em rota
+// autenticada — isso permitia acesso cross-tenant (IDOR). Este middleware não
+// deriva mais tenant de dados controlados pelo cliente.
 export const tenantMiddleware = (req, res, next) => {
-  const publicPaths = ["/api/auth/", "/api/public/", "/api/webhook/", "/api/ping"];
-  if (publicPaths.some(p => req.path.startsWith(p))) return next();
-  
-  const tenantId = req.headers["x-tenant-id"];
-  if (tenantId) {
-    req.tenantId = tenantId;
-  }
   next();
 };
 
