@@ -40,12 +40,14 @@ export class MetaManager {
 
         try {
             // Dispara para o webhook interno (o mesmo que Baileys usa) em server.js
-            const response = await axios.post('http://localhost:3000/api/webhook/whatsapp', {
+            const response = await axios.post(`http://localhost:${process.env.PORT || 3000}/api/webhook/whatsapp`, {
                 tenantId,
                 phone: from,
                 name: name || 'Lead (Meta)',
                 content,
                 source: 'Meta API'
+            }, {
+                headers: { 'x-webhook-secret': process.env.INTERNAL_WEBHOOK_SECRET || '' }
             });
 
             const data = response.data;

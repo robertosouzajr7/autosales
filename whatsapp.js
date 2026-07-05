@@ -287,9 +287,12 @@ export class WhatsAppManager {
                 }
 
                 // ═══ MODO SDR (fluxo original para leads) ═══
-                const response = await fetch('http://localhost:3000/api/webhook/whatsapp', {
+                const response = await fetch(`http://localhost:${process.env.PORT || 3000}/api/webhook/whatsapp`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-webhook-secret': process.env.INTERNAL_WEBHOOK_SECRET || ''
+                    },
                     body: JSON.stringify({
                         tenantId: webhookTenantId,
                         phone,

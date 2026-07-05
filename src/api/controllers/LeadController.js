@@ -195,11 +195,25 @@ export const bulkDeleteLeads = async (req, res) => {
 };
 
 /**
- * Webhook interno: recebe mensagens do WhatsApp (via Baileys) e processa o fluxo SDR.
+ * Webhook interno: recebe mensagens do WhatsApp (via Baileys/Meta) e processa o fluxo SDR.
  * Salva a mensagem do lead no banco e aciona a IA para gerar resposta.
- * Rota: POST /api/webhook/whatsapp (pública, autenticada por tenantId no body)
+ * Rota: POST /api/webhook/whatsapp
+ *
+ * SEGURANÇA (CR-4): autenticado por segredo compartilhado. Sem isso, qualquer
+ * anônimo poderia forjar mensagens para qualquer tenant e esgotar a cota de IA
+ * (negação de serviço financeira) + prompt injection. Falha fechado se o
+ * segredo não estiver configurado.
  */
 export const receiveWhatsappWebhook = async (req, res) => {
+  const expected = process.env.INTERNAL_WEBHOOK_SECRET;
+  if (!expected) {
+    console.error("[Webhook] INTERNAL_WEBHOOK_SECRET não configurado — recusando por segurança.");
+    return res.status(503).json({ success: false, error: "Webhook não configurado" });
+  }
+  if (req.headers["x-webhook-secret"] !== expected) {
+    return res.status(401).json({ success: false, error: "Não autorizado" });
+  }
+
   const { tenantId, phone, name, content, source = 'WhatsApp', skipNewLeadTrigger, messageType = 'TEXT' } = req.body;
 
   if (!tenantId || !phone || !content) {

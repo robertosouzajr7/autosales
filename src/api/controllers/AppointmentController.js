@@ -17,14 +17,30 @@ export const getAppointments = async (req, res) => {
 export const createAppointment = async (req, res) => {
   const { title, date, leadId, notes } = req.body;
   try {
+    const start = new Date(date);
+    if (isNaN(start.getTime())) return res.status(400).json({ error: "Data inválida" });
+    // Se houver leadId, confirma que pertence ao tenant
+    if (leadId) {
+      const lead = await prisma.lead.findFirst({ where: { id: leadId, tenantId: req.tenantId } });
+      if (!lead) return res.status(404).json({ error: "Lead não encontrado" });
+    }
+    // Evita conflito com outro agendamento no mesmo horário (slots de 1h)
+    const conflict = await prisma.appointment.findFirst({
+      where: {
+        tenantId: req.tenantId,
+        status: "SCHEDULED",
+        date: { gt: new Date(start.getTime() - 3600000), lt: new Date(start.getTime() + 3600000) }
+      }
+    });
+    if (conflict) return res.status(409).json({ error: "Já existe um agendamento nesse horário." });
     const appt = await prisma.appointment.create({
       data: {
         title,
-        date: new Date(date),
+        date: start,
         leadId,
         notes,
         tenantId: req.tenantId,
-        status: "PENDING"
+        status: "SCHEDULED" // unificado com o motor de IA e o CalendarService
       }
     });
     res.json(appt);
