@@ -257,14 +257,10 @@ export default function Conversations() {
     if (!message.trim() || !selectedChat) return;
     const content = message;
     setMessage("");
-    const tenantId = localStorage.getItem("tenantId");
     try {
       const res = await fetch("/api/messages", {
         method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "x-tenant-id": tenantId || ""
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ leadId: selectedChat.id, content, role: "SDR" })
       });
       if (res.ok) {
@@ -316,15 +312,11 @@ export default function Conversations() {
     reader.readAsDataURL(audioBlob);
     reader.onloadend = async () => {
       const base64Audio = reader.result as string;
-      const tenantId = localStorage.getItem("tenantId");
-      
+
       try {
         const res = await fetch("/api/messages", {
           method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            "x-tenant-id": tenantId || ""
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ 
             leadId: selectedChat.id, 
             content: base64Audio, 
@@ -355,10 +347,10 @@ export default function Conversations() {
 
   useEffect(() => {
     fetchData();
-    const tenantId = localStorage.getItem("tenantId");
-    if (!tenantId) return;
+    const token = localStorage.getItem("token");
+    if (!token) return;
 
-    const eventSource = new EventSource(`/api/events?tenantId=${tenantId}`);
+    const eventSource = new EventSource(`/api/events?token=${token}`);
     eventSource.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);

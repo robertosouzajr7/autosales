@@ -299,11 +299,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    const tenantId = localStorage.getItem("tenantId");
 
     if (!token) return;
 
-    const eventSource = new EventSource(`/api/events?tenantId=${tenantId}&token=${token}`);
+    const eventSource = new EventSource(`/api/events?token=${token}`);
 
     eventSource.onmessage = (event) => {
       try {

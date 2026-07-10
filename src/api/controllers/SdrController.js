@@ -1,7 +1,7 @@
 import prisma from "../config/prisma.js";
 
 export const getSdrs = async (req, res) => {
-  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const tenantId = req.tenantId;
   if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
 
   try {
@@ -16,7 +16,7 @@ export const getSdrs = async (req, res) => {
 };
 
 export const createSdr = async (req, res) => {
-  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const tenantId = req.tenantId;
   if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
 
   const {
@@ -75,7 +75,7 @@ export const createSdr = async (req, res) => {
 };
 
 export const updateSdr = async (req, res) => {
-  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const tenantId = req.tenantId;
   if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
 
   const { id } = req.params;
@@ -137,7 +137,7 @@ export const updateSdr = async (req, res) => {
 };
 
 export const deleteSdr = async (req, res) => {
-  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const tenantId = req.tenantId;
   if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
 
   const { id } = req.params;
@@ -153,7 +153,7 @@ export const deleteSdr = async (req, res) => {
 };
 
 export const trainSdr = async (req, res) => {
-  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const tenantId = req.tenantId;
   if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
 
   const { id } = req.params;

@@ -3,7 +3,7 @@ import engine from "../../../automation_engine.js";
 
 export const getProspectionStats = async (req, res) => {
   try {
-    const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+    const tenantId = req.tenantId;
 
     // 1. Logs de prospecção (as últimas 50 buscas)
     const logs = await prisma.prospectionLog.findMany({
@@ -73,7 +73,7 @@ export const getProspectionStats = async (req, res) => {
 
 export const triggerManualHunt = async (req, res) => {
   try {
-    const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+    const tenantId = req.tenantId;
     
     // Dispara a rotina em background para não travar a resposta
     engine.processAutoHunterRoutines(tenantId);

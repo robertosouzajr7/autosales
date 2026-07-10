@@ -54,7 +54,6 @@ export default function Prospecting() {
     setResults([]);
     setSelectedIds(new Set());
     
-    const tenantId = localStorage.getItem("tenantId");
 
     try {
       let endpoint = "/api/prospect";
@@ -72,8 +71,7 @@ export default function Prospecting() {
         method: "POST",
         headers: { 
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-            "x-tenant-id": tenantId || ""
+            "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify(body)
       });
@@ -98,15 +96,13 @@ export default function Prospecting() {
     if (!lead.url || enrichingIds.has(lead.id)) return;
     
     setEnrichingIds(prev => new Set(prev).add(lead.id));
-    const tenantId = localStorage.getItem("tenantId");
     const token = localStorage.getItem("token");
     try {
       const res = await fetch("/api/prospect/enrich", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json", 
-          "Authorization": `Bearer ${token}`,
-          "x-tenant-id": tenantId || "" 
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({ url: lead.url })
       });
@@ -134,15 +130,13 @@ export default function Prospecting() {
   };
 
   const importLead = async (lead: DiscoveredLead) => {
-    const tenantId = localStorage.getItem("tenantId");
     const token = localStorage.getItem("token");
     try {
       const res = await fetch("/api/leads", {
         method: "POST",
         headers: { 
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-            "x-tenant-id": tenantId || ""
+            "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
           name: lead.name,

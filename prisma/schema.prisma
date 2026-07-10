@@ -57,6 +57,7 @@ model Tenant {
   usedProspects        Int      @default(0)
   usedResearch         Int      @default(0)
   usedMessages         Int      @default(0)
+  qualifiedLeadsCount  Int      @default(0)
   lastUsageReset       DateTime @default(now())
 
   createdAt DateTime @default(now())
@@ -576,6 +577,13 @@ model Invoice {
   status      String    @default("PENDING") // PENDING, PAID, OVERDUE, CANCELED
   dueDate     DateTime
   paidAt      DateTime?
+  // Período de competência (ex.: "2026-07"). Garante idempotência do cron:
+  // uma fatura por tenant por período, imposta por constraint no banco.
+  billingPeriod String?
+  // Id da cobrança/pagamento no gateway; preenchido só pelo webhook.
+  gatewayId     String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  @@unique([tenantId, billingPeriod])
 }

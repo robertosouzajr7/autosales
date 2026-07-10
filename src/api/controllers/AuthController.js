@@ -1,8 +1,7 @@
 import prisma from "../config/prisma.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-
-const JWT_SECRET = process.env.JWT_SECRET || "vendai-secret-key-2026";
+import JWT_SECRET from "../config/jwt.js";
 
 export const login = async (req, res) => {
   try {
@@ -37,24 +36,42 @@ export const login = async (req, res) => {
   }
 };
 
+// Duração do trial gratuito ao cadastrar.
+const TRIAL_DAYS = parseInt(process.env.TRIAL_DAYS || "14", 10);
+
 export const register = async (req, res) => {
   try {
-    const { name, email, password, companyName, phone, plan } = req.body;
+    const { name, email, password, companyName, phone } = req.body;
+
+    if (!email || !password || password.length < 8) {
+      return res.status(400).json({ error: "Senha deve ter ao menos 8 caracteres." });
+    }
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) return res.status(400).json({ error: "E-mail já cadastrado" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    
-    // Find plan
-    const planDoc = await prisma.plan.findFirst({ where: { name: plan } });
+
+    // O plano NÃO é escolhido pelo cliente no cadastro. Todo signup entra em
+    // TRIAL no plano de entrada (mais barato ativo). Upgrade/pagamento é feito
+    // depois, pelo portal de billing.
+    const trialPlan = await prisma.plan.findFirst({
+      where: { active: true, priceMonthly: { gt: 0 } },
+      orderBy: { priceMonthly: "asc" }
+    });
+
+    const trialEnd = new Date();
+    trialEnd.setDate(trialEnd.getDate() + TRIAL_DAYS);
 
     const tenant = await prisma.tenant.create({
       data: {
         name: companyName,
         email,
         phone,
-        planId: planDoc?.id
+        planId: trialPlan?.id,
+        subscriptionStatus: "TRIAL",
+        trialEnd,
+        nextBillingDate: trialEnd
       }
     });
 
