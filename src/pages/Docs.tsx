@@ -51,7 +51,7 @@ const DOC_CONTENT = [
     label: "Contatos",
     icon: <Users className="w-5 h-5" />,
     title: "Gestão da Base de Leads",
-    intro: "O banco de dados central onde todas as informações dos seus prospectos ficam armazenadas de forma segura.",
+    intro: "O banco de dados central onde todas as informações dos seus pacientes ficam armazenadas de forma segura.",
     sections: [
       {
         title: "Importação e Higienização",
@@ -81,27 +81,8 @@ const DOC_CONTENT = [
     ]
   },
   {
-    id: "prospeccao",
-    label: "Prospecção Pro",
-    icon: <Target className="w-5 h-5" />,
-    title: "Mineração Ativa de Mercado",
-    intro: "Ferramenta de 'Growth' para encontrar novos clientes no Google Maps e redes sociais de forma automática.",
-    sections: [
-      {
-        title: "Como Iniciar uma Prospecção",
-        content: "Defina o nicho e a localização desejada.",
-        bullets: [
-          "Palavras-Chave: Ex: 'Clínica de Estética'.",
-          "Localização: Ex: 'Campinas - SP'.",
-          "Mineração: O sistema busca telefones e e-mails públicos de estabelecimentos ativos.",
-          "Importação: Após a busca, clique em 'Mover para Contatos' para que o SDR inicie o primeiro contato automaticamente."
-        ]
-      }
-    ]
-  },
-  {
     id: "sdr",
-    label: "Time de SDRs",
+    label: "Agente de IA",
     icon: <Bot className="w-5 h-5" />,
     title: "Parametrização de Agentes de IA",
     intro: "Aqui você define o 'cérebro' do robô. Cada SDR pode ser treinado para um produto ou público diferente.",
@@ -127,7 +108,7 @@ const DOC_CONTENT = [
       {
         title: "Entendendo os Gatilhos (Triggers)",
         bullets: [
-          "Novo Lead: Dispara assim que um lead entrar na sua base (via formulário ou prospecção).",
+          "Novo Paciente: Dispara assim que um contato entrar na sua base (via WhatsApp ou formulário).",
           "Palavra-Chave: Excelente para 'Cupom de Desconto' ou 'Falar com Atendente'.",
           "Inatividade: Dispara se o lead visualizou mas não respondeu após X horas."
         ]
@@ -140,23 +121,6 @@ const DOC_CONTENT = [
           "Bloco 'Condição': Separa leads 'Quentes' dos 'Frios' com base na resposta.",
           "Bloco 'Agendar': Envia o link de confirmação de reunião.",
           "Botão Publicar: Suas alterações só valem após clicar em 'Salvar'."
-        ]
-      }
-    ]
-  },
-  {
-    id: "disparos",
-    label: "Disparos em Massa",
-    icon: <Megaphone className="w-5 h-5" />,
-    title: "Campanhas e Broadcast",
-    intro: "Alcance milhares de pessoas ao mesmo tempo com tags e funis específicos.",
-    sections: [
-      {
-        title: "Regras de Ouro para Disparos",
-        bullets: [
-          "Seleção por Tag: Dispare apenas para quem tem a tag 'Pendente'.",
-          "Template: Crie uma mensagem com variáveis tipo 'Olá {{nome}}' para personalização.",
-          "Intervalo: O sistema gerencia o tempo entre mensagens para evitar SPAM."
         ]
       }
     ]

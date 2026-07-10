@@ -203,18 +203,18 @@ export default function LandingPage() {
          
          <div className="max-w-5xl mx-auto text-center space-y-8 relative z-10">
             <Badge className="bg-[#820AD1]/10 text-[#820AD1] border-none py-1.5 px-4 font-black text-xs uppercase tracking-widest leading-loose">
-               ⚡ A REVOLUÇÃO DA PROSPECÇÃO COM AGENTES INTELIGENTES
+               ⚡ SEU ATENDENTE DE IA NO WHATSAPP OFICIAL
             </Badge>
             <h1 className={`text-5xl lg:text-7xl font-black ${sHeroTitle} tracking-tighter leading-[0.95] text-balance`}>
-               Pare de perseguir leads.<br/>Construa uma <span className="text-[#820AD1] italic">Máquina de Vendas</span> Autônoma.
+               Nenhum paciente sem resposta.<br/>Sua clínica <span className="text-[#820AD1] italic">agendando 24h</span> por dia.
             </h1>
             <p className={`text-lg lg:text-xl ${sHeroDesc} font-medium max-w-3xl mx-auto leading-relaxed`}>
-               Enquanto seu time dorme, nosso **BDR Agent** mapeia decisores e enriquece contatos direto do Google Maps, e nosso **SDR Agent** qualifica e agenda reuniões diretamente na sua agenda comercial via WhatsApp.
+               Um agente de IA no WhatsApp oficial que responde na hora, qualifica o paciente e agenda a consulta direto na sua agenda — enquanto a sua recepção cuida de quem está na clínica.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
                <Link to="/register">
                  <Button className="h-16 px-10 text-lg font-black bg-[#820AD1] hover:bg-[#6c08b0] text-white rounded-2xl shadow-[0_20px_40px_-5px_rgba(130,10,209,0.4)] hover:scale-105 transition-all border-none">
-                   Criar Minha Máquina de Vendas
+                   Ativar meu atendente de IA
                  </Button>
                </Link>
                <a href="#how-it-works" className={`h-16 px-10 flex items-center justify-center text-sm font-bold border rounded-2xl ${sButtonSecondary} transition-all`}>
@@ -228,30 +228,30 @@ export default function LandingPage() {
       <section id="problem" className={`py-24 ${sSectionProblem} px-6 lg:px-20 transition-colors duration-300`}>
         <div className="max-w-6xl mx-auto space-y-16">
           <div className="text-center space-y-4">
-            <h2 className={`text-3xl lg:text-5xl font-black tracking-tighter ${sSectionTitle}`}>Por que o funil tradicional de prospecção está <span className="text-red-500 italic">quebrado</span>?</h2>
-            <p className={`${sSectionDesc} font-medium max-w-2xl mx-auto`}>Três grandes gargalos comercialmente drenam sua energia comercial e impedem sua empresa de escalar:</p>
+            <h2 className={`text-3xl lg:text-5xl font-black tracking-tighter ${sSectionTitle}`}>Por que sua clínica perde pacientes <span className="text-red-500 italic">todos os dias</span>?</h2>
+            <p className={`${sSectionDesc} font-medium max-w-2xl mx-auto`}>Três gargalos silenciosos esvaziam a sua agenda sem que ninguém perceba:</p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className={`p-8 border rounded-3xl space-y-4 ${sProblemCard} transition-all`}>
               <div className="bg-red-500/10 p-3 w-fit rounded-xl text-red-500"><Clock className="w-6 h-6" /></div>
-              <h3 className={`text-xl font-black ${sProblemTitle}`}>Tempo de Resposta Lento</h3>
+              <h3 className={`text-xl font-black ${sProblemTitle}`}>Resposta que demora</h3>
               <p className={`${sProblemDesc} text-sm leading-relaxed`}>
-                Um lead morre após 5 minutos sem atendimento. Vendedores humanos não conseguem dar respostas instantâneas 24h por dia, perdendo até 80% das chances de conversão.
+                Paciente sem resposta em minutos vira paciente do concorrente. No WhatsApp, quem responde primeiro agenda — e uma recepção humana não dá conta 24h por dia.
               </p>
             </div>
             <div className={`p-8 border rounded-3xl space-y-4 ${sProblemCard} transition-all`}>
               <div className="bg-red-500/10 p-3 w-fit rounded-xl text-red-500"><Users className="w-6 h-6" /></div>
-              <h3 className={`text-xl font-black ${sProblemTitle}`}>Custo Alto de Pré-Vendas (SDR)</h3>
+              <h3 className={`text-xl font-black ${sProblemTitle}`}>Recepção sobrecarregada</h3>
               <p className={`${sProblemDesc} text-sm leading-relaxed`}>
-                Contratar, treinar e manter SDRs humanos é caro. O turnover na área é gigante e a maior parte do dia é desperdiçada em tarefas manuais e cadastros de leads.
+                Sua equipe não consegue atender o balcão e o WhatsApp ao mesmo tempo. As mensagens acumulam, as ligações caem e o paciente desiste.
               </p>
             </div>
             <div className={`p-8 border rounded-3xl space-y-4 ${sProblemCard} transition-all`}>
               <div className="bg-red-500/10 p-3 w-fit rounded-xl text-red-500"><AlertCircle className="w-6 h-6" /></div>
-              <h3 className={`text-xl font-black ${sProblemTitle}`}>Bancos de Dados Frios</h3>
+              <h3 className={`text-xl font-black ${sProblemTitle}`}>Fora do horário</h3>
               <p className={`${sProblemDesc} text-sm leading-relaxed`}>
-                Comprar listas de leads gera apenas spam. Mapear empresas manualmente no Google Maps para achar telefones reais de decisores e e-mails atualizados toma dias de trabalho comercial.
+                Grande parte das mensagens chega à noite e nos fins de semana. Sem ninguém para responder, o interesse esfria e a agenda da semana seguinte fica vazia.
               </p>
             </div>
           </div>
@@ -262,35 +262,35 @@ export default function LandingPage() {
       <section id="how-it-works" className={`py-28 ${sHowItWorks} px-6 lg:px-20 transition-colors duration-300`}>
          <div className="max-w-6xl mx-auto space-y-20">
             <div className="text-center space-y-4">
-               <h2 className={`text-3xl lg:text-5xl font-black tracking-tighter ${sHowTitle}`}>Sua jornada comercial automatizada em <span className="text-[#820AD1] italic">3 passos simples</span></h2>
-               <p className={`${sSectionDesc} font-medium max-w-xl mx-auto`}>Colocamos a inteligência autônoma para trabalhar para você.</p>
+               <h2 className={`text-3xl lg:text-5xl font-black tracking-tighter ${sHowTitle}`}>Do "oi" ao agendamento em <span className="text-[#820AD1] italic">3 passos simples</span></h2>
+               <p className={`${sSectionDesc} font-medium max-w-xl mx-auto`}>Seu atendente de IA cuida do WhatsApp enquanto você cuida dos pacientes.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 relative">
                <div className="space-y-6 relative">
                   <div className={`absolute -top-6 -left-6 text-9xl font-black ${sHowNumberText} pointer-events-none select-none`}>01</div>
-                  <div className="text-[#820AD1] font-black text-xs uppercase tracking-widest">PASSO 1: MAPEAMENTO AUTÔNOMO</div>
-                  <h3 className={`text-2xl font-black ${sHowTitle} tracking-tight`}>O BDR Agent Encontra e Enriquece</h3>
+                  <div className="text-[#820AD1] font-black text-xs uppercase tracking-widest">PASSO 1: O PACIENTE CHAMA</div>
+                  <h3 className={`text-2xl font-black ${sHowTitle} tracking-tight`}>Responde na hora, com a sua voz</h3>
                   <p className={`${sSectionDesc} text-sm leading-relaxed`}>
-                     O BDR Agent busca as empresas no Google Maps conforme seu público-alvo (ICP). Ele entra no site de cada lead, busca de forma profunda no código por telefones adicionais, e-mails diretos e decisores reais, tudo de maneira automática.
+                     A qualquer hora do dia, o agente responde no WhatsApp oficial da clínica com o tom que você definir. Tira as dúvidas comuns — convênios, valores, endereço, preparo — sem deixar ninguém esperando.
                   </p>
                </div>
-               
+
                <div className="space-y-6 relative">
                   <div className={`absolute -top-6 -left-6 text-9xl font-black ${sHowNumberText} pointer-events-none select-none`}>02</div>
-                  <div className="text-[#820AD1] font-black text-xs uppercase tracking-widest">PASSO 2: CONTATO E QUALIFICAÇÃO</div>
-                  <h3 className={`text-2xl font-black ${sHowTitle} tracking-tight`}>O SDR Agent Inicia e Qualifica</h3>
+                  <div className="text-[#820AD1] font-black text-xs uppercase tracking-widest">PASSO 2: QUALIFICA COM SEGURANÇA</div>
+                  <h3 className={`text-2xl font-black ${sHowTitle} tracking-tight`}>Entende a necessidade do paciente</h3>
                   <p className={`${sSectionDesc} text-sm leading-relaxed`}>
-                     O SDR Agent aborda o lead de forma humana, enviando mensagens estratégicas únicas no WhatsApp. A IA conversa, contorna objeções, pontua o lead de 0 a 100 baseada na urgência e extrai os dados cruciais para o seu funil.
+                     A IA descobre o procedimento desejado, o convênio e a urgência para oferecer o melhor horário — sempre dentro do escopo, sem nunca dar diagnóstico ou orientação clínica.
                   </p>
                </div>
-               
+
                <div className="space-y-6 relative">
                   <div className={`absolute -top-6 -left-6 text-9xl font-black ${sHowNumberText} pointer-events-none select-none`}>03</div>
-                  <div className="text-[#820AD1] font-black text-xs uppercase tracking-widest">PASSO 3: FECHAMENTO</div>
-                  <h3 className={`text-2xl font-black ${sHowTitle} tracking-tight`}>Agendamento Automático de Reuniões</h3>
+                  <div className="text-[#820AD1] font-black text-xs uppercase tracking-widest">PASSO 3: AGENDA E CONFIRMA</div>
+                  <h3 className={`text-2xl font-black ${sHowTitle} tracking-tight`}>Marca a consulta automaticamente</h3>
                   <p className={`${sSectionDesc} text-sm leading-relaxed`}>
-                     Assim que o lead demonstra real interesse, o SDR Agent envia seu link de agenda integrada. O próprio lead escolhe o horário, o sistema confirma o agendamento no ato e faz lembretes automáticos no WhatsApp para garantir o show-rate.
+                     O agente consulta os horários livres na sua agenda, marca a consulta sem conflito, confirma na hora e envia lembretes automáticos no WhatsApp para reduzir as faltas.
                   </p>
                </div>
             </div>
@@ -310,9 +310,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 bg-[#820AD1]/10 text-[#820AD1] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Target className="w-6 h-6" />
               </div>
-              <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>BDR Agent (Performance Hunter)</h3>
+              <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>Atendente de IA 24/7</h3>
               <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
-                Varre o Google Maps a partir de palavras-chave, extraindo nomes de decisores, telefones secundários e e-mails reais do código das páginas web sem criar informações fictícias.
+                Responde todo paciente em segundos, no WhatsApp oficial, com a identidade e as informações da sua clínica (convênios, valores, endereço, preparo).
               </p>
             </Card>
 
@@ -320,9 +320,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 bg-[#820AD1]/10 text-[#820AD1] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Sparkles className="w-6 h-6" />
               </div>
-              <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>SDR Agent (Qualificação WhatsApp)</h3>
+              <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>Qualificação com segurança</h3>
               <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
-                Mensagens únicas e estratégicas com identidade e base de conhecimento (Prompt/Knowledge Base) próprias. Qualifica de forma natural, sem sobrecarregar a fila com múltiplas mensagens.
+                Entende a necessidade e agenda de forma natural, com guardrails que impedem qualquer diagnóstico ou orientação clínica. Treine o agente com a base de conhecimento da sua clínica.
               </p>
             </Card>
 
@@ -330,9 +330,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 bg-[#820AD1]/10 text-[#820AD1] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <BarChart className="w-6 h-6" />
               </div>
-              <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>Funil de Vendas (CRM/Kanban)</h3>
+              <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>Funil de Pacientes</h3>
               <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
-                Pipeline estruturado para monitorar a transição de status dos leads enriquecidos, qualificados e agendados. Mova estágios do funil com total visibilidade comercial.
+                Acompanhe cada paciente do primeiro contato à consulta marcada, em um quadro visual. Veja quem foi atendido, quem qualificou e quem agendou.
               </p>
             </Card>
 
@@ -340,9 +340,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 bg-[#820AD1]/10 text-[#820AD1] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Clock className="w-6 h-6" />
               </div>
-              <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>Reuniões (Agenda Integrada)</h3>
+              <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>Agenda integrada</h3>
               <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
-                Página pública customizada para o lead agendar um horário direto na sua conta. O SDR confirma a reunião pelo WhatsApp automaticamente em tempo real.
+                Marca direto na agenda da clínica (Google Calendar), sem conflito de horário, e confirma a consulta pelo WhatsApp automaticamente em tempo real.
               </p>
             </Card>
 
@@ -350,9 +350,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 bg-[#820AD1]/10 text-[#820AD1] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Zap className="w-6 h-6" />
               </div>
-              <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>Workflows No-Code & ICP</h3>
+              <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>Lembretes e follow-up</h3>
               <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
-                Monte fluxos de prospecção ligando gatilhos e etapas lógicas de vendas de forma no-code, definindo exatamente a segmentação de seu Público Alvo.
+                Confirmações e lembretes automáticos antes da consulta para reduzir faltas (no-show), além de retomar conversas paradas — tudo no-code.
               </p>
             </Card>
 
@@ -360,9 +360,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 bg-[#820AD1]/10 text-[#820AD1] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <MessageSquare className="w-6 h-6" />
               </div>
-              <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>Central Multi-atendimento</h3>
+              <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>Atendimento humano quando precisa</h3>
               <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
-                Central de mensagens integrada do WhatsApp Oficial. Seus atendentes humanos podem intervir a qualquer momento, assumindo a conversa onde a IA parou.
+                Central de mensagens do WhatsApp oficial. Sua recepção assume a conversa a qualquer momento, com todo o histórico, exatamente onde a IA parou.
               </p>
             </Card>
           </div>
@@ -373,8 +373,8 @@ export default function LandingPage() {
       <section id="testimonials" className={`py-24 ${sTestimonials} px-6 lg:px-20 transition-colors duration-300`}>
         <div className="max-w-6xl mx-auto space-y-16">
           <div className="text-center space-y-4">
-             <h2 className={`text-3xl lg:text-5xl font-black tracking-tighter ${sSectionTitle}`}>Empresas que escalaram sua <span className="text-[#820AD1] italic">prospecção comercial</span></h2>
-             <p className={`${sSectionDesc} font-medium max-w-xl mx-auto`}>Histórias de quem parou de perder tempo com tarefas repetitivas e focou em fechar negócios.</p>
+             <h2 className={`text-3xl lg:text-5xl font-black tracking-tighter ${sSectionTitle}`}>Clínicas que pararam de <span className="text-[#820AD1] italic">perder pacientes</span></h2>
+             <p className={`${sSectionDesc} font-medium max-w-xl mx-auto`}>Histórias de quem encheu a agenda respondendo todo paciente na hora, sem sobrecarregar a recepção.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -382,14 +382,14 @@ export default function LandingPage() {
                 <div className="space-y-4">
                    <div className="flex text-amber-500"><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/></div>
                    <p className={`${sTestimonialText} text-sm italic leading-relaxed`}>
-                      "Com o BDR Agent, conseguimos mapear todas as construtoras da nossa região. O sistema encontrou o e-mail real dos decisores e os telefones extras. O SDR Agent qualificou mais de 450 leads em 2 semanas."
+                      "O agente responde os pacientes na hora, mesmo de madrugada. Nossa recepção parou de viver apagando incêndio no WhatsApp e a agenda encheu — mais de 120 consultas marcadas sozinhas no primeiro mês."
                    </p>
                 </div>
                 <div className={`flex items-center gap-3 pt-4 border-t ${isDarkMode ? 'border-purple-950/30' : 'border-purple-100'}`}>
                    <div className="w-10 h-10 bg-[#820AD1]/20 rounded-full flex items-center justify-center font-black text-[#820AD1]">TF</div>
                    <div>
                       <p className={`text-sm font-black ${sTestimonialAuthor}`}>Thiago Fonseca</p>
-                      <p className={`text-[10px] uppercase font-black ${sTestimonialRole}`}>Diretor Comercial - Construtora Real</p>
+                      <p className={`text-[10px] uppercase font-black ${sTestimonialRole}`}>Gestor - Clínica Vida Plena</p>
                    </div>
                 </div>
              </Card>
@@ -398,14 +398,14 @@ export default function LandingPage() {
                 <div className="space-y-4">
                    <div className="flex text-amber-500"><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/></div>
                    <p className={`${sTestimonialText} text-sm italic leading-relaxed`}>
-                      "Nossa maior dor era o tempo de resposta no WhatsApp. Os leads chegavam e demoravam horas para serem respondidos. Agora, com a qualificação da Risia 24h, o lead recebe retorno instantâneo e agenda a reunião sozinho."
+                      "Nossa maior dor era o tempo de resposta no WhatsApp. O paciente chegava e demorava horas para ser atendido. Agora recebe retorno instantâneo, tira as dúvidas e agenda a consulta sozinho, 24h por dia."
                    </p>
                 </div>
                 <div className={`flex items-center gap-3 pt-4 border-t ${isDarkMode ? 'border-purple-950/30' : 'border-purple-100'}`}>
                    <div className="w-10 h-10 bg-[#820AD1]/20 rounded-full flex items-center justify-center font-black text-[#820AD1]">AM</div>
                    <div>
                       <p className={`text-sm font-black ${sTestimonialAuthor}`}>Aline Mendes</p>
-                      <p className={`text-[10px] uppercase font-black ${sTestimonialRole}`}>Fundadora - CRM Flow SaaS</p>
+                      <p className={`text-[10px] uppercase font-black ${sTestimonialRole}`}>Fundadora - Clínica Odonto Sorriso</p>
                    </div>
                 </div>
              </Card>
@@ -414,14 +414,14 @@ export default function LandingPage() {
                 <div className="space-y-4">
                    <div className="flex text-amber-500"><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/></div>
                    <p className={`${sTestimonialText} text-sm italic leading-relaxed`}>
-                      "Reduzimos nosso custo comercial pela metade. Em vez de manter 3 SDRs qualificando no manual, mantemos a IA fazendo o primeiro contato e nosso comercial humano foca 100% do tempo em fechar o contrato."
+                      "Reduzimos as faltas quase pela metade com os lembretes automáticos. E a recepção, que vivia presa no celular, voltou a focar no paciente que está na clínica. A IA cuida do primeiro contato."
                    </p>
                 </div>
                 <div className={`flex items-center gap-3 pt-4 border-t ${isDarkMode ? 'border-purple-950/30' : 'border-purple-100'}`}>
                    <div className="w-10 h-10 bg-[#820AD1]/20 rounded-full flex items-center justify-center font-black text-[#820AD1]">RC</div>
                    <div>
                       <p className={`text-sm font-black ${sTestimonialAuthor}`}>Ricardo Cruz</p>
-                      <p className={`text-[10px] uppercase font-black ${sTestimonialRole}`}>Gerente de Vendas - HubTech</p>
+                      <p className={`text-[10px] uppercase font-black ${sTestimonialRole}`}>Gestor - Clínica Fisio Movimento</p>
                    </div>
                 </div>
              </Card>
@@ -433,8 +433,8 @@ export default function LandingPage() {
       <section id="pricing" className={`py-28 ${sPricing} px-6 lg:px-20 transition-colors duration-300`}>
          <div className="max-w-6xl mx-auto space-y-20">
             <div className="text-center space-y-4">
-               <h2 className={`text-3xl lg:text-5xl font-black ${sSectionTitle} tracking-tighter leading-none`}>Preço Justo para <span className="text-[#820AD1] italic">Resultados Reais</span></h2>
-               <p className={`${sSectionDesc} text-lg font-medium`}>Sem taxas ocultas. Escolha o plano ideal para a sua escala comercial.</p>
+               <h2 className={`text-3xl lg:text-5xl font-black ${sSectionTitle} tracking-tighter leading-none`}>Preço justo para <span className="text-[#820AD1] italic">agenda cheia</span></h2>
+               <p className={`${sSectionDesc} text-lg font-medium`}>Sem taxas ocultas. Escolha o plano ideal para o tamanho da sua clínica.</p>
             </div>
             
             <div className={`grid grid-cols-1 ${visiblePlans.length === 2 ? 'md:grid-cols-2' : visiblePlans.length >= 3 ? 'md:grid-cols-3' : 'md:grid-cols-1'} gap-10 max-w-5xl mx-auto items-end pt-8`}>
@@ -457,31 +457,25 @@ export default function LandingPage() {
                        
                        <ul className={`space-y-3 pt-4 border-t ${sPricingBorderMuted(isRecommended)}`}>
                           <li className="flex items-center gap-2 text-xs font-bold">
-                             <Check className="w-4 h-4 shrink-0" /> 
-                             <span>CRM & Funil de Vendas (Kanban)</span>
+                             <Check className="w-4 h-4 shrink-0" />
+                             <span>Agente de IA no WhatsApp oficial</span>
                           </li>
                           <li className="flex items-center gap-2 text-xs font-bold">
-                             <Check className="w-4 h-4 shrink-0" /> 
-                             <span>Agendador de Reuniões</span>
+                             <Check className="w-4 h-4 shrink-0" />
+                             <span>Agenda integrada (Google Calendar)</span>
                           </li>
                           <li className="flex items-center gap-2 text-xs font-bold">
-                             <Check className="w-4 h-4 shrink-0" /> 
-                             <span>Central de Conversas</span>
+                             <Check className="w-4 h-4 shrink-0" />
+                             <span>Funil de Pacientes (Kanban)</span>
                           </li>
                           <li className="flex items-center gap-2 text-xs font-bold">
-                             <Check className="w-4 h-4 shrink-0" /> 
-                             <span>BDR Agent (Buscas Google Maps)</span>
+                             <Check className="w-4 h-4 shrink-0" />
+                             <span>Central de Conversas + atendimento humano</span>
                           </li>
                           <li className="flex items-center gap-2 text-xs font-bold">
-                             <Check className="w-4 h-4 shrink-0" /> 
-                             <span>Automações {featuresData.automations || "Inclusas"}</span>
+                             <Check className="w-4 h-4 shrink-0" />
+                             <span>Lembretes e automações {featuresData.automations || "inclusos"}</span>
                           </li>
-                          {featuresData.massMessaging && (
-                            <li className="flex items-center gap-2 text-xs font-bold">
-                               <Check className="w-4 h-4 shrink-0" /> 
-                               <span>Disparos em Massa</span>
-                            </li>
-                          )}
                           {featuresData.webhooks && (
                             <li className="flex items-center gap-2 text-xs font-bold">
                                <Check className="w-4 h-4 shrink-0" /> 
@@ -493,24 +487,16 @@ export default function LandingPage() {
                        <div className={`space-y-3 pt-6 border-t ${sPricingBorderMuted(isRecommended)}`}>
                            <p className={`text-[9px] font-black uppercase tracking-[0.2em] mb-4 ${sPricingTextMuted(isRecommended)}`}>Limites do Plano</p>
                            <div className={`flex justify-between items-center text-xs font-bold ${!plan.enableSdr ? 'opacity-40' : ''}`}>
-                              <span className={`${sPricingTextMuted(isRecommended)} ${!plan.enableSdr ? 'line-through' : ''}`}>Agentes SDR Ativos</span>
-                              <span>{plan.enableSdr ? `Até ${plan.maxSdrs} Bots` : 'Não disponível'}</span>
+                              <span className={`${sPricingTextMuted(isRecommended)} ${!plan.enableSdr ? 'line-through' : ''}`}>Agentes de IA Ativos</span>
+                              <span>{plan.enableSdr ? `Até ${plan.maxSdrs}` : 'Não disponível'}</span>
                            </div>
                            <div className={`flex justify-between items-center text-xs font-bold ${!plan.enableTokens ? 'opacity-40' : ''}`}>
-                              <span className={`${sPricingTextMuted(isRecommended)} ${!plan.enableTokens ? 'line-through' : ''}`}>Créditos de Tokens/IA</span>
+                              <span className={`${sPricingTextMuted(isRecommended)} ${!plan.enableTokens ? 'line-through' : ''}`}>Créditos de IA</span>
                               <span>{plan.enableTokens ? `${(plan.maxTokens / 1000).toLocaleString()}k Tokens` : 'Não disponível'}</span>
-                           </div>
-                           <div className={`flex justify-between items-center text-xs font-bold ${!plan.enableProspects ? 'opacity-40' : ''}`}>
-                              <span className={`${sPricingTextMuted(isRecommended)} ${!plan.enableProspects ? 'line-through' : ''}`}>Varreduras de BDR/mês</span>
-                              <span>{plan.enableProspects ? `${plan.maxProspects.toLocaleString()} Buscas` : 'Não disponível'}</span>
-                           </div>
-                           <div className={`flex justify-between items-center text-xs font-bold ${!plan.enableResearch ? 'opacity-40' : ''}`}>
-                              <span className={`${sPricingTextMuted(isRecommended)} ${!plan.enableResearch ? 'line-through' : ''}`}>Pesquisas de Deep Research</span>
-                              <span>{plan.enableResearch ? `${plan.maxResearch.toLocaleString()} Unidades` : 'Não disponível'}</span>
                            </div>
                            <div className={`flex justify-between items-center text-xs font-bold ${!plan.enableMessages ? 'opacity-40' : ''}`}>
                               <span className={`${sPricingTextMuted(isRecommended)} ${!plan.enableMessages ? 'line-through' : ''}`}>Mensagens/mês</span>
-                              <span>{plan.enableMessages ? `${plan.maxMessages.toLocaleString()} Envios` : 'Não disponível'}</span>
+                              <span>{plan.enableMessages ? `${plan.maxMessages.toLocaleString()} Mensagens` : 'Não disponível'}</span>
                            </div>
                         </div>
                        
@@ -538,30 +524,30 @@ export default function LandingPage() {
 
             <div className="space-y-6">
                <div className={`p-6 border rounded-2xl space-y-2 ${sFaqItem}`}>
-                  <h4 className={`font-black ${sFaqTitle} text-base`}>Os leads percebem que estão conversando com uma Inteligência Artificial?</h4>
+                  <h4 className={`font-black ${sFaqTitle} text-base`}>Os pacientes percebem que estão falando com uma Inteligência Artificial?</h4>
                   <p className={`${sFaqDesc} text-sm leading-relaxed`}>
-                     Não. O SDR Agent foi desenhado para enviar apenas uma mensagem estratégica e humanizada por interação (evitando spams e mensagens picadas). O fluxo é natural, profissional, e responde exatamente conforme a sua base de conhecimento e diretrizes da empresa.
-                  </p>
-               </div>
-               
-               <div className={`p-6 border rounded-2xl space-y-2 ${sFaqItem}`}>
-                  <h4 className={`font-black ${sFaqTitle} text-base`}>Como o BDR Agent busca as informações de e-mails e telefones?</h4>
-                  <p className={`${sFaqDesc} text-sm leading-relaxed`}>
-                     Ele usa o Google Maps a partir das suas palavras-chave e faz uma varredura completa. Ele entra no site de cada empresa e mapeia o código-fonte em busca de telefones de contato secundários, e-mails comerciais e decisores mapeados, atualizando os dados diretamente no CRM.
+                     A conversa é natural e humanizada, com o tom e as informações da sua clínica (base de conhecimento própria). E, sempre que o paciente pedir ou o assunto exigir, a conversa passa para a sua recepção com todo o histórico.
                   </p>
                </div>
 
                <div className={`p-6 border rounded-2xl space-y-2 ${sFaqItem}`}>
-                  <h4 className={`font-black ${sFaqTitle} text-base`}>Posso conectar meu WhatsApp comercial de uso diário?</h4>
+                  <h4 className={`font-black ${sFaqTitle} text-base`}>A IA dá orientação médica ou responde dúvidas clínicas?</h4>
                   <p className={`${sFaqDesc} text-sm leading-relaxed`}>
-                     Sim, você conecta via QR Code oficial no painel em segundos. A IA só responde os leads que entram pelas automações e o seu time humano pode intervir na conversa a qualquer momento a partir da Central de Atendimento.
+                     Não — por design. O agente tem regras invioláveis que o impedem de dar diagnóstico, prescrição ou qualquer orientação clínica. O papel dele é informar, qualificar e agendar; questões de saúde são sempre encaminhadas ao profissional.
                   </p>
                </div>
 
                <div className={`p-6 border rounded-2xl space-y-2 ${sFaqItem}`}>
-                  <h4 className={`font-black ${sFaqTitle} text-base`}>Consigo integrar com outros CRMs e sistemas?</h4>
+                  <h4 className={`font-black ${sFaqTitle} text-base`}>Uso o WhatsApp oficial? Meu número corre risco de bloqueio?</h4>
                   <p className={`${sFaqDesc} text-sm leading-relaxed`}>
-                     Sim! A partir do plano ENTERPRISE, você tem acesso completo a Webhooks e API nativos para enviar informações de leads qualificados ou reuniões agendadas para o ActiveCampaign, Hubspot, Pipefy ou qualquer outro sistema de vendas.
+                     Trabalhamos com a API oficial do WhatsApp (Meta), o canal aprovado para empresas — sem gambiarras que arriscam o número da clínica. Sua equipe pode intervir na conversa a qualquer momento pela Central de Atendimento.
+                  </p>
+               </div>
+
+               <div className={`p-6 border rounded-2xl space-y-2 ${sFaqItem}`}>
+                  <h4 className={`font-black ${sFaqTitle} text-base`}>E a LGPD? Como ficam os dados dos pacientes?</h4>
+                  <p className={`${sFaqDesc} text-sm leading-relaxed`}>
+                     A plataforma nasce adequada à LGPD: consentimento registrado, descadastro imediato quando o paciente pede ("PARAR"), e exportação ou exclusão definitiva dos dados de qualquer paciente direto no painel.
                   </p>
                </div>
             </div>
@@ -572,9 +558,9 @@ export default function LandingPage() {
       <section className={`py-28 text-center relative overflow-hidden ${sCTA} transition-colors duration-300`}>
          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#820AD1]/10 rounded-full blur-[180px] pointer-events-none" />
          <div className="max-w-4xl mx-auto space-y-8 relative z-10">
-            <h2 className="text-4xl lg:text-6xl font-black tracking-tighter">Chegou a hora de transformar seu processo de prospecção.</h2>
+            <h2 className="text-4xl lg:text-6xl font-black tracking-tighter">Chegou a hora de encher a agenda da sua clínica.</h2>
             <p className={`font-medium text-lg lg:text-xl max-w-2xl mx-auto leading-relaxed ${sCTADesc}`}>
-               Automatize a busca de contatos e a qualificação comercial. Pare de perder leads frios no WhatsApp e coloque reuniões diretamente na agenda do seu time comercial.
+               Pare de perder pacientes por demora no WhatsApp. Ative seu atendente de IA e veja as consultas sendo marcadas sozinhas — de dia, de noite e no fim de semana.
             </p>
             <div className="pt-4">
                <Link to="/register">
@@ -582,7 +568,7 @@ export default function LandingPage() {
                    Testar a Plataforma Grátis
                  </Button>
                </Link>
-               <p className="text-xs text-purple-300 font-bold uppercase tracking-widest mt-4">Teste grátis por 7 dias • Sem burocracia comercial</p>
+               <p className="text-xs text-purple-300 font-bold uppercase tracking-widest mt-4">Teste grátis • Sem cartão de crédito • Cancele quando quiser</p>
             </div>
          </div>
       </section>
@@ -595,7 +581,7 @@ export default function LandingPage() {
                   {settings?.logoUrl ? <img src={settings.logoUrl} className="h-8 grayscale opacity-60" /> : <img src="/logo.png" className="h-8 w-auto grayscale opacity-60" />}
                   <span className={`text-xl font-black ${sFooterTitle} tracking-tighter uppercase italic`}>Auto<span className="text-[#820AD1]">Sales</span></span>
                </div>
-               <p className={`text-xs font-bold ${sFooterDesc}`}>Acelere sua tração com agentes autônomos de vendas.</p>
+               <p className={`text-xs font-bold ${sFooterDesc}`}>Atendimento inteligente 24h para clínicas no WhatsApp.</p>
             </div>
             <div className="text-xs font-bold text-center md:text-right space-y-2">
                <div>E-mail oficial: contato@agentesvirtuais.com</div>
@@ -632,7 +618,7 @@ export default function LandingPage() {
            <div className={`p-6 text-white flex items-center gap-4 border-b ${isDarkMode ? 'bg-[#1c0133] border-purple-950/40' : 'bg-purple-50 border-purple-100'}`}>
               <div className="w-12 h-12 bg-[#820AD1] rounded-full flex items-center justify-center font-black text-white">AI</div>
               <div>
-                 <h4 className={`font-black text-sm uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-[#2D0052]'}`}>Consultor Estratégico</h4>
+                 <h4 className={`font-black text-sm uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-[#2D0052]'}`}>Assistente AutoSales</h4>
                  <p className="text-[10px] text-[#820AD1] font-bold flex items-center gap-1"><span className="w-2 h-2 bg-[#820AD1] rounded-full animate-ping" /> Especialista online agora</p>
               </div>
            </div>
@@ -640,7 +626,7 @@ export default function LandingPage() {
            <div className={`flex-1 h-96 p-6 overflow-y-auto space-y-4 ${isDarkMode ? 'bg-[#120024]' : 'bg-[#F8F6FC]'}`}>
               {chatHistory.length === 0 && (
                 <div className={`p-4 rounded-2xl border text-xs font-bold italic ${isDarkMode ? 'bg-[#1c0133] border-purple-950/40 text-purple-200' : 'bg-white border-purple-100 text-purple-950/70'}`}>
-                   Olá! Sou o consultor de prospecção da AutoSales. Como posso ajudar você a construir sua máquina comercial hoje?
+                   Olá! Sou o assistente da AutoSales. Quer ver como um agente de IA pode atender e agendar os pacientes da sua clínica 24h por dia?
                 </div>
               )}
               {chatHistory.map((msg, i) => (

@@ -4,7 +4,6 @@ import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import CRM from "@/pages/CRM";
 import Automations from "@/pages/Automations";
-import Prospecting from "@/pages/Prospecting";
 import Settings from "@/pages/Settings";
 import Connections from "@/pages/Connections";
 import AdminDashboard from "@/pages/AdminDashboard"; // Módulo SaaS Owner
@@ -15,11 +14,8 @@ import Contacts from "@/pages/Contacts";
 import Appointments from "@/pages/Appointments";
 import Analytics from "@/pages/Analytics";
 import AutomationConfig from "@/pages/AutomationConfig";
-import BulkMessaging from "@/pages/BulkMessaging";
 import PublicBooking from "@/pages/PublicBooking";
 import PublicWebchat from "@/pages/PublicWebchat";
-import IcpManagement from "@/pages/IcpManagement";
-import ProspectionAnalytics from "@/pages/ProspectionAnalytics";
 import Docs from "@/pages/Docs";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -40,15 +36,11 @@ function App() {
         <Route path="/crm" element={<CRM />} />
         <Route path="/contacts" element={<Contacts />} />
         <Route path="/appointments" element={<Appointments />} />
-        <Route path="/prospecting" element={<Prospecting />} />
-        <Route path="/prospecting/analytics" element={<ProspectionAnalytics />} />
-        <Route path="/prospecting/icp" element={<IcpManagement />} />
         <Route path="/sdrs" element={<SdrManagement />} />
         <Route path="/automations" element={<Automations />} />
         <Route path="/automations/config" element={<AutomationConfig />} />
         <Route path="/docs" element={<Docs />} />
         <Route path="/connections" element={<Connections />} />
-        <Route path="/disparos" element={<BulkMessaging />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/analytics" element={<Analytics />} />
 
