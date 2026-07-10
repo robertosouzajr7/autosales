@@ -16,6 +16,8 @@ import AutomationEngine from "../../automation_engine.js";
 import { receiveWhatsappWebhook } from "./controllers/LeadController.js";
 import { verifyMetaWebhook, receiveMetaWebhook } from "./controllers/MetaWebhookController.js";
 import { receivePaymentWebhook } from "./controllers/PaymentWebhookController.js";
+import { logger } from "./config/logger.js";
+import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { EventEmitter } from "events";
 
@@ -24,8 +26,39 @@ dotenv.config();
 const app = express();
 app.set("trust proxy", 1); // Necessário para o rateLimit funcionar atrás do Nginx/Easypanel proxy
 const eventEmitter = new EventEmitter();
-eventEmitter.setMaxListeners(100); 
+eventEmitter.setMaxListeners(100);
 AutomationEngine.setEventEmitter(eventEmitter);
+
+// Health checks — sem auth, sem rate limit. Devem vir ANTES de tudo.
+// /healthz = liveness (o processo está de pé). /readyz = readiness (o banco
+// responde), usado pelo orquestrador para decidir se manda tráfego.
+app.get("/healthz", (_req, res) => res.status(200).json({ status: "ok", uptime: process.uptime() }));
+app.get("/readyz", async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.status(200).json({ status: "ready" });
+  } catch (e) {
+    res.status(503).json({ status: "not_ready", error: "database" });
+  }
+});
+
+// requestId + log estruturado por requisição (com tenantId quando autenticado).
+app.use((req, res, next) => {
+  req.id = req.get("x-request-id") || crypto.randomUUID();
+  res.setHeader("x-request-id", req.id);
+  const start = Date.now();
+  res.on("finish", () => {
+    logger.info({
+      reqId: req.id,
+      method: req.method,
+      path: req.path,
+      status: res.statusCode,
+      ms: Date.now() - start,
+      tenantId: req.tenantId || null
+    }, "request");
+  });
+  next();
+});
 
 // Security
 // CSP desativado porque o mesmo Express serve a SPA/landing com scripts inline.
@@ -65,13 +98,6 @@ app.use(express.json({
   verify: (req, _res, buf) => { req.rawBody = buf; }
 }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
-
-if (process.env.NODE_ENV === "development") {
-    app.use((req, res, next) => {
-        console.log(`[REQ] ${req.method} ${req.url}`);
-        next();
-    });
-}
 
 // ⚡ Webhook WhatsApp (DEVE ser antes dos routers com authMiddleware)
 app.post("/api/webhook/whatsapp", receiveWhatsappWebhook);

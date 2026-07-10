@@ -55,7 +55,8 @@ export const sendCampaign = async (req, res) => {
       where: { id: tenantId },
       include: { plan: true }
     });
-    const leads = await prisma.lead.findMany({ where: { id: { in: leadIds }, tenantId } });
+    // LGPD: nunca disparar para leads que pediram opt-out.
+    const leads = await prisma.lead.findMany({ where: { id: { in: leadIds }, tenantId, optedOut: false } });
 
     // 🛡️ VERIFICAÇÃO DE COTA (Limite por Plano)
     const maxMessages = tenant.plan?.maxMessages || 1000;
