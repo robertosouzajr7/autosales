@@ -435,10 +435,10 @@ export default function AdminDashboard() {
         
         {/* Header Hero */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-slate-900 p-12 rounded-[50px] shadow-3xl relative overflow-hidden">
-           <div className="absolute top-0 right-0 w-96 h-96 bg-[#820AD1]/10 blur-[100px] rounded-full" />
+           <div className="absolute top-0 right-0 w-96 h-96 bg-[#0D9488]/10 blur-[100px] rounded-full" />
            <div className="space-y-2 relative z-10">
               <h1 className="text-4xl font-black text-white tracking-tighter uppercase flex items-center gap-3">
-                 SaaS <span className="text-[#820AD1] italic">Central</span>
+                 SaaS <span className="text-[#0D9488] italic">Central</span>
               </h1>
               <p className="text-white/30 font-bold uppercase tracking-widest text-[9px]">Painel de Controle do Fundador</p>
            </div>
@@ -447,7 +447,7 @@ export default function AdminDashboard() {
               {activeTab === "general" && (
                 <Button 
                   onClick={() => { setSelectedTenant(null); setIsEditTenantModalOpen(true); }} 
-                  className="h-14 bg-[#820AD1] hover:bg-[#6c08b0] px-8 rounded-2xl font-black uppercase text-[10px] tracking-widest text-white shadow-xl shadow-[#820AD1]/20 active:scale-95 transition-all animate-in fade-in"
+                  className="h-14 bg-[#0D9488] hover:bg-[#0F766E] px-8 rounded-2xl font-black uppercase text-[10px] tracking-widest text-white shadow-xl shadow-[#0D9488]/20 active:scale-95 transition-all animate-in fade-in"
                 >
                   <Plus className="w-5 h-5 mr-3" /> Novo Cliente
                 </Button>
@@ -478,7 +478,7 @@ export default function AdminDashboard() {
                       });
                       setIsTxModalOpen(true);
                     }} 
-                    className="h-14 bg-[#820AD1] hover:bg-[#6c08b0] px-8 rounded-2xl font-black uppercase text-[10px] tracking-widest text-white shadow-xl active:scale-95 transition-all"
+                    className="h-14 bg-[#0D9488] hover:bg-[#0F766E] px-8 rounded-2xl font-black uppercase text-[10px] tracking-widest text-white shadow-xl active:scale-95 transition-all"
                   >
                     <Plus className="w-5 h-5 mr-3" /> Nova Transação
                   </Button>
@@ -499,9 +499,9 @@ export default function AdminDashboard() {
           {/* TAB 1: CLIENTES */}
           <TabsContent value="general" className="space-y-10 animate-in slide-in-from-bottom-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-               <StatCard icon={<Building2 className="text-[#820AD1]" />} label="Clientes SaaS" value={tenants.length} />
+               <StatCard icon={<Building2 className="text-[#0D9488]" />} label="Clientes SaaS" value={tenants.length} />
                <StatCard icon={<TrendingUp className="text-emerald-500" />} label="MRR Estimado" value={`R$ ${tenants.reduce((acc, t) => acc + (t.plan?.priceMonthly || 0), 0).toFixed(2)}`} />
-               <StatCard icon={<Package className="text-purple-500" />} label="Planos Ativos" value={plans.length} />
+               <StatCard icon={<Package className="text-teal-500" />} label="Planos Ativos" value={plans.length} />
                <StatCard icon={<Activity className="text-orange-500" />} label="Status Infra" value="Online" />
             </div>
 
@@ -539,7 +539,7 @@ export default function AdminDashboard() {
                                     </div>
                                  </td>
                                  <td className="p-6">
-                                    <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 border-none font-bold">
+                                    <Badge className="bg-teal-100 text-teal-700 hover:bg-teal-100 border-none font-bold">
                                        {tenant.plan?.name || "Sem Plano"}
                                     </Badge>
                                  </td>
@@ -550,7 +550,7 @@ export default function AdminDashboard() {
                                  </td>
                                  <td className="p-6 text-right">
                                     <div className="flex justify-end gap-2">
-                                       <Button variant="ghost" size="icon" className="group-hover:text-[#820AD1]" onClick={(e) => { e.stopPropagation(); setSelectedTenant(tenant); setIsEditTenantModalOpen(true); }}>
+                                       <Button variant="ghost" size="icon" className="group-hover:text-[#0D9488]" onClick={(e) => { e.stopPropagation(); setSelectedTenant(tenant); setIsEditTenantModalOpen(true); }}>
                                           <SettingsIcon className="w-4 h-4" />
                                        </Button>
                                        <Button variant="ghost" size="icon" className="hover:text-red-500" onClick={(e) => { e.stopPropagation(); handleDeleteTenant(tenant.id); }}>
@@ -571,7 +571,7 @@ export default function AdminDashboard() {
           <TabsContent value="plans" className="animate-in slide-in-from-bottom-4 space-y-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-2xl font-black text-slate-800 flex items-center gap-3">
-                <Package className="w-8 h-8 text-[#820AD1]" /> Configurações de Planos
+                <Package className="w-8 h-8 text-[#0D9488]" /> Configurações de Planos
               </h3>
               <Button 
                 onClick={() => {
@@ -590,9 +590,9 @@ export default function AdminDashboard() {
                     <div>
                       <div className="flex justify-between items-start">
                         <h4 className="text-2xl font-black text-slate-800 group-hover:text-white mb-2">{plan.name}</h4>
-                        <Badge className="bg-[#820AD1]/10 text-[#820AD1] font-bold border-none uppercase text-[8px] tracking-widest">Ativo</Badge>
+                        <Badge className="bg-[#0D9488]/10 text-[#0D9488] font-bold border-none uppercase text-[8px] tracking-widest">Ativo</Badge>
                       </div>
-                      <p className="text-3xl font-black text-[#820AD1] italic mt-2">R$ {plan.priceMonthly.toFixed(2)}<span className="text-xs text-slate-400 group-hover:text-white/40">/mês</span></p>
+                      <p className="text-3xl font-black text-[#0D9488] italic mt-2">R$ {plan.priceMonthly.toFixed(2)}<span className="text-xs text-slate-400 group-hover:text-white/40">/mês</span></p>
                       
                       {/* Operational Margin Indicators */}
                       <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-500 group-hover:text-white/60">
@@ -625,7 +625,7 @@ export default function AdminDashboard() {
             {/* Financial indicators */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
                <StatCard 
-                 icon={<TrendingUp className="text-[#820AD1]" />} 
+                 icon={<TrendingUp className="text-[#0D9488]" />} 
                  label="MRR Recorrente" 
                  value={`R$ ${(financialSummary?.mrr || 0).toFixed(2)}`} 
                />
@@ -640,7 +640,7 @@ export default function AdminDashboard() {
                  value={`R$ ${(financialSummary?.totalExpenses || 0).toFixed(2)}`} 
                />
                <StatCard 
-                 icon={<Activity className="text-purple-500" />} 
+                 icon={<Activity className="text-teal-500" />} 
                  label="Custo Operacional Clientes" 
                  value={`R$ ${(financialSummary?.totalClientOperationalCosts || 0).toFixed(2)}`} 
                />
@@ -661,7 +661,7 @@ export default function AdminDashboard() {
                     <CardTitle className="text-xl font-black text-slate-800 italic uppercase">Custo Operacional de Clientes</CardTitle>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Cálculo dinâmico baseado no uso dos limites</p>
                   </div>
-                  <Sparkles className="w-6 h-6 text-[#820AD1]" />
+                  <Sparkles className="w-6 h-6 text-[#0D9488]" />
                 </CardHeader>
                 <CardContent className="p-4">
                   <div className="overflow-x-auto">
@@ -681,7 +681,7 @@ export default function AdminDashboard() {
                             <td className="p-4">
                               <div className="flex flex-col">
                                 <span className="font-extrabold text-slate-800">{cc.name}</span>
-                                <span className="text-[10px] font-bold text-[#820AD1]">{cc.planName || "Sem Plano"} (R$ {(cc.planPrice || 0).toFixed(2)})</span>
+                                <span className="text-[10px] font-bold text-[#0D9488]">{cc.planName || "Sem Plano"} (R$ {(cc.planPrice || 0).toFixed(2)})</span>
                               </div>
                             </td>
                             <td className="p-4 text-center font-bold">{cc.usage?.sdrs ?? 0}</td>
@@ -724,7 +724,7 @@ export default function AdminDashboard() {
                             <p className="text-sm font-black text-slate-800">{tx.description}</p>
                             <div className="flex items-center gap-2 mt-1">
                               <Badge className="bg-slate-200 text-slate-700 font-bold border-none text-[8px] tracking-wider">{tx.category}</Badge>
-                              {tx.isRecurring && <Badge className="bg-[#820AD1]/10 text-[#820AD1] font-bold border-none text-[8px] tracking-wider">Recorrente</Badge>}
+                              {tx.isRecurring && <Badge className="bg-[#0D9488]/10 text-[#0D9488] font-bold border-none text-[8px] tracking-wider">Recorrente</Badge>}
                               {tx.paidAt ? (
                                 <span className="text-[9px] font-bold text-emerald-600">Pago em {new Date(tx.paidAt).toLocaleDateString()}</span>
                               ) : (
@@ -764,7 +764,7 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-20">
                   <Card className="lg:col-span-2 border-none shadow-3xl rounded-[40px] bg-white p-10">
                       <h3 className="text-2xl font-black text-slate-800 mb-8 uppercase italic flex items-center gap-3">
-                          <Globe className="w-8 h-8 text-[#820AD1]" /> Configurações Visuais
+                          <Globe className="w-8 h-8 text-[#0D9488]" /> Configurações Visuais
                       </h3>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -790,7 +790,7 @@ export default function AdminDashboard() {
                           <div className="space-y-2">
                               <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">WhatsApp de Contato</Label>
                               <div className="relative">
-                                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#820AD1]" />
+                                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0D9488]" />
                                   <Input value={lpSettings.contactWhatsApp} onChange={e => setLpSettings({...lpSettings, contactWhatsApp: e.target.value})} className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold" placeholder="5511..." />
                               </div>
                           </div>
@@ -810,7 +810,7 @@ export default function AdminDashboard() {
 
                   <Card className="border-none shadow-3xl rounded-[40px] bg-slate-50 p-10">
                       <h3 className="text-xl font-black text-slate-800 mb-6 uppercase italic flex items-center gap-3">
-                          <Plus className="w-6 h-6 text-purple-500" /> Visibilidade de Planos
+                          <Plus className="w-6 h-6 text-teal-500" /> Visibilidade de Planos
                       </h3>
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">Escolha quais planos serão exibidos na Landing Page.</p>
                       
@@ -821,7 +821,7 @@ export default function AdminDashboard() {
                                   <div key={p.id} className={`p-5 rounded-2xl flex items-center justify-between border-2 transition-all ${isVisible ? 'bg-white border-emerald-500 shadow-lg' : 'bg-slate-100 border-transparent opacity-60'}`}>
                                       <div className="flex flex-col">
                                           <span className="font-black text-slate-800">{p.name}</span>
-                                          <span className="text-[10px] font-bold text-[#820AD1] italic">R$ {p.priceMonthly.toFixed(2)}/mês</span>
+                                          <span className="text-[10px] font-bold text-[#0D9488] italic">R$ {p.priceMonthly.toFixed(2)}/mês</span>
                                       </div>
                                       <Checkbox 
                                           checked={isVisible} 
@@ -848,7 +848,7 @@ export default function AdminDashboard() {
       {/* MODAL NOVO CLIENTE */}
       <Dialog open={isEditTenantModalOpen && !selectedTenant} onOpenChange={(v) => { if(!v) setIsEditTenantModalOpen(false); }}>
         <DialogContent className="rounded-[50px] p-12 max-w-lg border-none shadow-3xl">
-          <DialogHeader><DialogTitle className="text-3xl font-black">Novo <span className="text-[#820AD1]">Cliente</span></DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-3xl font-black">Novo <span className="text-[#0D9488]">Cliente</span></DialogTitle></DialogHeader>
           <div className="grid gap-6 py-4">
             <Input value={newTenant.name} onChange={e => setNewTenant({...newTenant, name: e.target.value})} placeholder="Nome da Empresa" className="h-14 rounded-2xl bg-slate-50 border-none font-bold" />
             <Input value={newTenant.email} onChange={e => setNewTenant({...newTenant, email: e.target.value})} placeholder="E-mail" className="h-14 rounded-2xl bg-slate-50 border-none font-bold" />
@@ -868,7 +868,7 @@ export default function AdminDashboard() {
           {selectedTenant && (
             <div className="flex flex-col h-[80vh]">
                <div className="p-8 bg-slate-900 text-white flex justify-between items-center">
-                  <h2 className="text-2xl font-black uppercase">Gerenciar <span className="text-[#9d4edd]">{selectedTenant.name}</span></h2>
+                  <h2 className="text-2xl font-black uppercase">Gerenciar <span className="text-[#2DD4BF]">{selectedTenant.name}</span></h2>
                   <Button variant="ghost" size="icon" onClick={() => setIsEditTenantModalOpen(false)} className="text-white hover:bg-white/10"><X className="w-6 h-6" /></Button>
                </div>
                <Tabs defaultValue="company" className="flex-1 flex flex-col overflow-hidden">
@@ -950,7 +950,7 @@ export default function AdminDashboard() {
                     </TabsContent>
                   </div>
                   <div className="p-8 border-t flex justify-end gap-3">
-                     <Button className="h-14 bg-[#820AD1] text-white font-black rounded-2xl px-12" onClick={async () => {
+                     <Button className="h-14 bg-[#0D9488] text-white font-black rounded-2xl px-12" onClick={async () => {
                         const res = await fetch(`/api/admin/tenants/${selectedTenant.id}`, { method: "PUT", headers: {"Content-Type":"application/json"}, body: JSON.stringify(selectedTenant) });
                         if (res.ok) { toast({title:"✅ Sucesso!"}); setIsEditTenantModalOpen(false); fetchData(); }
                      }}>Salvar Alterações</Button>
@@ -966,7 +966,7 @@ export default function AdminDashboard() {
         <DialogContent className="rounded-[50px] p-10 max-w-4xl border-none shadow-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-3xl font-black uppercase italic tracking-tight">
-              Configurações do <span className="text-[#820AD1]">Plano</span>
+              Configurações do <span className="text-[#0D9488]">Plano</span>
             </DialogTitle>
           </DialogHeader>
 
@@ -1077,19 +1077,19 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Profit Margin Calculator Panel */}
-                <div className="p-5 bg-purple-950/90 text-white rounded-3xl space-y-3 shadow-xl">
-                  <h4 className="text-[10px] font-black uppercase text-purple-300 tracking-wider">Simulador de Margem de Lucro (Mensal)</h4>
+                <div className="p-5 bg-teal-950/90 text-white rounded-3xl space-y-3 shadow-xl">
+                  <h4 className="text-[10px] font-black uppercase text-teal-300 tracking-wider">Simulador de Margem de Lucro (Mensal)</h4>
                   <div className="grid grid-cols-3 gap-2 py-2 text-center">
-                    <div className="border-r border-purple-800">
-                      <span className="block text-[8px] uppercase text-purple-300">Custo Total</span>
+                    <div className="border-r border-teal-800">
+                      <span className="block text-[8px] uppercase text-teal-300">Custo Total</span>
                       <span className="text-base font-extrabold text-red-300">R$ {simTotalCost.toFixed(2)}</span>
                     </div>
-                    <div className="border-r border-purple-800">
-                      <span className="block text-[8px] uppercase text-purple-300">Margem R$</span>
+                    <div className="border-r border-teal-800">
+                      <span className="block text-[8px] uppercase text-teal-300">Margem R$</span>
                       <span className={`text-base font-extrabold ${simProfit >= 0 ? 'text-emerald-300' : 'text-red-400'}`}>R$ {simProfit.toFixed(2)}</span>
                     </div>
                     <div>
-                      <span className="block text-[8px] uppercase text-purple-300">Margem %</span>
+                      <span className="block text-[8px] uppercase text-teal-300">Margem %</span>
                       <span className={`text-base font-extrabold ${simMargin >= 50 ? 'text-emerald-300' : (simMargin >= 10 ? 'text-yellow-300' : 'text-red-400')}`}>
                         {simMargin.toFixed(0)}%
                       </span>
@@ -1101,7 +1101,7 @@ export default function AdminDashboard() {
           </div>
 
           <DialogFooter className="mt-4">
-            <Button onClick={handleCreateOrUpdatePlan} className="w-full h-16 bg-[#820AD1] hover:bg-[#6c08b0] font-black text-white rounded-3xl uppercase tracking-widest text-[10px] shadow-2xl">
+            <Button onClick={handleCreateOrUpdatePlan} className="w-full h-16 bg-[#0D9488] hover:bg-[#0F766E] font-black text-white rounded-3xl uppercase tracking-widest text-[10px] shadow-2xl">
               Salvar Configurações do Plano
             </Button>
           </DialogFooter>
@@ -1111,7 +1111,7 @@ export default function AdminDashboard() {
       {/* MODAL TRANSACAO (CREATE/EDIT) */}
       <Dialog open={isTxModalOpen} onOpenChange={setIsTxModalOpen}>
         <DialogContent className="rounded-[40px] p-10 max-w-lg border-none shadow-3xl bg-white">
-          <h2 className="text-2xl font-black uppercase tracking-tighter mb-6 italic">Lançamento <span className="text-[#820AD1]">Financeiro</span></h2>
+          <h2 className="text-2xl font-black uppercase tracking-tighter mb-6 italic">Lançamento <span className="text-[#0D9488]">Financeiro</span></h2>
           <div className="space-y-4">
              <div className="space-y-1">
                 <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">Descrição</Label>
@@ -1187,7 +1187,7 @@ export default function AdminDashboard() {
                </div>
              </div>
 
-             <Button onClick={handleCreateOrUpdateTransaction} className="w-full h-16 bg-[#820AD1] hover:bg-[#6c08b0] text-white font-black rounded-2xl uppercase tracking-widest mt-4 shadow-xl active:scale-95 transition-all">
+             <Button onClick={handleCreateOrUpdateTransaction} className="w-full h-16 bg-[#0D9488] hover:bg-[#0F766E] text-white font-black rounded-2xl uppercase tracking-widest mt-4 shadow-xl active:scale-95 transition-all">
                 Salvar Lançamento
               </Button>
           </div>
@@ -1197,7 +1197,7 @@ export default function AdminDashboard() {
       {/* MODAL ADICIONAR USUÁRIO (ADMIN SIDE) */}
       <Dialog open={isAddUserModalOpen} onOpenChange={setIsAddUserModalOpen}>
         <DialogContent className="rounded-[40px] p-10 max-w-md border-none shadow-3xl bg-white">
-          <h2 className="text-2xl font-black uppercase tracking-tighter mb-6 italic">Novo <span className="text-[#820AD1]">Acesso</span></h2>
+          <h2 className="text-2xl font-black uppercase tracking-tighter mb-6 italic">Novo <span className="text-[#0D9488]">Acesso</span></h2>
           <div className="space-y-4">
              <div className="space-y-1">
                 <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">Nome do Colaborador</Label>

@@ -92,13 +92,13 @@ export default function PublicBooking() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-4">
         <Card className="w-full max-w-md border-emerald-500 bg-slate-900/60 backdrop-blur-xl text-white text-center p-8 animate-in fade-in zoom-in duration-500">
-          <CheckCircle2 className="w-20 h-20 text-[#9d4edd] mx-auto mb-6" />
+          <CheckCircle2 className="w-20 h-20 text-[#2DD4BF] mx-auto mb-6" />
           <CardTitle className="text-3xl font-bold mb-2">Agendado com Sucesso!</CardTitle>
           <CardDescription className="text-slate-300 mb-6 text-lg">
             Sua reunião foi confirmada para o dia <br />
             <strong>{format(date!, "dd 'de' MMMM", { locale: ptBR })} às {selectedTime}</strong>.
           </CardDescription>
-          <Button onClick={() => window.close()} className="w-full py-6 bg-[#6c08b0] hover:bg-[#820AD1] text-lg font-bold">
+          <Button onClick={() => window.close()} className="w-full py-6 bg-[#0F766E] hover:bg-[#0D9488] text-lg font-bold">
             Pode fechar esta janela
           </Button>
         </Card>

@@ -116,13 +116,13 @@ function SidebarNav({ collapsed, onNavClick, features }: SidebarNavProps & { fea
             <Icon
               className={cn(
                 "shrink-0 transition-colors duration-200",
-                isActive ? "text-[#820AD1]" : "text-slate-400 group-hover:text-white",
+                isActive ? "text-[#0D9488]" : "text-slate-400 group-hover:text-white",
                 collapsed ? "h-5 w-5" : "h-4 w-4"
               )}
             />
             {!collapsed && <span className="truncate">{item.label}</span>}
             {!collapsed && isActive && (
-              <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#820AD1]" />
+              <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#0D9488]" />
             )}
           </Link>
         );
@@ -174,7 +174,7 @@ function SidebarContent({
           <img src="/logo.png" alt="Logo" className="h-8 w-auto" />
           {!collapsed && (
             <span className="text-xl font-black tracking-tighter uppercase text-white">
-              Auto<span className="text-[#820AD1] italic">Sales</span>
+              Auto<span className="text-[#0D9488] italic">Sales</span>
             </span>
           )}
           {!collapsed && showCollapseButton && (
@@ -190,7 +190,7 @@ function SidebarContent({
         </div>
         {!collapsed && (
           <div className="w-full text-left truncate">
-            <p className="text-[10px] font-black text-purple-300 uppercase tracking-wide leading-none truncate">
+            <p className="text-[10px] font-black text-teal-300 uppercase tracking-wide leading-none truncate">
               {localStorage.getItem("companyName") || "Minha Empresa"}
             </p>
             <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-1">
@@ -211,14 +211,14 @@ function SidebarContent({
           <div className="p-4 bg-slate-800/50 rounded-2xl space-y-3">
             <div className="flex justify-between items-center">
               <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Plano Ativo</p>
-              <Badge className="bg-[#820AD1] text-white border-none text-[8px] font-black uppercase tracking-tighter leading-normal px-2">
+              <Badge className="bg-[#0D9488] text-white border-none text-[8px] font-black uppercase tracking-tighter leading-normal px-2">
                 {planName || "Básico"}
               </Badge>
             </div>
             <div className="flex items-center gap-2">
                <div className="flex-1 h-1 bg-slate-700 rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-[#820AD1] transition-all duration-1000" 
+                    className="h-full bg-[#0D9488] transition-all duration-1000" 
                     style={{ width: `${Math.min(100, (localStorage.getItem("usedTokens") ? parseInt(localStorage.getItem("usedTokens") || "0") : 0) / (planData.maxTokens || 1) * 100)}%` }}
                   />
                </div>
@@ -237,7 +237,7 @@ function SidebarContent({
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-3 w-full outline-none">
                   <Avatar className="h-8 w-8 shrink-0 border border-slate-700">
-                    <AvatarFallback className="bg-[#820AD1] text-[10px] font-black text-white uppercase">
+                    <AvatarFallback className="bg-[#0D9488] text-[10px] font-black text-white uppercase">
                       {localStorage.getItem("userName")?.charAt(0) || "U"}
                     </AvatarFallback>
                   </Avatar>
@@ -255,10 +255,10 @@ function SidebarContent({
                  <DropdownMenuLabel className="p-3 text-[10px] font-black uppercase text-slate-500 tracking-widest">Opções da Conta</DropdownMenuLabel>
                  <DropdownMenuSeparator className="bg-slate-800" />
                  <DropdownMenuItem onClick={() => navigate("/settings")} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/10 cursor-pointer text-xs font-bold uppercase">
-                    <User className="w-4 h-4 text-[#820AD1]" /> Perfil & Empresa
+                    <User className="w-4 h-4 text-[#0D9488]" /> Perfil & Empresa
                  </DropdownMenuItem>
                  <DropdownMenuItem onClick={() => navigate("/settings")} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/10 cursor-pointer text-xs font-bold uppercase">
-                    <Settings className="w-4 h-4 text-[#820AD1]" /> Configurações
+                    <Settings className="w-4 h-4 text-[#0D9488]" /> Configurações
                  </DropdownMenuItem>
                  <DropdownMenuSeparator className="bg-slate-800" />
                  <DropdownMenuItem 
@@ -364,11 +364,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     )?.label ?? "Dashboard";
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-[#120024]">
+    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-[#042F2E]">
       {/* Desktop Sidebar */}
       <aside
         className={cn(
-          "relative hidden flex-col border-r border-slate-200 dark:border-purple-950/40 lg:flex",
+          "relative hidden flex-col border-r border-slate-200 dark:border-teal-950/40 lg:flex",
           "transition-[width] duration-300 ease-in-out",
           collapsed ? "w-[68px]" : "w-[260px]"
         )}
@@ -389,7 +389,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <SheetTrigger asChild>
           <span className="hidden" />
         </SheetTrigger>
-        <SheetContent side="left" className="w-[260px] p-0 border-r border-slate-200 dark:border-purple-950/40">
+        <SheetContent side="left" className="w-[260px] p-0 border-r border-slate-200 dark:border-teal-950/40">
           <SidebarContent
             collapsed={false}
             showCollapseButton={false}
@@ -405,12 +405,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="flex h-16 shrink-0 items-center gap-4 border-b border-slate-200 dark:border-purple-950/40 bg-white dark:bg-[#1c0133] px-4 md:px-6">
+        <header className="flex h-16 shrink-0 items-center gap-4 border-b border-slate-200 dark:border-teal-950/40 bg-white dark:bg-[#0B4A47] px-4 md:px-6">
           {/* Mobile hamburger */}
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden text-slate-500 dark:text-purple-300 hover:bg-slate-100 dark:hover:bg-purple-950/20"
+            className="lg:hidden text-slate-500 dark:text-teal-300 hover:bg-slate-100 dark:hover:bg-teal-950/20"
             onClick={() => setMobileOpen(true)}
           >
             <Menu className="h-5 w-5" />
@@ -421,71 +421,71 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <h1 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tighter md:text-base">
               {currentPage}
             </h1>
-            <span className="hidden md:inline text-slate-300 dark:text-purple-950/40">|</span>
-            <span className="text-[10px] font-bold text-slate-400 dark:text-purple-300/40 uppercase truncate max-w-[200px] md:max-w-none">
+            <span className="hidden md:inline text-slate-300 dark:text-teal-950/40">|</span>
+            <span className="text-[10px] font-bold text-slate-400 dark:text-teal-300/40 uppercase truncate max-w-[200px] md:max-w-none">
               {localStorage.getItem("companyName") || "Minha Empresa"} • Plano {planData.name || "Básico"}
             </span>
           </div>
 
           {/* Search */}
           <div className="relative hidden w-64 md:block">
-            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300 dark:text-purple-300/40" />
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300 dark:text-teal-300/40" />
             <Input
               placeholder="Buscar..."
-              className="h-11 bg-slate-50 dark:bg-purple-950/20 pl-10 text-xs font-bold rounded-2xl border-none focus-visible:ring-[#820AD1]/20 dark:text-white dark:placeholder-purple-300/40"
+              className="h-11 bg-slate-50 dark:bg-teal-950/20 pl-10 text-xs font-bold rounded-2xl border-none focus-visible:ring-[#0D9488]/20 dark:text-white dark:placeholder-teal-300/40"
             />
           </div>
 
           {/* Notification bell */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative text-slate-500 dark:text-purple-300 hover:bg-slate-100 dark:hover:bg-purple-950/20 rounded-xl transition-all">
+              <Button variant="ghost" size="icon" className="relative text-slate-500 dark:text-teal-300 hover:bg-slate-100 dark:hover:bg-teal-950/20 rounded-xl transition-all">
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
-                  <Badge className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#820AD1] p-0 text-[10px] font-bold text-white animate-bounce border-2 border-white dark:border-[#1c0133]">
+                  <Badge className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#0D9488] p-0 text-[10px] font-bold text-white animate-bounce border-2 border-white dark:border-[#0B4A47]">
                     {unreadCount}
                   </Badge>
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80 p-0 border-none shadow-3xl rounded-[30px] overflow-hidden bg-white/95 dark:bg-[#1c0133]/95 backdrop-blur-md">
-              <div className="p-5 bg-slate-900 dark:bg-purple-950/80 text-white flex items-center justify-between">
+            <DropdownMenuContent align="end" className="w-80 p-0 border-none shadow-3xl rounded-[30px] overflow-hidden bg-white/95 dark:bg-[#0B4A47]/95 backdrop-blur-md">
+              <div className="p-5 bg-slate-900 dark:bg-teal-950/80 text-white flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-widest">Notificações</h3>
-                  <p className="text-[10px] text-white/40 dark:text-purple-300/40 font-bold uppercase mt-0.5">{unreadCount} novas mensagens</p>
+                  <p className="text-[10px] text-white/40 dark:text-teal-300/40 font-bold uppercase mt-0.5">{unreadCount} novas mensagens</p>
                 </div>
-                <Bell className="w-4 h-4 text-[#820AD1]" />
+                <Bell className="w-4 h-4 text-[#0D9488]" />
               </div>
               <ScrollArea className="h-[350px]">
                 {notifications.length === 0 ? (
                   <div className="p-10 text-center space-y-4">
-                    <div className="w-12 h-12 bg-slate-50 dark:bg-[#230440] rounded-2xl flex items-center justify-center mx-auto">
-                      <Sparkles className="w-6 h-6 text-slate-200 dark:text-purple-300/40" />
+                    <div className="w-12 h-12 bg-slate-50 dark:bg-[#0B3A38] rounded-2xl flex items-center justify-center mx-auto">
+                      <Sparkles className="w-6 h-6 text-slate-200 dark:text-teal-300/40" />
                     </div>
-                    <p className="text-[10px] font-black text-slate-300 dark:text-purple-300/40 uppercase tracking-widest">Tudo limpo por aqui</p>
+                    <p className="text-[10px] font-black text-slate-300 dark:text-teal-300/40 uppercase tracking-widest">Tudo limpo por aqui</p>
                   </div>
                 ) : (
                   <div className="p-2 space-y-1">
                     {notifications.map((n) => (
                       <DropdownMenuItem 
                         key={n.id} 
-                        className="p-4 rounded-2xl cursor-pointer hover:bg-slate-50 dark:hover:bg-[#230440]/65 border-none flex items-start gap-4 transition-all group"
+                        className="p-4 rounded-2xl cursor-pointer hover:bg-slate-50 dark:hover:bg-[#0B3A38]/65 border-none flex items-start gap-4 transition-all group"
                         onClick={() => {
                           n.read = true;
                           navigate("/conversations");
                         }}
                       >
-                        <div className="w-10 h-10 bg-purple-50 dark:bg-purple-950/30 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-[#820AD1] transition-colors">
-                          <MessageCircle className="w-5 h-5 text-[#820AD1] group-hover:text-white transition-colors" />
+                        <div className="w-10 h-10 bg-teal-50 dark:bg-teal-950/30 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-[#0D9488] transition-colors">
+                          <MessageCircle className="w-5 h-5 text-[#0D9488] group-hover:text-white transition-colors" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-center mb-1">
                             <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase">Nova Mensagem</p>
-                            <div className="flex items-center gap-1 text-[8px] font-bold text-slate-400 dark:text-purple-300/40 uppercase">
+                            <div className="flex items-center gap-1 text-[8px] font-bold text-slate-400 dark:text-teal-300/40 uppercase">
                               <Clock className="w-3 h-3" /> {n.time}
                             </div>
                           </div>
-                          <p className="text-xs text-slate-500 dark:text-purple-200/60 font-medium line-clamp-2 leading-relaxed">
+                          <p className="text-xs text-slate-500 dark:text-teal-200/60 font-medium line-clamp-2 leading-relaxed">
                             {n.content}
                           </p>
                         </div>
@@ -495,8 +495,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 )}
               </ScrollArea>
               {notifications.length > 0 && (
-                <div className="p-4 border-t border-slate-50 dark:border-purple-950/40">
-                  <Button variant="ghost" className="w-full text-[10px] font-black text-slate-400 dark:text-purple-300/40 hover:text-slate-900 dark:hover:text-white uppercase tracking-widest"
+                <div className="p-4 border-t border-slate-50 dark:border-teal-950/40">
+                  <Button variant="ghost" className="w-full text-[10px] font-black text-slate-400 dark:text-teal-300/40 hover:text-slate-900 dark:hover:text-white uppercase tracking-widest"
                     onClick={() => setNotifications([])}>
                     Limpar Tudo
                   </Button>
@@ -510,11 +510,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
-                className="flex items-center gap-2 px-2 hover:bg-slate-100 dark:hover:bg-purple-950/20"
+                className="flex items-center gap-2 px-2 hover:bg-slate-100 dark:hover:bg-teal-950/20"
               >
                 <Avatar className="h-8 w-8">
                   <AvatarImage src="" />
-                  <AvatarFallback className="bg-[#820AD1] text-[10px] font-black text-white uppercase">
+                  <AvatarFallback className="bg-[#0D9488] text-[10px] font-black text-white uppercase">
                     {localStorage.getItem("companyName")?.charAt(0) || "U"}
                   </AvatarFallback>
                 </Avatar>
@@ -523,33 +523,33 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 </span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52 dark:bg-[#1c0133] dark:border-purple-950/40 dark:text-white">
+            <DropdownMenuContent align="end" className="w-52 dark:bg-[#0B4A47] dark:border-teal-950/40 dark:text-white">
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col gap-0.5">
                   <p className="text-sm font-semibold">{localStorage.getItem("companyName") || "Minha Empresa"}</p>
-                  <p className="text-xs text-muted-foreground dark:text-purple-300/40">Painel do Usuário</p>
+                  <p className="text-xs text-muted-foreground dark:text-teal-300/40">Painel do Usuário</p>
                 </div>
               </DropdownMenuLabel>
-              <DropdownMenuSeparator className="dark:bg-purple-950/45" />
+              <DropdownMenuSeparator className="dark:bg-teal-950/45" />
               <DropdownMenuItem asChild>
-                <Link to="/settings" className="flex cursor-pointer items-center gap-2 dark:hover:bg-[#230440]">
-                  <User className="h-4 w-4 text-[#820AD1]" />
+                <Link to="/settings" className="flex cursor-pointer items-center gap-2 dark:hover:bg-[#0B3A38]">
+                  <User className="h-4 w-4 text-[#0D9488]" />
                   Perfil
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link to="/settings" className="flex cursor-pointer items-center gap-2 dark:hover:bg-[#230440]">
-                  <Building2 className="h-4 w-4 text-[#820AD1]" />
+                <Link to="/settings" className="flex cursor-pointer items-center gap-2 dark:hover:bg-[#0B3A38]">
+                  <Building2 className="h-4 w-4 text-[#0D9488]" />
                   Empresa
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link to="/settings" className="flex cursor-pointer items-center gap-2 dark:hover:bg-[#230440]">
-                  <Settings className="h-4 w-4 text-[#820AD1]" />
+                <Link to="/settings" className="flex cursor-pointer items-center gap-2 dark:hover:bg-[#0B3A38]">
+                  <Settings className="h-4 w-4 text-[#0D9488]" />
                   Configurações
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="dark:bg-purple-950/45" />
+              <DropdownMenuSeparator className="dark:bg-teal-950/45" />
               <DropdownMenuItem onClick={handleLogout} className="flex cursor-pointer items-center gap-2 text-red-600 focus:text-red-600 dark:hover:bg-red-500/10">
                 <LogOut className="h-4 w-4" />
                 Sair

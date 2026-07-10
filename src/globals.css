@@ -4,85 +4,85 @@
 
 @layer base {
   :root {
-    /* Nubank Light Palette */
-    --background: 264 40% 98%;
-    --foreground: 273 100% 16%;
+    /* Health Light Palette — teal/verde-azulado (calma, cuidado, confiança) */
+    --background: 170 40% 98%;
+    --foreground: 180 25% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 273 100% 16%;
+    --card-foreground: 180 25% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 273 100% 16%;
+    --popover-foreground: 180 25% 12%;
 
-    --primary: 276 91% 43%; /* Nubank Purple #820AD1 */
+    --primary: 175 84% 32%; /* Teal #0D9488 */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 264 40% 94%;
-    --secondary-foreground: 273 100% 16%;
+    --secondary: 170 40% 94%;
+    --secondary-foreground: 180 25% 12%;
 
-    --muted: 264 40% 94%;
-    --muted-foreground: 273 20% 45%;
+    --muted: 170 40% 94%;
+    --muted-foreground: 178 15% 42%;
 
-    --accent: 264 40% 94%;
-    --accent-foreground: 273 100% 16%;
+    --accent: 170 40% 94%;
+    --accent-foreground: 176 61% 16%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 264 30% 90%;
-    --input: 264 30% 90%;
-    --ring: 276 91% 43%;
+    --border: 170 30% 90%;
+    --input: 170 30% 90%;
+    --ring: 175 84% 32%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 264 40% 98%;
-    --sidebar-foreground: 273 100% 16%;
-    --sidebar-primary: 276 91% 43%;
+    --sidebar-background: 170 40% 98%;
+    --sidebar-foreground: 180 25% 12%;
+    --sidebar-primary: 175 84% 32%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 264 40% 94%;
-    --sidebar-accent-foreground: 273 100% 16%;
-    --sidebar-border: 264 30% 90%;
-    --sidebar-ring: 276 91% 43%;
+    --sidebar-accent: 170 40% 94%;
+    --sidebar-accent-foreground: 176 61% 16%;
+    --sidebar-border: 170 30% 90%;
+    --sidebar-ring: 175 84% 32%;
   }
 
   .dark {
-    /* Nubank Dark/Deep Palette */
-    --background: 270 100% 7%; /* Deep Dark Violet #120024 */
-    --foreground: 264 40% 98%;
+    /* Health Dark Palette — teal profundo */
+    --background: 178 84% 8%; /* Deep Teal #043432 */
+    --foreground: 170 40% 98%;
 
-    --card: 270 80% 11%; /* Dark Violet Card #20033c */
-    --card-foreground: 264 40% 98%;
+    --card: 177 64% 12%; /* Dark Teal Card #0b4a47 */
+    --card-foreground: 170 40% 98%;
 
-    --popover: 270 80% 11%;
-    --popover-foreground: 264 40% 98%;
+    --popover: 177 64% 12%;
+    --popover-foreground: 170 40% 98%;
 
-    --primary: 276 91% 43%; /* Nubank Purple #820AD1 */
-    --primary-foreground: 0 0% 100%;
+    --primary: 172 66% 44%; /* Teal claro p/ contraste no escuro #26bfae */
+    --primary-foreground: 178 84% 8%;
 
-    --secondary: 270 40% 16%;
-    --secondary-foreground: 264 40% 98%;
+    --secondary: 176 40% 16%;
+    --secondary-foreground: 170 40% 98%;
 
-    --muted: 270 40% 16%;
-    --muted-foreground: 264 20% 65%;
+    --muted: 176 40% 16%;
+    --muted-foreground: 170 20% 65%;
 
-    --accent: 270 40% 16%;
-    --accent-foreground: 264 40% 98%;
+    --accent: 176 40% 16%;
+    --accent-foreground: 170 40% 98%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 270 45% 15%;
-    --input: 270 45% 15%;
-    --ring: 276 91% 43%;
+    --border: 176 45% 15%;
+    --input: 176 45% 15%;
+    --ring: 172 66% 44%;
 
-    --sidebar-background: 270 100% 7%;
-    --sidebar-foreground: 264 40% 98%;
-    --sidebar-primary: 276 91% 43%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 270 40% 16%;
-    --sidebar-accent-foreground: 264 40% 98%;
-    --sidebar-border: 270 45% 15%;
-    --sidebar-ring: 276 91% 43%;
+    --sidebar-background: 178 84% 8%;
+    --sidebar-foreground: 170 40% 98%;
+    --sidebar-primary: 172 66% 44%;
+    --sidebar-primary-foreground: 178 84% 8%;
+    --sidebar-accent: 176 40% 16%;
+    --sidebar-accent-foreground: 170 40% 98%;
+    --sidebar-border: 176 45% 15%;
+    --sidebar-ring: 172 66% 44%;
   }
 }
 

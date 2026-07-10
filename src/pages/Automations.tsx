@@ -57,7 +57,7 @@ interface NodeTypeDef {
 const NODE_TYPES_DEF: NodeTypeDef[] = [
   { id: "PROSPECT_LEAD", label: "Prospecção Inteligente", icon: <Target className="w-4 h-4" />, color: "#0ea5e9", category: "action" },
   { id: "SEND_MSG", label: "Enviar Texto", icon: <MessageCircle className="w-4 h-4" />, color: "#10b981", category: "action" },
-  { id: "AI_RESPONSE", label: "Chamar IA", icon: <Bot className="w-4 h-4" />, color: "#7c3aed", category: "action" },
+  { id: "AI_RESPONSE", label: "Chamar IA", icon: <Bot className="w-4 h-4" />, color: "#0D9488", category: "action" },
   { id: "COLLECT_INPUT", label: "Coletar Resposta", icon: <Inbox className="w-4 h-4" />, color: "#06b6d4", category: "action" },
   { id: "WAIT", label: "Aguardar Tempo", icon: <Timer className="w-4 h-4" />, color: "#3b82f6", category: "action" },
   { id: "ADD_TAG", label: "Adicionar Tag", icon: <Tag className="w-4 h-4" />, color: "#f59e0b", category: "action" },
@@ -73,7 +73,7 @@ const NODE_TYPES_DEF: NodeTypeDef[] = [
   { id: "AB_TEST", label: "Teste A/B", icon: <Shuffle className="w-4 h-4" />, color: "#ea580c", category: "ai" },
   { id: "AI_SCORE", label: "Score IA", icon: <BarChart3 className="w-4 h-4" />, color: "#16a34a", category: "ai" },
   // Fase 4 — Escalabilidade
-  { id: "SUBFLOW", label: "Subfluxo", icon: <Workflow className="w-4 h-4" />, color: "#6d28d9", category: "logic" },
+  { id: "SUBFLOW", label: "Subfluxo", icon: <Workflow className="w-4 h-4" />, color: "#0D9488", category: "logic" },
   { id: "SEND_MEDIA", label: "Enviar Mídia", icon: <Image className="w-4 h-4" />, color: "#059669", category: "action" },
   // Lógica
   { id: "CONDITION", label: "Condição IF/ELSE", icon: <Split className="w-4 h-4" />, color: "#f97316", category: "logic" },
@@ -192,7 +192,7 @@ function AutomationNode({ data, selected }: any) {
     <div className={`relative transition-all duration-200 ${selected ? 'scale-105' : ''}`}>
       <Handle type="target" position={Position.Top} className="!w-3 !h-3 !bg-slate-300 !border-2 !border-white" />
 
-      <div className={`min-w-[220px] max-w-[280px] rounded-2xl bg-white shadow-xl border-2 transition-all ${selected ? 'border-emerald-400 shadow-[#820AD1]/20' : 'border-slate-100 hover:border-slate-300'}`}>
+      <div className={`min-w-[220px] max-w-[280px] rounded-2xl bg-white shadow-xl border-2 transition-all ${selected ? 'border-emerald-400 shadow-[#0D9488]/20' : 'border-slate-100 hover:border-slate-300'}`}>
         <div className="flex items-center gap-3 p-4">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg shrink-0" style={{ backgroundColor: typeDef?.color || "#64748b" }}>
             {typeDef?.icon || <Zap className="w-4 h-4" />}
@@ -213,7 +213,7 @@ function AutomationNode({ data, selected }: any) {
 
         {config.prompt && !['SEND_MSG', 'AB_TEST'].includes(nodeType) && (
           <div className="px-4 pb-3">
-            <p className="text-[9px] text-violet-400 bg-violet-50 rounded-lg p-2 truncate font-medium">
+            <p className="text-[9px] text-teal-400 bg-teal-50 rounded-lg p-2 truncate font-medium">
               🤖 {String(config.prompt).substring(0, 50)}...
             </p>
           </div>
@@ -221,7 +221,7 @@ function AutomationNode({ data, selected }: any) {
 
         {isCondition && (
           <div className="px-4 pb-3 grid grid-cols-2 gap-2">
-            <div className="text-center p-1.5 rounded-lg text-[8px] font-black uppercase bg-purple-50 text-[#820AD1]">✅ SIM</div>
+            <div className="text-center p-1.5 rounded-lg text-[8px] font-black uppercase bg-teal-50 text-[#0D9488]">✅ SIM</div>
             <div className="text-center p-1.5 rounded-lg text-[8px] font-black uppercase bg-red-50 text-red-500">❌ NÃO</div>
           </div>
         )}
@@ -230,7 +230,7 @@ function AutomationNode({ data, selected }: any) {
           <div className="px-4 pb-3">
             <div className="flex flex-wrap gap-1">
               {(config.intents || [{id:'comprar'},{id:'duvida'},{id:'outro'}]).slice(0, 4).map((i: any) => (
-                <span key={i?.id || Math.random()} className="text-[7px] bg-violet-50 text-violet-600 px-1.5 py-0.5 rounded-full font-black uppercase">{i?.id || "OUTRO"}</span>
+                <span key={i?.id || Math.random()} className="text-[7px] bg-teal-50 text-teal-600 px-1.5 py-0.5 rounded-full font-black uppercase">{i?.id || "OUTRO"}</span>
               ))}
             </div>
           </div>
@@ -240,7 +240,7 @@ function AutomationNode({ data, selected }: any) {
           <div className="px-4 pb-3 grid grid-cols-3 gap-1">
             <div className="text-center p-1 rounded-lg text-[7px] font-black uppercase bg-red-50 text-red-500">🥶 Frio</div>
             <div className="text-center p-1 rounded-lg text-[7px] font-black uppercase bg-amber-50 text-amber-600">☀️ Morno</div>
-            <div className="text-center p-1 rounded-lg text-[7px] font-black uppercase bg-purple-50 text-[#820AD1]">🔥 Quente</div>
+            <div className="text-center p-1 rounded-lg text-[7px] font-black uppercase bg-teal-50 text-[#0D9488]">🔥 Quente</div>
           </div>
         )}
 
@@ -257,7 +257,7 @@ function AutomationNode({ data, selected }: any) {
 
       {isCondition && (
         <>
-          <Handle type="source" position={Position.Bottom} id="true" className="!w-3 !h-3 !bg-[#820AD1] !border-2 !border-white" style={{ left: "30%" }} />
+          <Handle type="source" position={Position.Bottom} id="true" className="!w-3 !h-3 !bg-[#0D9488] !border-2 !border-white" style={{ left: "30%" }} />
           <Handle type="source" position={Position.Bottom} id="false" className="!w-3 !h-3 !bg-red-500 !border-2 !border-white" style={{ left: "70%" }} />
         </>
       )}
@@ -270,7 +270,7 @@ function AutomationNode({ data, selected }: any) {
               type="source"
               position={Position.Bottom}
               id={intent?.id || `out_${idx}`}
-              className="!w-2.5 !h-2.5 !bg-violet-500 !border-2 !border-white"
+              className="!w-2.5 !h-2.5 !bg-teal-500 !border-2 !border-white"
               style={{ left: `${((idx + 1) / (arr.length + 1)) * 100}%` }}
             />
           ))}
@@ -592,8 +592,8 @@ export default function Automations() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-1">
             <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase flex items-center gap-3">
-              <Zap className="w-8 h-8 text-[#820AD1]" />
-              Hub de <span className="text-[#820AD1] italic">Automações</span>
+              <Zap className="w-8 h-8 text-[#0D9488]" />
+              Hub de <span className="text-[#0D9488] italic">Automações</span>
             </h1>
             <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">
               Builder Visual Drag & Drop — Powered by ReactFlow
@@ -604,7 +604,7 @@ export default function Automations() {
             {execStats && (
               <div className="hidden lg:flex items-center gap-6 mr-4">
                 <div className="text-center"><p className="text-[9px] font-black text-slate-300 uppercase">Total</p><p className="text-lg font-black text-slate-900">{execStats.total || 0}</p></div>
-                <div className="text-center"><p className="text-[9px] font-black text-[#9d4edd] uppercase">OK</p><p className="text-lg font-black text-[#820AD1]">{execStats.completed || 0}</p></div>
+                <div className="text-center"><p className="text-[9px] font-black text-[#2DD4BF] uppercase">OK</p><p className="text-lg font-black text-[#0D9488]">{execStats.completed || 0}</p></div>
                 <div className="text-center"><p className="text-[9px] font-black text-red-400 uppercase">Falhas</p><p className="text-lg font-black text-red-500">{execStats.failed || 0}</p></div>
               </div>
             )}
@@ -619,13 +619,13 @@ export default function Automations() {
                 </Button>
                 <Button 
                   onClick={() => hasSdr ? setIsAddModalOpen(true) : toast({ title: "SDR Necessário", description: "Contrate um SDR antes de criar automações.", variant: "destructive" })} 
-                  className={`h-11 px-6 rounded-2xl font-black uppercase text-[10px] tracking-widest text-white shadow-xl ${!hasSdr ? 'bg-slate-700 cursor-not-allowed' : 'bg-[#820AD1] hover:bg-[#6c08b0] shadow-[#820AD1]/20'}`}
+                  className={`h-11 px-6 rounded-2xl font-black uppercase text-[10px] tracking-widest text-white shadow-xl ${!hasSdr ? 'bg-slate-700 cursor-not-allowed' : 'bg-[#0D9488] hover:bg-[#0F766E] shadow-[#0D9488]/20'}`}
                 >
                   <Plus className="w-4 h-4 mr-2" /> Criar
                 </Button>
               </div>
               {!hasSdr && (
-                <p className="text-[8px] font-black text-[#820AD1] uppercase tracking-widest animate-pulse mr-1">Requer SDR Contratado</p>
+                <p className="text-[8px] font-black text-[#0D9488] uppercase tracking-widest animate-pulse mr-1">Requer SDR Contratado</p>
               )}
             </div>
           </div>
@@ -660,7 +660,7 @@ export default function Automations() {
                           </div>
                         </div>
                       </div>
-                      <Switch checked={auto.active} onCheckedChange={() => toggleAuto(auto.id, auto.active)} className="data-[state=checked]:bg-[#820AD1]" />
+                      <Switch checked={auto.active} onCheckedChange={() => toggleAuto(auto.id, auto.active)} className="data-[state=checked]:bg-[#0D9488]" />
                     </div>
                     <div className="p-6 space-y-4">
                       <div className="grid grid-cols-2 gap-3">
@@ -673,7 +673,7 @@ export default function Automations() {
                           <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg" onClick={() => duplicateAuto(auto.id)}><Copy className="w-3.5 h-3.5 text-slate-300" /></Button>
                           <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg hover:bg-red-50" onClick={() => deleteAuto(auto.id)}><Trash2 className="w-3.5 h-3.5 text-slate-300" /></Button>
                         </div>
-                        <button onClick={() => openBuilder(auto)} className="text-[#820AD1] font-black text-[10px] uppercase tracking-widest flex items-center gap-1 hover:gap-2 transition-all">
+                        <button onClick={() => openBuilder(auto)} className="text-[#0D9488] font-black text-[10px] uppercase tracking-widest flex items-center gap-1 hover:gap-2 transition-all">
                           Editar <ArrowRight className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -690,7 +690,7 @@ export default function Automations() {
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
         <DialogContent className="rounded-[32px] p-10 max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black flex items-center gap-2"><Zap className="text-[#820AD1]" /> Novo Workflow</DialogTitle>
+            <DialogTitle className="text-2xl font-black flex items-center gap-2"><Zap className="text-[#0D9488]" /> Novo Workflow</DialogTitle>
           </DialogHeader>
           <div className="grid gap-5 py-4">
             <div className="space-y-2">
@@ -782,7 +782,7 @@ export default function Automations() {
           </div>
           <DialogFooter>
             <Button onClick={handleCreateAuto} className="w-full h-14 bg-slate-900 hover:bg-slate-800 text-white font-black rounded-2xl uppercase tracking-widest text-sm shadow-2xl">
-              <Save className="w-4 h-4 mr-2 text-[#820AD1]" /> Criar Automação
+              <Save className="w-4 h-4 mr-2 text-[#0D9488]" /> Criar Automação
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -792,13 +792,13 @@ export default function Automations() {
       <Dialog open={showTemplates} onOpenChange={setShowTemplates}>
         <DialogContent className="rounded-[32px] p-10 max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black flex items-center gap-2"><Layers className="text-violet-500" /> Templates Pré-Configurados</DialogTitle>
+            <DialogTitle className="text-2xl font-black flex items-center gap-2"><Layers className="text-teal-500" /> Templates Pré-Configurados</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             {FLOW_TEMPLATES.map((tmpl, i) => {
               const trigDef = TRIGGERS.find(t => t.id === tmpl.trigger);
               return (
-                <div key={i} className="p-6 rounded-2xl border-2 border-slate-100 hover:border-purple-200 transition-all cursor-pointer group" onClick={() => createFromTemplate(tmpl)}>
+                <div key={i} className="p-6 rounded-2xl border-2 border-slate-100 hover:border-teal-200 transition-all cursor-pointer group" onClick={() => createFromTemplate(tmpl)}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg" style={{ backgroundColor: trigDef?.color || "#10b981" }}>
@@ -809,11 +809,11 @@ export default function Automations() {
                         <p className="text-[10px] text-slate-400 font-medium">{tmpl.description}</p>
                         <div className="flex gap-2 mt-2">
                           <Badge className="text-[7px] bg-slate-100 text-slate-500 border-none font-black">{trigDef?.label}</Badge>
-                          <Badge className="text-[7px] bg-violet-100 text-violet-600 border-none font-black">{tmpl.nodes.length} nós</Badge>
+                          <Badge className="text-[7px] bg-teal-100 text-teal-600 border-none font-black">{tmpl.nodes.length} nós</Badge>
                         </div>
                       </div>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-slate-200 group-hover:text-[#820AD1] transition-colors" />
+                    <ChevronRight className="w-5 h-5 text-slate-200 group-hover:text-[#0D9488] transition-colors" />
                   </div>
                 </div>
               );
@@ -829,7 +829,7 @@ export default function Automations() {
           {/* Header */}
           <div className="p-5 bg-white border-b border-slate-100 flex items-center justify-between shrink-0 z-10">
             <div className="flex items-center gap-4">
-              <div className="bg-[#820AD1] p-2.5 rounded-xl shadow-lg"><Zap className="text-white w-5 h-5" /></div>
+              <div className="bg-[#0D9488] p-2.5 rounded-xl shadow-lg"><Zap className="text-white w-5 h-5" /></div>
               <div>
                 <h2 className="text-lg font-black text-slate-900 tracking-tight leading-none uppercase">{selectedAuto?.name}</h2>
                 <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-widest">
@@ -840,7 +840,7 @@ export default function Automations() {
             <div className="flex gap-3">
               <Button onClick={() => setIsBuilderOpen(false)} variant="ghost" className="h-10 w-10 rounded-xl text-slate-300"><X className="w-5 h-5" /></Button>
               <Button onClick={handleSaveWorkflow} className="h-10 bg-slate-900 hover:bg-black px-6 rounded-xl font-black uppercase text-[10px] tracking-widest text-white shadow-xl">
-                <Save className="w-4 h-4 mr-2 text-[#820AD1]" /> Salvar
+                <Save className="w-4 h-4 mr-2 text-[#0D9488]" /> Salvar
               </Button>
             </div>
           </div>
@@ -864,14 +864,14 @@ export default function Automations() {
                   </div>
                 </div>
               ))}
-              <h4 className="text-[8px] font-black text-purple-400 uppercase tracking-widest px-2 mt-2">⚡ IA Avançada</h4>
+              <h4 className="text-[8px] font-black text-teal-400 uppercase tracking-widest px-2 mt-2">⚡ IA Avançada</h4>
               {NODE_TYPES_DEF.filter(t => t.category === "ai").map(st => (
                 <div
                   key={st.id}
                   draggable
                   onDragStart={e => onDragStart(e, st.id)}
                   onClick={() => addNodeClick(st.id)}
-                  className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-purple-50 active:scale-95 transition-all cursor-grab active:cursor-grabbing border border-transparent hover:border-purple-100"
+                  className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-teal-50 active:scale-95 transition-all cursor-grab active:cursor-grabbing border border-transparent hover:border-teal-100"
                 >
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-md shrink-0" style={{ backgroundColor: st.color }}>{st.icon}</div>
                   <div className="flex flex-1 items-center justify-between">
@@ -894,11 +894,11 @@ export default function Automations() {
                 </div>
               ))}
 
-              <div className="mt-auto p-3 bg-violet-50 border border-violet-100 rounded-xl">
-                <p className="text-[8px] font-black text-violet-700 uppercase tracking-widest mb-2">Variáveis</p>
+              <div className="mt-auto p-3 bg-teal-50 border border-teal-100 rounded-xl">
+                <p className="text-[8px] font-black text-teal-700 uppercase tracking-widest mb-2">Variáveis</p>
                 <div className="flex flex-wrap gap-1">
                   {VARIABLE_HINTS.slice(0, 10).map(v => (
-                    <span key={v} className="text-[7px] bg-violet-100 text-violet-600 px-1.5 py-0.5 rounded-full font-bold cursor-pointer hover:bg-violet-200" onClick={() => navigator.clipboard.writeText(v)}>
+                    <span key={v} className="text-[7px] bg-teal-100 text-teal-600 px-1.5 py-0.5 rounded-full font-bold cursor-pointer hover:bg-teal-200" onClick={() => navigator.clipboard.writeText(v)}>
                       {v}
                     </span>
                   ))}
@@ -1089,7 +1089,7 @@ export default function Automations() {
                     <div className="space-y-2">
                       <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">ID da Automação</Label>
                       <Input value={selectedNodeData.config?.automationId || ""} onChange={e => updateNodeConfig(selectedNode.id, "automationId", e.target.value)} className="h-9 rounded-lg text-xs font-mono" placeholder="UUID da automação alvo" />
-                      <p className="text-[7px] text-violet-400 font-bold">Dispara outra automação para o mesmo lead (enfileirado)</p>
+                      <p className="text-[7px] text-teal-400 font-bold">Dispara outra automação para o mesmo lead (enfileirado)</p>
                     </div>
                   )}
 
@@ -1146,7 +1146,7 @@ export default function Automations() {
                         <span className="text-[8px] font-black uppercase text-slate-500">Enviar ao lead</span>
                         <Switch checked={selectedNodeData.config?.sendToLead !== false} onCheckedChange={v => updateNodeConfig(selectedNode.id, "sendToLead", v)} />
                       </div>
-                      <p className="text-[7px] text-purple-400 font-bold">Resultado: {"{{ai.response}}"} · Tools: {"{{ai.tool_calls}}"}</p>
+                      <p className="text-[7px] text-teal-400 font-bold">Resultado: {"{{ai.response}}"} · Tools: {"{{ai.tool_calls}}"}</p>
                     </>
                   )}
 
@@ -1178,7 +1178,7 @@ export default function Automations() {
                       <div className="space-y-3">
                         <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Intents (categorias)</Label>
                         {(selectedNodeData.config?.intents || []).map((intent: any, idx: number) => (
-                          <div key={idx} className="p-2 bg-violet-50 rounded-lg space-y-1.5">
+                          <div key={idx} className="p-2 bg-teal-50 rounded-lg space-y-1.5">
                             <Input value={intent.id} placeholder="ID (ex: comprar)" onChange={e => {
                               const intents = [...(selectedNodeData.config?.intents || [])];
                               intents[idx] = { ...intents[idx], id: e.target.value };
@@ -1198,7 +1198,7 @@ export default function Automations() {
                           updateNodeConfig(selectedNode.id, "intents", [...(selectedNodeData.config?.intents || []), { id: "", description: "" }]);
                         }}><Plus className="w-3 h-3 mr-1" /> Intent</Button>
                       </div>
-                      <p className="text-[7px] text-violet-400 font-bold">Roteamento automático: cada intent gera uma saída. Resultado em {"{{ai.intent}}"}</p>
+                      <p className="text-[7px] text-teal-400 font-bold">Roteamento automático: cada intent gera uma saída. Resultado em {"{{ai.intent}}"}</p>
                     </>
                   )}
 
@@ -1246,11 +1246,11 @@ export default function Automations() {
                           placeholder="Descreva os critérios de pontuação..."
                         />
                       </div>
-                      <div className="p-3 bg-purple-50 rounded-xl space-y-1">
+                      <div className="p-3 bg-teal-50 rounded-xl space-y-1">
                         <p className="text-[8px] font-black text-emerald-700 uppercase">Roteamento por Score</p>
-                        <p className="text-[7px] text-[#820AD1] font-medium">🔥 Quente: ≥ 70 · ☀️ Morno: 40-69 · 🥶 Frio: &lt; 40</p>
+                        <p className="text-[7px] text-[#0D9488] font-medium">🔥 Quente: ≥ 70 · ☀️ Morno: 40-69 · 🥶 Frio: &lt; 40</p>
                       </div>
-                      <p className="text-[7px] text-[#820AD1] font-bold">Score salvo em {"{{ai.score}}"} e no Lead.qualificationScore</p>
+                      <p className="text-[7px] text-[#0D9488] font-bold">Score salvo em {"{{ai.score}}"} e no Lead.qualificationScore</p>
                     </>
                   )}
                 </div>

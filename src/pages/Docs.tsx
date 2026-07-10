@@ -173,12 +173,12 @@ export default function Docs() {
         <div className="bg-white border-b border-slate-200 px-8 py-14 lg:px-24">
            <div className="max-w-[1240px] mx-auto">
                 <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 bg-[#820AD1] rounded-[18px] flex items-center justify-center shadow-lg shadow-emerald-200">
+                    <div className="w-12 h-12 bg-[#0D9488] rounded-[18px] flex items-center justify-center shadow-lg shadow-emerald-200">
                         <BookOpen className="text-white w-6 h-6" />
                     </div>
                     <Badge variant="outline" className="text-[10px] font-black tracking-[0.2em] uppercase py-1 border-slate-200 text-slate-400">Hub de Sucesso</Badge>
                 </div>
-                <h1 className="text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-none mb-4">Documentação <span className="text-[#820AD1] italic">Oficial</span></h1>
+                <h1 className="text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-none mb-4">Documentação <span className="text-[#0D9488] italic">Oficial</span></h1>
                 <p className="text-slate-500 font-medium text-lg leading-relaxed max-w-2xl">Manual instrutivo detalhado de cada funcionalidade disponível no Agentes Virtuais. O seu guia definitivo para automação de vendas.</p>
            </div>
         </div>
@@ -198,7 +198,7 @@ export default function Docs() {
                         : 'bg-transparent text-slate-500 hover:bg-white hover:text-slate-900 border border-transparent hover:border-slate-100'
                       }`}
                     >
-                      <div className={`flex-none ${activeTabId === item.id ? 'text-[#9d4edd]' : 'text-slate-400'}`}>
+                      <div className={`flex-none ${activeTabId === item.id ? 'text-[#2DD4BF]' : 'text-slate-400'}`}>
                          {item.icon}
                       </div>
                       <span className="text-sm font-bold tracking-tight">
@@ -208,9 +208,9 @@ export default function Docs() {
                   ))}
                </nav>
 
-               <div className="mt-12 p-8 bg-purple-50 rounded-[40px] border border-emerald-100">
+               <div className="mt-12 p-8 bg-teal-50 rounded-[40px] border border-emerald-100">
                   <div className="flex items-center gap-2 mb-4">
-                     <Lightbulb className="text-[#820AD1] w-5 h-5" />
+                     <Lightbulb className="text-[#0D9488] w-5 h-5" />
                      <span className="text-[10px] font-black text-emerald-800 uppercase tracking-widest">Dica Rápida</span>
                   </div>
                   <p className="text-xs text-emerald-700 font-medium leading-relaxed">Combine o **SDR Bot** com **Automações de Inatividade** para recuperar 30% dos leads que deixaram de responder.</p>
@@ -225,7 +225,7 @@ export default function Docs() {
                     {/* TITLE & INTRO */}
                     <div className="space-y-6">
                         <div className="inline-flex items-center gap-2 bg-white border border-slate-100 px-5 py-2 rounded-full shadow-sm">
-                            <Sparkles className="w-4 h-4 text-[#820AD1]" />
+                            <Sparkles className="w-4 h-4 text-[#0D9488]" />
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Módulo {activeTabId}</span>
                         </div>
                         <h2 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tight leading-none">
@@ -243,7 +243,7 @@ export default function Docs() {
                              
                              <div className="space-y-4 relative z-10">
                                 <h3 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-                                   <div className="w-2 h-8 bg-[#820AD1] rounded-full" />
+                                   <div className="w-2 h-8 bg-[#0D9488] rounded-full" />
                                    {section.title}
                                 </h3>
                                 {section.content && (
@@ -255,7 +255,7 @@ export default function Docs() {
                                 {section.bullets.map((bullet, bIdx) => (
                                   <div key={bIdx} className="flex gap-4 items-start bg-slate-50/50 p-6 rounded-[28px] border border-slate-100/50 hover:bg-white hover:shadow-lg transition-all">
                                      <div className="flex-none mt-1">
-                                        <CheckCircle2 className="text-[#820AD1] w-5 h-5" />
+                                        <CheckCircle2 className="text-[#0D9488] w-5 h-5" />
                                      </div>
                                      <p className="text-sm font-bold text-slate-600 leading-relaxed font-sans">{bullet}</p>
                                   </div>
@@ -274,7 +274,7 @@ export default function Docs() {
                     <div className="pt-12 text-center space-y-4">
                         <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Fim da seção de {activeDoc.label}</p>
                         <div className="flex justify-center gap-4">
-                            <button className="flex items-center gap-2 text-[#820AD1] font-black text-sm uppercase tracking-tighter hover:gap-4 transition-all">
+                            <button className="flex items-center gap-2 text-[#0D9488] font-black text-sm uppercase tracking-tighter hover:gap-4 transition-all">
                                 Ler Próximo Capítulo <ArrowRight className="w-4 h-4" />
                             </button>
                         </div>
