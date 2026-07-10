@@ -1,4 +1,5 @@
 import prisma from "./src/api/config/prisma.js";
+import { isTenantEntitled } from "./src/api/middlewares/subscription.js";
 import { WhatsAppManager } from "./whatsapp.js";
 import { EmailService } from "./email_service.js";
 import CalendarService from "./calendar_service.js";
@@ -2364,6 +2365,15 @@ ${scrapeContext}
    */
   async handleIncomingMessage(lead, content, tenantId) {
     try {
+      // 💰 Gate de assinatura: tenant inadimplente/trial expirado não tem o
+      // bot respondendo (o "dente" da monetização). A mensagem do lead já foi
+      // salva pelo webhook; aqui só suprimimos a resposta automática.
+      const { entitled } = await isTenantEntitled(tenantId);
+      if (!entitled) {
+        console.log(`[AutoEngine] 🚫 Bot suspenso p/ tenant ${tenantId} (assinatura inativa).`);
+        return null;
+      }
+
       // Verifica se há automações INCOMING_MESSAGE ativas
       const auts = await prisma.automation.findMany({
         where: { tenantId, trigger: "INCOMING_MESSAGE", active: true }

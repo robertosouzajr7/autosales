@@ -46,14 +46,7 @@ export default function Settings() {
   // SaaS Billing & Subscription States
   const [billingData, setBillingData] = useState<any>(null);
   const [plans, setPlans] = useState<any[]>([]);
-  const [isPayModalOpen, setIsPayModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
-  const [cardDetails, setCardDetails] = useState({
-    cardHolder: "",
-    cardNumber: "",
-    cvv: "",
-    expiry: ""
-  });
   const [isPaying, setIsPaying] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState(false);
 
@@ -177,28 +170,27 @@ export default function Settings() {
   const handlePayInvoice = async (invoiceId: string) => {
     setIsPaying(true);
     const token = localStorage.getItem("token");
-    const headers: any = { 
+    const headers: any = {
       "Content-Type": "application/json"
     };
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
     try {
-      const res = await fetch(`/api/billing/pay-invoice/${invoiceId}`, {
+      // Inicia o checkout hospedado do gateway. O pagamento é finalizado na
+      // página segura do provedor; a confirmação chega pelo webhook.
+      const res = await fetch(`/api/billing/checkout/${invoiceId}`, {
         method: "POST",
-        headers,
-        body: JSON.stringify(cardDetails)
+        headers
       });
       const data = await res.json();
-      if (res.ok && data.success) {
-        toast({ title: "Fatura paga com sucesso!", description: "Seu plano foi atualizado/confirmado e o consumo resetado." });
+      if (res.ok && data.success && data.checkoutUrl) {
         setIsPayModalOpen(false);
-        setCardDetails({ cardHolder: "", cardNumber: "", cvv: "", expiry: "" });
-        fetchData(); // Refresh all billing details
+        window.location.href = data.checkoutUrl;
       } else {
-        toast({ title: "Erro ao pagar fatura", description: data.error || "Dados inválidos", variant: "destructive" });
+        toast({ title: "Erro ao iniciar pagamento", description: data.error || "Tente novamente", variant: "destructive" });
       }
     } catch (e) {
-      toast({ title: "Erro na transação de pagamento", variant: "destructive" });
+      toast({ title: "Erro ao iniciar pagamento", variant: "destructive" });
     }
     setIsPaying(false);
   };
@@ -935,15 +927,16 @@ export default function Settings() {
                            </td>
                            <td className="py-4 text-right">
                              {invoice.status !== 'PAID' && (
-                               <Button 
+                               <Button
                                  size="sm"
+                                 disabled={isPaying}
                                  onClick={() => {
                                    setSelectedInvoice(invoice);
-                                   setIsPayModalOpen(true);
+                                   handlePayInvoice(invoice.id);
                                  }}
                                  className="bg-[#820AD1] hover:bg-[#6c08b0] text-white font-black uppercase text-[10px] tracking-widest rounded-xl px-4 h-9 shadow-md shadow-[#820AD1]/20 active:scale-95 transition-all"
                                >
-                                 Pagar Fatura
+                                 {isPaying ? "Redirecionando..." : "Pagar Fatura"}
                                </Button>
                              )}
                            </td>

@@ -64,7 +64,7 @@ class BillingService {
           planId: { not: null },
           nextBillingDate: { lte: now }
         },
-        include: { 
+        include: {
           plan: true,
           invoices: {
             where: { status: { in: ["PENDING", "OVERDUE"] } }
@@ -85,20 +85,36 @@ class BillingService {
           continue;
         }
 
-        // Generate a new invoice
-        console.log(`[BillingService] 💸 Gerando nova fatura mensal para ${tenant.name} (${tenant.plan.name})`);
-        
+        // Período de competência = mês da cobrança (YYYY-MM). A constraint
+        // única (tenantId, billingPeriod) garante que, se o cron rodar duas
+        // vezes no mesmo mês (retry, reboot), a segunda tentativa falhe em vez
+        // de duplicar a fatura.
+        const billingPeriod = now.toISOString().slice(0, 7);
+
         const dueDate = new Date();
         dueDate.setDate(dueDate.getDate() + 3); // 3 days to pay
 
-        const newInvoice = await prisma.invoice.create({
-          data: {
-            tenantId: tenant.id,
-            amount: tenant.plan.priceMonthly,
-            status: "PENDING",
-            dueDate
+        let newInvoice;
+        try {
+          newInvoice = await prisma.invoice.create({
+            data: {
+              tenantId: tenant.id,
+              amount: tenant.plan.priceMonthly,
+              status: "PENDING",
+              dueDate,
+              billingPeriod
+            }
+          });
+        } catch (e) {
+          // P2002 = violação de unique → já existe fatura desse período. Idempotente.
+          if (e.code === "P2002") {
+            console.log(`[BillingService] ↩️ Fatura de ${billingPeriod} já existe para ${tenant.name}. Ignorando (idempotência).`);
+            continue;
           }
-        });
+          throw e;
+        }
+
+        console.log(`[BillingService] 💸 Nova fatura mensal para ${tenant.name} (${tenant.plan.name}) — período ${billingPeriod}`);
 
         // We push the billing date by another 30 days
         const nextBilling = new Date(tenant.nextBillingDate || now);

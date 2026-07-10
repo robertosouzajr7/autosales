@@ -59,11 +59,11 @@ export const sendCampaign = async (req, res) => {
 
     // 🛡️ VERIFICAÇÃO DE COTA (Limite por Plano)
     const maxMessages = tenant.plan?.maxMessages || 1000;
-    const remainingQuota = maxMessages - tenant.monthlyMessagesCount;
+    const remainingQuota = maxMessages - (tenant.usedMessages || 0);
 
     if (leads.length > remainingQuota) {
-      return res.status(403).json({ 
-        error: `Cota insuficiente. Seu plano permite ${maxMessages} envios/mês. Você já usou ${tenant.monthlyMessagesCount}.` 
+      return res.status(403).json({
+        error: `Cota insuficiente. Seu plano permite ${maxMessages} envios/mês. Você já usou ${tenant.usedMessages || 0}.`
       });
     }
 
@@ -182,8 +182,8 @@ export const sendCampaign = async (req, res) => {
       // 📈 ATUALIZAR CONSUMO DO TENANT
       await prisma.tenant.update({
         where: { id: tenantId },
-        data: { 
-          monthlyMessagesCount: { increment: sent }
+        data: {
+          usedMessages: { increment: sent }
         }
       });
     })();

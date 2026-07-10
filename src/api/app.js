@@ -15,6 +15,7 @@ import { WhatsAppManager } from "../../whatsapp.js";
 import AutomationEngine from "../../automation_engine.js";
 import { receiveWhatsappWebhook } from "./controllers/LeadController.js";
 import { verifyMetaWebhook, receiveMetaWebhook } from "./controllers/MetaWebhookController.js";
+import { receivePaymentWebhook } from "./controllers/PaymentWebhookController.js";
 import bcrypt from "bcryptjs";
 import { EventEmitter } from "events";
 
@@ -46,7 +47,7 @@ const apiLimiter = rateLimit({
   // Webhooks são chamados por origem única (loop interno localhost, ou a
   // infra da Meta em rajada) — limitá-los por IP estrangularia todos os
   // tenants de uma vez. O webhook da Meta é autenticado por HMAC.
-  skip: (req) => req.path === "/webhook/whatsapp" || req.path === "/webhook/meta"
+  skip: (req) => ["/webhook/whatsapp", "/webhook/meta", "/webhook/payment"].includes(req.path)
 });
 
 // Login/registro: janela pequena contra força bruta e enumeração de contas
@@ -78,6 +79,9 @@ app.post("/api/webhook/whatsapp", receiveWhatsappWebhook);
 // ⚡ Webhook oficial da Meta Cloud API (verificação + eventos assinados)
 app.get("/api/webhook/meta", verifyMetaWebhook);
 app.post("/api/webhook/meta", receiveMetaWebhook);
+
+// ⚡ Webhook de pagamento (confirma fatura; assinado por HMAC)
+app.post("/api/webhook/payment", receivePaymentWebhook);
 
 // Routes
 app.use("/api/public", publicApiRouter);

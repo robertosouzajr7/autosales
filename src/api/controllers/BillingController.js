@@ -1,4 +1,5 @@
 import prisma from "../config/prisma.js";
+import PaymentService from "../services/PaymentService.js";
 
 // GET /api/billing/portal
 export const getBillingPortalData = async (req, res) => {
@@ -55,15 +56,12 @@ export const getActivePlans = async (req, res) => {
   }
 };
 
-// POST /api/billing/pay-invoice/:invoiceId
-export const payInvoiceMock = async (req, res) => {
+// POST /api/billing/checkout/:invoiceId
+// Inicia o checkout HOSPEDADO do gateway e devolve a URL. O backend nunca
+// recebe dados de cartão; a fatura só vira PAID pelo webhook do gateway.
+export const createCheckoutSession = async (req, res) => {
   const tenantId = req.tenantId;
   const { invoiceId } = req.params;
-  const { cardHolder, cardNumber, cvv, expiry } = req.body;
-
-  if (!cardHolder || !cardNumber || !cvv || !expiry) {
-    return res.status(400).json({ error: "Dados do cartão incompletos" });
-  }
 
   try {
     const invoice = await prisma.invoice.findFirst({
@@ -73,57 +71,13 @@ export const payInvoiceMock = async (req, res) => {
     if (!invoice) return res.status(404).json({ error: "Fatura não encontrada" });
     if (invoice.status === "PAID") return res.status(400).json({ error: "Fatura já está paga" });
 
-    // Mock successful payment
-    const paidInvoice = await prisma.invoice.update({
-      where: { id: invoiceId },
-      data: {
-        status: "PAID",
-        paidAt: new Date()
-      }
-    });
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    const { checkoutUrl, gatewayId } = await PaymentService.createCheckout(tenant, invoice);
 
-    // Update tenant subscription status and set next billing date
-    const nextDate = new Date();
-    nextDate.setDate(nextDate.getDate() + 30);
-
-    const tenant = await prisma.tenant.update({
-      where: { id: tenantId },
-      data: {
-        subscriptionStatus: "ACTIVE",
-        nextBillingDate: nextDate,
-        // Reset monthly consumptions on billing cycle start
-        usedTokens: 0,
-        usedProspects: 0,
-        usedResearch: 0,
-        usedMessages: 0,
-        lastUsageReset: new Date()
-      },
-      include: { plan: true }
-    });
-
-    // Create a financial record (Revenue) for the cash flow tracking
-    await prisma.financialRecord.create({
-      data: {
-        description: `Mensalidade Plano ${tenant.plan?.name || "SaaS"} - Ref: Fatura #${invoiceId.slice(0,8)}`,
-        amount: invoice.amount,
-        type: "REVENUE",
-        category: "Plano SaaS",
-        dueDate: invoice.dueDate,
-        paidAt: new Date(),
-        tenantId: tenant.id
-      }
-    });
-
-    res.json({ 
-      success: true, 
-      invoice: paidInvoice, 
-      tenant: {
-        subscriptionStatus: tenant.subscriptionStatus,
-        nextBillingDate: tenant.nextBillingDate
-      } 
-    });
+    res.json({ success: true, checkoutUrl, gatewayId });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("[Billing] Erro ao criar checkout:", error.message);
+    res.status(500).json({ error: "Não foi possível iniciar o pagamento." });
   }
 };
 

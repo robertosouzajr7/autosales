@@ -8,6 +8,7 @@ import * as PipelineController from "../controllers/PipelineController.js";
 import * as ICPController from "../controllers/ICPController.js";
 import * as AuthController from "../controllers/AuthController.js";
 import { authMiddleware, adminMiddleware } from "../middlewares/auth.js";
+import { requireActiveSubscription } from "../middlewares/subscription.js";
 import * as AdminController from "../controllers/AdminController.js";
 import * as AppointmentController from "../controllers/AppointmentController.js";
 import multer from "multer";
@@ -54,7 +55,7 @@ router.delete("/appointments/:id", AppointmentController.deleteAppointment);
 // Bulk Messaging
 router.get("/bulk/campaigns", BulkController.getCampaigns);
 router.post("/bulk/campaigns", BulkController.createCampaign);
-router.post("/bulk/campaigns/:id/send", BulkController.sendCampaign);
+router.post("/bulk/campaigns/:id/send", requireActiveSubscription, BulkController.sendCampaign);
 router.post("/bulk/import-csv", BulkController.importCSV);
 
 // Settings
@@ -84,18 +85,18 @@ router.get("/analytics", AnalyticsController.getAnalytics);
 
 // Messages & Conversations (Chat/Inbox)
 router.get("/messages/:leadId", MessageController.getMessages);
-router.post("/messages", MessageController.sendMessage);
-router.post("/messages/call-intent", MessageController.callIntent);
+router.post("/messages", requireActiveSubscription, MessageController.sendMessage);
+router.post("/messages/call-intent", requireActiveSubscription, MessageController.callIntent);
 router.put("/conversations/:leadId/toggle-bot", MessageController.toggleBot);
 router.get("/events", MessageController.sseEvents);
 
-// Prospecting (B2B)
-router.post("/prospect", ProspectController.prospectGeneric);
-router.post("/apollo/search", ProspectController.searchApollo);
-router.post("/prospect/linkedin", ProspectController.prospectLinkedIn);
-router.post("/prospect/enrich", ProspectController.enrichData);
+// Prospecting (B2B) — geram custo, exigem assinatura ativa
+router.post("/prospect", requireActiveSubscription, ProspectController.prospectGeneric);
+router.post("/apollo/search", requireActiveSubscription, ProspectController.searchApollo);
+router.post("/prospect/linkedin", requireActiveSubscription, ProspectController.prospectLinkedIn);
+router.post("/prospect/enrich", requireActiveSubscription, ProspectController.enrichData);
 router.get("/prospect/stats", ProspectionStatsController.getProspectionStats);
-router.post("/prospect/trigger-hunt", ProspectionStatsController.triggerManualHunt);
+router.post("/prospect/trigger-hunt", requireActiveSubscription, ProspectionStatsController.triggerManualHunt);
 
 // Users
 router.get("/users", UserController.getUsers);
@@ -155,7 +156,7 @@ router.post("/admin/financial/trigger-billing", adminMiddleware, async (req, res
 // SaaS Billing Portal (Customer)
 router.get("/billing/portal", BillingController.getBillingPortalData);
 router.get("/billing/plans", BillingController.getActivePlans);
-router.post("/billing/pay-invoice/:invoiceId", BillingController.payInvoiceMock);
+router.post("/billing/checkout/:invoiceId", BillingController.createCheckoutSession);
 router.post("/billing/upgrade", BillingController.upgradePlan);
 
 export default router;
