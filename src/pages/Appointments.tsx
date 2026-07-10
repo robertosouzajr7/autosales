@@ -185,11 +185,11 @@ export default function Appointments() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
            <div className="space-y-1">
               <div className="flex items-center gap-3">
-                 <div className="p-3 bg-[#820AD1]/10 rounded-2xl">
-                    <CalendarIcon className="w-6 h-6 text-[#820AD1]" />
+                 <div className="p-3 bg-[#0D9488]/10 rounded-2xl">
+                    <CalendarIcon className="w-6 h-6 text-[#0D9488]" />
                  </div>
                  <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">
-                    Agenda de <span className="text-[#820AD1] italic">Negócios</span>
+                    Agenda de <span className="text-[#0D9488] italic">Negócios</span>
                  </h1>
               </div>
               <p className="text-slate-400 font-bold uppercase tracking-widest text-[9px] pl-[52px]">Gestão de Reuniões e Call de Fechamento</p>
@@ -200,7 +200,7 @@ export default function Appointments() {
                 onClick={() => setIsAddModalOpen(true)}
                 className="h-14 bg-slate-900 hover:bg-black px-8 rounded-2xl font-black uppercase text-xs tracking-widest text-white shadow-2xl transition-all hover:-translate-y-1 active:scale-95"
               >
-                 <Plus className="w-5 h-5 mr-3 text-[#9d4edd]" /> Novo Agendamento
+                 <Plus className="w-5 h-5 mr-3 text-[#2DD4BF]" /> Novo Agendamento
               </Button>
            </div>
         </div>
@@ -225,7 +225,7 @@ export default function Appointments() {
 
               <Card className="border-none shadow-3xl rounded-[40px] bg-slate-900 p-8 text-white space-y-6">
                  <div>
-                    <p className="text-[10px] font-black text-[#9d4edd] uppercase tracking-widest mb-2">Visão Rápida</p>
+                    <p className="text-[10px] font-black text-[#2DD4BF] uppercase tracking-widest mb-2">Visão Rápida</p>
                     <h4 className="text-xl font-black">Performance SDR</h4>
                  </div>
                  <div className="space-y-4">
@@ -235,7 +235,7 @@ export default function Appointments() {
                     </div>
                     <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl">
                        <span className="text-xs font-bold text-slate-400">Taxa de Show</span>
-                       <span className="text-lg font-black text-[#9d4edd]">{stats.rate}%</span>
+                       <span className="text-lg font-black text-[#2DD4BF]">{stats.rate}%</span>
                     </div>
                  </div>
               </Card>
@@ -253,7 +253,7 @@ export default function Appointments() {
                     
                     <div className="flex items-center gap-3 pr-2">
                        <div className="hidden md:flex items-center bg-slate-50 rounded-2xl px-4 py-2 border border-slate-100">
-                          <CalendarDays className="w-4 h-4 text-[#820AD1] mr-3" />
+                          <CalendarDays className="w-4 h-4 text-[#0D9488] mr-3" />
                           <span className="text-[10px] font-black text-slate-500 uppercase tracking-tighter">
                              {format(selectedDate || new Date(), "MMMM yyyy", { locale: ptBR })}
                           </span>
@@ -292,7 +292,7 @@ export default function Appointments() {
                                             <div className="h-12 w-px bg-slate-100 hidden md:block" />
 
                                             <div className="space-y-1">
-                                               <h3 className="text-xl font-black text-slate-900 tracking-tight leading-none group-hover:text-[#820AD1] transition-colors">{appt.title}</h3>
+                                               <h3 className="text-xl font-black text-slate-900 tracking-tight leading-none group-hover:text-[#0D9488] transition-colors">{appt.title}</h3>
                                                <div className="flex items-center gap-3">
                                                   <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 rounded-full border border-slate-100">
                                                      <User className="w-3 h-3 text-slate-400" />
@@ -301,7 +301,7 @@ export default function Appointments() {
                                                   <Badge className={cn(
                                                     "text-[8px] font-black uppercase tracking-tighter px-2 h-5 border-none",
                                                     appt.status === "SCHEDULED" ? "bg-indigo-500 text-white" :
-                                                    appt.status === "COMPLETED" ? "bg-[#820AD1] text-white" :
+                                                    appt.status === "COMPLETED" ? "bg-[#0D9488] text-white" :
                                                     appt.status === "CANCELLED" ? "bg-red-500 text-white" :
                                                     appt.status === "NOSHOW" ? "bg-orange-500 text-white" :
                                                     "bg-slate-200 text-slate-600"
@@ -321,8 +321,8 @@ export default function Appointments() {
                                               className={cn(
                                                 "px-5 py-2.5 rounded-2xl font-black uppercase text-[9px] tracking-widest shadow-sm transition-all",
                                                 appt.status === "COMPLETED" 
-                                                  ? "bg-[#820AD1] text-white hover:bg-[#6c08b0]" 
-                                                  : "bg-slate-100 text-slate-500 hover:bg-[#820AD1] hover:text-white"
+                                                  ? "bg-[#0D9488] text-white hover:bg-[#0F766E]" 
+                                                  : "bg-slate-100 text-slate-500 hover:bg-[#0D9488] hover:text-white"
                                               )}
                                             >
                                                {appt.status === "COMPLETED" ? <><CheckCircle2 className="w-3 h-3 mr-2" /> Concluído</> : "Marcar Concluído"}
@@ -341,7 +341,7 @@ export default function Appointments() {
                          <div className="py-24 text-center border-4 border-dashed border-slate-100 rounded-[60px] flex flex-col items-center justify-center gap-8 bg-white/50">
                             <div className="w-24 h-24 bg-slate-50 rounded-[40px] flex items-center justify-center relative">
                                <LucideCalendar className="w-10 h-10 text-slate-200" />
-                               <div className="absolute top-0 right-0 w-6 h-6 bg-[#820AD1] rounded-full border-4 border-white animate-pulse" />
+                               <div className="absolute top-0 right-0 w-6 h-6 bg-[#0D9488] rounded-full border-4 border-white animate-pulse" />
                             </div>
                             <div className="space-y-2">
                                <p className="text-lg font-black text-slate-900 tracking-tighter uppercase">Nenhum agendamento encontrado</p>
@@ -361,10 +361,10 @@ export default function Appointments() {
 
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
         <DialogContent className="rounded-[40px] p-10 max-w-lg border-none shadow-3xl bg-white overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-[#820AD1]/5 blur-3xl rounded-full" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#0D9488]/5 blur-3xl rounded-full" />
           <DialogHeader>
             <DialogTitle className="text-3xl font-black text-slate-900 tracking-tighter uppercase leading-none mb-2">
-              Nova <span className="text-[#820AD1] italic">Reunião</span>
+              Nova <span className="text-[#0D9488] italic">Reunião</span>
             </DialogTitle>
             <DialogDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest">Preencha os detalhes para travar a agenda do SDR.</DialogDescription>
           </DialogHeader>
@@ -424,7 +424,7 @@ export default function Appointments() {
                onClick={handleCreateAppt} 
                className="w-full h-16 bg-slate-900 hover:bg-black text-white font-black rounded-3xl uppercase tracking-widest text-sm transition-all shadow-2xl hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3"
              >
-               <Save className="w-5 h-5 text-[#9d4edd]" /> Confirmar e Salvar
+               <Save className="w-5 h-5 text-[#2DD4BF]" /> Confirmar e Salvar
              </Button>
           </DialogFooter>
         </DialogContent>

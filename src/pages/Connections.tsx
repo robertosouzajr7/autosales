@@ -169,7 +169,7 @@ export default function Connections() {
         {/* STATUS TILES */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
            <Card className="p-6 border-none shadow-xl rounded-[30px] bg-white flex items-center gap-6">
-              <div className="bg-purple-50 p-4 rounded-2xl text-[#820AD1]"><Activity className="w-6 h-6" /></div>
+              <div className="bg-teal-50 p-4 rounded-2xl text-[#0D9488]"><Activity className="w-6 h-6" /></div>
               <div>
                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Conexões Ativas</p>
                  <p className="text-2xl font-black text-slate-900">{connections.filter(c => c.status === 'CONNECTED').length} / {connections.length}</p>
@@ -183,10 +183,10 @@ export default function Connections() {
               </div>
            </Card>
            <Card className="p-6 border-none shadow-xl rounded-[30px] bg-white flex items-center gap-6">
-              <div className="bg-purple-50 p-4 rounded-2xl text-[#820AD1]"><Globe className="w-6 h-6" /></div>
+              <div className="bg-teal-50 p-4 rounded-2xl text-[#0D9488]"><Globe className="w-6 h-6" /></div>
               <div>
                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status da API</p>
-                 <p className="text-2xl font-black text-[#820AD1]">Online</p>
+                 <p className="text-2xl font-black text-[#0D9488]">Online</p>
               </div>
            </Card>
         </div>
@@ -198,7 +198,7 @@ export default function Connections() {
                 <CardContent className="p-10 space-y-8">
                    <div className="flex justify-between items-start">
                       <div className="flex items-center gap-5">
-                         <div className={`w-16 h-16 rounded-[24px] flex items-center justify-center shadow-lg transition-transform group-hover:scale-110 ${conn.status === 'CONNECTED' ? 'bg-[#820AD1] text-white' : 'bg-slate-100 text-slate-400'}`}>
+                         <div className={`w-16 h-16 rounded-[24px] flex items-center justify-center shadow-lg transition-transform group-hover:scale-110 ${conn.status === 'CONNECTED' ? 'bg-[#0D9488] text-white' : 'bg-slate-100 text-slate-400'}`}>
                             <Smartphone className="w-8 h-8" />
                          </div>
                          <div className="space-y-1">
@@ -213,7 +213,7 @@ export default function Connections() {
                       </div>
                       <div className="flex gap-2">
                          {conn.status === 'CONNECTED' ? (
-                           <div className="bg-purple-50 text-[#820AD1] p-2 rounded-xl">
+                           <div className="bg-teal-50 text-[#0D9488] p-2 rounded-xl">
                               <CheckCircle2 className="w-6 h-6" />
                            </div>
                          ) : (
@@ -236,7 +236,7 @@ export default function Connections() {
                    </div>
 
                    <div className="flex items-center justify-between pt-4">
-                      <div className="flex items-center gap-2 text-[#820AD1] font-black text-[10px] uppercase tracking-widest">
+                      <div className="flex items-center gap-2 text-[#0D9488] font-black text-[10px] uppercase tracking-widest">
                          <CheckCircle2 className="w-4 h-4" /> Criptografia Ponta-a-Ponta
                       </div>
                        <Button variant="ghost" className="text-red-400 hover:text-red-600 hover:bg-red-50 text-[10px] font-black uppercase tracking-widest gap-2" onClick={() => handleDeleteConnection(conn.id)}>

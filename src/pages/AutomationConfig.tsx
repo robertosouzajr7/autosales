@@ -268,7 +268,7 @@ export default function AutomationConfig() {
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="bg-[#6c08b0] hover:bg-emerald-700 gap-2 shrink-0"
+            className="bg-[#0F766E] hover:bg-emerald-700 gap-2 shrink-0"
           >
             {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             {saving ? "Salvando…" : "Salvar Configurações"}
@@ -303,8 +303,8 @@ export default function AutomationConfig() {
           <TabsContent value="confirmations" className="mt-4 space-y-4">
             <ConfigCard
               icon={Bell}
-              iconColor="text-violet-600"
-              iconBg="bg-violet-50"
+              iconColor="text-teal-600"
+              iconBg="bg-teal-50"
               title="Confirmação Automática"
               description="O robô envia uma mensagem pedindo ao cliente para confirmar ou cancelar o agendamento antes do horário marcado."
             >
@@ -343,7 +343,7 @@ export default function AutomationConfig() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 bg-violet-50 text-violet-700 rounded-lg px-3 py-2.5 text-xs">
+                <div className="flex items-center gap-2 bg-teal-50 text-teal-700 rounded-lg px-3 py-2.5 text-xs">
                   <Clock className="h-3.5 w-3.5 shrink-0" />
                   <span>
                     Se o cliente responder <strong>SIM</strong>, o agendamento é mantido. Se responder <strong>NÃO</strong>ou não responder após {config.autoConfirmHours}h, a vaga é automaticamente liberada.
@@ -431,8 +431,8 @@ export default function AutomationConfig() {
           <TabsContent value="postservice" className="mt-4 space-y-4">
             <ConfigCard
               icon={Handshake}
-              iconColor="text-[#820AD1]"
-              iconBg="bg-purple-50"
+              iconColor="text-[#0D9488]"
+              iconBg="bg-teal-50"
               title="Follow-up Pós-Atendimento"
               description="O robô envia uma mensagem após a conclusão do serviço para verificar a satisfação do cliente."
             >
@@ -592,7 +592,7 @@ export default function AutomationConfig() {
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="bg-[#6c08b0] hover:bg-emerald-700 gap-2"
+            className="bg-[#0F766E] hover:bg-emerald-700 gap-2"
             size="sm"
           >
             {saving ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}

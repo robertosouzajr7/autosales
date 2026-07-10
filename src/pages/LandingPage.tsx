@@ -103,59 +103,59 @@ export default function LandingPage() {
 
   const visiblePlans = plans.filter(p => !settings?.visiblePlanIds || settings.visiblePlanIds.split(",").includes(p.id));
 
-  // Dynamic Theme Styling Variables - Nubank Palette Theme (#820AD1 purple based)
-  const sBg = isDarkMode ? "bg-[#120024] text-slate-100" : "bg-[#F8F6FC] text-[#2D0052]";
-  const sHeader = isDarkMode ? "bg-[#120024]/85 border-purple-950/40" : "bg-white/85 border-purple-100";
-  const sHeaderText = isDarkMode ? "text-purple-200 hover:text-[#820AD1]" : "text-[#2D0052] hover:text-[#820AD1]";
-  const sLogoText = isDarkMode ? "text-white" : "text-[#2D0052]";
+  // Dynamic Theme Styling Variables - Health Palette Theme (#0D9488 teal based)
+  const sBg = isDarkMode ? "bg-[#042F2E] text-slate-100" : "bg-[#F0FDFA] text-[#134E4A]";
+  const sHeader = isDarkMode ? "bg-[#042F2E]/85 border-teal-950/40" : "bg-white/85 border-teal-100";
+  const sHeaderText = isDarkMode ? "text-teal-200 hover:text-[#0D9488]" : "text-[#134E4A] hover:text-[#0D9488]";
+  const sLogoText = isDarkMode ? "text-white" : "text-[#134E4A]";
   
-  const sHero = isDarkMode ? "bg-[#120024] border-b border-purple-950/40" : "bg-white border-b border-purple-100/60";
-  const sHeroTitle = isDarkMode ? "text-white" : "text-[#2D0052]";
-  const sHeroDesc = isDarkMode ? "text-purple-200/70" : "text-purple-950/70";
-  const sButtonSecondary = isDarkMode ? "bg-white/5 border-purple-900/30 text-purple-200 hover:bg-white/10" : "bg-purple-50 border-purple-100 text-[#820AD1] hover:bg-purple-100";
+  const sHero = isDarkMode ? "bg-[#042F2E] border-b border-teal-950/40" : "bg-white border-b border-teal-100/60";
+  const sHeroTitle = isDarkMode ? "text-white" : "text-[#134E4A]";
+  const sHeroDesc = isDarkMode ? "text-teal-200/70" : "text-teal-950/70";
+  const sButtonSecondary = isDarkMode ? "bg-white/5 border-teal-900/30 text-teal-200 hover:bg-white/10" : "bg-teal-50 border-teal-100 text-[#0D9488] hover:bg-teal-100";
   
-  const sSectionProblem = isDarkMode ? "bg-[#17002e] border-b border-purple-950/40" : "bg-[#F0ECF8] border-b border-purple-100/40";
-  const sSectionTitle = isDarkMode ? "text-white" : "text-[#2D0052]";
-  const sSectionDesc = isDarkMode ? "text-purple-200/70" : "text-purple-950/70";
-  const sProblemCard = isDarkMode ? "bg-[#230440]/65 border-purple-950/40" : "bg-white border-purple-100 shadow-xl shadow-purple-950/5";
-  const sProblemTitle = isDarkMode ? "text-white" : "text-[#2D0052]";
-  const sProblemDesc = isDarkMode ? "text-purple-200/60" : "text-purple-950/60";
+  const sSectionProblem = isDarkMode ? "bg-[#032726] border-b border-teal-950/40" : "bg-[#E9FBF7] border-b border-teal-100/40";
+  const sSectionTitle = isDarkMode ? "text-white" : "text-[#134E4A]";
+  const sSectionDesc = isDarkMode ? "text-teal-200/70" : "text-teal-950/70";
+  const sProblemCard = isDarkMode ? "bg-[#0B3A38]/65 border-teal-950/40" : "bg-white border-teal-100 shadow-xl shadow-teal-950/5";
+  const sProblemTitle = isDarkMode ? "text-white" : "text-[#134E4A]";
+  const sProblemDesc = isDarkMode ? "text-teal-200/60" : "text-teal-950/60";
 
-  const sHowItWorks = isDarkMode ? "bg-[#120024] border-b border-purple-950/40" : "bg-white border-b border-purple-100";
-  const sHowNumberText = isDarkMode ? "text-purple-950/10" : "text-[#820AD1]/5";
-  const sHowTitle = isDarkMode ? "text-white" : "text-[#2D0052]";
+  const sHowItWorks = isDarkMode ? "bg-[#042F2E] border-b border-teal-950/40" : "bg-white border-b border-teal-100";
+  const sHowNumberText = isDarkMode ? "text-teal-950/10" : "text-[#0D9488]/5";
+  const sHowTitle = isDarkMode ? "text-white" : "text-[#134E4A]";
   
-  const sFeatures = isDarkMode ? "bg-[#17002e] border-b border-purple-950/40" : "bg-[#F8F6FC] border-b border-purple-100";
-  const sFeatureCard = isDarkMode ? "bg-[#230440]/65 border-purple-950/40 hover:border-[#820AD1]/40" : "bg-white border-purple-100 hover:border-[#820AD1]/30 hover:shadow-xl hover:shadow-purple-950/5";
-  const sFeatureTitle = isDarkMode ? "text-white" : "text-[#2D0052]";
-  const sFeatureDesc = isDarkMode ? "text-purple-200/60" : "text-purple-950/60";
+  const sFeatures = isDarkMode ? "bg-[#032726] border-b border-teal-950/40" : "bg-[#F0FDFA] border-b border-teal-100";
+  const sFeatureCard = isDarkMode ? "bg-[#0B3A38]/65 border-teal-950/40 hover:border-[#0D9488]/40" : "bg-white border-teal-100 hover:border-[#0D9488]/30 hover:shadow-xl hover:shadow-teal-950/5";
+  const sFeatureTitle = isDarkMode ? "text-white" : "text-[#134E4A]";
+  const sFeatureDesc = isDarkMode ? "text-teal-200/60" : "text-teal-950/60";
 
-  const sTestimonials = isDarkMode ? "bg-[#120024] border-b border-purple-950/40" : "bg-white border-b border-purple-100";
-  const sTestimonialCard = isDarkMode ? "bg-[#230440]/65 border-purple-950/40 text-white" : "bg-[#F8F6FC] border-purple-100 text-[#2D0052] shadow-md";
-  const sTestimonialText = isDarkMode ? "text-purple-100" : "text-purple-950/80";
-  const sTestimonialAuthor = isDarkMode ? "text-white" : "text-[#2D0052]";
-  const sTestimonialRole = isDarkMode ? "text-purple-300" : "text-purple-950/50";
+  const sTestimonials = isDarkMode ? "bg-[#042F2E] border-b border-teal-950/40" : "bg-white border-b border-teal-100";
+  const sTestimonialCard = isDarkMode ? "bg-[#0B3A38]/65 border-teal-950/40 text-white" : "bg-[#F0FDFA] border-teal-100 text-[#134E4A] shadow-md";
+  const sTestimonialText = isDarkMode ? "text-teal-100" : "text-teal-950/80";
+  const sTestimonialAuthor = isDarkMode ? "text-white" : "text-[#134E4A]";
+  const sTestimonialRole = isDarkMode ? "text-teal-300" : "text-teal-950/50";
 
-  const sPricing = isDarkMode ? "bg-[#17002e] border-b border-purple-950/40" : "bg-[#F0ECF8] border-b border-purple-100";
-  const sPricingCardRecommended = "bg-[#820AD1] text-white border-none shadow-2xl shadow-[#820AD1]/30";
-  const sPricingCardStandard = isDarkMode ? "bg-[#230440]/80 border-purple-950/40 text-white" : "bg-white border-purple-100 text-[#2D0052] shadow-xl shadow-purple-950/5";
-  const sPricingTextMuted = (recom: boolean) => recom ? "text-purple-100" : (isDarkMode ? "text-purple-300" : "text-purple-950/50");
-  const sPricingBorderMuted = (recom: boolean) => recom ? "border-white/10" : (isDarkMode ? "border-purple-950/30" : "border-purple-100");
+  const sPricing = isDarkMode ? "bg-[#032726] border-b border-teal-950/40" : "bg-[#E9FBF7] border-b border-teal-100";
+  const sPricingCardRecommended = "bg-[#0D9488] text-white border-none shadow-2xl shadow-[#0D9488]/30";
+  const sPricingCardStandard = isDarkMode ? "bg-[#0B3A38]/80 border-teal-950/40 text-white" : "bg-white border-teal-100 text-[#134E4A] shadow-xl shadow-teal-950/5";
+  const sPricingTextMuted = (recom: boolean) => recom ? "text-teal-100" : (isDarkMode ? "text-teal-300" : "text-teal-950/50");
+  const sPricingBorderMuted = (recom: boolean) => recom ? "border-white/10" : (isDarkMode ? "border-teal-950/30" : "border-teal-100");
 
-  const sFaq = isDarkMode ? "bg-[#120024] border-b border-purple-950/40" : "bg-white border-b border-purple-100";
-  const sFaqItem = isDarkMode ? "bg-[#230440]/65 border-purple-950/40" : "bg-[#F8F6FC] border-purple-100";
-  const sFaqTitle = isDarkMode ? "text-white" : "text-[#2D0052]";
-  const sFaqDesc = isDarkMode ? "text-purple-200/60" : "text-purple-950/60";
+  const sFaq = isDarkMode ? "bg-[#042F2E] border-b border-teal-950/40" : "bg-white border-b border-teal-100";
+  const sFaqItem = isDarkMode ? "bg-[#0B3A38]/65 border-teal-950/40" : "bg-[#F0FDFA] border-teal-100";
+  const sFaqTitle = isDarkMode ? "text-white" : "text-[#134E4A]";
+  const sFaqDesc = isDarkMode ? "text-teal-200/60" : "text-teal-950/60";
 
-  const sCTA = isDarkMode ? "bg-[#17002e]" : "bg-[#2D0052] text-white";
-  const sCTADesc = isDarkMode ? "text-purple-200/70" : "text-purple-200";
+  const sCTA = isDarkMode ? "bg-[#032726]" : "bg-[#134E4A] text-white";
+  const sCTADesc = isDarkMode ? "text-teal-200/70" : "text-teal-200";
   
-  const sFooter = isDarkMode ? "bg-[#120024] border-t border-purple-950 text-purple-400" : "bg-white border-t border-purple-100 text-purple-950/65";
-  const sFooterTitle = isDarkMode ? "text-white" : "text-[#2D0052]";
-  const sFooterDesc = isDarkMode ? "text-purple-300" : "text-purple-950/55";
+  const sFooter = isDarkMode ? "bg-[#042F2E] border-t border-teal-950 text-teal-400" : "bg-white border-t border-teal-100 text-teal-950/65";
+  const sFooterTitle = isDarkMode ? "text-white" : "text-[#134E4A]";
+  const sFooterDesc = isDarkMode ? "text-teal-300" : "text-teal-950/55";
 
   return (
-    <div className={`min-h-screen ${sBg} flex flex-col font-sans overflow-x-hidden selection:bg-[#820AD1] selection:text-white transition-colors duration-300`}>
+    <div className={`min-h-screen ${sBg} flex flex-col font-sans overflow-x-hidden selection:bg-[#0D9488] selection:text-white transition-colors duration-300`}>
       
       {/* HEADER */}
       <header className={`sticky top-0 z-50 ${sHeader} backdrop-blur-xl border-b px-6 lg:px-20 h-20 flex items-center justify-between transition-colors duration-300`}>
@@ -165,7 +165,7 @@ export default function LandingPage() {
           ) : (
             <>
               <img src="/logo.png" alt="AutoSales Logo" className="h-10 w-auto" />
-              <span className={`text-2xl font-black ${sLogoText} tracking-tighter uppercase italic`}>Auto<span className="text-[#820AD1]">Sales</span></span>
+              <span className={`text-2xl font-black ${sLogoText} tracking-tighter uppercase italic`}>Auto<span className="text-[#0D9488]">Sales</span></span>
             </>
           )}
         </div>
@@ -183,37 +183,37 @@ export default function LandingPage() {
            {/* THEME TOGGLE BUTTON */}
            <button 
              onClick={toggleTheme} 
-             className={`p-2.5 rounded-xl border ${isDarkMode ? 'border-purple-950/40 hover:bg-white/5 text-[#820AD1]' : 'border-purple-100 hover:bg-purple-50 text-[#820AD1]'} transition-all`}
+             className={`p-2.5 rounded-xl border ${isDarkMode ? 'border-teal-950/40 hover:bg-white/5 text-[#0D9488]' : 'border-teal-100 hover:bg-teal-50 text-[#0D9488]'} transition-all`}
              title={isDarkMode ? "Ativar Modo Claro" : "Ativar Modo Escuro"}
            >
-             {isDarkMode ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-purple-800" />}
+             {isDarkMode ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-teal-800" />}
            </button>
 
-           <Link to="/login" className={`text-sm font-bold ${isDarkMode ? 'text-purple-200 hover:text-[#820AD1]' : 'text-[#2D0052] hover:text-[#820AD1]'} transition-colors pr-2`}>Entrar</Link>
+           <Link to="/login" className={`text-sm font-bold ${isDarkMode ? 'text-teal-200 hover:text-[#0D9488]' : 'text-[#134E4A] hover:text-[#0D9488]'} transition-colors pr-2`}>Entrar</Link>
            <Link to="/register">
-             <Button className="font-black h-11 px-6 rounded-xl bg-[#820AD1] hover:bg-[#6c08b0] text-white shadow-xl shadow-[#820AD1]/20 hover:scale-105 transition-transform border-none">Testar Grátis</Button>
+             <Button className="font-black h-11 px-6 rounded-xl bg-[#0D9488] hover:bg-[#0F766E] text-white shadow-xl shadow-[#0D9488]/20 hover:scale-105 transition-transform border-none">Testar Grátis</Button>
            </Link>
         </div>
       </header>
 
       {/* HERO SECTION */}
       <section className={`relative pt-24 pb-32 lg:pt-36 lg:pb-44 overflow-hidden px-6 lg:px-20 ${sHero} transition-colors duration-300`}>
-         <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(130,10,209,0.08),transparent_50%)]" />
-         <div className="absolute top-10 right-10 w-96 h-96 bg-[#820AD1]/10 rounded-full blur-[150px] pointer-events-none" />
+         <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(13,148,136,0.08),transparent_50%)]" />
+         <div className="absolute top-10 right-10 w-96 h-96 bg-[#0D9488]/10 rounded-full blur-[150px] pointer-events-none" />
          
          <div className="max-w-5xl mx-auto text-center space-y-8 relative z-10">
-            <Badge className="bg-[#820AD1]/10 text-[#820AD1] border-none py-1.5 px-4 font-black text-xs uppercase tracking-widest leading-loose">
+            <Badge className="bg-[#0D9488]/10 text-[#0D9488] border-none py-1.5 px-4 font-black text-xs uppercase tracking-widest leading-loose">
                ⚡ SEU ATENDENTE DE IA NO WHATSAPP OFICIAL
             </Badge>
             <h1 className={`text-5xl lg:text-7xl font-black ${sHeroTitle} tracking-tighter leading-[0.95] text-balance`}>
-               Nenhum paciente sem resposta.<br/>Sua clínica <span className="text-[#820AD1] italic">agendando 24h</span> por dia.
+               Nenhum paciente sem resposta.<br/>Sua clínica <span className="text-[#0D9488] italic">agendando 24h</span> por dia.
             </h1>
             <p className={`text-lg lg:text-xl ${sHeroDesc} font-medium max-w-3xl mx-auto leading-relaxed`}>
                Um agente de IA no WhatsApp oficial que responde na hora, qualifica o paciente e agenda a consulta direto na sua agenda — enquanto a sua recepção cuida de quem está na clínica.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
                <Link to="/register">
-                 <Button className="h-16 px-10 text-lg font-black bg-[#820AD1] hover:bg-[#6c08b0] text-white rounded-2xl shadow-[0_20px_40px_-5px_rgba(130,10,209,0.4)] hover:scale-105 transition-all border-none">
+                 <Button className="h-16 px-10 text-lg font-black bg-[#0D9488] hover:bg-[#0F766E] text-white rounded-2xl shadow-[0_20px_40px_-5px_rgba(13,148,136,0.4)] hover:scale-105 transition-all border-none">
                    Ativar meu atendente de IA
                  </Button>
                </Link>
@@ -262,14 +262,14 @@ export default function LandingPage() {
       <section id="how-it-works" className={`py-28 ${sHowItWorks} px-6 lg:px-20 transition-colors duration-300`}>
          <div className="max-w-6xl mx-auto space-y-20">
             <div className="text-center space-y-4">
-               <h2 className={`text-3xl lg:text-5xl font-black tracking-tighter ${sHowTitle}`}>Do "oi" ao agendamento em <span className="text-[#820AD1] italic">3 passos simples</span></h2>
+               <h2 className={`text-3xl lg:text-5xl font-black tracking-tighter ${sHowTitle}`}>Do "oi" ao agendamento em <span className="text-[#0D9488] italic">3 passos simples</span></h2>
                <p className={`${sSectionDesc} font-medium max-w-xl mx-auto`}>Seu atendente de IA cuida do WhatsApp enquanto você cuida dos pacientes.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 relative">
                <div className="space-y-6 relative">
                   <div className={`absolute -top-6 -left-6 text-9xl font-black ${sHowNumberText} pointer-events-none select-none`}>01</div>
-                  <div className="text-[#820AD1] font-black text-xs uppercase tracking-widest">PASSO 1: O PACIENTE CHAMA</div>
+                  <div className="text-[#0D9488] font-black text-xs uppercase tracking-widest">PASSO 1: O PACIENTE CHAMA</div>
                   <h3 className={`text-2xl font-black ${sHowTitle} tracking-tight`}>Responde na hora, com a sua voz</h3>
                   <p className={`${sSectionDesc} text-sm leading-relaxed`}>
                      A qualquer hora do dia, o agente responde no WhatsApp oficial da clínica com o tom que você definir. Tira as dúvidas comuns — convênios, valores, endereço, preparo — sem deixar ninguém esperando.
@@ -278,7 +278,7 @@ export default function LandingPage() {
 
                <div className="space-y-6 relative">
                   <div className={`absolute -top-6 -left-6 text-9xl font-black ${sHowNumberText} pointer-events-none select-none`}>02</div>
-                  <div className="text-[#820AD1] font-black text-xs uppercase tracking-widest">PASSO 2: QUALIFICA COM SEGURANÇA</div>
+                  <div className="text-[#0D9488] font-black text-xs uppercase tracking-widest">PASSO 2: QUALIFICA COM SEGURANÇA</div>
                   <h3 className={`text-2xl font-black ${sHowTitle} tracking-tight`}>Entende a necessidade do paciente</h3>
                   <p className={`${sSectionDesc} text-sm leading-relaxed`}>
                      A IA descobre o procedimento desejado, o convênio e a urgência para oferecer o melhor horário — sempre dentro do escopo, sem nunca dar diagnóstico ou orientação clínica.
@@ -287,7 +287,7 @@ export default function LandingPage() {
 
                <div className="space-y-6 relative">
                   <div className={`absolute -top-6 -left-6 text-9xl font-black ${sHowNumberText} pointer-events-none select-none`}>03</div>
-                  <div className="text-[#820AD1] font-black text-xs uppercase tracking-widest">PASSO 3: AGENDA E CONFIRMA</div>
+                  <div className="text-[#0D9488] font-black text-xs uppercase tracking-widest">PASSO 3: AGENDA E CONFIRMA</div>
                   <h3 className={`text-2xl font-black ${sHowTitle} tracking-tight`}>Marca a consulta automaticamente</h3>
                   <p className={`${sSectionDesc} text-sm leading-relaxed`}>
                      O agente consulta os horários livres na sua agenda, marca a consulta sem conflito, confirma na hora e envia lembretes automáticos no WhatsApp para reduzir as faltas.
@@ -301,13 +301,13 @@ export default function LandingPage() {
       <section id="features" className={`py-28 ${sFeatures} px-6 lg:px-20 transition-colors duration-300`}>
         <div className="max-w-6xl mx-auto space-y-20">
           <div className="text-center space-y-4">
-            <h2 className={`text-3xl lg:text-5xl font-black tracking-tighter ${sSectionTitle}`}>Desenvolvido para gerar <span className="text-[#820AD1] italic">resultados operacionais reais</span></h2>
+            <h2 className={`text-3xl lg:text-5xl font-black tracking-tighter ${sSectionTitle}`}>Desenvolvido para gerar <span className="text-[#0D9488] italic">resultados operacionais reais</span></h2>
             <p className={`${sSectionDesc} font-medium max-w-xl mx-auto`}>Funcionalidades nativas, maduras e prontas para rodar no seu negócio.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             <Card className={`p-8 border rounded-[30px] space-y-6 transition-all group ${sFeatureCard}`}>
-              <div className="w-12 h-12 bg-[#820AD1]/10 text-[#820AD1] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <div className="w-12 h-12 bg-[#0D9488]/10 text-[#0D9488] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Target className="w-6 h-6" />
               </div>
               <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>Atendente de IA 24/7</h3>
@@ -317,7 +317,7 @@ export default function LandingPage() {
             </Card>
 
             <Card className={`p-8 border rounded-[30px] space-y-6 transition-all group ${sFeatureCard}`}>
-              <div className="w-12 h-12 bg-[#820AD1]/10 text-[#820AD1] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <div className="w-12 h-12 bg-[#0D9488]/10 text-[#0D9488] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Sparkles className="w-6 h-6" />
               </div>
               <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>Qualificação com segurança</h3>
@@ -327,7 +327,7 @@ export default function LandingPage() {
             </Card>
 
             <Card className={`p-8 border rounded-[30px] space-y-6 transition-all group ${sFeatureCard}`}>
-              <div className="w-12 h-12 bg-[#820AD1]/10 text-[#820AD1] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <div className="w-12 h-12 bg-[#0D9488]/10 text-[#0D9488] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <BarChart className="w-6 h-6" />
               </div>
               <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>Funil de Pacientes</h3>
@@ -337,7 +337,7 @@ export default function LandingPage() {
             </Card>
 
             <Card className={`p-8 border rounded-[30px] space-y-6 transition-all group ${sFeatureCard}`}>
-              <div className="w-12 h-12 bg-[#820AD1]/10 text-[#820AD1] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <div className="w-12 h-12 bg-[#0D9488]/10 text-[#0D9488] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Clock className="w-6 h-6" />
               </div>
               <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>Agenda integrada</h3>
@@ -347,7 +347,7 @@ export default function LandingPage() {
             </Card>
 
             <Card className={`p-8 border rounded-[30px] space-y-6 transition-all group ${sFeatureCard}`}>
-              <div className="w-12 h-12 bg-[#820AD1]/10 text-[#820AD1] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <div className="w-12 h-12 bg-[#0D9488]/10 text-[#0D9488] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Zap className="w-6 h-6" />
               </div>
               <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>Lembretes e follow-up</h3>
@@ -357,7 +357,7 @@ export default function LandingPage() {
             </Card>
 
             <Card className={`p-8 border rounded-[30px] space-y-6 transition-all group ${sFeatureCard}`}>
-              <div className="w-12 h-12 bg-[#820AD1]/10 text-[#820AD1] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <div className="w-12 h-12 bg-[#0D9488]/10 text-[#0D9488] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <MessageSquare className="w-6 h-6" />
               </div>
               <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>Atendimento humano quando precisa</h3>
@@ -373,7 +373,7 @@ export default function LandingPage() {
       <section id="testimonials" className={`py-24 ${sTestimonials} px-6 lg:px-20 transition-colors duration-300`}>
         <div className="max-w-6xl mx-auto space-y-16">
           <div className="text-center space-y-4">
-             <h2 className={`text-3xl lg:text-5xl font-black tracking-tighter ${sSectionTitle}`}>Clínicas que pararam de <span className="text-[#820AD1] italic">perder pacientes</span></h2>
+             <h2 className={`text-3xl lg:text-5xl font-black tracking-tighter ${sSectionTitle}`}>Clínicas que pararam de <span className="text-[#0D9488] italic">perder pacientes</span></h2>
              <p className={`${sSectionDesc} font-medium max-w-xl mx-auto`}>Histórias de quem encheu a agenda respondendo todo paciente na hora, sem sobrecarregar a recepção.</p>
           </div>
 
@@ -385,8 +385,8 @@ export default function LandingPage() {
                       "O agente responde os pacientes na hora, mesmo de madrugada. Nossa recepção parou de viver apagando incêndio no WhatsApp e a agenda encheu — mais de 120 consultas marcadas sozinhas no primeiro mês."
                    </p>
                 </div>
-                <div className={`flex items-center gap-3 pt-4 border-t ${isDarkMode ? 'border-purple-950/30' : 'border-purple-100'}`}>
-                   <div className="w-10 h-10 bg-[#820AD1]/20 rounded-full flex items-center justify-center font-black text-[#820AD1]">TF</div>
+                <div className={`flex items-center gap-3 pt-4 border-t ${isDarkMode ? 'border-teal-950/30' : 'border-teal-100'}`}>
+                   <div className="w-10 h-10 bg-[#0D9488]/20 rounded-full flex items-center justify-center font-black text-[#0D9488]">TF</div>
                    <div>
                       <p className={`text-sm font-black ${sTestimonialAuthor}`}>Thiago Fonseca</p>
                       <p className={`text-[10px] uppercase font-black ${sTestimonialRole}`}>Gestor - Clínica Vida Plena</p>
@@ -401,8 +401,8 @@ export default function LandingPage() {
                       "Nossa maior dor era o tempo de resposta no WhatsApp. O paciente chegava e demorava horas para ser atendido. Agora recebe retorno instantâneo, tira as dúvidas e agenda a consulta sozinho, 24h por dia."
                    </p>
                 </div>
-                <div className={`flex items-center gap-3 pt-4 border-t ${isDarkMode ? 'border-purple-950/30' : 'border-purple-100'}`}>
-                   <div className="w-10 h-10 bg-[#820AD1]/20 rounded-full flex items-center justify-center font-black text-[#820AD1]">AM</div>
+                <div className={`flex items-center gap-3 pt-4 border-t ${isDarkMode ? 'border-teal-950/30' : 'border-teal-100'}`}>
+                   <div className="w-10 h-10 bg-[#0D9488]/20 rounded-full flex items-center justify-center font-black text-[#0D9488]">AM</div>
                    <div>
                       <p className={`text-sm font-black ${sTestimonialAuthor}`}>Aline Mendes</p>
                       <p className={`text-[10px] uppercase font-black ${sTestimonialRole}`}>Fundadora - Clínica Odonto Sorriso</p>
@@ -417,8 +417,8 @@ export default function LandingPage() {
                       "Reduzimos as faltas quase pela metade com os lembretes automáticos. E a recepção, que vivia presa no celular, voltou a focar no paciente que está na clínica. A IA cuida do primeiro contato."
                    </p>
                 </div>
-                <div className={`flex items-center gap-3 pt-4 border-t ${isDarkMode ? 'border-purple-950/30' : 'border-purple-100'}`}>
-                   <div className="w-10 h-10 bg-[#820AD1]/20 rounded-full flex items-center justify-center font-black text-[#820AD1]">RC</div>
+                <div className={`flex items-center gap-3 pt-4 border-t ${isDarkMode ? 'border-teal-950/30' : 'border-teal-100'}`}>
+                   <div className="w-10 h-10 bg-[#0D9488]/20 rounded-full flex items-center justify-center font-black text-[#0D9488]">RC</div>
                    <div>
                       <p className={`text-sm font-black ${sTestimonialAuthor}`}>Ricardo Cruz</p>
                       <p className={`text-[10px] uppercase font-black ${sTestimonialRole}`}>Gestor - Clínica Fisio Movimento</p>
@@ -433,7 +433,7 @@ export default function LandingPage() {
       <section id="pricing" className={`py-28 ${sPricing} px-6 lg:px-20 transition-colors duration-300`}>
          <div className="max-w-6xl mx-auto space-y-20">
             <div className="text-center space-y-4">
-               <h2 className={`text-3xl lg:text-5xl font-black ${sSectionTitle} tracking-tighter leading-none`}>Preço justo para <span className="text-[#820AD1] italic">agenda cheia</span></h2>
+               <h2 className={`text-3xl lg:text-5xl font-black ${sSectionTitle} tracking-tighter leading-none`}>Preço justo para <span className="text-[#0D9488] italic">agenda cheia</span></h2>
                <p className={`${sSectionDesc} text-lg font-medium`}>Sem taxas ocultas. Escolha o plano ideal para o tamanho da sua clínica.</p>
             </div>
             
@@ -448,7 +448,7 @@ export default function LandingPage() {
                        {isRecommended && <div className="absolute top-0 right-0 bg-white/20 px-8 py-3 rounded-bl-3xl font-black text-[10px] uppercase tracking-widest text-white">RECOMENDADO</div>}
                        
                        <div className="space-y-2">
-                          <Badge className={`${isRecommended ? 'bg-black/20 text-white' : 'bg-[#820AD1]/15 text-[#820AD1]'} border-none py-1 px-4 font-black text-[10px] uppercase tracking-widest`}>{plan.name}</Badge>
+                          <Badge className={`${isRecommended ? 'bg-black/20 text-white' : 'bg-[#0D9488]/15 text-[#0D9488]'} border-none py-1 px-4 font-black text-[10px] uppercase tracking-widest`}>{plan.name}</Badge>
                           <h3 className="text-5xl font-black tracking-tighter">
                             R$ {plan.priceMonthly}
                             <span className={`text-sm font-medium ${sPricingTextMuted(isRecommended)}`}>/mês</span>
@@ -501,7 +501,7 @@ export default function LandingPage() {
                         </div>
                        
                        <Link to="/register" className="block w-full">
-                          <Button className={`w-full h-16 ${isRecommended ? 'bg-white text-[#820AD1] hover:bg-slate-50 shadow-2xl' : 'bg-[#820AD1] text-white hover:bg-[#6c08b0]'} font-black rounded-2xl text-lg transition-transform active:scale-95 border-none`}>
+                          <Button className={`w-full h-16 ${isRecommended ? 'bg-white text-[#0D9488] hover:bg-slate-50 shadow-2xl' : 'bg-[#0D9488] text-white hover:bg-[#0F766E]'} font-black rounded-2xl text-lg transition-transform active:scale-95 border-none`}>
                             Começar Agora
                           </Button>
                        </Link>
@@ -518,7 +518,7 @@ export default function LandingPage() {
       <section id="faq" className={`py-24 ${sFaq} px-6 lg:px-20 transition-colors duration-300`}>
          <div className="max-w-4xl mx-auto space-y-16">
             <div className="text-center space-y-4">
-               <h2 className={`text-3xl lg:text-5xl font-black tracking-tighter ${sSectionTitle}`}>Perguntas <span className="text-[#820AD1] italic">Frequentes</span></h2>
+               <h2 className={`text-3xl lg:text-5xl font-black tracking-tighter ${sSectionTitle}`}>Perguntas <span className="text-[#0D9488] italic">Frequentes</span></h2>
                <p className={`${sSectionDesc} font-medium`}>Esclareça suas dúvidas e ative sua operação com total segurança.</p>
             </div>
 
@@ -556,7 +556,7 @@ export default function LandingPage() {
 
       {/* FINAL CTA */}
       <section className={`py-28 text-center relative overflow-hidden ${sCTA} transition-colors duration-300`}>
-         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#820AD1]/10 rounded-full blur-[180px] pointer-events-none" />
+         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#0D9488]/10 rounded-full blur-[180px] pointer-events-none" />
          <div className="max-w-4xl mx-auto space-y-8 relative z-10">
             <h2 className="text-4xl lg:text-6xl font-black tracking-tighter">Chegou a hora de encher a agenda da sua clínica.</h2>
             <p className={`font-medium text-lg lg:text-xl max-w-2xl mx-auto leading-relaxed ${sCTADesc}`}>
@@ -564,11 +564,11 @@ export default function LandingPage() {
             </p>
             <div className="pt-4">
                <Link to="/register">
-                 <Button className="h-16 px-12 text-lg font-black bg-[#820AD1] hover:bg-[#6c08b0] text-white rounded-2xl shadow-xl shadow-[#820AD1]/20 hover:scale-105 transition-all border-none">
+                 <Button className="h-16 px-12 text-lg font-black bg-[#0D9488] hover:bg-[#0F766E] text-white rounded-2xl shadow-xl shadow-[#0D9488]/20 hover:scale-105 transition-all border-none">
                    Testar a Plataforma Grátis
                  </Button>
                </Link>
-               <p className="text-xs text-purple-300 font-bold uppercase tracking-widest mt-4">Teste grátis • Sem cartão de crédito • Cancele quando quiser</p>
+               <p className="text-xs text-teal-300 font-bold uppercase tracking-widest mt-4">Teste grátis • Sem cartão de crédito • Cancele quando quiser</p>
             </div>
          </div>
       </section>
@@ -579,7 +579,7 @@ export default function LandingPage() {
             <div className="flex flex-col gap-3">
                <div className="flex items-center gap-3">
                   {settings?.logoUrl ? <img src={settings.logoUrl} className="h-8 grayscale opacity-60" /> : <img src="/logo.png" className="h-8 w-auto grayscale opacity-60" />}
-                  <span className={`text-xl font-black ${sFooterTitle} tracking-tighter uppercase italic`}>Auto<span className="text-[#820AD1]">Sales</span></span>
+                  <span className={`text-xl font-black ${sFooterTitle} tracking-tighter uppercase italic`}>Auto<span className="text-[#0D9488]">Sales</span></span>
                </div>
                <p className={`text-xs font-bold ${sFooterDesc}`}>Atendimento inteligente 24h para clínicas no WhatsApp.</p>
             </div>
@@ -598,7 +598,7 @@ export default function LandingPage() {
          <a 
            href={`https://wa.me/5571992042802`} 
            target="_blank" 
-           className="w-16 h-16 bg-[#820AD1] hover:bg-emerald-400 text-slate-950 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all animate-bounce"
+           className="w-16 h-16 bg-[#0D9488] hover:bg-emerald-400 text-slate-950 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all animate-bounce"
          >
             <Phone className="w-8 h-8 fill-current" />
          </a>
@@ -606,7 +606,7 @@ export default function LandingPage() {
          {/* SDR CHAT BUTTON */}
          <button 
            onClick={() => setIsChatOpen(!isChatOpen)}
-           className={`w-16 h-16 ${isDarkMode ? 'bg-[#120024] border-purple-950/40 text-white' : 'bg-white border-purple-100 text-slate-900'} border rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all`}
+           className={`w-16 h-16 ${isDarkMode ? 'bg-[#042F2E] border-teal-950/40 text-white' : 'bg-white border-teal-100 text-slate-900'} border rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all`}
          >
             {isChatOpen ? <X className="w-8 h-8" /> : <MessageSquare className="w-8 h-8" />}
          </button>
@@ -614,40 +614,40 @@ export default function LandingPage() {
 
       {/* SDR CHAT BOX */}
       {isChatOpen && (
-        <div className={`fixed bottom-32 right-10 w-96 ${isDarkMode ? 'bg-[#120024] border-purple-950/40' : 'bg-white border-purple-100'} border rounded-[30px] shadow-[0_50px_100px_rgba(0,0,0,0.4)] flex flex-col overflow-hidden z-[9999] animate-in slide-in-from-bottom-10 duration-500`}>
-           <div className={`p-6 text-white flex items-center gap-4 border-b ${isDarkMode ? 'bg-[#1c0133] border-purple-950/40' : 'bg-purple-50 border-purple-100'}`}>
-              <div className="w-12 h-12 bg-[#820AD1] rounded-full flex items-center justify-center font-black text-white">AI</div>
+        <div className={`fixed bottom-32 right-10 w-96 ${isDarkMode ? 'bg-[#042F2E] border-teal-950/40' : 'bg-white border-teal-100'} border rounded-[30px] shadow-[0_50px_100px_rgba(0,0,0,0.4)] flex flex-col overflow-hidden z-[9999] animate-in slide-in-from-bottom-10 duration-500`}>
+           <div className={`p-6 text-white flex items-center gap-4 border-b ${isDarkMode ? 'bg-[#0B4A47] border-teal-950/40' : 'bg-teal-50 border-teal-100'}`}>
+              <div className="w-12 h-12 bg-[#0D9488] rounded-full flex items-center justify-center font-black text-white">AI</div>
               <div>
-                 <h4 className={`font-black text-sm uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-[#2D0052]'}`}>Assistente AutoSales</h4>
-                 <p className="text-[10px] text-[#820AD1] font-bold flex items-center gap-1"><span className="w-2 h-2 bg-[#820AD1] rounded-full animate-ping" /> Especialista online agora</p>
+                 <h4 className={`font-black text-sm uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-[#134E4A]'}`}>Assistente AutoSales</h4>
+                 <p className="text-[10px] text-[#0D9488] font-bold flex items-center gap-1"><span className="w-2 h-2 bg-[#0D9488] rounded-full animate-ping" /> Especialista online agora</p>
               </div>
            </div>
            
-           <div className={`flex-1 h-96 p-6 overflow-y-auto space-y-4 ${isDarkMode ? 'bg-[#120024]' : 'bg-[#F8F6FC]'}`}>
+           <div className={`flex-1 h-96 p-6 overflow-y-auto space-y-4 ${isDarkMode ? 'bg-[#042F2E]' : 'bg-[#F0FDFA]'}`}>
               {chatHistory.length === 0 && (
-                <div className={`p-4 rounded-2xl border text-xs font-bold italic ${isDarkMode ? 'bg-[#1c0133] border-purple-950/40 text-purple-200' : 'bg-white border-purple-100 text-purple-950/70'}`}>
+                <div className={`p-4 rounded-2xl border text-xs font-bold italic ${isDarkMode ? 'bg-[#0B4A47] border-teal-950/40 text-teal-200' : 'bg-white border-teal-100 text-teal-950/70'}`}>
                    Olá! Sou o assistente da AutoSales. Quer ver como um agente de IA pode atender e agendar os pacientes da sua clínica 24h por dia?
                 </div>
               )}
               {chatHistory.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                   <div className={`max-w-[80%] p-4 rounded-3xl text-sm font-bold whitespace-pre-wrap leading-relaxed ${msg.role === 'user' ? 'bg-[#820AD1] text-white' : (isDarkMode ? 'bg-[#1c0133] border border-purple-950/40 text-purple-100' : 'bg-white border border-purple-100 text-[#2D0052]')}`}>
+                   <div className={`max-w-[80%] p-4 rounded-3xl text-sm font-bold whitespace-pre-wrap leading-relaxed ${msg.role === 'user' ? 'bg-[#0D9488] text-white' : (isDarkMode ? 'bg-[#0B4A47] border border-teal-950/40 text-teal-100' : 'bg-white border border-teal-100 text-[#134E4A]')}`}>
                       {msg.content}
                    </div>
                 </div>
               ))}
-              {loadingChat && <div className="text-[10px] font-black text-purple-500 animate-pulse pl-2">SDR está elaborando resposta...</div>}
+              {loadingChat && <div className="text-[10px] font-black text-teal-500 animate-pulse pl-2">SDR está elaborando resposta...</div>}
            </div>
 
-           <div className={`p-4 border-t ${isDarkMode ? 'bg-[#120024] border-purple-950/40' : 'bg-[#F8F6FC] border-purple-100'} flex gap-2`}>
+           <div className={`p-4 border-t ${isDarkMode ? 'bg-[#042F2E] border-teal-950/40' : 'bg-[#F0FDFA] border-teal-100'} flex gap-2`}>
               <input 
                 value={chatMessage}
                 onChange={e => setChatMessage(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
                 placeholder="Tire suas dúvidas conosco..."
-                className={`flex-1 h-12 px-6 rounded-xl border-none text-xs font-bold focus:ring-1 ring-[#820AD1]/40 transition-all outline-none ${isDarkMode ? 'bg-[#1c0133] text-white' : 'bg-white text-[#2D0052]'}`}
+                className={`flex-1 h-12 px-6 rounded-xl border-none text-xs font-bold focus:ring-1 ring-[#0D9488]/40 transition-all outline-none ${isDarkMode ? 'bg-[#0B4A47] text-white' : 'bg-white text-[#134E4A]'}`}
               />
-              <Button onClick={handleSendMessage} disabled={loadingChat} className="bg-[#820AD1] hover:bg-[#6c08b0] text-white w-12 h-12 rounded-xl p-0 shrink-0">
+              <Button onClick={handleSendMessage} disabled={loadingChat} className="bg-[#0D9488] hover:bg-[#0F766E] text-white w-12 h-12 rounded-xl p-0 shrink-0">
                  <Send className="w-5 h-5" />
               </Button>
            </div>

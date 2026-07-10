@@ -49,8 +49,8 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 lg:p-12 font-sans overflow-hidden relative">
-      <div className="absolute top-0 right-0 w-1/3 h-full bg-[#820AD1]/5 blur-3xl rounded-full translate-x-1/2" />
-      <div className="absolute bottom-0 left-0 w-1/4 h-1/2 bg-[#820AD1]/5 blur-3xl rounded-full -translate-x-1/2" />
+      <div className="absolute top-0 right-0 w-1/3 h-full bg-[#0D9488]/5 blur-3xl rounded-full translate-x-1/2" />
+      <div className="absolute bottom-0 left-0 w-1/4 h-1/2 bg-[#0D9488]/5 blur-3xl rounded-full -translate-x-1/2" />
 
       <div className="max-w-4xl w-full grid grid-cols-1 lg:grid-cols-2 bg-white rounded-[40px] shadow-3xl border border-slate-100 overflow-hidden relative z-10">
 
@@ -62,7 +62,7 @@ export default function Register() {
            </div>
            <div className="flex items-center gap-3 relative z-10">
               <img src="/logo.png" alt="AutoSales" className="h-8 w-auto" />
-              <span className="text-2xl font-black tracking-tighter text-white">Auto<span className="text-[#820AD1] italic">Sales</span></span>
+              <span className="text-2xl font-black tracking-tighter text-white">Auto<span className="text-[#0D9488] italic">Sales</span></span>
            </div>
            <div className="space-y-6 relative z-10">
               <h2 className="text-4xl font-black leading-none tracking-tight">Sua recepção que nunca dorme.</h2>
@@ -70,7 +70,7 @@ export default function Register() {
               <div className="space-y-4 pt-10">
                  {["Período de teste grátis", "Cobrança só depois do teste", "Cancele em um clique no painel", "Agenda integrada ao Google Calendar"].map(t => (
                    <div key={t} className="flex items-center gap-3 text-xs font-black text-white/50">
-                      <CheckCircle2 className="w-4 h-4 text-[#9d4edd] shrink-0" /> {t}
+                      <CheckCircle2 className="w-4 h-4 text-[#2DD4BF] shrink-0" /> {t}
                    </div>
                  ))}
               </div>
@@ -109,7 +109,7 @@ export default function Register() {
                      <Input placeholder="seu@email.com" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="h-14 border-slate-100 rounded-2xl bg-slate-50 shadow-none font-bold" />
                   </div>
                </div>
-               <Button onClick={handleRegister} disabled={loading} className="w-full h-14 bg-[#820AD1] hover:bg-[#6c08b0] text-white rounded-2xl font-black text-base gap-3 shadow-xl shadow-[#820AD1]/20">
+               <Button onClick={handleRegister} disabled={loading} className="w-full h-14 bg-[#0D9488] hover:bg-[#0F766E] text-white rounded-2xl font-black text-base gap-3 shadow-xl shadow-[#0D9488]/20">
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Começar teste grátis <ArrowRight className="w-4 h-4" /></>}
                </Button>
                <p className="text-[10px] text-center text-slate-400 font-bold leading-relaxed">
@@ -118,7 +118,7 @@ export default function Register() {
             </div>
 
             <div className="mt-8 text-center pb-4">
-               <p className="text-xs font-bold text-slate-400">Já tem conta? <Link to="/login" className="text-[#820AD1] hover:underline">Fazer Login</Link></p>
+               <p className="text-xs font-bold text-slate-400">Já tem conta? <Link to="/login" className="text-[#0D9488] hover:underline">Fazer Login</Link></p>
             </div>
         </div>
 
