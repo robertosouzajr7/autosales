@@ -19,6 +19,7 @@ model Tenant {
   plan               Plan?     @relation(fields: [planId], references: [id])
   subscriptionStatus String    @default("TRIAL") // TRIAL, ACTIVE, PAST_DUE, CANCELED
   trialEnd           DateTime?
+  acceptedTermsAt    DateTime? // aceite de Termos/Privacidade no signup (LGPD)
   mercadoPagoId      String?
   cardLast4          String?
   nextBillingDate    DateTime?
@@ -132,6 +133,11 @@ model Lead {
   extraEmails String? // JSON ou Texto: email1, email2...
 
   isToEnrich Boolean @default(false)
+
+  // LGPD / Consentimento
+  optedOut  Boolean   @default(false) // titular pediu para parar (stop-keyword)
+  optOutAt  DateTime?
+  consentAt DateTime? // registro de opt-in (primeira interação/consentimento)
 
   // Fase 3 — IA Avançada
   qualificationScore       Int? // 0-100 score via IA
@@ -586,4 +592,20 @@ model Invoice {
   updatedAt   DateTime  @updatedAt
 
   @@unique([tenantId, billingPeriod])
+}
+
+// Trilha de auditoria mínima: ações sensíveis (billing/admin) para
+// rastreabilidade e conformidade (LGPD exige registro de tratamento).
+model AuditLog {
+  id        String   @id @default(uuid())
+  tenantId  String?  // tenant afetado (quando aplicável)
+  actorId   String?  // usuário que executou (null = sistema/webhook)
+  action    String   // ex.: "INVOICE_PAID", "PLAN_UPDATED", "TENANT_DELETED"
+  entity    String?  // tipo da entidade afetada
+  entityId  String?  // id da entidade afetada
+  metadata  String?  // JSON com detalhes adicionais
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([action])
 }

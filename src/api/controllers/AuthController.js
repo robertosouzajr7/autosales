@@ -71,7 +71,9 @@ export const register = async (req, res) => {
         planId: trialPlan?.id,
         subscriptionStatus: "TRIAL",
         trialEnd,
-        nextBillingDate: trialEnd
+        nextBillingDate: trialEnd,
+        // Aceite de Termos/Privacidade capturado no cadastro (LGPD).
+        acceptedTermsAt: new Date()
       }
     });
 

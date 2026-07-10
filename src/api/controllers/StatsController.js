@@ -2,7 +2,7 @@ import prisma from "../config/prisma.js";
 
 export const getDashboardStats = async (req, res) => {
   try {
-    const tenantId = req.user.tenantId;
+    const tenantId = req.tenantId;
 
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
@@ -95,6 +95,62 @@ export const getDashboardStats = async (req, res) => {
         }
       },
       funnelData
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+};
+
+/**
+ * Painel de resultados da clínica — a prova de ROI que sustenta a renovação.
+ * Métricas do período: consultas agendadas, conversas atendidas e tempo médio
+ * de primeira resposta do agente. Aceita ?days=N (default 30).
+ */
+export const getResults = async (req, res) => {
+  try {
+    const tenantId = req.tenantId;
+    const days = Math.min(parseInt(req.query.days) || 30, 365);
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const [appointmentsScheduled, appointmentsCompleted, conversationsHandled, optOuts] = await Promise.all([
+      prisma.appointment.count({ where: { tenantId, createdAt: { gte: since } } }),
+      prisma.appointment.count({ where: { tenantId, status: "COMPLETED", createdAt: { gte: since } } }),
+      prisma.conversation.count({ where: { tenantId, messages: { some: { createdAt: { gte: since } } } } }),
+      prisma.lead.count({ where: { tenantId, optedOut: true } })
+    ]);
+
+    // Tempo médio de 1ª resposta: para cada conversa recente, diferença entre
+    // a 1ª mensagem do lead (USER) e a 1ª resposta do agente (ASSISTANT).
+    const conversations = await prisma.conversation.findMany({
+      where: { tenantId, messages: { some: { createdAt: { gte: since } } } },
+      select: {
+        messages: {
+          where: { createdAt: { gte: since } },
+          orderBy: { createdAt: "asc" },
+          select: { role: true, createdAt: true }
+        }
+      },
+      take: 500
+    });
+
+    let totalMs = 0, counted = 0;
+    for (const conv of conversations) {
+      const firstUser = conv.messages.find(m => m.role === "USER");
+      if (!firstUser) continue;
+      const firstReply = conv.messages.find(m => m.role === "ASSISTANT" && m.createdAt > firstUser.createdAt);
+      if (!firstReply) continue;
+      totalMs += new Date(firstReply.createdAt) - new Date(firstUser.createdAt);
+      counted++;
+    }
+    const avgResponseSeconds = counted > 0 ? Math.round(totalMs / counted / 1000) : null;
+
+    res.json({
+      periodDays: days,
+      appointmentsScheduled,
+      appointmentsCompleted,
+      conversationsHandled,
+      avgResponseSeconds,
+      optOuts
     });
   } catch (e) {
     res.status(500).json({ error: e.message });

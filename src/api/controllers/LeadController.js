@@ -1,6 +1,16 @@
 import prisma from "../config/prisma.js";
 import AutomationEngine from "../../../automation_engine.js";
 
+// Palavras que sinalizam pedido de descadastro (LGPD opt-out).
+const STOP_KEYWORDS = ["parar", "sair", "cancelar", "descadastrar", "stop", "remover", "pare"];
+
+function isStopKeyword(text) {
+  if (!text) return false;
+  const normalized = text.trim().toLowerCase().replace(/[.!?]/g, "");
+  // Casa quando a mensagem é exatamente a keyword (evita falso positivo em frases).
+  return STOP_KEYWORDS.includes(normalized);
+}
+
 export const getLeads = async (req, res) => {
   try {
     const tenantId = req.tenantId;
@@ -207,21 +217,23 @@ export const receiveWhatsappWebhook = async (req, res) => {
     });
 
     // 1. Upsert do Lead (Garante que não existam duplicados por telefone + tenantId)
+    // consentAt registra o opt-in na primeira interação inbound (base legal LGPD).
     const lead = await prisma.lead.upsert({
-      where: { 
-        phone_tenantId: { phone, tenantId } 
+      where: {
+        phone_tenantId: { phone, tenantId }
       },
-      update: { 
-        name: name || undefined, 
-        source: source || undefined 
+      update: {
+        name: name || undefined,
+        source: source || undefined
       },
-      create: { 
-        name: name || phone, 
-        phone, 
-        tenantId, 
-        source, 
+      create: {
+        name: name || phone,
+        phone,
+        tenantId,
+        source,
         status: "NEW",
-        stageId: firstStage?.id
+        stageId: firstStage?.id,
+        consentAt: new Date()
       }
     });
 
@@ -254,6 +266,32 @@ export const receiveWhatsappWebhook = async (req, res) => {
       const { messageEvents } = await import("./MessageController.js");
       messageEvents.emit("new_message", { tenantId, message: userMessage });
     } catch (_) {}
+
+    // 4.5 🛑 Stop-keyword (LGPD): honra o pedido de descadastro. Marca o lead
+    // como optedOut, suprime respostas e futuros envios, e confirma uma vez.
+    if (isStopKeyword(content)) {
+      await prisma.lead.update({
+        where: { id: lead.id },
+        data: { optedOut: true, optOutAt: new Date() }
+      });
+      await prisma.conversation.update({
+        where: { id: conversation.id },
+        data: { botActive: false }
+      }).catch(() => {});
+      console.log(`[Webhook] 🛑 Opt-out registrado para ${phone}.`);
+      // Confirmação curta e única (não passa pela IA).
+      try {
+        const { WhatsAppManager } = await import("../../../whatsapp.js");
+        await WhatsAppManager.sendMessage(tenantId, phone, "Pronto! Você não receberá mais mensagens nossas. Se mudar de ideia, é só escrever.");
+      } catch (_) {}
+      return res.json({ success: true, opted_out: true, ai_response: null });
+    }
+
+    // 4.6 Se o lead já optou por sair, não responder automaticamente.
+    if (lead.optedOut) {
+      console.log(`[Webhook] Lead ${phone} está em opt-out. Mensagem salva, sem resposta.`);
+      return res.json({ success: true, opted_out: true, ai_response: null });
+    }
 
     // 5. Verifica se o bot está ativo para esta conversa
     if (!conversation.botActive) {

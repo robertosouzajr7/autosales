@@ -1,5 +1,6 @@
 import prisma from "../config/prisma.js";
 import bcrypt from "bcryptjs";
+import { audit } from "../services/AuditService.js";
 
 export const getTenants = async (req, res) => {
   try {
@@ -27,6 +28,10 @@ export const updateTenant = async (req, res) => {
       where: { id: req.params.id },
       data: { name, email, planId, active, subscriptionStatus }
     });
+    await audit({
+      tenantId: tenant.id, actorId: req.userId, action: "TENANT_UPDATED",
+      entity: "Tenant", entityId: tenant.id, metadata: { planId, active, subscriptionStatus }
+    });
     res.json(tenant);
   } catch (e) { res.status(500).json({ error: e.message }); }
 };
@@ -34,6 +39,7 @@ export const updateTenant = async (req, res) => {
 export const deleteTenant = async (req, res) => {
   try {
     await prisma.tenant.delete({ where: { id: req.params.id } });
+    await audit({ actorId: req.userId, action: "TENANT_DELETED", entity: "Tenant", entityId: req.params.id });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 };
@@ -76,6 +82,7 @@ export const createPlan = async (req, res) => {
 export const updatePlan = async (req, res) => {
   try {
     const plan = await prisma.plan.update({ where: { id: req.params.id }, data: req.body });
+    await audit({ actorId: req.userId, action: "PLAN_UPDATED", entity: "Plan", entityId: plan.id });
     res.json(plan);
   } catch (e) { res.status(500).json({ error: e.message }); }
 };

@@ -1,5 +1,6 @@
 import axios from "axios";
 import prisma from "../config/prisma.js";
+import { audit } from "./AuditService.js";
 
 /**
  * Camada de pagamento — provider-agnostic, com adaptador para Mercado Pago.
@@ -104,6 +105,11 @@ class PaymentService {
         paidAt: new Date(),
         tenantId: tenant.id
       }
+    });
+
+    await audit({
+      tenantId: tenant.id, action: "INVOICE_PAID", entity: "Invoice", entityId: invoiceId,
+      metadata: { amount: invoice.amount, gatewayId: gatewayId || invoice.gatewayId }
     });
 
     return { alreadyPaid: false, invoice: paidInvoice, tenant };

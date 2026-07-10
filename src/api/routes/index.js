@@ -22,6 +22,7 @@ import * as ProspectionStatsController from "../controllers/ProspectionStatsCont
 import * as FinancialController from "../controllers/FinancialController.js";
 import * as BillingController from "../controllers/BillingController.js";
 import BillingService from "../services/BillingService.js";
+import * as ComplianceController from "../controllers/ComplianceController.js";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -81,6 +82,7 @@ router.post("/automations/config", AutomationController.updateConfig);
 
 // Stats & Analytics
 router.get("/stats/dashboard", StatsController.getDashboardStats);
+router.get("/stats/results", StatsController.getResults);
 router.get("/analytics", AnalyticsController.getAnalytics);
 
 // Messages & Conversations (Chat/Inbox)
@@ -154,6 +156,11 @@ router.post("/admin/financial/trigger-billing", adminMiddleware, async (req, res
 });
 
 // SaaS Billing Portal (Customer)
+// Compliance / Direitos do titular (LGPD)
+router.get("/compliance/account/export", ComplianceController.exportAccountData);
+router.get("/compliance/leads/:id/export", ComplianceController.exportLeadData);
+router.delete("/compliance/leads/:id", ComplianceController.deleteLeadData);
+
 router.get("/billing/portal", BillingController.getBillingPortalData);
 router.get("/billing/plans", BillingController.getActivePlans);
 router.post("/billing/checkout/:invoiceId", BillingController.createCheckoutSession);
