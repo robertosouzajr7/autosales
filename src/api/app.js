@@ -14,6 +14,7 @@ import prospectionRoutes from "./routes/prospection.js";
 import { WhatsAppManager } from "../../whatsapp.js";
 import AutomationEngine from "../../automation_engine.js";
 import { receiveWhatsappWebhook } from "./controllers/LeadController.js";
+import { verifyMetaWebhook, receiveMetaWebhook } from "./controllers/MetaWebhookController.js";
 import bcrypt from "bcryptjs";
 import { EventEmitter } from "events";
 
@@ -42,10 +43,10 @@ const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 600, // uso normal do painel (polling de conversas/stats)
   message: { error: "Muitas requisições. Tente novamente mais tarde." },
-  // O webhook de WhatsApp é chamado em loop interno (localhost) a cada mensagem
-  // recebida — limitá-lo por IP estrangularia todos os tenants de uma vez.
-  // Assinatura HMAC do webhook entra no Sprint 2 (Meta Cloud API).
-  skip: (req) => req.path === "/webhook/whatsapp"
+  // Webhooks são chamados por origem única (loop interno localhost, ou a
+  // infra da Meta em rajada) — limitá-los por IP estrangularia todos os
+  // tenants de uma vez. O webhook da Meta é autenticado por HMAC.
+  skip: (req) => req.path === "/webhook/whatsapp" || req.path === "/webhook/meta"
 });
 
 // Login/registro: janela pequena contra força bruta e enumeração de contas
@@ -57,7 +58,11 @@ const authLimiter = rateLimit({
 
 app.use("/api/auth/", authLimiter);
 app.use("/api/", apiLimiter);
-app.use(express.json({ limit: '10mb' }));
+// Guarda o corpo cru p/ validar a assinatura HMAC do webhook da Meta.
+app.use(express.json({
+  limit: '10mb',
+  verify: (req, _res, buf) => { req.rawBody = buf; }
+}));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 if (process.env.NODE_ENV === "development") {
@@ -69,6 +74,10 @@ if (process.env.NODE_ENV === "development") {
 
 // ⚡ Webhook WhatsApp (DEVE ser antes dos routers com authMiddleware)
 app.post("/api/webhook/whatsapp", receiveWhatsappWebhook);
+
+// ⚡ Webhook oficial da Meta Cloud API (verificação + eventos assinados)
+app.get("/api/webhook/meta", verifyMetaWebhook);
+app.post("/api/webhook/meta", receiveMetaWebhook);
 
 // Routes
 app.use("/api/public", publicApiRouter);

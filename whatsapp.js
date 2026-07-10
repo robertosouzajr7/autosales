@@ -9,6 +9,11 @@ const prisma = new PrismaClient();
 
 export const whatsappSessions = new Map();
 
+// Baileys (WhatsApp não-oficial) é modo EXPERIMENTAL. Em produção o canal é a
+// Meta Cloud API (oficial, não-banível). Só habilite via env em ambiente de
+// teste, ciente do risco de banimento do número.
+export const BAILEYS_ENABLED = process.env.ENABLE_BAILEYS === "true";
+
 // Mapa de cooldown: previne tentativas excessivas após erros 405 (rate-limiting WhatsApp)
 const connectionCooldowns = new Map();
 const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutos
@@ -59,6 +64,12 @@ export class WhatsAppManager {
     }
 
     static async createSession(accountId, emitQr) {
+        if (!BAILEYS_ENABLED) {
+            const msg = "WhatsApp via Baileys está desabilitado. Use a conexão oficial (Meta Cloud API).";
+            console.warn(`[WhatsApp] ${msg}`);
+            if (emitQr) emitQr(JSON.stringify({ status: "DISABLED", message: msg }));
+            return null;
+        }
         // Se já está conectada, avisa e retorna
         if (whatsappSessions.has(accountId)) {
             const existing = whatsappSessions.get(accountId);
@@ -358,6 +369,10 @@ export class WhatsAppManager {
 
     // Inicia todas as instâncias existentes (ao ligar o servidor)
     static async bootExistingSessions() {
+        if (!BAILEYS_ENABLED) {
+            console.log("[WhatsApp] Baileys desabilitado (ENABLE_BAILEYS != true). Canal oficial: Meta Cloud API.");
+            return;
+        }
         const instancesDir = path.resolve('./instances');
         if (!fs.existsSync(instancesDir)) return;
         const accounts = fs.readdirSync(instancesDir);
