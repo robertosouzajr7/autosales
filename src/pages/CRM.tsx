@@ -99,11 +99,9 @@ export default function CRM() {
 
   const handleDeleteLead = async (id: string) => {
     if (!confirm("Remover este lead permanentemente?")) return;
-    const tenantId = localStorage.getItem("tenantId");
     try {
       const res = await fetch(`/api/leads/${id}`, { 
-        method: "DELETE",
-        headers: { "x-tenant-id": tenantId || "" }
+        method: "DELETE"
       });
       if (res.ok) {
         toast({ title: "Lead removido." });
@@ -127,13 +125,9 @@ export default function CRM() {
       setLeads(updatedLeads);
 
       try {
-        const tenantId = localStorage.getItem("tenantId");
         const res = await fetch(`/api/leads/${leadId}`, {
           method: "PUT",
-          headers: { 
-            "Content-Type": "application/json",
-            "x-tenant-id": tenantId || ""
-          },
+          headers: { "Content-Type": "application/json" },
           // Enviar apenas os campos necessários para evitar erros de validação
           body: JSON.stringify({
             name: lead.name,
@@ -160,14 +154,10 @@ export default function CRM() {
   const handleAddStage = async () => {
     const name = prompt("Nome do novo pipeline:");
     if (!name) return;
-    const tenantId = localStorage.getItem("tenantId");
     try {
       await fetch("/api/pipeline-stages", {
         method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "x-tenant-id": tenantId || ""
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, order: stages.length })
       });
       fetchData();
@@ -351,24 +341,18 @@ export default function CRM() {
                       const newStages = [...stages];
                       newStages[idx].name = e.target.value;
                       setStages(newStages);
-                      const tenantId = localStorage.getItem("tenantId");
                       await fetch(`/api/pipeline-stages/${s.id}`, {
                         method: "PUT",
-                        headers: { 
-                          "Content-Type": "application/json",
-                          "x-tenant-id": tenantId || ""
-                        },
+                        headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ name: e.target.value })
                       });
                     }}
                     className="border-none bg-transparent font-bold text-xs" 
                   />
                   <Button variant="ghost" size="icon" onClick={async () => {
-                    const tenantId = localStorage.getItem("tenantId");
                     if (confirm("Deletar stage? Todos os leads nela ficarão órfãos.")) {
                        await fetch(`/api/pipeline-stages/${s.id}`, { 
-                         method: "DELETE",
-                         headers: { "x-tenant-id": tenantId || "" }
+                         method: "DELETE"
                        });
                        fetchData();
                     }

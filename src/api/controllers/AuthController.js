@@ -1,8 +1,7 @@
 import prisma from "../config/prisma.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-
-const JWT_SECRET = process.env.JWT_SECRET || "vendai-secret-key-2026";
+import JWT_SECRET from "../config/jwt.js";
 
 export const login = async (req, res) => {
   try {

@@ -66,3 +66,8 @@ stdout.log
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Scratch / debug scripts
+scratch/
+tmp/
+test-*.js

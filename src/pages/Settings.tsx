@@ -178,8 +178,7 @@ export default function Settings() {
     setIsPaying(true);
     const token = localStorage.getItem("token");
     const headers: any = { 
-      "Content-Type": "application/json",
-      "x-tenant-id": localStorage.getItem("tenantId") || ""
+      "Content-Type": "application/json"
     };
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
@@ -209,8 +208,7 @@ export default function Settings() {
     setIsUpgrading(true);
     const token = localStorage.getItem("token");
     const headers: any = { 
-      "Content-Type": "application/json",
-      "x-tenant-id": localStorage.getItem("tenantId") || ""
+      "Content-Type": "application/json"
     };
     if (token) headers["Authorization"] = `Bearer ${token}`;
 

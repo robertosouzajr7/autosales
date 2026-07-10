@@ -1,6 +1,5 @@
 import jwt from "jsonwebtoken";
-
-const JWT_SECRET = process.env.JWT_SECRET || "vendai-secret-key-2026";
+import JWT_SECRET from "../config/jwt.js";
 
 export const authMiddleware = (req, res, next) => {
   console.log(`[AUTH CHECK] ${req.method} ${req.url}`);

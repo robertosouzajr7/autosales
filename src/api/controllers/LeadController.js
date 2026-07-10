@@ -16,7 +16,7 @@ export const getLeads = async (req, res) => {
 };
 
 export const exportContacts = async (req, res) => {
-  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const tenantId = req.tenantId;
   if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
 
   try {
@@ -35,7 +35,7 @@ export const exportContacts = async (req, res) => {
 };
 
 export const importBulk = async (req, res) => {
-  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const tenantId = req.tenantId;
   if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
 
   const { contacts } = req.body;
@@ -76,7 +76,7 @@ export const importBulk = async (req, res) => {
 
 export const createLead = async (req, res) => {
   try {
-    const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+    const tenantId = req.tenantId;
     const { name, phone, email, notes, status, source, stageId, isToEnrich } = req.body;
 
     // Buscar primeira etapa se não informada
@@ -118,8 +118,9 @@ export const createLead = async (req, res) => {
 
 export const updateLead = async (req, res) => {
   try {
-    const oldLead = await prisma.lead.findUnique({ where: { id: req.params.id } });
-    
+    const oldLead = await prisma.lead.findFirst({ where: { id: req.params.id, tenantId: req.tenantId } });
+    if (!oldLead) return res.status(404).json({ error: "Lead não encontrado" });
+
     const { name, phone, email, notes, status, source, stageId, isToEnrich, qualificationScore, extractedData, lastIntentClassification } = req.body;
     
     // Build update data with only defined scalar fields (tags is a relation — cannot be set as string)
@@ -138,10 +139,10 @@ export const updateLead = async (req, res) => {
     if (stageId !== undefined && stageId !== null && stageId !== '') dataToUpdate.stageId = stageId;
     else if (stageId === null) dataToUpdate.stageId = null;
 
-    const lead = await prisma.lead.update({ where: { id: req.params.id }, data: dataToUpdate });
+    const lead = await prisma.lead.update({ where: { id: req.params.id, tenantId: req.tenantId }, data: dataToUpdate });
 
     if (oldLead && req.body.stageId && oldLead.stageId !== req.body.stageId) {
-      const stage = await prisma.pipelineStage.findUnique({ where: { id: req.body.stageId } });
+      const stage = await prisma.pipelineStage.findFirst({ where: { id: req.body.stageId, tenantId: req.tenantId } });
       const qualifiedNames = ["interessados", "agendados", "convertidos", "qualificado", "appointment", "converted"];
       
       if (stage && qualifiedNames.some(n => stage.name.toLowerCase().includes(n))) {
@@ -162,7 +163,7 @@ export const updateLead = async (req, res) => {
 
 export const deleteLead = async (req, res) => {
   try {
-    await prisma.lead.delete({ where: { id: req.params.id } });
+    await prisma.lead.delete({ where: { id: req.params.id, tenantId: req.tenantId } });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 };
@@ -171,7 +172,7 @@ export const bulkEnrichLeads = async (req, res) => {
   try {
     const { ids } = req.body;
     await prisma.lead.updateMany({
-      where: { id: { in: ids } },
+      where: { id: { in: ids }, tenantId: req.tenantId },
       data: { isToEnrich: true }
     });
     res.json({ success: true, message: "🚀 Investigação profunda iniciada para os leads selecionados." });
@@ -181,7 +182,7 @@ export const bulkEnrichLeads = async (req, res) => {
 export const bulkDeleteLeads = async (req, res) => {
   try {
     const { ids } = req.body;
-    await prisma.lead.deleteMany({ where: { id: { in: ids } } });
+    await prisma.lead.deleteMany({ where: { id: { in: ids }, tenantId: req.tenantId } });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 };

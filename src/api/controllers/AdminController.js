@@ -41,9 +41,11 @@ export const deleteTenant = async (req, res) => {
 export const createTenantUser = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
+    // Usuários de tenant nunca recebem SUPERADMIN, nem por rota administrativa.
+    const safeRole = ["OWNER", "ADMIN", "AGENT"].includes(role) ? role : "AGENT";
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { name, email, password: hashedPassword, role, tenantId: req.params.id }
+      data: { name, email, password: hashedPassword, role: safeRole, tenantId: req.params.id }
     });
     res.json(user);
   } catch (e) { res.status(500).json({ error: e.message }); }

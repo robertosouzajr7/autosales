@@ -2,7 +2,7 @@ import prisma from "../config/prisma.js";
 
 // GET /api/billing/portal
 export const getBillingPortalData = async (req, res) => {
-  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const tenantId = req.tenantId;
   if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
 
   try {
@@ -57,7 +57,7 @@ export const getActivePlans = async (req, res) => {
 
 // POST /api/billing/pay-invoice/:invoiceId
 export const payInvoiceMock = async (req, res) => {
-  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const tenantId = req.tenantId;
   const { invoiceId } = req.params;
   const { cardHolder, cardNumber, cvv, expiry } = req.body;
 
@@ -129,7 +129,7 @@ export const payInvoiceMock = async (req, res) => {
 
 // POST /api/billing/upgrade
 export const upgradePlan = async (req, res) => {
-  const tenantId = req.headers["x-tenant-id"] || req.tenantId;
+  const tenantId = req.tenantId;
   const { planId } = req.body;
 
   if (!planId) return res.status(400).json({ error: "ID do plano é obrigatório" });
