@@ -251,7 +251,7 @@ function SidebarContent({
                   )}
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent side={collapsed ? "right" : "top"} align="start" className="w-52 bg-slate-900 border-slate-800 text-white rounded-xl p-1.5 shadow-xl">
+              <DropdownMenuContent side={collapsed ? "right" : "top"} align="start" className="w-52 bg-slate-900 border-slate-800 text-white rounded-xl p-1.5 shadow-sm">
                  <DropdownMenuItem onClick={() => navigate("/settings")} className="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-white/10 cursor-pointer text-sm">
                     <Settings className="w-4 h-4 text-slate-400" /> Configurações
                  </DropdownMenuItem>
@@ -400,7 +400,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="flex h-16 shrink-0 items-center gap-4 border-b border-slate-200 dark:border-teal-950/40 bg-white dark:bg-[#0B4A47] px-4 md:px-6">
+        <header className="flex h-11 shrink-0 items-center gap-4 border-b border-slate-200 dark:border-teal-950/40 bg-white dark:bg-[#0B4A47] px-4 md:px-6">
           {/* Mobile hamburger */}
           <Button
             variant="ghost"
@@ -424,7 +424,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <Button variant="ghost" size="icon" className="relative text-slate-500 dark:text-teal-300 hover:bg-slate-100 dark:hover:bg-teal-950/20 rounded-xl transition-all">
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
-                  <Badge className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#0D9488] p-0 text-[10px] font-bold text-white animate-bounce border-2 border-white dark:border-[#0B4A47]">
+                  <Badge className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#0D9488] p-0 text-xs font-bold text-white animate-bounce border-2 border-white dark:border-[#0B4A47]">
                     {unreadCount}
                   </Badge>
                 )}

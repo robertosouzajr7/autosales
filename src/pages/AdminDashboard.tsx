@@ -433,21 +433,18 @@ export default function AdminDashboard() {
     <DashboardLayout>
       <div className="flex flex-col gap-10 p-6 lg:p-10 max-w-[1600px] mx-auto animate-in fade-in duration-700">
         
-        {/* Header Hero */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-slate-900 p-12 rounded-[50px] shadow-3xl relative overflow-hidden">
-           <div className="absolute top-0 right-0 w-96 h-96 bg-[#0D9488]/10 blur-[100px] rounded-full" />
-           <div className="space-y-2 relative z-10">
-              <h1 className="text-4xl font-black text-white tracking-tighter uppercase flex items-center gap-3">
-                 SaaS <span className="text-[#0D9488] italic">Central</span>
-              </h1>
-              <p className="text-white/30 font-bold uppercase tracking-widest text-[9px]">Painel de Controle do Fundador</p>
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+           <div className="space-y-1">
+              <h1 className="text-2xl font-semibold text-foreground tracking-tight">Administração do SaaS</h1>
+              <p className="text-sm text-muted-foreground">Clientes, planos e financeiro da plataforma.</p>
            </div>
-           
-           <div className="flex gap-4 relative z-10">
+
+           <div className="flex gap-3">
               {activeTab === "general" && (
                 <Button 
                   onClick={() => { setSelectedTenant(null); setIsEditTenantModalOpen(true); }} 
-                  className="h-14 bg-[#0D9488] hover:bg-[#0F766E] px-8 rounded-2xl font-black uppercase text-[10px] tracking-widest text-white shadow-xl shadow-[#0D9488]/20 active:scale-95 transition-all animate-in fade-in"
+                  
                 >
                   <Plus className="w-5 h-5 mr-3" /> Novo Cliente
                 </Button>
@@ -457,7 +454,7 @@ export default function AdminDashboard() {
                   <Button 
                     onClick={handleTriggerBilling} 
                     disabled={isTriggeringBilling}
-                    className="h-14 bg-emerald-600 hover:bg-emerald-700 px-8 rounded-2xl font-black uppercase text-[10px] tracking-widest text-white shadow-xl active:scale-95 transition-all"
+                    variant="outline"
                   >
                     <RefreshCw className={`w-5 h-5 mr-3 ${isTriggeringBilling ? 'animate-spin' : ''}`} /> 
                     {isTriggeringBilling ? "Executando..." : "Rodar Faturamento"}
@@ -478,7 +475,7 @@ export default function AdminDashboard() {
                       });
                       setIsTxModalOpen(true);
                     }} 
-                    className="h-14 bg-[#0D9488] hover:bg-[#0F766E] px-8 rounded-2xl font-black uppercase text-[10px] tracking-widest text-white shadow-xl active:scale-95 transition-all"
+                    
                   >
                     <Plus className="w-5 h-5 mr-3" /> Nova Transação
                   </Button>
@@ -489,7 +486,7 @@ export default function AdminDashboard() {
 
         {/* Tab Headers */}
         <Tabs defaultValue="general" className="w-full" onValueChange={setActiveTab}>
-          <TabsList className="bg-slate-100 p-1 rounded-2xl h-16 w-full max-w-xl mb-8 grid grid-cols-4">
+          <TabsList className="bg-muted p-1 rounded-xl h-11 w-full max-w-xl mb-6 grid grid-cols-4">
             <TabsTrigger value="general" className="rounded-xl font-bold text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm">Clientes</TabsTrigger>
             <TabsTrigger value="plans" className="rounded-xl font-bold text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm">Planos</TabsTrigger>
             <TabsTrigger value="financial" className="rounded-xl font-bold text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm">Financeiro</TabsTrigger>
@@ -505,17 +502,17 @@ export default function AdminDashboard() {
                <StatCard icon={<Activity className="text-orange-500" />} label="Status Infra" value="Online" />
             </div>
 
-            <Card className="border-none shadow-3xl rounded-[40px] overflow-hidden bg-white">
+            <Card className="border-none shadow-sm rounded-2xl overflow-hidden bg-white">
               <CardContent className="p-0">
                   <div className="p-8 border-b border-slate-50 flex items-center justify-between">
-                     <h3 className="text-xl font-black text-slate-800 tracking-tight italic">Gestão de Empresas</h3>
+                     <h3 className="text-xl font-semibold text-slate-800 tracking-tight">Gestão de Empresas</h3>
                      <div className="relative">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                         <input 
                           value={searchTerm}
                           onChange={e => setSearchTerm(e.target.value)}
                           placeholder="Buscar empresa..." 
-                          className="h-12 pl-12 pr-6 border-none bg-slate-50 rounded-2xl w-64 text-xs font-bold focus:ring-2 ring-emerald-500/20" 
+                          className="h-10 pl-12 pr-6 border-none bg-slate-50 rounded-2xl w-64 text-xs font-bold focus:ring-2 ring-emerald-500/20" 
                         />
                      </div>
                   </div>
@@ -523,19 +520,19 @@ export default function AdminDashboard() {
                      <table className="w-full text-left">
                         <thead>
                            <tr className="border-b border-slate-50">
-                              <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Empresa</th>
-                              <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Plano Contratado</th>
-                              <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
-                              <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
+                              <th className="p-6 text-xs font-semibold text-slate-400 ">Empresa</th>
+                              <th className="p-6 text-xs font-semibold text-slate-400 ">Plano Contratado</th>
+                              <th className="p-6 text-xs font-semibold text-slate-400 text-center">Status</th>
+                              <th className="p-6 text-xs font-semibold text-slate-400 text-right">Ações</th>
                            </tr>
                         </thead>
                         <tbody>
                            {filteredTenants.map(tenant => (
-                              <tr key={tenant.id} className="border-b border-slate-50 hover:bg-slate-50/50 rounded-3xl group cursor-pointer" onClick={() => { setSelectedTenant(tenant); setIsEditTenantModalOpen(true); }}>
+                              <tr key={tenant.id} className="border-b border-slate-50 hover:bg-slate-50/50 rounded-2xl group cursor-pointer" onClick={() => { setSelectedTenant(tenant); setIsEditTenantModalOpen(true); }}>
                                  <td className="p-6">
                                     <div className="flex flex-col">
                                        <span className="font-extrabold text-slate-800">{tenant.name}</span>
-                                       <span className="text-[10px] font-bold text-slate-400">{tenant.email}</span>
+                                       <span className="text-xs font-bold text-slate-400">{tenant.email}</span>
                                     </div>
                                  </td>
                                  <td className="p-6">
@@ -544,7 +541,7 @@ export default function AdminDashboard() {
                                     </Badge>
                                  </td>
                                  <td className="p-6 text-center">
-                                    <Badge className={`font-black text-[9px] uppercase tracking-tighter ${tenant.active !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'} border-none`}>
+                                    <Badge className={`font-semibold text-xs tracking-tight ${tenant.active !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'} border-none`}>
                                        {tenant.active !== false ? (tenant.subscriptionStatus || 'Ativo') : 'Suspenso'}
                                     </Badge>
                                  </td>
@@ -570,7 +567,7 @@ export default function AdminDashboard() {
           {/* TAB 2: MODELOS DE PLANOS */}
           <TabsContent value="plans" className="animate-in slide-in-from-bottom-4 space-y-6">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-2xl font-black text-slate-800 flex items-center gap-3">
+              <h3 className="text-2xl font-semibold text-slate-800 flex items-center gap-3">
                 <Package className="w-8 h-8 text-[#0D9488]" /> Configurações de Planos
               </h3>
               <Button 
@@ -578,7 +575,7 @@ export default function AdminDashboard() {
                   setNewPlan(defaultPlanState);
                   setIsPlanModalOpen(true);
                 }} 
-                className="h-14 bg-slate-900 hover:bg-black px-8 rounded-2xl font-black uppercase text-[10px] tracking-widest text-white shadow-xl transition-all"
+                className="h-10 bg-slate-900 hover:bg-black px-8 rounded-2xl font-semibold uppercase text-xs text-white shadow-sm transition-all"
               >
                 <Plus className="w-5 h-5 mr-3" /> Criar Novo Plano
               </Button>
@@ -586,29 +583,29 @@ export default function AdminDashboard() {
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {plans.map(plan => (
-                  <Card key={plan.id} className="border-none shadow-xl rounded-[40px] bg-white p-8 group hover:bg-slate-900 hover:shadow-2xl transition-all duration-500 cursor-pointer flex flex-col justify-between h-[300px]" onClick={() => handleEditPlan(plan)}>
+                  <Card key={plan.id} className="border-none shadow-sm rounded-2xl bg-white p-8 group hover:bg-slate-900 hover:shadow-sm transition-all duration-500 cursor-pointer flex flex-col justify-between h-[300px]" onClick={() => handleEditPlan(plan)}>
                     <div>
                       <div className="flex justify-between items-start">
-                        <h4 className="text-2xl font-black text-slate-800 group-hover:text-white mb-2">{plan.name}</h4>
-                        <Badge className="bg-[#0D9488]/10 text-[#0D9488] font-bold border-none uppercase text-[8px] tracking-widest">Ativo</Badge>
+                        <h4 className="text-2xl font-semibold text-slate-800 group-hover:text-white mb-2">{plan.name}</h4>
+                        <Badge className="bg-[#0D9488]/10 text-[#0D9488] font-bold border-none uppercase text-xs ">Ativo</Badge>
                       </div>
-                      <p className="text-3xl font-black text-[#0D9488] italic mt-2">R$ {plan.priceMonthly.toFixed(2)}<span className="text-xs text-slate-400 group-hover:text-white/40">/mês</span></p>
+                      <p className="text-3xl font-semibold text-[#0D9488] mt-2">R$ {plan.priceMonthly.toFixed(2)}<span className="text-xs text-slate-400 group-hover:text-white/40">/mês</span></p>
                       
                       {/* Operational Margin Indicators */}
                       <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-500 group-hover:text-white/60">
                         <div>
-                          <span className="block text-[9px] font-black uppercase text-slate-400">Tokens/IA</span>
+                          <span className="block text-xs font-semibold uppercase text-slate-400">Tokens/IA</span>
                           <span className="font-bold text-slate-800 group-hover:text-white">{plan.enableTokens ? `${plan.maxTokens.toLocaleString()}` : "Desativado"}</span>
                         </div>
                         <div>
-                          <span className="block text-[9px] font-black uppercase text-slate-400">SDRs</span>
+                          <span className="block text-xs font-semibold uppercase text-slate-400">SDRs</span>
                           <span className="font-bold text-slate-800 group-hover:text-white">{plan.enableSdr ? `${plan.maxSdrs} Ativos` : "Desativado"}</span>
                         </div>
                       </div>
                     </div>
 
                     <div className="pt-4 border-t border-slate-100 group-hover:border-white/10 flex justify-between items-center">
-                       <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 group-hover:text-emerald-400">Clique para Editar</span>
+                       <span className="text-xs font-semibold text-emerald-600 group-hover:text-emerald-400">Clique para Editar</span>
                        <div className="flex gap-2">
                           <Button variant="ghost" size="icon" className="group-hover:text-white hover:bg-slate-100 group-hover:hover:bg-white/10" onClick={(e) => { e.stopPropagation(); handleEditPlan(plan); }}><SettingsIcon className="w-4 h-4" /></Button>
                           <Button variant="ghost" size="icon" className="group-hover:text-red-400 hover:bg-slate-100 group-hover:hover:bg-white/10" onClick={(e) => { e.stopPropagation(); handleDeletePlan(plan.id); }}><Trash2 className="w-4 h-4" /></Button>
@@ -655,11 +652,11 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               
               {/* Left Screen: Client Operational Cost */}
-              <Card className="lg:col-span-7 border-none shadow-3xl rounded-[40px] overflow-hidden bg-white">
+              <Card className="lg:col-span-7 border-none shadow-sm rounded-2xl overflow-hidden bg-white">
                 <CardHeader className="p-8 border-b border-slate-50 flex flex-row items-center justify-between">
                   <div>
-                    <CardTitle className="text-xl font-black text-slate-800 italic uppercase">Custo Operacional de Clientes</CardTitle>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Cálculo dinâmico baseado no uso dos limites</p>
+                    <CardTitle className="text-xl font-semibold text-slate-800 uppercase">Custo Operacional de Clientes</CardTitle>
+                    <p className="text-xs font-bold text-slate-400 mt-1">Cálculo dinâmico baseado no uso dos limites</p>
                   </div>
                   <Sparkles className="w-6 h-6 text-[#0D9488]" />
                 </CardHeader>
@@ -668,11 +665,11 @@ export default function AdminDashboard() {
                     <table className="w-full text-left text-sm">
                       <thead>
                         <tr className="border-b border-slate-100">
-                          <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Empresa / Plano</th>
-                          <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">SDRs Act.</th>
-                          <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Uso Tokens</th>
-                          <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Buscas BDR</th>
-                          <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Custo Total</th>
+                          <th className="p-4 text-xs font-semibold text-slate-400 ">Empresa / Plano</th>
+                          <th className="p-4 text-xs font-semibold text-slate-400 text-center">SDRs Act.</th>
+                          <th className="p-4 text-xs font-semibold text-slate-400 text-center">Uso Tokens</th>
+                          <th className="p-4 text-xs font-semibold text-slate-400 text-center">Buscas BDR</th>
+                          <th className="p-4 text-xs font-semibold text-slate-400 text-right">Custo Total</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -681,20 +678,20 @@ export default function AdminDashboard() {
                             <td className="p-4">
                               <div className="flex flex-col">
                                 <span className="font-extrabold text-slate-800">{cc.name}</span>
-                                <span className="text-[10px] font-bold text-[#0D9488]">{cc.planName || "Sem Plano"} (R$ {(cc.planPrice || 0).toFixed(2)})</span>
+                                <span className="text-xs font-bold text-[#0D9488]">{cc.planName || "Sem Plano"} (R$ {(cc.planPrice || 0).toFixed(2)})</span>
                               </div>
                             </td>
                             <td className="p-4 text-center font-bold">{cc.usage?.sdrs ?? 0}</td>
                             <td className="p-4 text-center text-xs font-semibold text-slate-500">{((cc.usage?.tokens || 0) / 1000).toFixed(1)}k</td>
                             <td className="p-4 text-center text-xs font-semibold text-slate-500">{cc.usage?.prospects ?? 0}</td>
-                            <td className="p-4 text-right font-black text-slate-900">
+                            <td className="p-4 text-right font-semibold text-slate-900">
                               R$ {(cc.totalCost ?? 0).toFixed(2)}
                             </td>
                           </tr>
                         ))}
                         {(!financialSummary?.clientCosts || financialSummary.clientCosts.length === 0) && (
                           <tr>
-                            <td colSpan={5} className="p-8 text-center text-slate-400 font-bold uppercase text-[10px]">Nenhum cliente com consumo gerado</td>
+                            <td colSpan={5} className="p-8 text-center text-slate-400 font-bold uppercase text-xs">Nenhum cliente com consumo gerado</td>
                           </tr>
                         )}
                       </tbody>
@@ -704,11 +701,11 @@ export default function AdminDashboard() {
               </Card>
 
               {/* Right Screen: Transaction Manager */}
-              <Card className="lg:col-span-5 border-none shadow-3xl rounded-[40px] overflow-hidden bg-white">
+              <Card className="lg:col-span-5 border-none shadow-sm rounded-2xl overflow-hidden bg-white">
                 <CardHeader className="p-8 border-b border-slate-50 flex flex-row items-center justify-between">
                   <div>
-                    <CardTitle className="text-xl font-black text-slate-800 italic uppercase">Livro de Caixa</CardTitle>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Lançamento de receitas e despesas manuais</p>
+                    <CardTitle className="text-xl font-semibold text-slate-800 uppercase">Livro de Caixa</CardTitle>
+                    <p className="text-xs font-bold text-slate-400 mt-1">Lançamento de receitas e despesas manuais</p>
                   </div>
                   <Receipt className="w-6 h-6 text-slate-400" />
                 </CardHeader>
@@ -721,20 +718,20 @@ export default function AdminDashboard() {
                             {tx.type === 'REVENUE' ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownRight className="w-5 h-5" />}
                           </div>
                           <div>
-                            <p className="text-sm font-black text-slate-800">{tx.description}</p>
+                            <p className="text-sm font-semibold text-slate-800">{tx.description}</p>
                             <div className="flex items-center gap-2 mt-1">
-                              <Badge className="bg-slate-200 text-slate-700 font-bold border-none text-[8px] tracking-wider">{tx.category}</Badge>
-                              {tx.isRecurring && <Badge className="bg-[#0D9488]/10 text-[#0D9488] font-bold border-none text-[8px] tracking-wider">Recorrente</Badge>}
+                              <Badge className="bg-slate-200 text-slate-700 font-bold border-none text-xs ">{tx.category}</Badge>
+                              {tx.isRecurring && <Badge className="bg-[#0D9488]/10 text-[#0D9488] font-bold border-none text-xs ">Recorrente</Badge>}
                               {tx.paidAt ? (
-                                <span className="text-[9px] font-bold text-emerald-600">Pago em {new Date(tx.paidAt).toLocaleDateString()}</span>
+                                <span className="text-xs font-bold text-emerald-600">Pago em {new Date(tx.paidAt).toLocaleDateString()}</span>
                               ) : (
-                                <span className="text-[9px] font-bold text-red-500">Pendente</span>
+                                <span className="text-xs font-bold text-red-500">Pendente</span>
                               )}
                             </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className={`font-black text-sm ${tx.type === 'REVENUE' ? 'text-emerald-600' : 'text-red-500'}`}>
+                          <span className={`font-semibold text-sm ${tx.type === 'REVENUE' ? 'text-emerald-600' : 'text-red-500'}`}>
                             {tx.type === 'REVENUE' ? '+' : '-'} R$ {tx.amount.toFixed(2)}
                           </span>
                           <Button 
@@ -749,7 +746,7 @@ export default function AdminDashboard() {
                       </div>
                     ))}
                     {transactions.length === 0 && (
-                      <div className="p-8 text-center text-slate-400 font-bold uppercase text-[10px]">Nenhuma transação lançada</div>
+                      <div className="p-8 text-center text-slate-400 font-bold uppercase text-xs">Nenhuma transação lançada</div>
                     )}
                   </div>
                 </CardContent>
@@ -762,20 +759,20 @@ export default function AdminDashboard() {
           {/* TAB 4: LANDING PAGE CMS */}
           <TabsContent value="cms" className="animate-in slide-in-from-bottom-4">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-20">
-                  <Card className="lg:col-span-2 border-none shadow-3xl rounded-[40px] bg-white p-10">
-                      <h3 className="text-2xl font-black text-slate-800 mb-8 uppercase italic flex items-center gap-3">
+                  <Card className="lg:col-span-2 border-none shadow-sm rounded-2xl bg-white p-10">
+                      <h3 className="text-2xl font-semibold text-slate-800 mb-8 uppercase flex items-center gap-3">
                           <Globe className="w-8 h-8 text-[#0D9488]" /> Configurações Visuais
                       </h3>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div className="space-y-2">
-                              <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">URL da Logotipo</Label>
-                              <Input value={lpSettings.logoUrl} onChange={e => setLpSettings({...lpSettings, logoUrl: e.target.value})} className="h-14 rounded-2xl bg-slate-50 border-none font-bold" placeholder="https://..." />
+                              <Label className="text-xs font-semibold uppercase text-slate-400 pl-1">URL da Logotipo</Label>
+                              <Input value={lpSettings.logoUrl} onChange={e => setLpSettings({...lpSettings, logoUrl: e.target.value})} className="h-10 rounded-2xl bg-slate-50 border-none font-bold" placeholder="https://..." />
                           </div>
                           <div className="space-y-2">
-                              <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">SDR do Chat da Landing Page</Label>
+                              <Label className="text-xs font-semibold uppercase text-slate-400 pl-1">SDR do Chat da Landing Page</Label>
                               <Select value={lpSettings.selectedSdrId} onValueChange={v => setLpSettings({...lpSettings, selectedSdrId: v})}>
-                                  <SelectTrigger className="h-14 rounded-2xl bg-slate-50 border-none font-bold">
+                                  <SelectTrigger className="h-10 rounded-2xl bg-slate-50 border-none font-bold">
                                       <SelectValue placeholder="Selecione um SDR..." />
                                   </SelectTrigger>
                                   <SelectContent className="rounded-2xl">
@@ -785,34 +782,34 @@ export default function AdminDashboard() {
                           </div>
                       </div>
 
-                      <h4 className="text-xl font-black text-slate-800 mt-12 mb-6 uppercase italic">Links de Contato</h4>
+                      <h4 className="text-xl font-semibold text-slate-800 mt-12 mb-6 uppercase">Links de Contato</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div className="space-y-2">
-                              <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">WhatsApp de Contato</Label>
+                              <Label className="text-xs font-semibold uppercase text-slate-400 pl-1">WhatsApp de Contato</Label>
                               <div className="relative">
                                   <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0D9488]" />
-                                  <Input value={lpSettings.contactWhatsApp} onChange={e => setLpSettings({...lpSettings, contactWhatsApp: e.target.value})} className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold" placeholder="5511..." />
+                                  <Input value={lpSettings.contactWhatsApp} onChange={e => setLpSettings({...lpSettings, contactWhatsApp: e.target.value})} className="h-10 pl-12 rounded-2xl bg-slate-50 border-none font-bold" placeholder="5511..." />
                               </div>
                           </div>
                           <div className="space-y-2">
-                              <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">E-mail de Suporte</Label>
+                              <Label className="text-xs font-semibold uppercase text-slate-400 pl-1">E-mail de Suporte</Label>
                               <div className="relative">
                                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-orange-500" />
-                                  <Input value={lpSettings.contactEmail} onChange={e => setLpSettings({...lpSettings, contactEmail: e.target.value})} className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold" placeholder="suporte@..." />
+                                  <Input value={lpSettings.contactEmail} onChange={e => setLpSettings({...lpSettings, contactEmail: e.target.value})} className="h-10 pl-12 rounded-2xl bg-slate-50 border-none font-bold" placeholder="suporte@..." />
                               </div>
                           </div>
                       </div>
                       
-                      <Button onClick={handleUpdateLp} className="h-16 w-full mt-10 bg-slate-900 text-white font-black rounded-3xl uppercase tracking-widest shadow-2xl hover:scale-[1.01] transition-all">
+                      <Button onClick={handleUpdateLp} className="h-11 w-full mt-10 bg-slate-900 text-white font-semibold rounded-2xl shadow-sm hover:scale-[1.01] transition-all">
                           Salvar Configurações da Landing Page
                       </Button>
                   </Card>
 
-                  <Card className="border-none shadow-3xl rounded-[40px] bg-slate-50 p-10">
-                      <h3 className="text-xl font-black text-slate-800 mb-6 uppercase italic flex items-center gap-3">
+                  <Card className="border-none shadow-sm rounded-2xl bg-slate-50 p-10">
+                      <h3 className="text-xl font-semibold text-slate-800 mb-6 uppercase flex items-center gap-3">
                           <Plus className="w-6 h-6 text-teal-500" /> Visibilidade de Planos
                       </h3>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">Escolha quais planos serão exibidos na Landing Page.</p>
+                      <p className="text-xs font-bold text-slate-400 mb-6">Escolha quais planos serão exibidos na Landing Page.</p>
                       
                       <div className="space-y-3">
                           {plans.map(p => {
@@ -820,8 +817,8 @@ export default function AdminDashboard() {
                               return (
                                   <div key={p.id} className={`p-5 rounded-2xl flex items-center justify-between border-2 transition-all ${isVisible ? 'bg-white border-emerald-500 shadow-lg' : 'bg-slate-100 border-transparent opacity-60'}`}>
                                       <div className="flex flex-col">
-                                          <span className="font-black text-slate-800">{p.name}</span>
-                                          <span className="text-[10px] font-bold text-[#0D9488] italic">R$ {p.priceMonthly.toFixed(2)}/mês</span>
+                                          <span className="font-semibold text-slate-800">{p.name}</span>
+                                          <span className="text-xs font-bold text-[#0D9488]">R$ {p.priceMonthly.toFixed(2)}/mês</span>
                                       </div>
                                       <Checkbox 
                                           checked={isVisible} 
@@ -847,57 +844,57 @@ export default function AdminDashboard() {
 
       {/* MODAL NOVO CLIENTE */}
       <Dialog open={isEditTenantModalOpen && !selectedTenant} onOpenChange={(v) => { if(!v) setIsEditTenantModalOpen(false); }}>
-        <DialogContent className="rounded-[50px] p-12 max-w-lg border-none shadow-3xl">
-          <DialogHeader><DialogTitle className="text-3xl font-black">Novo <span className="text-[#0D9488]">Cliente</span></DialogTitle></DialogHeader>
+        <DialogContent className="rounded-2xl p-12 max-w-lg border-none shadow-sm">
+          <DialogHeader><DialogTitle className="text-3xl font-semibold">Novo <span className="text-[#0D9488]">Cliente</span></DialogTitle></DialogHeader>
           <div className="grid gap-6 py-4">
-            <Input value={newTenant.name} onChange={e => setNewTenant({...newTenant, name: e.target.value})} placeholder="Nome da Empresa" className="h-14 rounded-2xl bg-slate-50 border-none font-bold" />
-            <Input value={newTenant.email} onChange={e => setNewTenant({...newTenant, email: e.target.value})} placeholder="E-mail" className="h-14 rounded-2xl bg-slate-50 border-none font-bold" />
-            <Input type="password" value={newTenant.adminPassword} onChange={e => setNewTenant({...newTenant, adminPassword: e.target.value})} placeholder="Senha" className="h-14 rounded-2xl bg-slate-50 border-none font-bold" />
+            <Input value={newTenant.name} onChange={e => setNewTenant({...newTenant, name: e.target.value})} placeholder="Nome da Empresa" className="h-10 rounded-2xl bg-slate-50 border-none font-bold" />
+            <Input value={newTenant.email} onChange={e => setNewTenant({...newTenant, email: e.target.value})} placeholder="E-mail" className="h-10 rounded-2xl bg-slate-50 border-none font-bold" />
+            <Input type="password" value={newTenant.adminPassword} onChange={e => setNewTenant({...newTenant, adminPassword: e.target.value})} placeholder="Senha" className="h-10 rounded-2xl bg-slate-50 border-none font-bold" />
             <Select onValueChange={v => setNewTenant({...newTenant, planId: v})}>
-              <SelectTrigger className="h-14 rounded-2xl bg-slate-50 border-none font-bold"><SelectValue placeholder="Plano..." /></SelectTrigger>
+              <SelectTrigger className="h-10 rounded-2xl bg-slate-50 border-none font-bold"><SelectValue placeholder="Plano..." /></SelectTrigger>
               <SelectContent>{plans.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <DialogFooter><Button onClick={handleCreateTenant} className="w-full h-16 bg-slate-900 text-white font-black rounded-3xl">Criar Conta SaaS</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleCreateTenant} className="w-full h-11 bg-slate-900 text-white font-semibold rounded-2xl">Criar Conta SaaS</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* MODAL GERENCIAR CLIENTE (DETALHADO) */}
       <Dialog open={isEditTenantModalOpen && !!selectedTenant} onOpenChange={setIsEditTenantModalOpen}>
-        <DialogContent className="rounded-[50px] p-0 max-w-4xl border-none shadow-3xl bg-white overflow-hidden">
+        <DialogContent className="rounded-2xl p-0 max-w-4xl border-none shadow-sm bg-white overflow-hidden">
           {selectedTenant && (
             <div className="flex flex-col h-[80vh]">
                <div className="p-8 bg-slate-900 text-white flex justify-between items-center">
-                  <h2 className="text-2xl font-black uppercase">Gerenciar <span className="text-[#2DD4BF]">{selectedTenant.name}</span></h2>
+                  <h2 className="text-2xl font-semibold uppercase">Gerenciar <span className="text-[#2DD4BF]">{selectedTenant.name}</span></h2>
                   <Button variant="ghost" size="icon" onClick={() => setIsEditTenantModalOpen(false)} className="text-white hover:bg-white/10"><X className="w-6 h-6" /></Button>
                </div>
                <Tabs defaultValue="company" className="flex-1 flex flex-col overflow-hidden">
                   <div className="px-8 bg-slate-50 border-b border-slate-100">
-                    <TabsList className="bg-transparent h-14 p-0">
-                      <TabsTrigger value="company" className="font-black text-[10px] uppercase">Empresa & Contato</TabsTrigger>
-                      <TabsTrigger value="plan" className="font-black text-[10px] uppercase">Plano & Status</TabsTrigger>
-                      <TabsTrigger value="users" className="font-black text-[10px] uppercase">Usuários</TabsTrigger>
+                    <TabsList className="bg-transparent h-10 p-0">
+                      <TabsTrigger value="company" className="font-semibold text-xs uppercase">Empresa & Contato</TabsTrigger>
+                      <TabsTrigger value="plan" className="font-semibold text-xs uppercase">Plano & Status</TabsTrigger>
+                      <TabsTrigger value="users" className="font-semibold text-xs uppercase">Usuários</TabsTrigger>
                     </TabsList>
                   </div>
                   <div className="flex-1 overflow-y-auto p-8">
                     <TabsContent value="company" className="space-y-4">
-                       <Input value={selectedTenant.name} onChange={e => setSelectedTenant({...selectedTenant, name: e.target.value})} placeholder="Nome" className="h-12 border-none bg-slate-50 rounded-xl" />
-                       <Input value={selectedTenant.email} onChange={e => setSelectedTenant({...selectedTenant, email: e.target.value})} placeholder="E-mail" className="h-12 border-none bg-slate-50 rounded-xl" />
-                       <Input value={selectedTenant.cnpj || ""} onChange={e => setSelectedTenant({...selectedTenant, cnpj: e.target.value})} placeholder="CNPJ" className="h-12 border-none bg-slate-50 rounded-xl" />
-                       <Input value={selectedTenant.phone || ""} onChange={e => setSelectedTenant({...selectedTenant, phone: e.target.value})} placeholder="Telefone" className="h-12 border-none bg-slate-50 rounded-xl" />
-                       <Input value={selectedTenant.address || ""} onChange={e => setSelectedTenant({...selectedTenant, address: e.target.value})} placeholder="Endereço" className="h-12 border-none bg-slate-50 rounded-xl" />
+                       <Input value={selectedTenant.name} onChange={e => setSelectedTenant({...selectedTenant, name: e.target.value})} placeholder="Nome" className="h-10 border-none bg-slate-50 rounded-xl" />
+                       <Input value={selectedTenant.email} onChange={e => setSelectedTenant({...selectedTenant, email: e.target.value})} placeholder="E-mail" className="h-10 border-none bg-slate-50 rounded-xl" />
+                       <Input value={selectedTenant.cnpj || ""} onChange={e => setSelectedTenant({...selectedTenant, cnpj: e.target.value})} placeholder="CNPJ" className="h-10 border-none bg-slate-50 rounded-xl" />
+                       <Input value={selectedTenant.phone || ""} onChange={e => setSelectedTenant({...selectedTenant, phone: e.target.value})} placeholder="Telefone" className="h-10 border-none bg-slate-50 rounded-xl" />
+                       <Input value={selectedTenant.address || ""} onChange={e => setSelectedTenant({...selectedTenant, address: e.target.value})} placeholder="Endereço" className="h-10 border-none bg-slate-50 rounded-xl" />
                     </TabsContent>
                     <TabsContent value="plan" className="space-y-6">
                        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
-                          <p className="font-bold uppercase text-[10px]">Status da Conta: {selectedTenant.active !== false ? 'ATIVA' : 'SUSPENSA'}</p>
+                          <p className="font-bold uppercase text-xs">Status da Conta: {selectedTenant.active !== false ? 'ATIVA' : 'SUSPENSA'}</p>
                           <Button size="sm" onClick={() => setSelectedTenant({...selectedTenant, active: !selectedTenant.active})}>{selectedTenant.active !== false ? 'Suspender' : 'Ativar'}</Button>
                        </div>
                        <Select value={selectedTenant.planId} onValueChange={v => setSelectedTenant({...selectedTenant, planId: v})}>
-                          <SelectTrigger className="h-12 rounded-xl border-none bg-slate-50"><SelectValue placeholder="Mudar Plano" /></SelectTrigger>
+                          <SelectTrigger className="h-10 rounded-xl border-none bg-slate-50"><SelectValue placeholder="Mudar Plano" /></SelectTrigger>
                           <SelectContent>{plans.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
                        </Select>
                        <Select value={selectedTenant.subscriptionStatus || "ACTIVE"} onValueChange={v => setSelectedTenant({...selectedTenant, subscriptionStatus: v})}>
-                          <SelectTrigger className="h-12 rounded-xl border-none bg-slate-50"><SelectValue /></SelectTrigger>
+                          <SelectTrigger className="h-10 rounded-xl border-none bg-slate-50"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="ACTIVE">Ativo</SelectItem>
                             <SelectItem value="PAST_DUE">Inadimplente</SelectItem>
@@ -906,11 +903,11 @@ export default function AdminDashboard() {
                     </TabsContent>
                     <TabsContent value="users" className="m-0 space-y-4">
                        <div className="flex justify-between items-center">
-                          <h4 className="font-black text-[10px] uppercase text-slate-400 tracking-widest">Usuários com acesso à conta</h4>
+                          <h4 className="font-semibold text-xs uppercase text-slate-400 ">Usuários com acesso à conta</h4>
                           <Button 
                             size="sm" 
                             variant="outline" 
-                            className="h-8 rounded-lg text-[9px] font-black uppercase tracking-widest border-2"
+                            className="h-8 rounded-lg text-xs font-semibold border-2"
                             onClick={() => setIsAddUserModalOpen(true)}
                           >
                              Adicionar Usuário
@@ -920,16 +917,16 @@ export default function AdminDashboard() {
                            {selectedTenant.users?.map((u: any) => (
                               <div key={u.id} className="p-4 bg-slate-50 rounded-2xl flex items-center justify-between">
                                  <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-black text-xs text-slate-400 uppercase">
+                                    <div className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center font-semibold text-xs text-slate-400 uppercase">
                                        {u.name.charAt(0)}
                                     </div>
                                     <div>
-                                       <p className="text-sm font-black text-slate-800">{u.name}</p>
-                                       <p className="text-[10px] font-bold text-slate-400 italic">{u.email}</p>
+                                       <p className="text-sm font-semibold text-slate-800">{u.name}</p>
+                                       <p className="text-xs font-bold text-slate-400">{u.email}</p>
                                     </div>
                                  </div>
                                  <div className="flex items-center gap-2">
-                                    <Badge variant="outline" className="text-[9px] font-black uppercase border-slate-200">{u.role}</Badge>
+                                    <Badge variant="outline" className="text-xs font-semibold uppercase border-slate-200">{u.role}</Badge>
                                     <Button 
                                       variant="ghost" 
                                       size="icon" 
@@ -950,7 +947,7 @@ export default function AdminDashboard() {
                     </TabsContent>
                   </div>
                   <div className="p-8 border-t flex justify-end gap-3">
-                     <Button className="h-14 bg-[#0D9488] text-white font-black rounded-2xl px-12" onClick={async () => {
+                     <Button className="h-10 bg-[#0D9488] text-white font-semibold rounded-2xl px-12" onClick={async () => {
                         const res = await fetch(`/api/admin/tenants/${selectedTenant.id}`, { method: "PUT", headers: {"Content-Type":"application/json"}, body: JSON.stringify(selectedTenant) });
                         if (res.ok) { toast({title:"✅ Sucesso!"}); setIsEditTenantModalOpen(false); fetchData(); }
                      }}>Salvar Alterações</Button>
@@ -963,9 +960,9 @@ export default function AdminDashboard() {
 
       {/* MODAL PLANO (CREATE/EDIT COM LIMITES E MARGENS) */}
       <Dialog open={isPlanModalOpen} onOpenChange={setIsPlanModalOpen}>
-        <DialogContent className="rounded-[50px] p-10 max-w-4xl border-none shadow-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="rounded-2xl p-10 max-w-4xl border-none shadow-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-3xl font-black uppercase italic tracking-tight">
+            <DialogTitle className="text-3xl font-semibold uppercase tracking-tight">
               Configurações do <span className="text-[#0D9488]">Plano</span>
             </DialogTitle>
           </DialogHeader>
@@ -975,27 +972,27 @@ export default function AdminDashboard() {
              {/* Left Column: Plan basic & Resource Switches */}
              <div className="space-y-6">
                 <div>
-                  <h4 className="text-sm font-black uppercase text-slate-400 mb-3 tracking-wider">Dados Básicos</h4>
+                  <h4 className="text-sm font-semibold uppercase text-slate-400 mb-3 ">Dados Básicos</h4>
                   <div className="space-y-4">
                      <div className="space-y-1">
-                       <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">Nome do Plano</Label>
-                       <Input value={newPlan.name} onChange={e => setNewPlan({...newPlan, name: e.target.value})} placeholder="Ex: Basic, Pro..." className="h-12 bg-slate-50 border-none rounded-xl font-bold" />
+                       <Label className="text-xs font-semibold uppercase text-slate-400 pl-1">Nome do Plano</Label>
+                       <Input value={newPlan.name} onChange={e => setNewPlan({...newPlan, name: e.target.value})} placeholder="Ex: Basic, Pro..." className="h-10 bg-slate-50 border-none rounded-xl font-bold" />
                      </div>
                      <div className="grid grid-cols-2 gap-4">
                        <div className="space-y-1">
-                         <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">Mensalidade (R$)</Label>
-                         <Input type="number" step="0.01" value={newPlan.priceMonthly} onChange={e => setNewPlan({...newPlan, priceMonthly: parseFloat(e.target.value) || 0})} className="h-12 bg-slate-50 border-none rounded-xl font-bold" />
+                         <Label className="text-xs font-semibold uppercase text-slate-400 pl-1">Mensalidade (R$)</Label>
+                         <Input type="number" step="0.01" value={newPlan.priceMonthly} onChange={e => setNewPlan({...newPlan, priceMonthly: parseFloat(e.target.value) || 0})} className="h-10 bg-slate-50 border-none rounded-xl font-bold" />
                        </div>
                        <div className="space-y-1">
-                         <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">Anuidade (R$)</Label>
-                         <Input type="number" step="0.01" value={newPlan.priceYearly} onChange={e => setNewPlan({...newPlan, priceYearly: parseFloat(e.target.value) || 0})} className="h-12 bg-slate-50 border-none rounded-xl font-bold" />
+                         <Label className="text-xs font-semibold uppercase text-slate-400 pl-1">Anuidade (R$)</Label>
+                         <Input type="number" step="0.01" value={newPlan.priceYearly} onChange={e => setNewPlan({...newPlan, priceYearly: parseFloat(e.target.value) || 0})} className="h-10 bg-slate-50 border-none rounded-xl font-bold" />
                        </div>
                      </div>
                   </div>
                 </div>
 
                 <div>
-                  <h4 className="text-sm font-black uppercase text-slate-400 mb-3 tracking-wider">Recursos Ativos</h4>
+                  <h4 className="text-sm font-semibold uppercase text-slate-400 mb-3 ">Recursos Ativos</h4>
                   <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-100">
                      <div className="flex items-center justify-between">
                        <Label className="text-xs font-bold text-slate-700">Ativar Robôs SDR</Label>
@@ -1024,38 +1021,38 @@ export default function AdminDashboard() {
              {/* Right Column: Limits, Unit Costs & Margin Simulator */}
              <div className="space-y-6">
                 <div>
-                  <h4 className="text-sm font-black uppercase text-slate-400 mb-3 tracking-wider">Limites & Custos Unitários</h4>
+                  <h4 className="text-sm font-semibold uppercase text-slate-400 mb-3 ">Limites & Custos Unitários</h4>
                   <div className="grid grid-cols-2 gap-4 max-h-[320px] overflow-y-auto pr-1">
                      
                      {/* SDR */}
                      <div className="space-y-1 p-3 bg-slate-50 rounded-xl">
-                       <Label className="text-[10px] font-black uppercase text-slate-400">Máx SDRs</Label>
+                       <Label className="text-xs font-semibold uppercase text-slate-400">Máx SDRs</Label>
                        <Input disabled={!newPlan.enableSdr} type="number" value={newPlan.maxSdrs} onChange={e => setNewPlan({...newPlan, maxSdrs: parseInt(e.target.value) || 0})} className="h-9 bg-white border-none rounded-lg font-bold" />
-                       <span className="text-[9px] font-semibold text-slate-400 block mt-1">Custo/SDR: R$</span>
+                       <span className="text-xs font-semibold text-slate-400 block mt-1">Custo/SDR: R$</span>
                        <Input type="number" step="0.01" value={newPlan.sdrUnitCost} onChange={e => setNewPlan({...newPlan, sdrUnitCost: parseFloat(e.target.value) || 0})} className="h-8 bg-white border-none rounded-lg text-xs" />
                      </div>
 
                      {/* Tokens */}
                      <div className="space-y-1 p-3 bg-slate-50 rounded-xl">
-                       <Label className="text-[10px] font-black uppercase text-slate-400">Tokens/IA</Label>
+                       <Label className="text-xs font-semibold uppercase text-slate-400">Tokens/IA</Label>
                        <Input disabled={!newPlan.enableTokens} type="number" value={newPlan.maxTokens} onChange={e => setNewPlan({...newPlan, maxTokens: parseInt(e.target.value) || 0})} className="h-9 bg-white border-none rounded-lg font-bold" />
-                       <span className="text-[9px] font-semibold text-slate-400 block mt-1">Custo/1k Tokens: R$</span>
+                       <span className="text-xs font-semibold text-slate-400 block mt-1">Custo/1k Tokens: R$</span>
                        <Input type="number" step="0.01" value={newPlan.tokenUnitCost} onChange={e => setNewPlan({...newPlan, tokenUnitCost: parseFloat(e.target.value) || 0})} className="h-8 bg-white border-none rounded-lg text-xs" />
                      </div>
 
                      {/* Messages */}
                      <div className="space-y-1 p-3 bg-slate-50 rounded-xl">
-                       <Label className="text-[10px] font-black uppercase text-slate-400">Msg/mês</Label>
+                       <Label className="text-xs font-semibold uppercase text-slate-400">Msg/mês</Label>
                        <Input disabled={!newPlan.enableMessages} type="number" value={newPlan.maxMessages} onChange={e => setNewPlan({...newPlan, maxMessages: parseInt(e.target.value) || 0})} className="h-9 bg-white border-none rounded-lg font-bold" />
-                       <span className="text-[9px] font-semibold text-slate-400 block mt-1">Custo/Msg: R$</span>
+                       <span className="text-xs font-semibold text-slate-400 block mt-1">Custo/Msg: R$</span>
                        <Input type="number" step="0.01" value={newPlan.messageUnitCost} onChange={e => setNewPlan({...newPlan, messageUnitCost: parseFloat(e.target.value) || 0})} className="h-8 bg-white border-none rounded-lg text-xs" />
                      </div>
 
                      {/* Prospects */}
                      <div className="space-y-1 p-3 bg-slate-50 rounded-xl">
-                       <Label className="text-[10px] font-black uppercase text-slate-400">Buscas BDR</Label>
+                       <Label className="text-xs font-semibold uppercase text-slate-400">Buscas BDR</Label>
                        <Input disabled={!newPlan.enableProspects} type="number" value={newPlan.maxProspects} onChange={e => setNewPlan({...newPlan, maxProspects: parseInt(e.target.value) || 0})} className="h-9 bg-white border-none rounded-lg font-bold" />
-                       <span className="text-[9px] font-semibold text-slate-400 block mt-1">Custo/BDR: R$</span>
+                       <span className="text-xs font-semibold text-slate-400 block mt-1">Custo/BDR: R$</span>
                        <Input type="number" step="0.01" value={newPlan.prospectUnitCost} onChange={e => setNewPlan({...newPlan, prospectUnitCost: parseFloat(e.target.value) || 0})} className="h-8 bg-white border-none rounded-lg text-xs" />
                      </div>
 
@@ -1063,11 +1060,11 @@ export default function AdminDashboard() {
                      <div className="space-y-1 p-3 bg-slate-50 rounded-xl col-span-2">
                        <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <Label className="text-[10px] font-black uppercase text-slate-400">Deep Research</Label>
+                            <Label className="text-xs font-semibold uppercase text-slate-400">Deep Research</Label>
                             <Input disabled={!newPlan.enableResearch} type="number" value={newPlan.maxResearch} onChange={e => setNewPlan({...newPlan, maxResearch: parseInt(e.target.value) || 0})} className="h-9 bg-white border-none rounded-lg font-bold" />
                           </div>
                           <div>
-                            <span className="text-[9px] font-semibold text-slate-400 block mt-1">Custo/Pesquisa: R$</span>
+                            <span className="text-xs font-semibold text-slate-400 block mt-1">Custo/Pesquisa: R$</span>
                             <Input type="number" step="0.01" value={newPlan.researchUnitCost} onChange={e => setNewPlan({...newPlan, researchUnitCost: parseFloat(e.target.value) || 0})} className="h-8 bg-white border-none rounded-lg text-xs mt-1" />
                           </div>
                        </div>
@@ -1077,19 +1074,19 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Profit Margin Calculator Panel */}
-                <div className="p-5 bg-teal-950/90 text-white rounded-3xl space-y-3 shadow-xl">
-                  <h4 className="text-[10px] font-black uppercase text-teal-300 tracking-wider">Simulador de Margem de Lucro (Mensal)</h4>
+                <div className="p-5 bg-teal-950/90 text-white rounded-2xl space-y-3 shadow-sm">
+                  <h4 className="text-xs font-semibold uppercase text-teal-300 ">Simulador de Margem de Lucro (Mensal)</h4>
                   <div className="grid grid-cols-3 gap-2 py-2 text-center">
                     <div className="border-r border-teal-800">
-                      <span className="block text-[8px] uppercase text-teal-300">Custo Total</span>
+                      <span className="block text-xs uppercase text-teal-300">Custo Total</span>
                       <span className="text-base font-extrabold text-red-300">R$ {simTotalCost.toFixed(2)}</span>
                     </div>
                     <div className="border-r border-teal-800">
-                      <span className="block text-[8px] uppercase text-teal-300">Margem R$</span>
+                      <span className="block text-xs uppercase text-teal-300">Margem R$</span>
                       <span className={`text-base font-extrabold ${simProfit >= 0 ? 'text-emerald-300' : 'text-red-400'}`}>R$ {simProfit.toFixed(2)}</span>
                     </div>
                     <div>
-                      <span className="block text-[8px] uppercase text-teal-300">Margem %</span>
+                      <span className="block text-xs uppercase text-teal-300">Margem %</span>
                       <span className={`text-base font-extrabold ${simMargin >= 50 ? 'text-emerald-300' : (simMargin >= 10 ? 'text-yellow-300' : 'text-red-400')}`}>
                         {simMargin.toFixed(0)}%
                       </span>
@@ -1101,7 +1098,7 @@ export default function AdminDashboard() {
           </div>
 
           <DialogFooter className="mt-4">
-            <Button onClick={handleCreateOrUpdatePlan} className="w-full h-16 bg-[#0D9488] hover:bg-[#0F766E] font-black text-white rounded-3xl uppercase tracking-widest text-[10px] shadow-2xl">
+            <Button onClick={handleCreateOrUpdatePlan} className="w-full h-11 bg-[#0D9488] hover:bg-[#0F766E] font-semibold text-white rounded-2xl text-xs shadow-sm">
               Salvar Configurações do Plano
             </Button>
           </DialogFooter>
@@ -1110,22 +1107,22 @@ export default function AdminDashboard() {
 
       {/* MODAL TRANSACAO (CREATE/EDIT) */}
       <Dialog open={isTxModalOpen} onOpenChange={setIsTxModalOpen}>
-        <DialogContent className="rounded-[40px] p-10 max-w-lg border-none shadow-3xl bg-white">
-          <h2 className="text-2xl font-black uppercase tracking-tighter mb-6 italic">Lançamento <span className="text-[#0D9488]">Financeiro</span></h2>
+        <DialogContent className="rounded-2xl p-10 max-w-lg border-none shadow-sm bg-white">
+          <h2 className="text-2xl font-semibold tracking-tight mb-6">Lançamento <span className="text-[#0D9488]">Financeiro</span></h2>
           <div className="space-y-4">
              <div className="space-y-1">
-                <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">Descrição</Label>
-                <Input value={newTransaction.description} onChange={e => setNewTransaction({...newTransaction, description: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-none font-bold" placeholder="Ex: Servidor AWS, Campanha Ads..." />
+                <Label className="text-xs font-semibold uppercase text-slate-400 pl-1">Descrição</Label>
+                <Input value={newTransaction.description} onChange={e => setNewTransaction({...newTransaction, description: e.target.value})} className="h-10 rounded-xl bg-slate-50 border-none font-bold" placeholder="Ex: Servidor AWS, Campanha Ads..." />
              </div>
              <div className="grid grid-cols-2 gap-4">
                <div className="space-y-1">
-                  <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">Valor (R$)</Label>
-                  <Input type="number" step="0.01" value={newTransaction.amount} onChange={e => setNewTransaction({...newTransaction, amount: parseFloat(e.target.value) || 0})} className="h-12 rounded-xl bg-slate-50 border-none font-bold" />
+                  <Label className="text-xs font-semibold uppercase text-slate-400 pl-1">Valor (R$)</Label>
+                  <Input type="number" step="0.01" value={newTransaction.amount} onChange={e => setNewTransaction({...newTransaction, amount: parseFloat(e.target.value) || 0})} className="h-10 rounded-xl bg-slate-50 border-none font-bold" />
                </div>
                <div className="space-y-1">
-                  <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">Tipo</Label>
+                  <Label className="text-xs font-semibold uppercase text-slate-400 pl-1">Tipo</Label>
                   <Select value={newTransaction.type} onValueChange={v => setNewTransaction({...newTransaction, type: v})}>
-                     <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
+                     <SelectTrigger className="h-10 rounded-xl bg-slate-50 border-none font-bold">
                         <SelectValue />
                      </SelectTrigger>
                      <SelectContent className="rounded-xl">
@@ -1138,13 +1135,13 @@ export default function AdminDashboard() {
 
              <div className="grid grid-cols-2 gap-4">
                <div className="space-y-1">
-                  <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">Categoria</Label>
-                  <Input value={newTransaction.category} onChange={e => setNewTransaction({...newTransaction, category: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-none font-bold" placeholder="Servidor, Infra, Suporte..." />
+                  <Label className="text-xs font-semibold uppercase text-slate-400 pl-1">Categoria</Label>
+                  <Input value={newTransaction.category} onChange={e => setNewTransaction({...newTransaction, category: e.target.value})} className="h-10 rounded-xl bg-slate-50 border-none font-bold" placeholder="Servidor, Infra, Suporte..." />
                </div>
                <div className="space-y-1">
-                  <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">Vincular a Cliente (Opcional)</Label>
+                  <Label className="text-xs font-semibold uppercase text-slate-400 pl-1">Vincular a Cliente (Opcional)</Label>
                   <Select value={newTransaction.tenantId} onValueChange={v => setNewTransaction({...newTransaction, tenantId: v})}>
-                     <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
+                     <SelectTrigger className="h-10 rounded-xl bg-slate-50 border-none font-bold">
                         <SelectValue placeholder="Geral" />
                      </SelectTrigger>
                      <SelectContent className="rounded-xl">
@@ -1162,7 +1159,7 @@ export default function AdminDashboard() {
                 </div>
                 {newTransaction.isRecurring && (
                   <div className="pt-2 border-t mt-2">
-                    <Label className="text-[10px] font-black uppercase text-slate-400">Frequência</Label>
+                    <Label className="text-xs font-semibold uppercase text-slate-400">Frequência</Label>
                     <Select value={newTransaction.frequency} onValueChange={v => setNewTransaction({...newTransaction, frequency: v})}>
                        <SelectTrigger className="h-10 rounded-lg bg-white border border-slate-200 font-bold mt-1">
                           <SelectValue />
@@ -1178,16 +1175,16 @@ export default function AdminDashboard() {
 
              <div className="grid grid-cols-2 gap-4">
                <div className="space-y-1">
-                  <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">Vencimento</Label>
-                  <Input type="date" value={newTransaction.dueDate} onChange={e => setNewTransaction({...newTransaction, dueDate: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-none font-bold" />
+                  <Label className="text-xs font-semibold uppercase text-slate-400 pl-1">Vencimento</Label>
+                  <Input type="date" value={newTransaction.dueDate} onChange={e => setNewTransaction({...newTransaction, dueDate: e.target.value})} className="h-10 rounded-xl bg-slate-50 border-none font-bold" />
                </div>
                <div className="space-y-1">
-                  <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">Data Pagamento (se pago)</Label>
-                  <Input type="date" value={newTransaction.paidAt} onChange={e => setNewTransaction({...newTransaction, paidAt: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-none font-bold" />
+                  <Label className="text-xs font-semibold uppercase text-slate-400 pl-1">Data Pagamento (se pago)</Label>
+                  <Input type="date" value={newTransaction.paidAt} onChange={e => setNewTransaction({...newTransaction, paidAt: e.target.value})} className="h-10 rounded-xl bg-slate-50 border-none font-bold" />
                </div>
              </div>
 
-             <Button onClick={handleCreateOrUpdateTransaction} className="w-full h-16 bg-[#0D9488] hover:bg-[#0F766E] text-white font-black rounded-2xl uppercase tracking-widest mt-4 shadow-xl active:scale-95 transition-all">
+             <Button onClick={handleCreateOrUpdateTransaction} className="w-full h-11 bg-[#0D9488] hover:bg-[#0F766E] text-white font-semibold rounded-2xl mt-4 shadow-sm active:scale-95 transition-all">
                 Salvar Lançamento
               </Button>
           </div>
@@ -1196,34 +1193,34 @@ export default function AdminDashboard() {
 
       {/* MODAL ADICIONAR USUÁRIO (ADMIN SIDE) */}
       <Dialog open={isAddUserModalOpen} onOpenChange={setIsAddUserModalOpen}>
-        <DialogContent className="rounded-[40px] p-10 max-w-md border-none shadow-3xl bg-white">
-          <h2 className="text-2xl font-black uppercase tracking-tighter mb-6 italic">Novo <span className="text-[#0D9488]">Acesso</span></h2>
+        <DialogContent className="rounded-2xl p-10 max-w-md border-none shadow-sm bg-white">
+          <h2 className="text-2xl font-semibold tracking-tight mb-6">Novo <span className="text-[#0D9488]">Acesso</span></h2>
           <div className="space-y-4">
              <div className="space-y-1">
-                <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">Nome do Colaborador</Label>
-                <Input value={newUser.name} onChange={e => setNewUser({...newUser, name: e.target.value})} className="h-14 rounded-2xl bg-slate-50 border-none font-bold placeholder:text-slate-200" placeholder="Ex: João Silva" />
+                <Label className="text-xs font-semibold uppercase text-slate-400 pl-1">Nome do Colaborador</Label>
+                <Input value={newUser.name} onChange={e => setNewUser({...newUser, name: e.target.value})} className="h-10 rounded-2xl bg-slate-50 border-none font-bold placeholder:text-slate-200" placeholder="Ex: João Silva" />
              </div>
              <div className="space-y-1">
-                <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">E-mail</Label>
-                <Input value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} className="h-14 rounded-2xl bg-slate-50 border-none font-bold placeholder:text-slate-200" placeholder="joao@empresa.com" />
+                <Label className="text-xs font-semibold uppercase text-slate-400 pl-1">E-mail</Label>
+                <Input value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} className="h-10 rounded-2xl bg-slate-50 border-none font-bold placeholder:text-slate-200" placeholder="joao@empresa.com" />
              </div>
              <div className="space-y-1">
-                <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">Senha</Label>
-                <Input type="password" value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} className="h-14 rounded-2xl bg-slate-50 border-none font-bold placeholder:text-slate-200" placeholder="******" />
+                <Label className="text-xs font-semibold uppercase text-slate-400 pl-1">Senha</Label>
+                <Input type="password" value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} className="h-10 rounded-2xl bg-slate-50 border-none font-bold placeholder:text-slate-200" placeholder="******" />
              </div>
              <div className="space-y-1">
-                <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">Permissão</Label>
+                <Label className="text-xs font-semibold uppercase text-slate-400 pl-1">Permissão</Label>
                 <Select value={newUser.role} onValueChange={v => setNewUser({...newUser, role: v})}>
-                   <SelectTrigger className="h-14 rounded-2xl bg-slate-50 border-none font-bold">
+                   <SelectTrigger className="h-10 rounded-2xl bg-slate-50 border-none font-bold">
                       <SelectValue />
                    </SelectTrigger>
-                   <SelectContent className="rounded-2xl border-none shadow-2xl">
+                   <SelectContent className="rounded-2xl border-none shadow-sm">
                       <SelectItem value="AGENT">Vendedor / Agente</SelectItem>
                       <SelectItem value="ADMIN">Gerente / Admin</SelectItem>
                    </SelectContent>
                 </Select>
              </div>
-             <Button onClick={handleCreateUser} className="w-full h-16 bg-slate-900 hover:bg-black text-white font-black rounded-2xl uppercase tracking-widest mt-4 shadow-xl active:scale-95 transition-all">
+             <Button onClick={handleCreateUser} className="w-full h-11 bg-slate-900 hover:bg-black text-white font-semibold rounded-2xl mt-4 shadow-sm active:scale-95 transition-all">
                 Liberar Acesso
              </Button>
           </div>
@@ -1235,11 +1232,11 @@ export default function AdminDashboard() {
 
 function StatCard({ icon, label, value }: { icon: any, label: string, value: any }) {
   return (
-    <Card className="p-8 border-2 rounded-[40px] flex items-center gap-6 bg-white border-slate-100 hover:shadow-xl hover:border-slate-200 transition-all duration-300">
+    <Card className="p-8 border-2 rounded-2xl flex items-center gap-6 bg-white border-slate-100 hover:shadow-sm hover:border-slate-200 transition-all duration-300">
        <div className="p-4 bg-slate-50 rounded-2xl">{icon}</div>
        <div>
-         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
-         <p className="text-2xl font-black tracking-tight mt-1 text-slate-800">{value}</p>
+         <p className="text-xs font-semibold text-slate-400 ">{label}</p>
+         <p className="text-2xl font-semibold tracking-tight mt-1 text-slate-800">{value}</p>
        </div>
     </Card>
   );

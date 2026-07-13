@@ -155,38 +155,38 @@ export default function Connections() {
         {/* HEADER */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
            <div className="space-y-1">
-              <h1 className="text-4xl font-black text-slate-900 tracking-tighter flex items-center gap-4 uppercase">
+              <h1 className="text-4xl font-semibold text-slate-900 tracking-tight flex items-center gap-4 uppercase">
                  <Smartphone className="w-10 h-10 text-primary" />
-                 Canais de <span className="text-primary italic">Atendimento</span>
+                 Canais de <span className="text-primary">Atendimento</span>
               </h1>
               <p className="text-slate-500 font-bold">Conecte suas contas de WhatsApp para ativar os SDRs.</p>
            </div>
-           <Button onClick={() => setShowAddModal(true)} className="h-14 px-8 bg-slate-900 hover:bg-black text-lg font-black rounded-2xl shadow-2xl shadow-slate-200 gap-3">
+           <Button onClick={() => setShowAddModal(true)} className="h-10 px-8 bg-slate-900 hover:bg-black text-lg font-semibold rounded-2xl shadow-sm shadow-slate-200 gap-3">
               <Plus className="w-6 h-6 text-primary" /> Nova Conexão
            </Button>
         </div>
 
         {/* STATUS TILES */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-           <Card className="p-6 border-none shadow-xl rounded-[30px] bg-white flex items-center gap-6">
+           <Card className="p-6 border-none shadow-sm rounded-2xl bg-white flex items-center gap-6">
               <div className="bg-teal-50 p-4 rounded-2xl text-[#0D9488]"><Activity className="w-6 h-6" /></div>
               <div>
-                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Conexões Ativas</p>
-                 <p className="text-2xl font-black text-slate-900">{connections.filter(c => c.status === 'CONNECTED').length} / {connections.length}</p>
+                 <p className="text-xs font-semibold text-slate-400 ">Conexões Ativas</p>
+                 <p className="text-2xl font-semibold text-slate-900">{connections.filter(c => c.status === 'CONNECTED').length} / {connections.length}</p>
               </div>
            </Card>
-           <Card className="p-6 border-none shadow-xl rounded-[30px] bg-white flex items-center gap-6">
+           <Card className="p-6 border-none shadow-sm rounded-2xl bg-white flex items-center gap-6">
               <div className="bg-primary/5 p-4 rounded-2xl text-primary"><MessageSquare className="w-6 h-6" /></div>
               <div>
-                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Saúde da Instância</p>
-                 <p className="text-2xl font-black text-slate-900">{connections.length > 0 ? "Operacional" : "Sem Conexões"}</p>
+                 <p className="text-xs font-semibold text-slate-400 ">Saúde da Instância</p>
+                 <p className="text-2xl font-semibold text-slate-900">{connections.length > 0 ? "Operacional" : "Sem Conexões"}</p>
               </div>
            </Card>
-           <Card className="p-6 border-none shadow-xl rounded-[30px] bg-white flex items-center gap-6">
+           <Card className="p-6 border-none shadow-sm rounded-2xl bg-white flex items-center gap-6">
               <div className="bg-teal-50 p-4 rounded-2xl text-[#0D9488]"><Globe className="w-6 h-6" /></div>
               <div>
-                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status da API</p>
-                 <p className="text-2xl font-black text-[#0D9488]">Online</p>
+                 <p className="text-xs font-semibold text-slate-400 ">Status da API</p>
+                 <p className="text-2xl font-semibold text-[#0D9488]">Online</p>
               </div>
            </Card>
         </div>
@@ -194,20 +194,20 @@ export default function Connections() {
         {/* CONNECTION LIST */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
            {connections.map(conn => (
-             <Card key={conn.id} className="overflow-hidden border-none shadow-2xl rounded-[40px] bg-white group">
+             <Card key={conn.id} className="overflow-hidden border-none shadow-sm rounded-2xl bg-white group">
                 <CardContent className="p-10 space-y-8">
                    <div className="flex justify-between items-start">
                       <div className="flex items-center gap-5">
-                         <div className={`w-16 h-16 rounded-[24px] flex items-center justify-center shadow-lg transition-transform group-hover:scale-110 ${conn.status === 'CONNECTED' ? 'bg-[#0D9488] text-white' : 'bg-slate-100 text-slate-400'}`}>
+                         <div className={`w-16 h-11 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-110 ${conn.status === 'CONNECTED' ? 'bg-[#0D9488] text-white' : 'bg-slate-100 text-slate-400'}`}>
                             <Smartphone className="w-8 h-8" />
                          </div>
                          <div className="space-y-1">
-                            <h3 className="text-2xl font-black text-slate-900 tracking-tight">{conn.name}</h3>
+                            <h3 className="text-2xl font-semibold text-slate-900 tracking-tight">{conn.name}</h3>
                             <div className="flex items-center gap-2">
-                               <Badge className={`text-[9px] font-black uppercase tracking-widest border-none ${conn.status === 'CONNECTED' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
+                               <Badge className={`text-xs font-semibold border-none ${conn.status === 'CONNECTED' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
                                   {conn.status}
                                </Badge>
-                               <span className="text-[10px] font-bold text-slate-400">ID: {conn.instance}</span>
+                               <span className="text-xs font-bold text-slate-400">ID: {conn.instance}</span>
                             </div>
                          </div>
                       </div>
@@ -217,17 +217,17 @@ export default function Connections() {
                               <CheckCircle2 className="w-6 h-6" />
                            </div>
                          ) : (
-                           <Button className="h-10 px-4 bg-primary hover:bg-primary/90 font-black rounded-xl text-[10px] uppercase" onClick={() => handleOpenQr(conn.id)}>
+                           <Button className="h-10 px-4 bg-primary hover:bg-primary/90 font-semibold rounded-xl text-xs uppercase" onClick={() => handleOpenQr(conn.id)}>
                               Reconectar
                            </Button>
                          )}
                       </div>
                    </div>
 
-                   <div className="p-6 bg-slate-50 rounded-3xl space-y-4 border border-slate-100">
+                   <div className="p-6 bg-slate-50 rounded-2xl space-y-4 border border-slate-100">
                       <div className="flex justify-between items-center text-sm">
                          <span className="text-slate-400 font-bold">Número Ativo</span>
-                         <span className="text-slate-900 font-black tracking-tight">{conn.phone || "--"}</span>
+                         <span className="text-slate-900 font-semibold tracking-tight">{conn.phone || "--"}</span>
                       </div>
                       <div className="flex justify-between items-center text-sm">
                          <span className="text-slate-400 font-bold">Última Atividade</span>
@@ -236,10 +236,10 @@ export default function Connections() {
                    </div>
 
                    <div className="flex items-center justify-between pt-4">
-                      <div className="flex items-center gap-2 text-[#0D9488] font-black text-[10px] uppercase tracking-widest">
+                      <div className="flex items-center gap-2 text-[#0D9488] font-semibold text-xs ">
                          <CheckCircle2 className="w-4 h-4" /> Criptografia Ponta-a-Ponta
                       </div>
-                       <Button variant="ghost" className="text-red-400 hover:text-red-600 hover:bg-red-50 text-[10px] font-black uppercase tracking-widest gap-2" onClick={() => handleDeleteConnection(conn.id)}>
+                       <Button variant="ghost" className="text-red-400 hover:text-red-600 hover:bg-red-50 text-xs font-semibold gap-2" onClick={() => handleDeleteConnection(conn.id)}>
                           <Trash2 className="w-4 h-4" /> Deletar Canal
                        </Button>
                    </div>
@@ -249,14 +249,14 @@ export default function Connections() {
         </div>
 
         {/* SECURITY INFO */}
-        <div className="bg-slate-900 p-10 rounded-[40px] text-white flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
+        <div className="bg-slate-900 p-10 rounded-2xl text-white flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 blur-3xl rounded-full translate-x-1/2" />
            <ShieldCheck className="w-16 h-16 text-primary shrink-0" />
            <div className="space-y-2 flex-1">
-              <h4 className="text-xl font-black tracking-tight">Arquitetura SaaS Multi-Instância</h4>
+              <h4 className="text-xl font-semibold tracking-tight">Arquitetura SaaS Multi-Instância</h4>
               <p className="text-white/40 text-sm font-medium leading-relaxed">Cada conexão roda em um container isolado (Isolation Layer). Seus dados de sessão são criptografados e destruídos em caso de desconexão forçada.</p>
            </div>
-           <Button className="h-14 px-10 bg-white text-slate-900 hover:bg-slate-100 font-black rounded-2xl gap-3">
+           <Button className="h-10 px-10 bg-white text-slate-900 hover:bg-slate-100 font-semibold rounded-2xl gap-3">
               <LinkIcon className="w-5 h-5" /> Documentação API
            </Button>
         </div>
@@ -264,16 +264,16 @@ export default function Connections() {
 
       {/* MODAL ADICIONAR CONEXÃO */}
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-        <DialogContent className="max-w-md p-10 border-none shadow-3xl rounded-[40px] bg-white">
+        <DialogContent className="max-w-md p-10 border-none shadow-sm rounded-2xl bg-white">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black text-slate-900 uppercase">Novo Canal</DialogTitle>
+            <DialogTitle className="text-2xl font-semibold text-slate-900 uppercase">Novo Canal</DialogTitle>
             <DialogDescription>Escolha como deseja conectar seu WhatsApp.</DialogDescription>
           </DialogHeader>
 
           <Tabs defaultValue="baileys" className="w-full">
             <TabsList className="grid w-full grid-cols-2 rounded-2xl bg-slate-100 p-1 mb-6">
-              <TabsTrigger value="baileys" className="rounded-xl font-bold text-[10px] uppercase">QR Code (Baileys)</TabsTrigger>
-              <TabsTrigger value="meta" className="rounded-xl font-bold text-[10px] uppercase">Meta Oficial (Cloud API)</TabsTrigger>
+              <TabsTrigger value="baileys" className="rounded-xl font-bold text-xs uppercase">QR Code (Baileys)</TabsTrigger>
+              <TabsTrigger value="meta" className="rounded-xl font-bold text-xs uppercase">Meta Oficial (Cloud API)</TabsTrigger>
             </TabsList>
             
             <TabsContent value="baileys" className="space-y-4">
@@ -282,23 +282,23 @@ export default function Connections() {
                  placeholder="Nome da Conexão (ex: Comercial)"
                  value={newName}
                  onChange={(e) => setNewName(e.target.value)}
-                 className="w-full h-14 px-6 bg-slate-100 rounded-2xl border-none font-bold text-slate-900 focus:ring-2 focus:ring-primary outline-none"
+                 className="w-full h-10 px-6 bg-slate-100 rounded-2xl border-none font-bold text-slate-900 focus:ring-2 focus:ring-primary outline-none"
                />
-               <Button onClick={handleAddConnection} disabled={loading || !newName} className="w-full h-14 bg-slate-900 font-black rounded-2xl text-white">
+               <Button onClick={handleAddConnection} disabled={loading || !newName} className="w-full h-10 bg-slate-900 font-semibold rounded-2xl text-white">
                   {loading ? "Processando..." : "GERAR QR CODE"}
                </Button>
             </TabsContent>
 
             <TabsContent value="meta" className="space-y-4">
                <div className="space-y-3">
-                   <input type="text" id="meta-name" placeholder="Nome do Canal" className="w-full h-14 px-6 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all" />
-                   <input type="text" id="meta-phone" placeholder="Seu Número (ex: 5511999999999)" className="w-full h-14 px-6 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all" />
-                   <input type="text" id="meta-phoneid" placeholder="Phone Number ID" className="w-full h-14 px-6 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all" />
-                   <input type="text" id="meta-waba" placeholder="WABA (Business Account ID)" className="w-full h-14 px-6 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all" />
-                   <input type="text" id="meta-verify" placeholder="Verify Token (Escolha uma Senha p/ Webhook)" className="w-full h-14 px-6 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all" />
+                   <input type="text" id="meta-name" placeholder="Nome do Canal" className="w-full h-10 px-6 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all" />
+                   <input type="text" id="meta-phone" placeholder="Seu Número (ex: 5511999999999)" className="w-full h-10 px-6 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all" />
+                   <input type="text" id="meta-phoneid" placeholder="Phone Number ID" className="w-full h-10 px-6 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all" />
+                   <input type="text" id="meta-waba" placeholder="WABA (Business Account ID)" className="w-full h-10 px-6 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all" />
+                   <input type="text" id="meta-verify" placeholder="Verify Token (Escolha uma Senha p/ Webhook)" className="w-full h-10 px-6 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all" />
                   <div className="p-4 bg-slate-900 rounded-xl space-y-2">
-                     <p className="text-[10px] text-white/50 font-black uppercase tracking-widest">Webhook URL p/ Colar no Facebook:</p>
-                     <p className="text-[11px] text-primary font-mono font-bold break-all">{window.location.origin}/api/webhook/whatsapp/meta</p>
+                     <p className="text-xs text-white/50 font-semibold ">Webhook URL p/ Colar no Facebook:</p>
+                     <p className="text-xs text-primary font-mono font-bold break-all">{window.location.origin}/api/webhook/whatsapp/meta</p>
                   </div>
                    <textarea id="meta-token" placeholder="Access Token Permanente (Bearer)" className="w-full h-24 px-6 py-4 bg-slate-50 border-none rounded-2xl font-bold text-xs outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all resize-none" />
                </div>
@@ -326,7 +326,7 @@ export default function Connections() {
                   finally { setLoading(false); }
                 }}
                 disabled={loading} 
-                className="w-full h-14 bg-primary font-black rounded-2xl text-white"
+                className="w-full h-10 bg-primary font-semibold rounded-2xl text-white"
                >
                   {loading ? "Vinculando..." : "VINCULAR CONTA OFICIAL"}
                </Button>
@@ -337,28 +337,28 @@ export default function Connections() {
 
       {/* QR CODE MODAL (Requirement 5) */}
       <Dialog open={showQrModal} onOpenChange={setShowQrModal}>
-        <DialogContent className="max-w-md p-10 border-none shadow-3xl rounded-[40px] bg-white overflow-hidden text-center">
+        <DialogContent className="max-w-md p-10 border-none shadow-sm rounded-2xl bg-white overflow-hidden text-center">
             <div className="space-y-6">
                <div className="space-y-2 mb-8">
-                  <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase leading-none">Conectar <span className="text-primary italic">WhatsApp</span></h2>
-                  <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Aponte a câmera do seu celular</p>
+                  <h2 className="text-3xl font-semibold text-slate-900 tracking-tight uppercase leading-none">Conectar <span className="text-primary">WhatsApp</span></h2>
+                  <p className="text-slate-400 font-bold text-xs ">Aponte a câmera do seu celular</p>
                </div>
                
-               <div className="relative group p-6 bg-slate-50 rounded-[40px] border-2 border-dashed border-slate-200 aspect-square flex items-center justify-center">
+               <div className="relative group p-6 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 aspect-square flex items-center justify-center">
                    <div className="relative z-10">
-                      <Card className="p-8 shadow-2xl border-none rounded-[30px] bg-white">
+                      <Card className="p-8 shadow-sm border-none rounded-2xl bg-white">
                          <div className="w-48 h-48 bg-white flex items-center justify-center rounded-2xl overflow-hidden border-4 border-slate-900">
                             {qrCode ? (
                                <QRCodeCanvas value={qrCode} size={192} level="H" includeMargin={true} />
                             ) : cooldownSeconds > 0 ? (
                                <div className="flex flex-col items-center gap-3 text-orange-500">
-                                  <span className="text-5xl font-black">{Math.floor(cooldownSeconds / 60)}:{String(cooldownSeconds % 60).padStart(2, '0')}</span>
-                                  <span className="text-[10px] font-black uppercase tracking-tighter text-center text-slate-500">Aguarde para tentar novamente</span>
+                                  <span className="text-5xl font-semibold">{Math.floor(cooldownSeconds / 60)}:{String(cooldownSeconds % 60).padStart(2, '0')}</span>
+                                  <span className="text-xs font-semibold tracking-tight text-center text-slate-500">Aguarde para tentar novamente</span>
                                </div>
                             ) : (
                                <div className="flex flex-col items-center gap-2 text-slate-300">
-                                  <RefreshCw className="w-12 h-12 animate-spin" />
-                                  <span className="text-[10px] font-black uppercase tracking-tighter">{qrStatus}</span>
+                                  <RefreshCw className="w-10 h-10 animate-spin" />
+                                  <span className="text-xs font-semibold tracking-tight">{qrStatus}</span>
                                </div>
                             )}
                          </div>
@@ -366,15 +366,15 @@ export default function Connections() {
                    </div>
                </div>
 
-               <div className={`px-8 py-4 rounded-3xl font-black flex items-center justify-center gap-3 shadow-xl ${cooldownSeconds > 0 ? 'bg-orange-500' : 'bg-slate-900'} text-white`}>
+               <div className={`px-8 py-4 rounded-2xl font-semibold flex items-center justify-center gap-3 shadow-sm ${cooldownSeconds > 0 ? 'bg-orange-500' : 'bg-slate-900'} text-white`}>
                   <ShieldCheck className="w-5 h-5 text-white" /> {qrStatus}
                </div>
                
-               <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest px-10 leading-relaxed">
+               <p className="text-slate-400 text-xs font-bold px-10 leading-relaxed">
                   Seus dados de sessão são <span className="text-slate-900">criptografados de ponta a ponta</span> e nunca saem do servidor.
                </p>
             </div>
-            <Button onClick={() => setShowQrModal(false)} variant="ghost" className="mt-8 font-black text-slate-300 hover:text-slate-900 w-full rounded-2xl uppercase text-[10px]">Fechar Janela</Button>
+            <Button onClick={() => setShowQrModal(false)} variant="ghost" className="mt-8 font-semibold text-slate-300 hover:text-slate-900 w-full rounded-2xl uppercase text-xs">Fechar Janela</Button>
         </DialogContent>
       </Dialog>
     </DashboardLayout>

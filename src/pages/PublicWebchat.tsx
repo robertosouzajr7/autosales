@@ -97,7 +97,7 @@ export default function PublicWebchat() {
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
          <div className="animate-pulse flex flex-col items-center gap-4">
             <Target className="w-12 h-12 text-[#0D9488] animate-spin" />
-            <p className="text-white/20 font-black uppercase tracking-widest text-xs">Carregando Portal de Atendimento...</p>
+            <p className="text-white/20 font-bold text-xs">Carregando Portal de Atendimento...</p>
          </div>
       </div>
     );
@@ -107,7 +107,7 @@ export default function PublicWebchat() {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-center space-y-6">
          <Shield className="w-16 h-16 text-red-500/50" />
-         <h1 className="text-2xl font-black text-white uppercase tracking-tighter">Portal não encontrado</h1>
+         <h1 className="text-2xl font-bold text-white tracking-tight">Portal não encontrado</h1>
          <p className="text-white/40 max-w-sm">Este endereço de webchat pode ter sido removido ou o plano do cliente expirou.</p>
          <Button variant="ghost" className="text-[#0D9488] font-bold" onClick={() => window.history.back()}>Voltar</Button>
       </div>
@@ -122,7 +122,7 @@ export default function PublicWebchat() {
          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-full bg-[#0D9488]/5 blur-[120px] rounded-full" />
       </div>
 
-      <Card className="w-full max-w-5xl h-screen md:h-[85vh] border-none shadow-[0_50px_100px_rgba(0,0,0,0.5)] bg-slate-900/50 backdrop-blur-2xl overflow-hidden flex flex-col md:flex-row rounded-none md:rounded-[40px]">
+      <Card className="w-full max-w-5xl h-screen md:h-[85vh] border-none shadow-[0_50px_100px_rgba(0,0,0,0.5)] bg-slate-900/50 backdrop-blur-2xl overflow-hidden flex flex-col md:flex-row rounded-none md:rounded-3xl">
          
          {/* SIDEBAR - INFO (Visible on Desktop) */}
          <div className="w-full md:w-80 bg-slate-900 flex-shrink-0 p-8 flex flex-col justify-between border-r border-white/5">
@@ -133,20 +133,20 @@ export default function PublicWebchat() {
                   ) : (
                     <div className="flex items-center gap-3">
                        <div className="bg-[#0D9488] p-2 rounded-xl"><Target className="w-6 h-6 text-white" /></div>
-                       <span className="text-xl font-black text-white tracking-tighter uppercase italic">{data.tenantName}</span>
+                       <span className="text-xl font-bold text-white tracking-tight uppercase italic">{data.tenantName}</span>
                     </div>
                   )}
-                  <Badge className="bg-[#0D9488]/10 text-[#0D9488] border-none font-black text-[9px] uppercase tracking-widest px-3 py-1">Online agora</Badge>
+                  <Badge className="bg-[#0D9488]/10 text-[#0D9488] border-none font-bold text-xs px-3 py-1">Online agora</Badge>
                </div>
 
                <div className="space-y-6">
                   <div className="space-y-1">
-                     <p className="text-[10px] font-black text-white/20 uppercase tracking-widest pl-1">Consultor Atribuído</p>
+                     <p className="text-xs font-bold text-white/20 pl-1">Consultor Atribuído</p>
                      <div className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl">
-                        <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center font-black text-white">{data.sdr?.name?.[0] || "AI"}</div>
+                        <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center font-bold text-white">{data.sdr?.name?.[0] || "AI"}</div>
                         <div>
-                           <p className="text-sm font-black text-white">{data.sdr?.name || "Especialista Agentes Virtuais"}</p>
-                           <p className="text-[10px] text-white/40 font-bold uppercase">{data.sdr?.role || "Inbound SDR"}</p>
+                           <p className="text-sm font-bold text-white">{data.sdr?.name || "Especialista Agentes Virtuais"}</p>
+                           <p className="text-xs text-white/40 font-bold uppercase">{data.sdr?.role || "Inbound SDR"}</p>
                         </div>
                      </div>
                   </div>
@@ -160,7 +160,7 @@ export default function PublicWebchat() {
             </div>
 
             <div className="pt-10 border-t border-white/5 space-y-4">
-               <p className="text-[10px] text-white/20 font-bold leading-relaxed">Este é um canal oficial da <b>{data.tenantName}</b> operado por Inteligência Artificial Especializada.</p>
+               <p className="text-xs text-white/20 font-bold leading-relaxed">Este é um canal oficial da <b>{data.tenantName}</b> operado por Inteligência Artificial Especializada.</p>
                <Button variant="ghost" className="w-full justify-start text-white/40 hover:text-white hover:bg-white/5 rounded-xl text-xs gap-3 font-bold group">
                   <Shield className="w-4 h-4 group-hover:text-[#0D9488] transition-colors" /> Privacidade & Segurança
                </Button>
@@ -173,7 +173,7 @@ export default function PublicWebchat() {
             <div className="md:hidden bg-slate-900 p-4 flex items-center justify-between border-b border-white/5">
                 <div className="flex items-center gap-3">
                    <div className="w-8 h-8 bg-[#0D9488] rounded-lg flex items-center justify-center"><Target className="w-4 h-4 text-white" /></div>
-                   <span className="font-black text-white text-sm uppercase tracking-tighter">{data.tenantName}</span>
+                   <span className="font-bold text-white text-sm tracking-tight">{data.tenantName}</span>
                 </div>
                 <div className="w-2 h-2 bg-[#0D9488] rounded-full animate-pulse" />
             </div>
@@ -183,12 +183,12 @@ export default function PublicWebchat() {
                
                <div className="flex flex-col items-center text-center space-y-4 py-10 opacity-30">
                   <Globe className="w-12 h-12 text-white" />
-                  <p className="text-[10px] font-black text-white uppercase tracking-[0.3em]">Criptografia ponta-a-ponta ativada</p>
+                  <p className="text-xs font-bold text-white ">Criptografia ponta-a-ponta ativada</p>
                </div>
 
                {chatHistory.length === 0 && (
                  <div className="flex justify-start animate-in slide-in-from-left duration-700">
-                    <div className="max-w-[85%] p-6 bg-white/5 border border-white/5 rounded-[30px] rounded-tl-none">
+                    <div className="max-w-[85%] p-6 bg-white/5 border border-white/5 rounded-2xl rounded-tl-none">
                        <p className="text-white/80 font-bold leading-relaxed">
                           Olá! 👋 Bem-vindo ao portal de atendimento da <b>{data.tenantName}</b>. <br/><br/>
                           Eu sou o seu consultor dedicado e estou aqui para tirar todas as suas dúvidas. Como posso te ajudar hoje?
@@ -199,11 +199,11 @@ export default function PublicWebchat() {
 
                {chatHistory.map((msg, i) => (
                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in zoom-in-95`}>
-                    <div className={`shadow-2xl max-w-[85%] p-6 rounded-[30px] ${
-                       msg.role === 'user' 
-                       ? 'bg-[#0D9488] text-slate-950 font-black rounded-tr-none' 
-                       : 'bg-white/5 border border-white/5 text-white font-bold rounded-tl-none'
-                    }`}>
+                    <div className={`shadow-2xl max-w-[85%] p-6 rounded-2xl ${
+ msg.role === 'user' 
+ ? 'bg-[#0D9488] text-slate-950 font-bold rounded-tr-none' 
+ : 'bg-white/5 border border-white/5 text-white font-bold rounded-tl-none'
+ }`}>
                        <p className="leading-relaxed">{msg.content}</p>
                     </div>
                  </div>
@@ -211,7 +211,7 @@ export default function PublicWebchat() {
                
                {sending && (
                  <div className="flex justify-start">
-                    <div className="flex items-center gap-2 text-white/20 font-black uppercase text-[10px] tracking-widest pl-4">
+                    <div className="flex items-center gap-2 text-white/20 font-bold uppercase text-xs pl-4">
                        <div className="flex gap-1">
                           <span className="w-1 h-1 bg-[#0D9488] rounded-full animate-bounce" style={{animationDelay: '0ms'}} />
                           <span className="w-1 h-1 bg-[#0D9488] rounded-full animate-bounce" style={{animationDelay: '150ms'}} />
@@ -226,8 +226,8 @@ export default function PublicWebchat() {
             {/* INPUT AREA */}
             <div className="p-6 md:p-10 pt-0">
                <div className="relative group">
-                  <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-blue-500/20 rounded-[30px] blur opacity-0 group-focus-within:opacity-100 transition-opacity" />
-                  <div className="relative flex items-center bg-slate-900 border border-white/10 rounded-[30px] p-2 pr-4 shadow-2xl transition-all">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-blue-500/20 rounded-2xl blur opacity-0 group-focus-within:opacity-100 transition-opacity" />
+                  <div className="relative flex items-center bg-slate-900 border border-white/10 rounded-2xl p-2 pr-4 shadow-2xl transition-all">
                      <input 
                        value={message}
                        onChange={e => setMessage(e.target.value)}
@@ -238,13 +238,13 @@ export default function PublicWebchat() {
                      <Button 
                        onClick={handleSend}
                        disabled={sending || !message.trim()}
-                       className="h-14 w-14 rounded-2xl bg-[#0D9488] hover:bg-emerald-400 text-slate-950 shadow-xl shadow-[#0D9488]/20 active:scale-90 transition-all p-0 flex items-center justify-center shrink-0"
+                       className="h-14 w-14 rounded-2xl bg-[#0D9488] hover:bg-emerald-400 text-slate-950 shadow-xl active:scale-90 transition-all p-0 flex items-center justify-center shrink-0"
                      >
                         <Send className="w-6 h-6" />
                      </Button>
                   </div>
                </div>
-               <p className="text-center text-[9px] font-black text-white/20 uppercase tracking-widest mt-6">Powered by Agentes Virtuais Neural Engine v4.0</p>
+               <p className="text-center text-xs font-bold text-white/20 mt-6">Powered by Agentes Virtuais Neural Engine v4.0</p>
             </div>
          </div>
       </Card>

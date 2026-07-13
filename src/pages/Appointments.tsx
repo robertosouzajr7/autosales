@@ -197,34 +197,34 @@ export default function Appointments() {
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
            
            <div className="xl:col-span-1 space-y-6">
-              <Card className="border-none shadow-3xl rounded-[40px] bg-white overflow-hidden">
+              <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden">
                  <CardHeader className="pb-0 pt-8 px-8">
-                    <CardTitle className="text-sm font-black text-slate-900 uppercase tracking-tighter">Explorar Data</CardTitle>
+                    <CardTitle className="text-sm font-semibold text-slate-900 tracking-tight">Explorar Data</CardTitle>
                  </CardHeader>
                  <div className="p-4 flex justify-center">
                     <Calendar
                       mode="single"
                       selected={selectedDate}
                       onSelect={setSelectedDate}
-                      className="rounded-3xl border-none font-bold"
+                      className="rounded-2xl border-none font-bold"
                       locale={ptBR}
                     />
                  </div>
               </Card>
 
-              <Card className="border-none shadow-3xl rounded-[40px] bg-slate-900 p-8 text-white space-y-6">
+              <Card className="border-none shadow-sm rounded-2xl bg-slate-900 p-8 text-white space-y-6">
                  <div>
-                    <p className="text-[10px] font-black text-[#2DD4BF] uppercase tracking-widest mb-2">Visão Rápida</p>
-                    <h4 className="text-xl font-black">Performance SDR</h4>
+                    <p className="text-xs font-semibold text-[#2DD4BF] mb-2">Visão Rápida</p>
+                    <h4 className="text-xl font-semibold">Performance SDR</h4>
                  </div>
                  <div className="space-y-4">
                     <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl">
                        <span className="text-xs font-bold text-slate-400">Total no Mês</span>
-                       <span className="text-lg font-black text-white">{stats.total}</span>
+                       <span className="text-lg font-semibold text-white">{stats.total}</span>
                     </div>
                     <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl">
                        <span className="text-xs font-bold text-slate-400">Taxa de Show</span>
-                       <span className="text-lg font-black text-[#2DD4BF]">{stats.rate}%</span>
+                       <span className="text-lg font-semibold text-[#2DD4BF]">{stats.rate}%</span>
                     </div>
                  </div>
               </Card>
@@ -232,18 +232,18 @@ export default function Appointments() {
 
            <div className="xl:col-span-3 space-y-6">
               <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)} className="w-full">
-                 <div className="flex items-center justify-between bg-white p-2 rounded-3xl shadow-xl border border-slate-50 mb-8">
+                 <div className="flex items-center justify-between bg-white p-2 rounded-2xl shadow-sm border border-slate-50 mb-8">
                     <TabsList className="bg-transparent border-none">
-                       <TabsTrigger value="day" className="h-11 px-8 rounded-2xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-black uppercase text-[10px] tracking-widest transition-all">Dia</TabsTrigger>
-                       <TabsTrigger value="week" className="h-11 px-8 rounded-2xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-black uppercase text-[10px] tracking-widest transition-all">Semana</TabsTrigger>
-                       <TabsTrigger value="month" className="h-11 px-8 rounded-2xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-black uppercase text-[10px] tracking-widest transition-all">Mês</TabsTrigger>
-                       <TabsTrigger value="upcoming" className="h-11 px-8 rounded-2xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-black uppercase text-[10px] tracking-widest transition-all">Próximos</TabsTrigger>
+                       <TabsTrigger value="day" className="h-11 px-8 rounded-2xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-semibold uppercase text-xs transition-all">Dia</TabsTrigger>
+                       <TabsTrigger value="week" className="h-11 px-8 rounded-2xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-semibold uppercase text-xs transition-all">Semana</TabsTrigger>
+                       <TabsTrigger value="month" className="h-11 px-8 rounded-2xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-semibold uppercase text-xs transition-all">Mês</TabsTrigger>
+                       <TabsTrigger value="upcoming" className="h-11 px-8 rounded-2xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-semibold uppercase text-xs transition-all">Próximos</TabsTrigger>
                     </TabsList>
                     
                     <div className="flex items-center gap-3 pr-2">
                        <div className="hidden md:flex items-center bg-slate-50 rounded-2xl px-4 py-2 border border-slate-100">
                           <CalendarDays className="w-4 h-4 text-[#0D9488] mr-3" />
-                          <span className="text-[10px] font-black text-slate-500 uppercase tracking-tighter">
+                          <span className="text-xs font-semibold text-slate-500 tracking-tight">
                              {format(selectedDate || new Date(), "MMMM yyyy", { locale: ptBR })}
                           </span>
                        </div>
@@ -256,39 +256,39 @@ export default function Appointments() {
                          Object.keys(groupedAppts).map(dateKey => (
                            <div key={dateKey} className="space-y-6">
                               <div className="flex items-center gap-4">
-                                 <h2 className="text-lg font-black text-slate-900 uppercase tracking-tighter italic pl-2">{getDateLabel(dateKey)}</h2>
+                                 <h2 className="text-lg font-semibold text-slate-900 tracking-tight pl-2">{getDateLabel(dateKey)}</h2>
                                  <div className="flex-1 h-px bg-slate-100" />
                               </div>
 
                               <div className="grid grid-cols-1 gap-4">
                                  {groupedAppts[dateKey].map((appt: Appointment) => (
-                                   <Card key={appt.id} className="group border-none shadow-xl hover:shadow-2xl rounded-[35px] bg-white transition-all duration-500 overflow-hidden hover:translate-x-2 border-l-8 border-emerald-500">
+                                   <Card key={appt.id} className="group border-none shadow-sm hover:shadow-sm rounded-2xl bg-white transition-all duration-500 overflow-hidden hover:translate-x-2 border-l-8 border-emerald-500">
                                       <div className="p-8 flex flex-col md:flex-row items-center justify-between gap-6">
                                          <div className="flex items-center gap-8 w-full md:w-auto">
                                             <div className="flex flex-col items-center justify-center min-w-[80px]">
-                                               <span className="text-3xl font-black text-slate-900 tracking-tighter italic -mb-1">
+                                               <span className="text-3xl font-semibold text-slate-900 tracking-tight -mb-1">
                                                  {(() => {
                                                    try { return format(new Date(appt.date), "HH:mm"); } catch(e) { return "--:--"; }
                                                  })()}
                                                </span>
-                                               <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">
+                                               <span className="text-xs font-semibold text-slate-300 ">
                                                  {(() => {
                                                    try { return format(new Date(appt.date), "aaa"); } catch(e) { return ""; }
                                                  })()}
                                                </span>
                                             </div>
                                             
-                                            <div className="h-12 w-px bg-slate-100 hidden md:block" />
+                                            <div className="h-10 w-px bg-slate-100 hidden md:block" />
 
                                             <div className="space-y-1">
-                                               <h3 className="text-xl font-black text-slate-900 tracking-tight leading-none group-hover:text-[#0D9488] transition-colors">{appt.title}</h3>
+                                               <h3 className="text-xl font-semibold text-slate-900 tracking-tight leading-none group-hover:text-[#0D9488] transition-colors">{appt.title}</h3>
                                                <div className="flex items-center gap-3">
                                                   <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 rounded-full border border-slate-100">
                                                      <User className="w-3 h-3 text-slate-400" />
-                                                     <span className="text-[10px] font-bold text-slate-500 uppercase">{appt.lead?.name || "Contato"}</span>
+                                                     <span className="text-xs font-bold text-slate-500 uppercase">{appt.lead?.name || "Contato"}</span>
                                                   </div>
                                                   <Badge className={cn(
-                                                    "text-[8px] font-black uppercase tracking-tighter px-2 h-5 border-none",
+                                                    "text-xs font-semibold tracking-tight px-2 h-5 border-none",
                                                     appt.status === "SCHEDULED" ? "bg-indigo-500 text-white" :
                                                     appt.status === "COMPLETED" ? "bg-[#0D9488] text-white" :
                                                     appt.status === "CANCELLED" ? "bg-red-500 text-white" :
@@ -308,7 +308,7 @@ export default function Appointments() {
                                             <Button 
                                               onClick={() => toggleComplete(appt)}
                                               className={cn(
-                                                "px-5 py-2.5 rounded-2xl font-black uppercase text-[9px] tracking-widest shadow-sm transition-all",
+                                                "px-5 py-2.5 rounded-2xl font-semibold uppercase text-xs  shadow-sm transition-all",
                                                 appt.status === "COMPLETED" 
                                                   ? "bg-[#0D9488] text-white hover:bg-[#0F766E]" 
                                                   : "bg-slate-100 text-slate-500 hover:bg-[#0D9488] hover:text-white"
@@ -316,7 +316,7 @@ export default function Appointments() {
                                             >
                                                {appt.status === "COMPLETED" ? <><CheckCircle2 className="w-3 h-3 mr-2" /> Concluído</> : "Marcar Concluído"}
                                             </Button>
-                                            <Button variant="ghost" size="icon" className="w-12 h-12 rounded-2xl hover:bg-red-50 hover:text-red-500 transition-all text-slate-200" onClick={() => deleteAppt(appt.id)}>
+                                            <Button variant="ghost" size="icon" className="w-10 h-10 rounded-2xl hover:bg-red-50 hover:text-red-500 transition-all text-slate-200" onClick={() => deleteAppt(appt.id)}>
                                                <Trash2 className="w-5 h-5" />
                                             </Button>
                                          </div>
@@ -328,15 +328,15 @@ export default function Appointments() {
                          ))
                        ) : (
                          <div className="py-24 text-center border-4 border-dashed border-slate-100 rounded-[60px] flex flex-col items-center justify-center gap-8 bg-white/50">
-                            <div className="w-24 h-24 bg-slate-50 rounded-[40px] flex items-center justify-center relative">
+                            <div className="w-24 h-24 bg-slate-50 rounded-2xl flex items-center justify-center relative">
                                <LucideCalendar className="w-10 h-10 text-slate-200" />
                                <div className="absolute top-0 right-0 w-6 h-6 bg-[#0D9488] rounded-full border-4 border-white animate-pulse" />
                             </div>
                             <div className="space-y-2">
-                               <p className="text-lg font-black text-slate-900 tracking-tighter uppercase">Nenhum agendamento encontrado</p>
-                               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest px-12">Experimente mudar o filtro de data ou criar uma nova reunião.</p>
+                               <p className="text-lg font-semibold text-slate-900 tracking-tight uppercase">Nenhum agendamento encontrado</p>
+                               <p className="text-xs font-bold text-slate-400 px-12">Experimente mudar o filtro de data ou criar uma nova reunião.</p>
                             </div>
-                            <Button onClick={() => setIsAddModalOpen(true)} variant="outline" className="h-12 border-2 border-slate-100 rounded-2xl px-8 font-black uppercase text-[10px] tracking-widest hover:bg-slate-900 hover:text-white transition-all">
+                            <Button onClick={() => setIsAddModalOpen(true)} variant="outline" className="h-10 border-2 border-slate-100 rounded-2xl px-8 font-semibold uppercase text-xs hover:bg-slate-900 hover:text-white transition-all">
                                Agendar Agora
                             </Button>
                          </div>
@@ -349,44 +349,44 @@ export default function Appointments() {
       </div>
 
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-        <DialogContent className="rounded-[40px] p-10 max-w-lg border-none shadow-3xl bg-white overflow-hidden">
+        <DialogContent className="rounded-2xl p-10 max-w-lg border-none shadow-sm bg-white overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#0D9488]/5 blur-3xl rounded-full" />
           <DialogHeader>
-            <DialogTitle className="text-3xl font-black text-slate-900 tracking-tighter uppercase leading-none mb-2">
-              Nova <span className="text-[#0D9488] italic">Reunião</span>
+            <DialogTitle className="text-3xl font-semibold text-slate-900 tracking-tight uppercase leading-none mb-2">
+              Nova <span className="text-[#0D9488]">Reunião</span>
             </DialogTitle>
-            <DialogDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest">Preencha os detalhes para travar a agenda do SDR.</DialogDescription>
+            <DialogDescription className="text-xs font-bold text-slate-400 ">Preencha os detalhes para travar a agenda do SDR.</DialogDescription>
           </DialogHeader>
           
           <div className="grid gap-6 py-8">
             <div className="space-y-3">
-              <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Título do Compromisso</Label>
+              <Label className="font-semibold text-xs text-slate-400 pl-1">Título do Compromisso</Label>
               <Input 
                 value={newAppt.title} 
                 onChange={e => setNewAppt({...newAppt, title: e.target.value})} 
-                className="h-14 rounded-2xl border-none bg-slate-50 font-bold text-slate-900 px-6 focus:ring-2 focus:ring-emerald-500 transition-all" 
+                className="h-10 rounded-2xl border-none bg-slate-50 font-bold text-slate-900 px-6 focus:ring-2 focus:ring-emerald-500 transition-all" 
                 placeholder="Ex: Call de Fechamento Vendas" 
               />
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <div className="space-y-3">
-                 <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Data e Hora</Label>
+                 <Label className="font-semibold text-xs text-slate-400 pl-1">Data e Hora</Label>
                  <Input 
                    type="datetime-local" 
                    value={newAppt.date} 
                    onChange={e => setNewAppt({...newAppt, date: e.target.value})} 
-                   className="h-14 rounded-2xl border-none bg-slate-50 font-bold text-slate-900 px-6 focus:ring-2 focus:ring-emerald-500 transition-all" 
+                   className="h-10 rounded-2xl border-none bg-slate-50 font-bold text-slate-900 px-6 focus:ring-2 focus:ring-emerald-500 transition-all" 
                  />
                </div>
                
                <div className="space-y-3">
-                 <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Vincular Lead</Label>
+                 <Label className="font-semibold text-xs text-slate-400 pl-1">Vincular Lead</Label>
                  <Select value={newAppt.leadId} onValueChange={v => setNewAppt({...newAppt, leadId: v})}>
-                   <SelectTrigger className="h-14 rounded-2xl border-none bg-slate-50 font-bold text-slate-900 px-6 focus:ring-2 focus:ring-emerald-500 transition-all">
+                   <SelectTrigger className="h-10 rounded-2xl border-none bg-slate-50 font-bold text-slate-900 px-6 focus:ring-2 focus:ring-emerald-500 transition-all">
                      <SelectValue placeholder="Selecione..." />
                    </SelectTrigger>
-                   <SelectContent className="rounded-2xl border-slate-100 shadow-2xl">
+                   <SelectContent className="rounded-2xl border-slate-100 shadow-sm">
                      {leads.map(l => (
                        <SelectItem key={l.id} value={l.id} className="font-bold py-3">
                          {l.name}
@@ -398,11 +398,11 @@ export default function Appointments() {
             </div>
 
             <div className="space-y-3">
-              <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Notas Adicionais</Label>
+              <Label className="font-semibold text-xs text-slate-400 pl-1">Notas Adicionais</Label>
               <Input 
                 value={newAppt.notes} 
                 onChange={e => setNewAppt({...newAppt, notes: e.target.value})} 
-                className="h-14 rounded-2xl border-none bg-slate-50 font-bold text-slate-900 px-6 focus:ring-2 focus:ring-emerald-500 transition-all" 
+                className="h-10 rounded-2xl border-none bg-slate-50 font-bold text-slate-900 px-6 focus:ring-2 focus:ring-emerald-500 transition-all" 
                 placeholder="Observações importantes..." 
               />
             </div>
@@ -411,7 +411,7 @@ export default function Appointments() {
           <DialogFooter className="mt-4">
              <Button 
                onClick={handleCreateAppt} 
-               className="w-full h-16 bg-slate-900 hover:bg-black text-white font-black rounded-3xl uppercase tracking-widest text-sm transition-all shadow-2xl hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3"
+               className="w-full h-11 bg-slate-900 hover:bg-black text-white font-semibold rounded-2xl text-sm transition-all shadow-sm hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3"
              >
                <Save className="w-5 h-5 text-[#2DD4BF]" /> Confirmar e Salvar
              </Button>
