@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -201,27 +202,24 @@ export default function SdrManagement() {
       <div className="flex flex-col gap-10 p-6 lg:p-10 max-w-screen-2xl mx-auto">
         
         {/* HEADER ESTRATÉGICO */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-slate-900 p-12 rounded-[50px] shadow-3xl relative overflow-hidden">
-           <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#0D9488]/10 blur-[130px] rounded-full translate-x-1/2 -translate-y-1/2" />
-           <div className="space-y-3 relative z-10">
-              <h1 className="text-4xl font-black text-white tracking-tighter uppercase flex items-center gap-4">
-                 Frota de <span className="text-[#0D9488] italic">SDRs IA</span>
-              </h1>
-              <p className="text-white/30 font-bold uppercase tracking-widest text-[9px] pl-[56px] leading-relaxed max-w-md">Gerencie e treine seu time de SDRs inteligentes para atuar em qualquer tipo de negócio.</p>
-           </div>
-           
-           <div className="flex flex-col items-end gap-2 relative z-10">
-              <Button 
-                onClick={() => hasWhatsApp ? handleOpenModal() : toast({ title: "WhatsApp Necessário", description: "Conecte um WhatsApp antes de contratar um SDR.", variant: "destructive" })} 
-                className={`h-16 px-10 rounded-2xl font-black uppercase text-xs tracking-widest shadow-2xl transition-all hover:-translate-y-1 text-white ${!hasWhatsApp ? 'bg-slate-700 cursor-not-allowed border-none' : 'bg-[#0D9488] hover:bg-[#0F766E]'}`}
+        <PageHeader
+          icon={<Bot className="w-5 h-5" />}
+          title="Assistente de IA"
+          subtitle="Crie e treine o assistente que atende seus pacientes no WhatsApp."
+          actions={
+            <div className="flex flex-col items-end gap-1">
+              <Button
+                onClick={() => hasWhatsApp ? handleOpenModal() : toast({ title: "WhatsApp necessário", description: "Conecte um WhatsApp antes de criar um assistente.", variant: "destructive" })}
+                disabled={!hasWhatsApp}
               >
-                <Plus className="w-5 h-5 mr-3" /> Contratar SDR
+                <Plus className="w-4 h-4 mr-2" /> Criar assistente
               </Button>
               {!hasWhatsApp && (
-                <p className="text-[8px] font-black text-[#0D9488] uppercase tracking-widest animate-pulse">Requer conexão WhatsApp</p>
+                <p className="text-xs text-muted-foreground">Requer conexão com o WhatsApp</p>
               )}
-           </div>
-        </div>
+            </div>
+          }
+        />
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-40 gap-4 opacity-30">
