@@ -328,28 +328,22 @@ export default function Settings() {
             </Button>
         </div>
 
-        <Tabs defaultValue="general" className="space-y-10">
-          <TabsList className="bg-slate-50 p-1.5 rounded-[22px] border border-slate-100 shadow-sm inline-flex h-16 w-full md:w-auto">
-            <TabsTrigger value="general" className="rounded-[18px] h-full px-8 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg">
-              <Zap className="w-4 h-4 mr-2 text-rose-500" /> Geral
+        <Tabs defaultValue="billing" className="space-y-8">
+          <TabsList className="bg-muted p-1 rounded-xl inline-flex h-11 w-full md:w-auto overflow-x-auto scrollbar-thin">
+            <TabsTrigger value="billing" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm">
+              <CreditCard className="w-4 h-4 mr-2" /> Plano &amp; Cobrança
             </TabsTrigger>
-            <TabsTrigger value="hunter" className="rounded-[18px] h-full px-8 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg">
-              <Target className="w-4 h-4 mr-2 text-[#0D9488]" /> Hunter System
+            <TabsTrigger value="general" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm">
+              <Zap className="w-4 h-4 mr-2" /> Geral
             </TabsTrigger>
-            <TabsTrigger value="integrations" className="rounded-[18px] h-full px-8 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg">
-              <Database className="w-4 h-4 mr-2 text-[#0D9488]" /> Integrações
+            <TabsTrigger value="users" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm">
+              <Shield className="w-4 h-4 mr-2" /> Equipe
             </TabsTrigger>
-            <TabsTrigger value="channels" className="rounded-[18px] h-full px-8 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg">
-              <Mail className="w-4 h-4 mr-2 text-[#0D9488]" /> Canais de Disparo
+            <TabsTrigger value="channels" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm">
+              <Mail className="w-4 h-4 mr-2" /> Canais
             </TabsTrigger>
-            <TabsTrigger value="connections" className="rounded-[18px] h-full px-8 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg">
-              <Share2 className="w-4 h-4 mr-2 text-amber-500" /> Conexões & API
-            </TabsTrigger>
-            <TabsTrigger value="users" className="rounded-[18px] h-full px-8 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg">
-              <Shield className="w-4 h-4 mr-2 text-teal-500" /> Equipe
-            </TabsTrigger>
-            <TabsTrigger value="billing" className="rounded-[18px] h-full px-8 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg">
-              <CreditCard className="w-4 h-4 mr-2 text-indigo-500" /> Assinatura & Cobrança
+            <TabsTrigger value="integrations" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm">
+              <Database className="w-4 h-4 mr-2" /> Avançado
             </TabsTrigger>
           </TabsList>
 
