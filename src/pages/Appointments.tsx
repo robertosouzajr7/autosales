@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { cn } from "../lib/utils";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -182,28 +183,16 @@ export default function Appointments() {
     <DashboardLayout>
       <div className="flex flex-col gap-8 p-6 lg:p-10 max-w-screen-2xl mx-auto">
         
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-           <div className="space-y-1">
-              <div className="flex items-center gap-3">
-                 <div className="p-3 bg-[#0D9488]/10 rounded-2xl">
-                    <CalendarIcon className="w-6 h-6 text-[#0D9488]" />
-                 </div>
-                 <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">
-                    Agenda de <span className="text-[#0D9488] italic">Negócios</span>
-                 </h1>
-              </div>
-              <p className="text-slate-400 font-bold uppercase tracking-widest text-[9px] pl-[52px]">Gestão de Reuniões e Call de Fechamento</p>
-           </div>
-           
-           <div className="flex items-center gap-3">
-              <Button 
-                onClick={() => setIsAddModalOpen(true)}
-                className="h-14 bg-slate-900 hover:bg-black px-8 rounded-2xl font-black uppercase text-xs tracking-widest text-white shadow-2xl transition-all hover:-translate-y-1 active:scale-95"
-              >
-                 <Plus className="w-5 h-5 mr-3 text-[#2DD4BF]" /> Novo Agendamento
-              </Button>
-           </div>
-        </div>
+        <PageHeader
+          icon={<CalendarIcon className="w-5 h-5" />}
+          title="Agenda de consultas"
+          subtitle="Todas as consultas marcadas na sua clínica."
+          actions={
+            <Button onClick={() => setIsAddModalOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" /> Nova consulta
+            </Button>
+          }
+        />
 
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
            

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { 
   Users, Target, Search, Filter, 
   MoreHorizontal, Plus, Star, Zap, 
@@ -169,30 +170,20 @@ export default function CRM() {
       <div className="flex flex-col gap-6 p-6 lg:p-8 max-w-[1800px] mx-auto animate-in fade-in duration-700">
         
         {/* HEADER CRM */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white border-2 border-slate-50 p-6 rounded-[30px] shadow-sm">
-           <div className="space-y-1">
-              <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase flex items-center gap-3">
-                 Sales <span className="text-[#0D9488] italic">Pipeline</span>
-              </h1>
-              <p className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Gargalo de Conversão & Oportunidades</p>
-           </div>
-           
-           <div className="flex gap-3">
-              <Button 
-                variant="outline" 
-                onClick={() => setIsEditStagesOpen(true)}
-                className="h-12 border-2 rounded-xl font-bold uppercase text-[10px] tracking-widest px-6"
-              >
-                 <Edit3 className="w-4 h-4 mr-2" /> Editar Pipelines
+        <PageHeader
+          title="Funil de pacientes"
+          subtitle="Acompanhe cada paciente do primeiro contato à consulta."
+          actions={
+            <>
+              <Button variant="outline" onClick={() => setIsEditStagesOpen(true)}>
+                <Edit3 className="w-4 h-4 mr-2" /> Editar etapas
               </Button>
-              <Button 
-                onClick={() => setIsAddModalOpen(true)}
-                className="h-12 bg-slate-900 hover:bg-black px-6 rounded-xl font-black uppercase text-[10px] tracking-widest text-white shadow-lg"
-              >
-                 <Plus className="w-4 h-4 mr-2" /> Novo Lead
+              <Button onClick={() => setIsAddModalOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" /> Novo paciente
               </Button>
-           </div>
-        </div>
+            </>
+          }
+        />
 
         {/* KANBAN BOARD */}
         <div className="flex gap-4 overflow-x-auto pb-8 snap-x">

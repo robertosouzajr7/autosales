@@ -495,7 +495,7 @@ export default function Conversations() {
                       variant="outline" 
                       className={`rounded-xl border-slate-100 font-bold text-xs ${selectedChat.conversations?.[0]?.botActive !== false ? 'hover:bg-slate-50' : 'bg-teal-50 border-emerald-100 text-[#0D9488] hover:bg-emerald-100'}`}
                     >
-                      {selectedChat.conversations?.[0]?.botActive !== false ? "Pausar SDR" : "Retomar SDR"}
+                      {selectedChat.conversations?.[0]?.botActive !== false ? "Assumir conversa" : "Devolver ao assistente"}
                     </Button>
                       <Button variant="outline" size="icon" className="rounded-xl border-slate-100 hover:bg-teal-50 hover:border-teal-200 group/call transition-colors"
                         onClick={handleOpenCallModal}
@@ -635,39 +635,33 @@ export default function Conversations() {
                <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center">
                   <MessageSquare className="w-10 h-10 text-slate-200" />
                </div>
-               <p className="font-black uppercase tracking-widest text-xs">Selecione uma conversa para iniciar</p>
+               <p className="text-sm font-medium text-muted-foreground">Selecione uma conversa para começar</p>
             </div>
           )}
         </Card>
 
-        {/* INFO DO LEAD (LATERAL DIREITA) */}
+        {/* INFO DO PACIENTE (LATERAL DIREITA) */}
         {selectedChat && (
-          <Card className="w-80 border-none shadow-2xl rounded-[40px] bg-slate-900 text-white overflow-hidden hidden xl:flex flex-col p-8">
-             <div className="space-y-10">
-                <div className="text-center space-y-4">
-                   <Avatar className="h-20 w-20 mx-auto border-4 border-white/10">
-                      <AvatarFallback className="bg-[#0D9488] text-white font-black text-xl">
+          <Card className="w-80 border border-border shadow-sm rounded-2xl bg-card overflow-hidden hidden xl:flex flex-col p-6">
+             <div className="space-y-6">
+                <div className="text-center space-y-3">
+                   <Avatar className="h-16 w-16 mx-auto">
+                      <AvatarFallback className="bg-primary/10 text-primary font-semibold text-lg">
                         {selectedChat.name.substring(0,2).toUpperCase()}
                       </AvatarFallback>
                    </Avatar>
                    <div>
-                      <p className="text-lg font-black tracking-tight">{selectedChat.name}</p>
-                      <Badge className="bg-white/10 text-[#2DD4BF] border-none font-bold text-[9px] uppercase tracking-widest mt-1">Interessado</Badge>
+                      <p className="text-base font-semibold text-foreground">{selectedChat.name}</p>
+                      <p className="text-sm text-muted-foreground">Paciente</p>
                    </div>
                 </div>
 
-                <div className="space-y-6">
+                <div className="space-y-4">
                    <InfoRow icon={<Phone className="w-4 h-4" />} label="WhatsApp" value={selectedChat.phone} />
                    <InfoRow icon={<Mail className="w-4 h-4" />} label="E-mail" value={selectedChat.email || "Não informado"} />
-                   <InfoRow icon={<Calendar className="w-4 h-4" />} label="Captado em" value="31 Mar, 2026" />
                 </div>
 
-                <div className="p-6 bg-white/5 rounded-3xl space-y-3">
-                   <p className="text-[10px] font-black text-[#0D9488] uppercase tracking-widest">Resumo da IA</p>
-                   <p className="text-[11px] font-bold text-white/50 leading-relaxed italic">"Lead demonstrou interesse no plano PRO mas tem dúvidas sobre o faturamento via boleto corporativo."</p>
-                </div>
-
-                <Button className="w-full h-14 bg-[#0D9488] hover:bg-[#0F766E] text-white font-black rounded-2xl uppercase tracking-widest text-[10px] shadow-xl shadow-[#0D9488]/20">Ver Perfil no CRM</Button>
+                <Button variant="outline" className="w-full" onClick={() => navigate("/crm")}>Ver no funil de pacientes</Button>
              </div>
           </Card>
         )}
@@ -749,9 +743,9 @@ export default function Conversations() {
 function InfoRow({ icon, label, value }: { icon: any, label: string, value: string }) {
   return (
     <div className="space-y-1">
-       <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">{label}</p>
-       <div className="flex items-center gap-2 text-sm font-bold">
-          <div className="text-[#0D9488]">{icon}</div>
+       <p className="text-xs font-medium text-muted-foreground">{label}</p>
+       <div className="flex items-center gap-2 text-sm text-foreground">
+          <div className="text-primary">{icon}</div>
           <span className="truncate">{value}</span>
        </div>
     </div>
