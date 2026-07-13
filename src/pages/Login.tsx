@@ -52,15 +52,15 @@ export default function Login() {
         
         <div className="text-center space-y-3 flex flex-col items-center">
           <img src="/logo.png" alt="AutoSales Logo" className="h-12 w-auto mb-2" />
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter">Bem-vindo de volta.</h1>
+          <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Bem-vindo de volta.</h1>
           <p className="text-slate-500 font-bold">Faça login para gerenciar seus SDRs e Leads.</p>
         </div>
 
-        <Card className="border-none shadow-3xl bg-white p-10 rounded-[40px]">
+        <Card className="border-none shadow-xl bg-white p-10 rounded-3xl">
           <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-1">Seu E-mail</Label>
+                <Label className="text-xs font-bold text-slate-400 pl-1">Seu E-mail</Label>
                 <div className="relative">
                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
                    <Input 
@@ -73,7 +73,7 @@ export default function Login() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-1">Senha</Label>
+                <Label className="text-xs font-bold text-slate-400 pl-1">Senha</Label>
                 <div className="relative">
                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
                    <Input 
@@ -87,7 +87,7 @@ export default function Login() {
               </div>
             </div>
 
-            <Button type="submit" className="w-full h-16 bg-slate-900 hover:bg-black rounded-2xl font-black text-xl shadow-2xl shadow-slate-200 gap-3" disabled={loading}>
+            <Button type="submit" className="w-full h-16 bg-slate-900 hover:bg-black rounded-2xl font-bold text-xl shadow-2xl shadow-slate-200 gap-3" disabled={loading}>
                {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Entrar Painel SDR"}
                {!loading && <ArrowRight className="w-6 h-6 text-primary" />}
             </Button>
@@ -96,7 +96,7 @@ export default function Login() {
 
         <div className="text-center space-y-4">
            <p className="text-sm font-bold text-slate-400 italic">Não tem conta? <Link to="/register" className="text-primary hover:underline">Iniciar 7 dias grátis</Link></p>
-           <Link to="/" className="text-xs font-black text-slate-300 uppercase tracking-widest hover:text-slate-900 transition-colors">Voltar para Home</Link>
+           <Link to="/" className="text-xs font-bold text-slate-300 hover:text-slate-900 transition-colors">Voltar para Home</Link>
         </div>
 
       </div>

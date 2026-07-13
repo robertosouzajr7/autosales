@@ -223,21 +223,21 @@ export default function SdrManagement() {
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-40 gap-4 opacity-30">
-             <RefreshCw className="w-12 h-12 text-[#0D9488] animate-spin" />
-             <p className="text-[10px] font-black uppercase tracking-widest">Sincronizando IA...</p>
+             <RefreshCw className="w-10 h-10 text-[#0D9488] animate-spin" />
+             <p className="text-xs font-semibold ">Sincronizando IA...</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {sdrs.map(sdr => (
-              <Card key={sdr.id} className="border-none shadow-2xl rounded-[45px] bg-white overflow-hidden hover:scale-[1.01] transition-all group relative">
+              <Card key={sdr.id} className="border-none shadow-sm rounded-2xl bg-white overflow-hidden hover:scale-[1.01] transition-all group relative">
                 <div className="p-8 bg-slate-50 flex items-center justify-between group-hover:bg-slate-900 transition-all duration-500">
                    <div className="flex items-center gap-5">
-                      <div className="w-14 h-14 bg-white group-hover:bg-[#0D9488] rounded-2xl flex items-center justify-center shadow-lg transition-all">
+                      <div className="w-10 h-10 bg-white group-hover:bg-[#0D9488] rounded-2xl flex items-center justify-center shadow-lg transition-all">
                          <Bot className="w-7 h-7 text-slate-800 group-hover:text-white" />
                       </div>
                       <div>
-                         <h3 className="text-slate-900 group-hover:text-white font-black text-lg leading-none uppercase">{sdr.name}</h3>
-                         <Badge className="bg-[#0D9488]/10 text-[#0D9488] font-black text-[8px] mt-1 uppercase border-none">{sdr.role}</Badge>
+                         <h3 className="text-slate-900 group-hover:text-white font-semibold text-lg leading-none uppercase">{sdr.name}</h3>
+                         <Badge className="bg-[#0D9488]/10 text-[#0D9488] font-semibold text-xs mt-1 uppercase border-none">{sdr.role}</Badge>
                       </div>
                    </div>
                    <div className="flex items-center gap-3">
@@ -247,7 +247,7 @@ export default function SdrManagement() {
                         title={sdr.active ? "Desativar SDR" : "Ativar SDR"}
                       >
                          <Power className={`w-4 h-4 ${sdr.active ? 'text-[#0D9488]' : 'text-slate-400'}`} />
-                         <span className="text-[9px] font-black uppercase tracking-widest leading-none">{sdr.active ? 'ON' : 'OFF'}</span>
+                         <span className="text-xs font-semibold leading-none">{sdr.active ? 'ON' : 'OFF'}</span>
                       </div>
                       <Button variant="ghost" size="icon" className="w-10 h-10 rounded-xl hover:bg-red-50 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all" onClick={(e) => { e.stopPropagation(); deleteSdr(sdr.id); }}>
                          <Trash2 className="w-5 h-5" />
@@ -259,22 +259,22 @@ export default function SdrManagement() {
                    <div className="grid grid-cols-3 gap-2">
                       <div className="bg-slate-50 p-3 rounded-2xl text-center">
                          <MessageSquare className="w-4 h-4 text-[#0D9488] mx-auto mb-1" />
-                         <span className="text-[9px] font-black text-slate-800 block">{sdr.followUpInterval}m</span>
-                         <span className="text-[7px] font-bold text-slate-400 uppercase">Followup</span>
+                         <span className="text-xs font-semibold text-slate-800 block">{sdr.followUpInterval}m</span>
+                         <span className="text-xs font-bold text-slate-400 uppercase">Followup</span>
                       </div>
                       <div className="bg-slate-50 p-3 rounded-2xl text-center">
                          <Clock className="w-4 h-4 text-[#0D9488] mx-auto mb-1" />
-                         <span className="text-[9px] font-black text-slate-800 block">{sdr.preConfirmationHours}h</span>
-                         <span className="text-[7px] font-bold text-slate-400 uppercase">Confirm</span>
+                         <span className="text-xs font-semibold text-slate-800 block">{sdr.preConfirmationHours}h</span>
+                         <span className="text-xs font-bold text-slate-400 uppercase">Confirm</span>
                       </div>
                       <div className="bg-slate-50 p-3 rounded-2xl text-center">
                          <CheckCircle2 className="w-4 h-4 text-[#0D9488] mx-auto mb-1" />
-                         <span className="text-[9px] font-black text-slate-800 block">{sdr.enableWaitlist ? "ON" : "OFF"}</span>
-                         <span className="text-[7px] font-bold text-slate-400 uppercase">Encaixe</span>
+                         <span className="text-xs font-semibold text-slate-800 block">{sdr.enableWaitlist ? "ON" : "OFF"}</span>
+                         <span className="text-xs font-bold text-slate-400 uppercase">Encaixe</span>
                       </div>
                    </div>
 
-                   <Button onClick={() => handleOpenModal(sdr)} className="w-full h-14 bg-slate-900 hover:bg-black text-white font-black rounded-2xl uppercase text-[10px] tracking-widest transition-all">
+                   <Button onClick={() => handleOpenModal(sdr)} className="w-full h-10 bg-slate-900 hover:bg-black text-white font-semibold rounded-2xl uppercase text-xs transition-all">
                       Ajustar Parâmetros IA
                    </Button>
                 </div>
@@ -282,8 +282,8 @@ export default function SdrManagement() {
             ))}
             {sdrs.length === 0 && (
                <div className="col-span-full py-20 text-center opacity-30 flex flex-col items-center gap-3">
-                  <Bot className="w-12 h-12 text-slate-300" />
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-300">Nenhum robô contratado</p>
+                  <Bot className="w-10 h-10 text-slate-300" />
+                  <p className="text-xs font-semibold text-slate-300">Nenhum robô contratado</p>
                </div>
             )}
           </div>
@@ -291,7 +291,7 @@ export default function SdrManagement() {
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-4xl p-0 border-none shadow-3xl bg-white overflow-hidden rounded-[40px]">
+        <DialogContent className="max-w-4xl p-0 border-none shadow-sm bg-white overflow-hidden rounded-2xl">
           <div className="flex flex-col md:flex-row h-[85vh]">
             <div className="w-full md:w-80 bg-slate-900 p-10 flex flex-col justify-between relative overflow-hidden">
               <DialogHeader className="hidden">
@@ -300,37 +300,37 @@ export default function SdrManagement() {
               </DialogHeader>
               <div className="absolute top-0 left-0 w-32 h-32 bg-[#0D9488]/10 blur-3xl rounded-full translate-x-[-50%] translate-y-[-50%]" />
               <div className="space-y-10 relative z-10">
-                 <div className="w-16 h-16 bg-[#0D9488] rounded-2xl flex items-center justify-center shadow-lg"><Brain className="w-8 h-8 text-white" /></div>
+                 <div className="w-16 h-11 bg-[#0D9488] rounded-2xl flex items-center justify-center shadow-lg"><Brain className="w-8 h-8 text-white" /></div>
                  <div className="space-y-3">
-                    <h3 className="text-2xl font-black text-white tracking-tighter uppercase leading-tight">Módulo <span className="text-[#0D9488] italic font-medium">Global</span></h3>
-                    <p className="text-white/30 text-[9px] font-bold uppercase tracking-widest leading-relaxed">Personalize a inteligência e o comportamento para o fluxo de qualquer negócio.</p>
+                    <h3 className="text-2xl font-semibold text-white tracking-tight uppercase leading-tight">Módulo <span className="text-[#0D9488] font-medium">Global</span></h3>
+                    <p className="text-white/30 text-xs font-bold leading-relaxed">Personalize a inteligência e o comportamento para o fluxo de qualquer negócio.</p>
                  </div>
               </div>
-              <div className="p-5 bg-white/5 rounded-3xl border border-white/5 space-y-2">
-                 <p className="text-[9px] font-black text-[#0D9488] uppercase tracking-widest mb-1">Nota Técnica</p>
-                 <p className="text-[10px] text-slate-400 leading-relaxed font-medium">Este robô agora gerencia automaticamente a lista de espera e cobrança de vouchers promocionais.</p>
+              <div className="p-5 bg-white/5 rounded-2xl border border-white/5 space-y-2">
+                 <p className="text-xs font-semibold text-[#0D9488] mb-1">Nota Técnica</p>
+                 <p className="text-xs text-slate-400 leading-relaxed font-medium">Este robô agora gerencia automaticamente a lista de espera e cobrança de vouchers promocionais.</p>
               </div>
             </div>
 
             <div className="flex-1 p-10 overflow-y-auto bg-white">
                <Tabs defaultValue="perfil" className="space-y-8">
-                  <TabsList className="bg-slate-100 p-1.5 rounded-[25px] h-16 w-full shadow-inner">
-                    <TabsTrigger value="perfil" className="flex-1 rounded-[20px] font-black uppercase text-[10px] data-[state=active]:bg-white data-[state=active]:shadow-md">Perfil</TabsTrigger>
-                    <TabsTrigger value="knowledge" className="flex-1 rounded-[20px] font-black uppercase text-[10px] data-[state=active]:bg-white data-[state=active]:shadow-md">Conhecimento</TabsTrigger>
-                    <TabsTrigger value="params" className="flex-1 rounded-[20px] font-black uppercase text-[10px] data-[state=active]:bg-white data-[state=active]:shadow-md">Parâmetros</TabsTrigger>
+                  <TabsList className="bg-slate-100 p-1.5 rounded-2xl h-16 w-full shadow-inner">
+                    <TabsTrigger value="perfil" className="flex-1 rounded-2xl font-semibold uppercase text-xs data-[state=active]:bg-white data-[state=active]:shadow-md">Perfil</TabsTrigger>
+                    <TabsTrigger value="knowledge" className="flex-1 rounded-2xl font-semibold uppercase text-xs data-[state=active]:bg-white data-[state=active]:shadow-md">Conhecimento</TabsTrigger>
+                    <TabsTrigger value="params" className="flex-1 rounded-2xl font-semibold uppercase text-xs data-[state=active]:bg-white data-[state=active]:shadow-md">Parâmetros</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="perfil" className="space-y-6 animate-in fade-in slide-in-from-top-4">
                     <div className="grid grid-cols-2 gap-4">
                        <div className="space-y-2">
-                          <Label className="font-black text-[9px] uppercase tracking-widest text-slate-400 pl-1">Identificação da IA</Label>
-                          <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="h-14 rounded-2xl border-none bg-slate-50 font-bold px-6 shadow-inner" placeholder="Ex: Joana Bronze" />
+                          <Label className="font-semibold text-xs text-slate-400 pl-1">Identificação da IA</Label>
+                          <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="h-10 rounded-2xl border-none bg-slate-50 font-bold px-6 shadow-inner" placeholder="Ex: Joana Bronze" />
                        </div>
                        <div className="space-y-2">
-                          <Label className="font-black text-[9px] uppercase tracking-widest text-slate-400 pl-1">Especialidade</Label>
+                          <Label className="font-semibold text-xs text-slate-400 pl-1">Especialidade</Label>
                           <Select value={form.role} onValueChange={v => setForm({...form, role: v})}>
-                             <SelectTrigger className="h-14 rounded-2xl border-none bg-slate-50 font-bold shadow-inner"><SelectValue /></SelectTrigger>
-                             <SelectContent className="rounded-xl border-none shadow-2xl">
+                             <SelectTrigger className="h-10 rounded-2xl border-none bg-slate-50 font-bold shadow-inner"><SelectValue /></SelectTrigger>
+                             <SelectContent className="rounded-xl border-none shadow-sm">
                                 <SelectItem value="SDR" className="font-bold py-2">PRÉ-VENDAS / AGENDAMENTO</SelectItem>
                                 <SelectItem value="POS_VENDAS" className="font-bold py-2">PÓS-VENDAS / FEEDBACK</SelectItem>
                              </SelectContent>
@@ -338,21 +338,21 @@ export default function SdrManagement() {
                        </div>
                     </div>
                     <div className="space-y-2">
-                       <Label className="font-black text-[9px] uppercase tracking-widest text-slate-400 pl-1">Diretriz de Comportamento (Prompt)</Label>
-                       <Textarea value={form.prompt} onChange={e => setForm({...form, prompt: e.target.value})} className="min-h-[140px] rounded-2xl border-none bg-slate-50 p-6 font-medium italic leading-relaxed" placeholder="Como ele deve se comportar?" />
+                       <Label className="font-semibold text-xs text-slate-400 pl-1">Diretriz de Comportamento (Prompt)</Label>
+                       <Textarea value={form.prompt} onChange={e => setForm({...form, prompt: e.target.value})} className="min-h-[140px] rounded-2xl border-none bg-slate-50 p-6 font-medium leading-relaxed" placeholder="Como ele deve se comportar?" />
                     </div>
                   </TabsContent>
 
                   <TabsContent value="knowledge" className="space-y-6 animate-in fade-in slide-in-from-top-4">
                     {editingSdr && (
-                      <div className="p-6 bg-teal-50 rounded-[30px] border-2 border-dashed border-teal-200 space-y-4">
+                      <div className="p-6 bg-teal-50 rounded-2xl border-2 border-dashed border-teal-200 space-y-4">
                         <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-[#0D9488] rounded-2xl flex items-center justify-center shadow-lg">
+                          <div className="w-10 h-10 bg-[#0D9488] rounded-2xl flex items-center justify-center shadow-lg">
                             <Upload className="w-6 h-6 text-white" />
                           </div>
                           <div>
-                            <h4 className="text-sm font-black text-[#134E4A] uppercase tracking-tighter">Treinamento Neural</h4>
-                            <p className="text-[10px] text-[#0D9488] font-bold uppercase tracking-widest">Upload de PDF, DOCX ou TXT</p>
+                            <h4 className="text-sm font-semibold text-[#134E4A] tracking-tight">Treinamento Neural</h4>
+                            <p className="text-xs text-[#0D9488] font-bold ">Upload de PDF, DOCX ou TXT</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-4">
@@ -366,7 +366,7 @@ export default function SdrManagement() {
                           />
                           <Button 
                             asChild 
-                            className="w-full h-12 bg-[#0D9488] hover:bg-[#0F766E] text-white font-black rounded-xl uppercase text-[10px] tracking-widest cursor-pointer shadow-lg"
+                            className="w-full h-10 bg-[#0D9488] hover:bg-[#0F766E] text-white font-semibold rounded-xl uppercase text-xs cursor-pointer shadow-lg"
                           >
                             <label htmlFor="training-file">
                               {uploading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
@@ -374,12 +374,12 @@ export default function SdrManagement() {
                             </label>
                           </Button>
                         </div>
-                        <p className="text-[9px] text-[#2DD4BF] italic font-medium text-center">O robô lerá o arquivo e especializará sua base de respostas automaticamente.</p>
+                        <p className="text-xs text-[#2DD4BF] font-medium text-center">O robô lerá o arquivo e especializará sua base de respostas automaticamente.</p>
                       </div>
                     )}
                     
                     <div className="space-y-2">
-                       <Label className="font-black text-[9px] uppercase tracking-widest text-slate-400 pl-1">Cérebro do Agente (Texto Consolidado)</Label>
+                       <Label className="font-semibold text-xs text-slate-400 pl-1">Cérebro do Agente (Texto Consolidado)</Label>
                        <Textarea value={form.knowledgeBase} onChange={e => setForm({...form, knowledgeBase: e.target.value})} className="min-h-[200px] rounded-2xl border-none bg-slate-50 p-6 font-medium leading-relaxed text-sm" placeholder="O conteúdo dos arquivos e textos manuais aparecerão aqui..." />
                     </div>
                   </TabsContent>
@@ -387,56 +387,56 @@ export default function SdrManagement() {
                   <TabsContent value="params" className="space-y-8 animate-in fade-in slide-in-from-top-4 py-2">
                     <div className="grid grid-cols-2 gap-x-8 gap-y-6">
                        <div className="space-y-2">
-                          <Label className="font-black text-[9px] uppercase tracking-widest text-slate-400 pl-1">Follow-up de Venda (Minutos)</Label>
-                          <Input type="number" value={form.followUpInterval} onChange={e => setForm({...form, followUpInterval: parseInt(e.target.value)})} className="h-14 rounded-2xl border-none bg-slate-50 font-bold px-6 shadow-inner" />
-                          <p className="text-[8px] font-bold text-slate-400 pl-1">Tempo para cobrar resposta após info de preço.</p>
+                          <Label className="font-semibold text-xs text-slate-400 pl-1">Follow-up de Venda (Minutos)</Label>
+                          <Input type="number" value={form.followUpInterval} onChange={e => setForm({...form, followUpInterval: parseInt(e.target.value)})} className="h-10 rounded-2xl border-none bg-slate-50 font-bold px-6 shadow-inner" />
+                          <p className="text-xs font-bold text-slate-400 pl-1">Tempo para cobrar resposta após info de preço.</p>
                        </div>
                        <div className="space-y-2">
-                          <Label className="font-black text-[9px] uppercase tracking-widest text-slate-400 pl-1">Janela Pré-Confirmação (Horas)</Label>
-                          <Input type="number" value={form.preConfirmationHours} onChange={e => setForm({...form, preConfirmationHours: parseInt(e.target.value)})} className="h-14 rounded-2xl border-none bg-slate-50 font-bold px-6 shadow-inner" />
-                          <p className="text-[8px] font-bold text-slate-400 pl-1">Quanto tempo antes enviar o 1º lembrete.</p>
+                          <Label className="font-semibold text-xs text-slate-400 pl-1">Janela Pré-Confirmação (Horas)</Label>
+                          <Input type="number" value={form.preConfirmationHours} onChange={e => setForm({...form, preConfirmationHours: parseInt(e.target.value)})} className="h-10 rounded-2xl border-none bg-slate-50 font-bold px-6 shadow-inner" />
+                          <p className="text-xs font-bold text-slate-400 pl-1">Quanto tempo antes enviar o 1º lembrete.</p>
                        </div>
                        <div className="space-y-2">
-                          <Label className="font-black text-[9px] uppercase tracking-widest text-slate-400 pl-1">Tolerância No-Show (Minutos)</Label>
-                          <Input type="number" value={form.noShowGraceMinutes} onChange={e => setForm({...form, noShowGraceMinutes: parseInt(e.target.value)})} className="h-14 rounded-2xl border-none bg-slate-50 font-bold px-6 shadow-inner" />
-                          <p className="text-[8px] font-bold text-slate-400 pl-1">Atraso permitido antes de perguntar se ainda vem.</p>
+                          <Label className="font-semibold text-xs text-slate-400 pl-1">Tolerância No-Show (Minutos)</Label>
+                          <Input type="number" value={form.noShowGraceMinutes} onChange={e => setForm({...form, noShowGraceMinutes: parseInt(e.target.value)})} className="h-10 rounded-2xl border-none bg-slate-50 font-bold px-6 shadow-inner" />
+                          <p className="text-xs font-bold text-slate-400 pl-1">Atraso permitido antes de perguntar se ainda vem.</p>
                        </div>
                        <div className="space-y-2">
-                          <Label className="font-black text-[9px] uppercase tracking-widest text-slate-400 pl-1">Pós-Venda Checkup (Horas)</Label>
-                          <Input type="number" value={form.postServiceCheckHours} onChange={e => setForm({...form, postServiceCheckHours: parseInt(e.target.value)})} className="h-14 rounded-2xl border-none bg-slate-50 font-bold px-6 shadow-inner" />
-                          <p className="text-[8px] font-bold text-slate-400 pl-1">Tempo após serviço para checar se está tudo OK.</p>
+                          <Label className="font-semibold text-xs text-slate-400 pl-1">Pós-Venda Checkup (Horas)</Label>
+                          <Input type="number" value={form.postServiceCheckHours} onChange={e => setForm({...form, postServiceCheckHours: parseInt(e.target.value)})} className="h-10 rounded-2xl border-none bg-slate-50 font-bold px-6 shadow-inner" />
+                          <p className="text-xs font-bold text-slate-400 pl-1">Tempo após serviço para checar se está tudo OK.</p>
                        </div>
                     </div>
                     
-                    <div className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                    <div className="flex items-center justify-between p-6 bg-slate-50 rounded-2xl border border-slate-100">
                        <div className="space-y-0.5">
-                          <Label className="text-sm font-black text-slate-900 tracking-tight">Gestão de Encaixe Automático</Label>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase leading-none">Busca leads na lista de espera em caso de desistência</p>
+                          <Label className="text-sm font-semibold text-slate-900 tracking-tight">Gestão de Encaixe Automático</Label>
+                          <p className="text-xs font-bold text-slate-400 uppercase leading-none">Busca leads na lista de espera em caso de desistência</p>
                        </div>
                        <Switch checked={form.enableWaitlist} onCheckedChange={v => setForm({...form, enableWaitlist: v})} className="data-[state=checked]:bg-[#0D9488]" />
                     </div>
 
                     <div className="space-y-2">
-                       <Label className="font-black text-[9px] uppercase tracking-widest text-slate-400 pl-1">Gatilhos de Alerta Humano (Separados por vírgula)</Label>
-                       <Input value={form.escalationKeywords} onChange={e => setForm({...form, escalationKeywords: e.target.value})} className="h-14 rounded-2xl border-none bg-slate-50 font-bold px-6 shadow-inner" />
+                       <Label className="font-semibold text-xs text-slate-400 pl-1">Gatilhos de Alerta Humano (Separados por vírgula)</Label>
+                       <Input value={form.escalationKeywords} onChange={e => setForm({...form, escalationKeywords: e.target.value})} className="h-10 rounded-2xl border-none bg-slate-50 font-bold px-6 shadow-inner" />
                     </div>
 
                     <Separator className="opacity-50" />
 
-                    <div className="bg-slate-900 p-8 rounded-[35px] space-y-6">
+                    <div className="bg-slate-900 p-8 rounded-2xl space-y-6">
                        <div className="flex items-center gap-3 text-[#2DD4BF] mb-2">
                           <Zap className="w-5 h-5" />
-                          <h4 className="font-black uppercase text-[11px] tracking-widest">Configuração de Voz (Neural)</h4>
+                          <h4 className="font-semibold uppercase text-xs ">Configuração de Voz (Neural)</h4>
                        </div>
                        
                        <div className="grid grid-cols-2 gap-6">
                           <div className="space-y-2">
-                             <Label className="font-black text-[9px] uppercase tracking-widest text-white/50 pl-1">Modo de Resposta</Label>
+                             <Label className="font-semibold text-xs text-white/50 pl-1">Modo de Resposta</Label>
                              <Select value={form.responseMode} onValueChange={v => setForm({...form, responseMode: v})}>
-                                <SelectTrigger className="h-14 rounded-2xl border-none bg-white/5 text-white font-bold px-6 shadow-inner">
+                                <SelectTrigger className="h-10 rounded-2xl border-none bg-white/5 text-white font-bold px-6 shadow-inner">
                                    <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent className="rounded-xl border-none shadow-2xl">
+                                <SelectContent className="rounded-xl border-none shadow-sm">
                                    <SelectItem value="TEXT" className="font-bold">APENAS TEXTO</SelectItem>
                                    <SelectItem value="AUDIO" className="font-bold">APENAS ÁUDIO (Voz)</SelectItem>
                                    <SelectItem value="BOTH" className="font-bold">AMBOS (Texto + Áudio)</SelectItem>
@@ -445,19 +445,19 @@ export default function SdrManagement() {
                           </div>
                           
                           <div className="space-y-2">
-                             <Label className="font-black text-[9px] uppercase tracking-widest text-white/50 pl-1">ID da Voz (ElevenLabs)</Label>
-                             <Input value={form.voiceId} onChange={e => setForm({...form, voiceId: e.target.value})} className="h-14 rounded-2xl border-none bg-white/5 text-white font-bold px-6 shadow-inner" placeholder="Ex: 21m00Tcm4TlvDq8ikWAM" />
-                             <p className="text-[8px] font-bold text-white/20 pl-1 italic">Rachel: 21m00Tcm4TlvDq8ikWAM</p>
+                             <Label className="font-semibold text-xs text-white/50 pl-1">ID da Voz (ElevenLabs)</Label>
+                             <Input value={form.voiceId} onChange={e => setForm({...form, voiceId: e.target.value})} className="h-10 rounded-2xl border-none bg-white/5 text-white font-bold px-6 shadow-inner" placeholder="Ex: 21m00Tcm4TlvDq8ikWAM" />
+                             <p className="text-xs font-bold text-white/20 pl-1">Rachel: 21m00Tcm4TlvDq8ikWAM</p>
                           </div>
                        </div>
                     </div>
                   </TabsContent>
 
                   <div className="flex gap-4 pt-4 pb-2">
-                     <Button onClick={handleSave} className="flex-[3] h-20 bg-slate-900 hover:bg-black text-white font-black rounded-3xl uppercase tracking-widest shadow-2xl transition-all hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3">
+                     <Button onClick={handleSave} className="flex-[3] h-20 bg-slate-900 hover:bg-black text-white font-semibold rounded-2xl shadow-sm transition-all hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3">
                         <Save className="w-5 h-5 text-[#0D9488]" /> Salvar Agente Inteligente
                      </Button>
-                     <Button onClick={() => setIsModalOpen(false)} variant="ghost" className="flex-1 h-20 rounded-3xl font-black uppercase text-xs text-slate-400 leading-none">Cancelar</Button>
+                     <Button onClick={() => setIsModalOpen(false)} variant="ghost" className="flex-1 h-20 rounded-2xl font-semibold uppercase text-xs text-slate-400 leading-none">Cancelar</Button>
                   </div>
                </Tabs>
             </div>

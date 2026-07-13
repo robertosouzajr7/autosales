@@ -192,14 +192,14 @@ export default function CRM() {
                 key={stage.id} 
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => onDrop(e, stage.id)}
-                className="flex-shrink-0 w-80 bg-slate-50/50 p-4 rounded-[25px] border-2 border-transparent hover:border-teal-200 transition-all flex flex-col gap-4 snap-start h-[calc(100vh-250px)]"
+                className="flex-shrink-0 w-80 bg-slate-50/50 p-4 rounded-2xl border-2 border-transparent hover:border-teal-200 transition-all flex flex-col gap-4 snap-start h-[calc(100vh-250px)]"
               >
                  <div className="flex items-center justify-between px-2">
                     <div className="flex items-center gap-2">
                        <div className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: stage.color }} />
-                       <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-600">{stage.name}</h3>
+                       <h3 className="text-xs font-semibold text-slate-600">{stage.name}</h3>
                     </div>
-                    <Badge className="bg-white text-slate-400 border border-slate-100 font-black text-[10px] h-6 px-2.5 rounded-lg">
+                    <Badge className="bg-white text-slate-400 border border-slate-100 font-semibold text-xs h-6 px-2.5 rounded-lg">
                       {leads.filter(l => l.stageId === stage.id).length}
                     </Badge>
                  </div>
@@ -215,14 +215,14 @@ export default function CRM() {
                           className="border-none shadow-sm rounded-xl bg-white p-3 hover:shadow-md hover:translate-y-[-2px] transition-all duration-300 group cursor-grab active:cursor-grabbing border-l-4 border-l-transparent hover:border-l-emerald-500"
                         >
                            <div className="space-y-2">
-                              <p className="text-[13px] font-black text-slate-800 leading-tight truncate group-hover:text-[#0D9488] transition-colors uppercase tracking-tight">{lead.name}</p>
+                              <p className="text-[13px] font-semibold text-slate-800 leading-tight truncate group-hover:text-[#0D9488] transition-colors uppercase tracking-tight">{lead.name}</p>
                               
                               <div className="flex items-center justify-between pt-1">
-                                 <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
+                                 <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400">
                                     <Phone className="w-3 h-3 text-[#0D9488]/50" /> {lead.phone}
                                  </div>
                                  {lead.source && (
-                                   <Badge variant="outline" className="text-[8px] font-black uppercase text-slate-300 border-slate-100">{lead.source}</Badge>
+                                   <Badge variant="outline" className="text-xs font-semibold uppercase text-slate-300 border-slate-100">{lead.source}</Badge>
                                  )}
                               </div>
                            </div>
@@ -244,30 +244,30 @@ export default function CRM() {
             
             <button 
               onClick={handleAddStage}
-              className="flex-shrink-0 w-80 border-4 border-dashed border-slate-100 rounded-[25px] flex flex-col items-center justify-center gap-4 hover:border-teal-200 group transition-all h-[calc(100vh-250px)]"
+              className="flex-shrink-0 w-80 border-4 border-dashed border-slate-100 rounded-2xl flex flex-col items-center justify-center gap-4 hover:border-teal-200 group transition-all h-[calc(100vh-250px)]"
             >
-               <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center group-hover:bg-[#0D9488] transition-all">
+               <div className="w-16 h-11 bg-slate-100 rounded-full flex items-center justify-center group-hover:bg-[#0D9488] transition-all">
                   <Plus className="w-8 h-8 text-slate-400 group-hover:text-white" />
                </div>
-               <span className="font-black text-xs uppercase tracking-widest text-slate-300 group-hover:text-[#0D9488]">Novo Pipeline</span>
+               <span className="font-semibold text-xs text-slate-300 group-hover:text-[#0D9488]">Novo Pipeline</span>
             </button>
         </div>
       </div>
 
       {/* MODAL DETALHES LEAD */}
       <Dialog open={!!selectedLead} onOpenChange={(open) => !open && setSelectedLead(null)}>
-        <DialogContent className="max-w-2xl p-0 overflow-hidden border-none shadow-3xl rounded-[40px]">
+        <DialogContent className="max-w-2xl p-0 overflow-hidden border-none shadow-sm rounded-2xl">
            <div className="p-12 bg-slate-900 text-white relative">
               <Button onClick={() => setSelectedLead(null)} variant="ghost" className="absolute top-8 right-8 text-white/50 hover:text-white"><X className="w-6 h-6" /></Button>
               <div className="flex items-center gap-6">
-                 <Avatar className="h-20 w-20 border-4 border-white/10 shadow-2xl">
-                    <AvatarFallback className="bg-[#0D9488] text-white font-black text-2xl">
+                 <Avatar className="h-20 w-20 border-4 border-white/10 shadow-sm">
+                    <AvatarFallback className="bg-[#0D9488] text-white font-semibold text-2xl">
                        {selectedLead?.name?.substring(0,2).toUpperCase()}
                     </AvatarFallback>
                  </Avatar>
                  <div className="space-y-1">
-                    <h2 className="text-3xl font-black leading-none uppercase tracking-tighter">{selectedLead?.name}</h2>
-                    <Badge className="bg-white/10 text-white border-none font-black text-[9px] tracking-widest uppercase py-1 px-4 backdrop-blur-md">
+                    <h2 className="text-3xl font-semibold leading-none tracking-tight">{selectedLead?.name}</h2>
+                    <Badge className="bg-white/10 text-white border-none font-semibold text-xs uppercase py-1 px-4 backdrop-blur-md">
                       Status: {stages.find(s => s.id === selectedLead?.stageId)?.name || "N/A"}
                     </Badge>
                  </div>
@@ -277,36 +277,36 @@ export default function CRM() {
            <div className="p-10 space-y-8 bg-white">
               <div className="grid grid-cols-2 gap-6">
                  <div className="space-y-2">
-                    <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400">Nome Completo</Label>
-                    <Input value={selectedLead?.name} onChange={e => setSelectedLead({...selectedLead, name: e.target.value})} className="h-14 border-2 border-slate-50 rounded-2xl font-bold bg-slate-50/20" />
+                    <Label className="font-semibold text-xs text-slate-400">Nome Completo</Label>
+                    <Input value={selectedLead?.name} onChange={e => setSelectedLead({...selectedLead, name: e.target.value})} className="h-10 border-2 border-slate-50 rounded-2xl font-bold bg-slate-50/20" />
                  </div>
                  <div className="space-y-2">
-                    <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400">Pipeline Atual</Label>
+                    <Label className="font-semibold text-xs text-slate-400">Pipeline Atual</Label>
                     <Select value={selectedLead?.stageId} onValueChange={v => setSelectedLead({...selectedLead, stageId: v})}>
-                       <SelectTrigger className="h-14 rounded-2xl border-2 border-slate-50 font-bold bg-slate-50/20">
+                       <SelectTrigger className="h-10 rounded-2xl border-2 border-slate-50 font-bold bg-slate-50/20">
                           <SelectValue />
                        </SelectTrigger>
-                       <SelectContent className="rounded-xl border-none shadow-2xl">
+                       <SelectContent className="rounded-xl border-none shadow-sm">
                           {stages.map(s => <SelectItem key={s.id} value={s.id} className="font-bold">{s.name}</SelectItem>)}
                        </SelectContent>
                     </Select>
                  </div>
                  <div className="col-span-2 space-y-2">
-                    <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400">Anotações</Label>
+                    <Label className="font-semibold text-xs text-slate-400">Anotações</Label>
                     <textarea 
                       value={selectedLead?.notes || ""} 
                       onChange={e => setSelectedLead({...selectedLead, notes: e.target.value})}
-                      className="w-full min-h-[140px] p-6 border-2 border-slate-50 rounded-[30px] font-medium bg-slate-50/20 outline-none transition-all text-sm"
+                      className="w-full min-h-[140px] p-6 border-2 border-slate-50 rounded-2xl font-medium bg-slate-50/20 outline-none transition-all text-sm"
                       placeholder="Descreva o andamento..."
                     />
                  </div>
               </div>
 
               <div className="flex gap-4 pt-4">
-                 <Button onClick={handleUpdateLead} className="flex-[4] h-16 bg-slate-900 hover:bg-black text-white font-black rounded-2xl uppercase tracking-widest shadow-2xl transition-all">
+                 <Button onClick={handleUpdateLead} className="flex-[4] h-11 bg-slate-900 hover:bg-black text-white font-semibold rounded-2xl shadow-sm transition-all">
                     <Save className="w-5 h-5 mr-3 text-[#0D9488]" /> Atualizar Pipeline
                  </Button>
-                 <Button onClick={() => handleDeleteLead(selectedLead.id)} variant="outline" className="flex-1 h-16 border-2 border-red-50 text-red-500 hover:bg-red-50 hover:text-red-600 font-black rounded-2xl transition-all uppercase tracking-widest">
+                 <Button onClick={() => handleDeleteLead(selectedLead.id)} variant="outline" className="flex-1 h-11 border-2 border-red-50 text-red-500 hover:bg-red-50 hover:text-red-600 font-semibold rounded-2xl transition-all ">
                     <Trash2 className="w-5 h-5" />
                  </Button>
               </div>
@@ -316,9 +316,9 @@ export default function CRM() {
 
       {/* MODAL EDITAR STAGES */}
       <Dialog open={isEditStagesOpen} onOpenChange={setIsEditStagesOpen}>
-        <DialogContent className="max-w-md p-10 rounded-[40px] border-none shadow-3xl">
+        <DialogContent className="max-w-md p-10 rounded-2xl border-none shadow-sm">
           <DialogHeader>
-            <DialogTitle className="text-xl font-black uppercase tracking-tighter flex items-center gap-2">
+            <DialogTitle className="text-xl font-semibold tracking-tight flex items-center gap-2">
               <Edit3 className="w-5 h-5 text-[#0D9488]" /> Gerenciar Pipelines
             </DialogTitle>
           </DialogHeader>
@@ -352,7 +352,7 @@ export default function CRM() {
                   </Button>
                </div>
              ))}
-             <Button onClick={handleAddStage} variant="ghost" className="w-full h-12 border-2 border-dashed border-slate-200 rounded-xl font-bold uppercase text-[10px] tracking-widest text-slate-400 hover:bg-slate-50">
+             <Button onClick={handleAddStage} variant="ghost" className="w-full h-10 border-2 border-dashed border-slate-200 rounded-xl font-bold uppercase text-xs text-slate-400 hover:bg-slate-50">
                 + Adicionar Etapa
              </Button>
           </div>
@@ -361,24 +361,24 @@ export default function CRM() {
       
       {/* MODAL NOVO LEAD */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-        <DialogContent className="rounded-[40px] p-10 max-w-lg border-none shadow-3xl">
+        <DialogContent className="rounded-2xl p-10 max-w-lg border-none shadow-sm">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black flex items-center gap-2">
+            <DialogTitle className="text-2xl font-semibold flex items-center gap-2">
               <div className="bg-[#0D9488] p-2 rounded-xl shadow-lg"><UserPlus className="text-white w-5 h-5" /></div> Adicionar Lead
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-6 py-4">
             <div className="space-y-2">
-              <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400">Nome do Contato</Label>
-              <Input value={newLead.name} onChange={e => setNewLead({...newLead, name: e.target.value})} className="h-14 rounded-2xl border-2 border-slate-50 font-bold bg-slate-50/20" placeholder="Ex: Roberto Carlos" />
+              <Label className="font-semibold text-xs text-slate-400">Nome do Contato</Label>
+              <Input value={newLead.name} onChange={e => setNewLead({...newLead, name: e.target.value})} className="h-10 rounded-2xl border-2 border-slate-50 font-bold bg-slate-50/20" placeholder="Ex: Roberto Carlos" />
             </div>
             <div className="space-y-2">
-              <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400">WhatsApp / Telefone</Label>
-              <Input value={newLead.phone} onChange={e => setNewLead({...newLead, phone: e.target.value})} className="h-14 rounded-2xl border-2 border-slate-50 font-bold bg-slate-50/20" placeholder="55..." />
+              <Label className="font-semibold text-xs text-slate-400">WhatsApp / Telefone</Label>
+              <Input value={newLead.phone} onChange={e => setNewLead({...newLead, phone: e.target.value})} className="h-10 rounded-2xl border-2 border-slate-50 font-bold bg-slate-50/20" placeholder="55..." />
             </div>
           </div>
           <DialogFooter>
-             <Button onClick={handleCreateLead} className="w-full h-16 bg-slate-900 hover:bg-black text-white font-black rounded-2xl uppercase tracking-widest text-sm transition-all shadow-2xl">
+             <Button onClick={handleCreateLead} className="w-full h-11 bg-slate-900 hover:bg-black text-white font-semibold rounded-2xl text-sm transition-all shadow-sm">
                Salvar Lead no Pipeline
              </Button>
           </DialogFooter>

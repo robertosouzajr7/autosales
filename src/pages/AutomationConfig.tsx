@@ -182,7 +182,7 @@ function NumberField({
         />
         <span className="text-sm text-slate-500">{unit}</span>
       </div>
-      {hint && <p className="text-[11px] text-slate-400">{hint}</p>}
+      {hint && <p className="text-xs text-slate-400">{hint}</p>}
     </div>
   );
 }
@@ -338,7 +338,7 @@ export default function AutomationConfig() {
                     value={config.confirmMsgTemplate}
                     onChange={(e) => setConfig({ ...config, confirmMsgTemplate: e.target.value })}
                   />
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-xs text-slate-400">
                     Use {"{name}"} e {"{time}"} para inserir o nome e horário automaticamente.
                   </p>
                 </div>
@@ -419,7 +419,7 @@ export default function AutomationConfig() {
                     value={config.lateMsgTemplate}
                     onChange={(e) => setConfig({ ...config, lateMsgTemplate: e.target.value })}
                   />
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-xs text-slate-400">
                     Use {"{name}"} e {"{time}"} para inserir os dados dinâmicos.
                   </p>
                 </div>
@@ -466,7 +466,7 @@ export default function AutomationConfig() {
                     value={config.postServiceMsgTemplate}
                     onChange={(e) => setConfig({ ...config, postServiceMsgTemplate: e.target.value })}
                   />
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-xs text-slate-400">
                     Use {"{name}"} para personalizar com o nome da cliente.
                   </p>
                 </div>

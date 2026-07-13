@@ -117,7 +117,7 @@ export default function LandingPage() {
   const sSectionProblem = isDarkMode ? "bg-[#032726] border-b border-teal-950/40" : "bg-[#E9FBF7] border-b border-teal-100/40";
   const sSectionTitle = isDarkMode ? "text-white" : "text-[#134E4A]";
   const sSectionDesc = isDarkMode ? "text-teal-200/70" : "text-teal-950/70";
-  const sProblemCard = isDarkMode ? "bg-[#0B3A38]/65 border-teal-950/40" : "bg-white border-teal-100 shadow-xl shadow-teal-950/5";
+  const sProblemCard = isDarkMode ? "bg-[#0B3A38]/65 border-teal-950/40" : "bg-white border-teal-100 shadow-xl ";
   const sProblemTitle = isDarkMode ? "text-white" : "text-[#134E4A]";
   const sProblemDesc = isDarkMode ? "text-teal-200/60" : "text-teal-950/60";
 
@@ -126,7 +126,7 @@ export default function LandingPage() {
   const sHowTitle = isDarkMode ? "text-white" : "text-[#134E4A]";
   
   const sFeatures = isDarkMode ? "bg-[#032726] border-b border-teal-950/40" : "bg-[#F0FDFA] border-b border-teal-100";
-  const sFeatureCard = isDarkMode ? "bg-[#0B3A38]/65 border-teal-950/40 hover:border-[#0D9488]/40" : "bg-white border-teal-100 hover:border-[#0D9488]/30 hover:shadow-xl hover:shadow-teal-950/5";
+  const sFeatureCard = isDarkMode ? "bg-[#0B3A38]/65 border-teal-950/40 hover:border-[#0D9488]/40" : "bg-white border-teal-100 hover:border-[#0D9488]/30 hover:shadow-xl hover:";
   const sFeatureTitle = isDarkMode ? "text-white" : "text-[#134E4A]";
   const sFeatureDesc = isDarkMode ? "text-teal-200/60" : "text-teal-950/60";
 
@@ -137,8 +137,8 @@ export default function LandingPage() {
   const sTestimonialRole = isDarkMode ? "text-teal-300" : "text-teal-950/50";
 
   const sPricing = isDarkMode ? "bg-[#032726] border-b border-teal-950/40" : "bg-[#E9FBF7] border-b border-teal-100";
-  const sPricingCardRecommended = "bg-[#0D9488] text-white border-none shadow-2xl shadow-[#0D9488]/30";
-  const sPricingCardStandard = isDarkMode ? "bg-[#0B3A38]/80 border-teal-950/40 text-white" : "bg-white border-teal-100 text-[#134E4A] shadow-xl shadow-teal-950/5";
+  const sPricingCardRecommended = "bg-[#0D9488] text-white border-none shadow-2xl ";
+  const sPricingCardStandard = isDarkMode ? "bg-[#0B3A38]/80 border-teal-950/40 text-white" : "bg-white border-teal-100 text-[#134E4A] shadow-xl ";
   const sPricingTextMuted = (recom: boolean) => recom ? "text-teal-100" : (isDarkMode ? "text-teal-300" : "text-teal-950/50");
   const sPricingBorderMuted = (recom: boolean) => recom ? "border-white/10" : (isDarkMode ? "border-teal-950/30" : "border-teal-100");
 
@@ -165,7 +165,7 @@ export default function LandingPage() {
           ) : (
             <>
               <img src="/logo.png" alt="AutoSales Logo" className="h-10 w-auto" />
-              <span className={`text-2xl font-black ${sLogoText} tracking-tighter uppercase italic`}>Auto<span className="text-[#0D9488]">Sales</span></span>
+              <span className={`text-2xl font-bold ${sLogoText} tracking-tight uppercase italic`}>Auto<span className="text-[#0D9488]">Sales</span></span>
             </>
           )}
         </div>
@@ -191,7 +191,7 @@ export default function LandingPage() {
 
            <Link to="/login" className={`text-sm font-bold ${isDarkMode ? 'text-teal-200 hover:text-[#0D9488]' : 'text-[#134E4A] hover:text-[#0D9488]'} transition-colors pr-2`}>Entrar</Link>
            <Link to="/register">
-             <Button className="font-black h-11 px-6 rounded-xl bg-[#0D9488] hover:bg-[#0F766E] text-white shadow-xl shadow-[#0D9488]/20 hover:scale-105 transition-transform border-none">Testar Grátis</Button>
+             <Button className="font-bold h-11 px-6 rounded-xl bg-[#0D9488] hover:bg-[#0F766E] text-white shadow-xl hover:scale-105 transition-transform border-none">Testar Grátis</Button>
            </Link>
         </div>
       </header>
@@ -202,10 +202,10 @@ export default function LandingPage() {
          <div className="absolute top-10 right-10 w-96 h-96 bg-[#0D9488]/10 rounded-full blur-[150px] pointer-events-none" />
          
          <div className="max-w-5xl mx-auto text-center space-y-8 relative z-10">
-            <Badge className="bg-[#0D9488]/10 text-[#0D9488] border-none py-1.5 px-4 font-black text-xs uppercase tracking-widest leading-loose">
+            <Badge className="bg-[#0D9488]/10 text-[#0D9488] border-none py-1.5 px-4 font-bold text-xs leading-loose">
                ⚡ SEU ATENDENTE DE IA NO WHATSAPP OFICIAL
             </Badge>
-            <h1 className={`text-5xl lg:text-7xl font-black ${sHeroTitle} tracking-tighter leading-[0.95] text-balance`}>
+            <h1 className={`text-5xl lg:text-7xl font-bold ${sHeroTitle} tracking-tight leading-[0.95] text-balance`}>
                Nenhum paciente sem resposta.<br/>Sua clínica <span className="text-[#0D9488] italic">agendando 24h</span> por dia.
             </h1>
             <p className={`text-lg lg:text-xl ${sHeroDesc} font-medium max-w-3xl mx-auto leading-relaxed`}>
@@ -213,7 +213,7 @@ export default function LandingPage() {
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
                <Link to="/register">
-                 <Button className="h-16 px-10 text-lg font-black bg-[#0D9488] hover:bg-[#0F766E] text-white rounded-2xl shadow-[0_20px_40px_-5px_rgba(13,148,136,0.4)] hover:scale-105 transition-all border-none">
+                 <Button className="h-16 px-10 text-lg font-bold bg-[#0D9488] hover:bg-[#0F766E] text-white rounded-2xl shadow-[0_20px_40px_-5px_rgba(13,148,136,0.4)] hover:scale-105 transition-all border-none">
                    Ativar meu atendente de IA
                  </Button>
                </Link>
@@ -228,28 +228,28 @@ export default function LandingPage() {
       <section id="problem" className={`py-24 ${sSectionProblem} px-6 lg:px-20 transition-colors duration-300`}>
         <div className="max-w-6xl mx-auto space-y-16">
           <div className="text-center space-y-4">
-            <h2 className={`text-3xl lg:text-5xl font-black tracking-tighter ${sSectionTitle}`}>Por que sua clínica perde pacientes <span className="text-red-500 italic">todos os dias</span>?</h2>
+            <h2 className={`text-3xl lg:text-5xl font-bold tracking-tight ${sSectionTitle}`}>Por que sua clínica perde pacientes <span className="text-red-500 italic">todos os dias</span>?</h2>
             <p className={`${sSectionDesc} font-medium max-w-2xl mx-auto`}>Três gargalos silenciosos esvaziam a sua agenda sem que ninguém perceba:</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className={`p-8 border rounded-3xl space-y-4 ${sProblemCard} transition-all`}>
               <div className="bg-red-500/10 p-3 w-fit rounded-xl text-red-500"><Clock className="w-6 h-6" /></div>
-              <h3 className={`text-xl font-black ${sProblemTitle}`}>Resposta que demora</h3>
+              <h3 className={`text-xl font-bold ${sProblemTitle}`}>Resposta que demora</h3>
               <p className={`${sProblemDesc} text-sm leading-relaxed`}>
                 Paciente sem resposta em minutos vira paciente do concorrente. No WhatsApp, quem responde primeiro agenda — e uma recepção humana não dá conta 24h por dia.
               </p>
             </div>
             <div className={`p-8 border rounded-3xl space-y-4 ${sProblemCard} transition-all`}>
               <div className="bg-red-500/10 p-3 w-fit rounded-xl text-red-500"><Users className="w-6 h-6" /></div>
-              <h3 className={`text-xl font-black ${sProblemTitle}`}>Recepção sobrecarregada</h3>
+              <h3 className={`text-xl font-bold ${sProblemTitle}`}>Recepção sobrecarregada</h3>
               <p className={`${sProblemDesc} text-sm leading-relaxed`}>
                 Sua equipe não consegue atender o balcão e o WhatsApp ao mesmo tempo. As mensagens acumulam, as ligações caem e o paciente desiste.
               </p>
             </div>
             <div className={`p-8 border rounded-3xl space-y-4 ${sProblemCard} transition-all`}>
               <div className="bg-red-500/10 p-3 w-fit rounded-xl text-red-500"><AlertCircle className="w-6 h-6" /></div>
-              <h3 className={`text-xl font-black ${sProblemTitle}`}>Fora do horário</h3>
+              <h3 className={`text-xl font-bold ${sProblemTitle}`}>Fora do horário</h3>
               <p className={`${sProblemDesc} text-sm leading-relaxed`}>
                 Grande parte das mensagens chega à noite e nos fins de semana. Sem ninguém para responder, o interesse esfria e a agenda da semana seguinte fica vazia.
               </p>
@@ -262,33 +262,33 @@ export default function LandingPage() {
       <section id="how-it-works" className={`py-28 ${sHowItWorks} px-6 lg:px-20 transition-colors duration-300`}>
          <div className="max-w-6xl mx-auto space-y-20">
             <div className="text-center space-y-4">
-               <h2 className={`text-3xl lg:text-5xl font-black tracking-tighter ${sHowTitle}`}>Do "oi" ao agendamento em <span className="text-[#0D9488] italic">3 passos simples</span></h2>
+               <h2 className={`text-3xl lg:text-5xl font-bold tracking-tight ${sHowTitle}`}>Do "oi" ao agendamento em <span className="text-[#0D9488] italic">3 passos simples</span></h2>
                <p className={`${sSectionDesc} font-medium max-w-xl mx-auto`}>Seu atendente de IA cuida do WhatsApp enquanto você cuida dos pacientes.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 relative">
                <div className="space-y-6 relative">
-                  <div className={`absolute -top-6 -left-6 text-9xl font-black ${sHowNumberText} pointer-events-none select-none`}>01</div>
-                  <div className="text-[#0D9488] font-black text-xs uppercase tracking-widest">PASSO 1: O PACIENTE CHAMA</div>
-                  <h3 className={`text-2xl font-black ${sHowTitle} tracking-tight`}>Responde na hora, com a sua voz</h3>
+                  <div className={`absolute -top-6 -left-6 text-9xl font-bold ${sHowNumberText} pointer-events-none select-none`}>01</div>
+                  <div className="text-[#0D9488] font-bold text-xs ">PASSO 1: O PACIENTE CHAMA</div>
+                  <h3 className={`text-2xl font-bold ${sHowTitle} tracking-tight`}>Responde na hora, com a sua voz</h3>
                   <p className={`${sSectionDesc} text-sm leading-relaxed`}>
                      A qualquer hora do dia, o agente responde no WhatsApp oficial da clínica com o tom que você definir. Tira as dúvidas comuns — convênios, valores, endereço, preparo — sem deixar ninguém esperando.
                   </p>
                </div>
 
                <div className="space-y-6 relative">
-                  <div className={`absolute -top-6 -left-6 text-9xl font-black ${sHowNumberText} pointer-events-none select-none`}>02</div>
-                  <div className="text-[#0D9488] font-black text-xs uppercase tracking-widest">PASSO 2: QUALIFICA COM SEGURANÇA</div>
-                  <h3 className={`text-2xl font-black ${sHowTitle} tracking-tight`}>Entende a necessidade do paciente</h3>
+                  <div className={`absolute -top-6 -left-6 text-9xl font-bold ${sHowNumberText} pointer-events-none select-none`}>02</div>
+                  <div className="text-[#0D9488] font-bold text-xs ">PASSO 2: QUALIFICA COM SEGURANÇA</div>
+                  <h3 className={`text-2xl font-bold ${sHowTitle} tracking-tight`}>Entende a necessidade do paciente</h3>
                   <p className={`${sSectionDesc} text-sm leading-relaxed`}>
                      A IA descobre o procedimento desejado, o convênio e a urgência para oferecer o melhor horário — sempre dentro do escopo, sem nunca dar diagnóstico ou orientação clínica.
                   </p>
                </div>
 
                <div className="space-y-6 relative">
-                  <div className={`absolute -top-6 -left-6 text-9xl font-black ${sHowNumberText} pointer-events-none select-none`}>03</div>
-                  <div className="text-[#0D9488] font-black text-xs uppercase tracking-widest">PASSO 3: AGENDA E CONFIRMA</div>
-                  <h3 className={`text-2xl font-black ${sHowTitle} tracking-tight`}>Marca a consulta automaticamente</h3>
+                  <div className={`absolute -top-6 -left-6 text-9xl font-bold ${sHowNumberText} pointer-events-none select-none`}>03</div>
+                  <div className="text-[#0D9488] font-bold text-xs ">PASSO 3: AGENDA E CONFIRMA</div>
+                  <h3 className={`text-2xl font-bold ${sHowTitle} tracking-tight`}>Marca a consulta automaticamente</h3>
                   <p className={`${sSectionDesc} text-sm leading-relaxed`}>
                      O agente consulta os horários livres na sua agenda, marca a consulta sem conflito, confirma na hora e envia lembretes automáticos no WhatsApp para reduzir as faltas.
                   </p>
@@ -301,66 +301,66 @@ export default function LandingPage() {
       <section id="features" className={`py-28 ${sFeatures} px-6 lg:px-20 transition-colors duration-300`}>
         <div className="max-w-6xl mx-auto space-y-20">
           <div className="text-center space-y-4">
-            <h2 className={`text-3xl lg:text-5xl font-black tracking-tighter ${sSectionTitle}`}>Desenvolvido para gerar <span className="text-[#0D9488] italic">resultados operacionais reais</span></h2>
+            <h2 className={`text-3xl lg:text-5xl font-bold tracking-tight ${sSectionTitle}`}>Desenvolvido para gerar <span className="text-[#0D9488] italic">resultados operacionais reais</span></h2>
             <p className={`${sSectionDesc} font-medium max-w-xl mx-auto`}>Funcionalidades nativas, maduras e prontas para rodar no seu negócio.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card className={`p-8 border rounded-[30px] space-y-6 transition-all group ${sFeatureCard}`}>
+            <Card className={`p-8 border rounded-2xl space-y-6 transition-all group ${sFeatureCard}`}>
               <div className="w-12 h-12 bg-[#0D9488]/10 text-[#0D9488] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Target className="w-6 h-6" />
               </div>
-              <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>Atendente de IA 24/7</h3>
+              <h3 className={`text-xl font-bold ${sFeatureTitle} tracking-tight`}>Atendente de IA 24/7</h3>
               <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
                 Responde todo paciente em segundos, no WhatsApp oficial, com a identidade e as informações da sua clínica (convênios, valores, endereço, preparo).
               </p>
             </Card>
 
-            <Card className={`p-8 border rounded-[30px] space-y-6 transition-all group ${sFeatureCard}`}>
+            <Card className={`p-8 border rounded-2xl space-y-6 transition-all group ${sFeatureCard}`}>
               <div className="w-12 h-12 bg-[#0D9488]/10 text-[#0D9488] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Sparkles className="w-6 h-6" />
               </div>
-              <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>Qualificação com segurança</h3>
+              <h3 className={`text-xl font-bold ${sFeatureTitle} tracking-tight`}>Qualificação com segurança</h3>
               <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
                 Entende a necessidade e agenda de forma natural, com guardrails que impedem qualquer diagnóstico ou orientação clínica. Treine o agente com a base de conhecimento da sua clínica.
               </p>
             </Card>
 
-            <Card className={`p-8 border rounded-[30px] space-y-6 transition-all group ${sFeatureCard}`}>
+            <Card className={`p-8 border rounded-2xl space-y-6 transition-all group ${sFeatureCard}`}>
               <div className="w-12 h-12 bg-[#0D9488]/10 text-[#0D9488] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <BarChart className="w-6 h-6" />
               </div>
-              <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>Funil de Pacientes</h3>
+              <h3 className={`text-xl font-bold ${sFeatureTitle} tracking-tight`}>Funil de Pacientes</h3>
               <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
                 Acompanhe cada paciente do primeiro contato à consulta marcada, em um quadro visual. Veja quem foi atendido, quem qualificou e quem agendou.
               </p>
             </Card>
 
-            <Card className={`p-8 border rounded-[30px] space-y-6 transition-all group ${sFeatureCard}`}>
+            <Card className={`p-8 border rounded-2xl space-y-6 transition-all group ${sFeatureCard}`}>
               <div className="w-12 h-12 bg-[#0D9488]/10 text-[#0D9488] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Clock className="w-6 h-6" />
               </div>
-              <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>Agenda integrada</h3>
+              <h3 className={`text-xl font-bold ${sFeatureTitle} tracking-tight`}>Agenda integrada</h3>
               <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
                 Marca direto na agenda da clínica (Google Calendar), sem conflito de horário, e confirma a consulta pelo WhatsApp automaticamente em tempo real.
               </p>
             </Card>
 
-            <Card className={`p-8 border rounded-[30px] space-y-6 transition-all group ${sFeatureCard}`}>
+            <Card className={`p-8 border rounded-2xl space-y-6 transition-all group ${sFeatureCard}`}>
               <div className="w-12 h-12 bg-[#0D9488]/10 text-[#0D9488] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Zap className="w-6 h-6" />
               </div>
-              <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>Lembretes e follow-up</h3>
+              <h3 className={`text-xl font-bold ${sFeatureTitle} tracking-tight`}>Lembretes e follow-up</h3>
               <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
                 Confirmações e lembretes automáticos antes da consulta para reduzir faltas (no-show), além de retomar conversas paradas — tudo no-code.
               </p>
             </Card>
 
-            <Card className={`p-8 border rounded-[30px] space-y-6 transition-all group ${sFeatureCard}`}>
+            <Card className={`p-8 border rounded-2xl space-y-6 transition-all group ${sFeatureCard}`}>
               <div className="w-12 h-12 bg-[#0D9488]/10 text-[#0D9488] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <MessageSquare className="w-6 h-6" />
               </div>
-              <h3 className={`text-xl font-black ${sFeatureTitle} tracking-tight`}>Atendimento humano quando precisa</h3>
+              <h3 className={`text-xl font-bold ${sFeatureTitle} tracking-tight`}>Atendimento humano quando precisa</h3>
               <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
                 Central de mensagens do WhatsApp oficial. Sua recepção assume a conversa a qualquer momento, com todo o histórico, exatamente onde a IA parou.
               </p>
@@ -373,7 +373,7 @@ export default function LandingPage() {
       <section id="testimonials" className={`py-24 ${sTestimonials} px-6 lg:px-20 transition-colors duration-300`}>
         <div className="max-w-6xl mx-auto space-y-16">
           <div className="text-center space-y-4">
-             <h2 className={`text-3xl lg:text-5xl font-black tracking-tighter ${sSectionTitle}`}>Clínicas que pararam de <span className="text-[#0D9488] italic">perder pacientes</span></h2>
+             <h2 className={`text-3xl lg:text-5xl font-bold tracking-tight ${sSectionTitle}`}>Clínicas que pararam de <span className="text-[#0D9488] italic">perder pacientes</span></h2>
              <p className={`${sSectionDesc} font-medium max-w-xl mx-auto`}>Histórias de quem encheu a agenda respondendo todo paciente na hora, sem sobrecarregar a recepção.</p>
           </div>
 
@@ -386,10 +386,10 @@ export default function LandingPage() {
                    </p>
                 </div>
                 <div className={`flex items-center gap-3 pt-4 border-t ${isDarkMode ? 'border-teal-950/30' : 'border-teal-100'}`}>
-                   <div className="w-10 h-10 bg-[#0D9488]/20 rounded-full flex items-center justify-center font-black text-[#0D9488]">TF</div>
+                   <div className="w-10 h-10 bg-[#0D9488]/20 rounded-full flex items-center justify-center font-bold text-[#0D9488]">TF</div>
                    <div>
-                      <p className={`text-sm font-black ${sTestimonialAuthor}`}>Thiago Fonseca</p>
-                      <p className={`text-[10px] uppercase font-black ${sTestimonialRole}`}>Gestor - Clínica Vida Plena</p>
+                      <p className={`text-sm font-bold ${sTestimonialAuthor}`}>Thiago Fonseca</p>
+                      <p className={`text-xs uppercase font-bold ${sTestimonialRole}`}>Gestor - Clínica Vida Plena</p>
                    </div>
                 </div>
              </Card>
@@ -402,10 +402,10 @@ export default function LandingPage() {
                    </p>
                 </div>
                 <div className={`flex items-center gap-3 pt-4 border-t ${isDarkMode ? 'border-teal-950/30' : 'border-teal-100'}`}>
-                   <div className="w-10 h-10 bg-[#0D9488]/20 rounded-full flex items-center justify-center font-black text-[#0D9488]">AM</div>
+                   <div className="w-10 h-10 bg-[#0D9488]/20 rounded-full flex items-center justify-center font-bold text-[#0D9488]">AM</div>
                    <div>
-                      <p className={`text-sm font-black ${sTestimonialAuthor}`}>Aline Mendes</p>
-                      <p className={`text-[10px] uppercase font-black ${sTestimonialRole}`}>Fundadora - Clínica Odonto Sorriso</p>
+                      <p className={`text-sm font-bold ${sTestimonialAuthor}`}>Aline Mendes</p>
+                      <p className={`text-xs uppercase font-bold ${sTestimonialRole}`}>Fundadora - Clínica Odonto Sorriso</p>
                    </div>
                 </div>
              </Card>
@@ -418,10 +418,10 @@ export default function LandingPage() {
                    </p>
                 </div>
                 <div className={`flex items-center gap-3 pt-4 border-t ${isDarkMode ? 'border-teal-950/30' : 'border-teal-100'}`}>
-                   <div className="w-10 h-10 bg-[#0D9488]/20 rounded-full flex items-center justify-center font-black text-[#0D9488]">RC</div>
+                   <div className="w-10 h-10 bg-[#0D9488]/20 rounded-full flex items-center justify-center font-bold text-[#0D9488]">RC</div>
                    <div>
-                      <p className={`text-sm font-black ${sTestimonialAuthor}`}>Ricardo Cruz</p>
-                      <p className={`text-[10px] uppercase font-black ${sTestimonialRole}`}>Gestor - Clínica Fisio Movimento</p>
+                      <p className={`text-sm font-bold ${sTestimonialAuthor}`}>Ricardo Cruz</p>
+                      <p className={`text-xs uppercase font-bold ${sTestimonialRole}`}>Gestor - Clínica Fisio Movimento</p>
                    </div>
                 </div>
              </Card>
@@ -433,7 +433,7 @@ export default function LandingPage() {
       <section id="pricing" className={`py-28 ${sPricing} px-6 lg:px-20 transition-colors duration-300`}>
          <div className="max-w-6xl mx-auto space-y-20">
             <div className="text-center space-y-4">
-               <h2 className={`text-3xl lg:text-5xl font-black ${sSectionTitle} tracking-tighter leading-none`}>Preço justo para <span className="text-[#0D9488] italic">agenda cheia</span></h2>
+               <h2 className={`text-3xl lg:text-5xl font-bold ${sSectionTitle} tracking-tight leading-none`}>Preço justo para <span className="text-[#0D9488] italic">agenda cheia</span></h2>
                <p className={`${sSectionDesc} text-lg font-medium`}>Sem taxas ocultas. Escolha o plano ideal para o tamanho da sua clínica.</p>
             </div>
             
@@ -444,12 +444,12 @@ export default function LandingPage() {
                   try { featuresData = JSON.parse(plan.features || "{}"); } catch(e){}
 
                   return (
-                    <Card key={plan.id} className={`p-10 ${isRecommended ? sPricingCardRecommended : sPricingCardStandard} rounded-[40px] space-y-8 relative overflow-hidden transition-all duration-300 group`}>
-                       {isRecommended && <div className="absolute top-0 right-0 bg-white/20 px-8 py-3 rounded-bl-3xl font-black text-[10px] uppercase tracking-widest text-white">RECOMENDADO</div>}
+                    <Card key={plan.id} className={`p-10 ${isRecommended ? sPricingCardRecommended : sPricingCardStandard} rounded-3xl space-y-8 relative overflow-hidden transition-all duration-300 group`}>
+                       {isRecommended && <div className="absolute top-0 right-0 bg-white/20 px-8 py-3 rounded-bl-3xl font-bold text-xs text-white">RECOMENDADO</div>}
                        
                        <div className="space-y-2">
-                          <Badge className={`${isRecommended ? 'bg-black/20 text-white' : 'bg-[#0D9488]/15 text-[#0D9488]'} border-none py-1 px-4 font-black text-[10px] uppercase tracking-widest`}>{plan.name}</Badge>
-                          <h3 className="text-5xl font-black tracking-tighter">
+                          <Badge className={`${isRecommended ? 'bg-black/20 text-white' : 'bg-[#0D9488]/15 text-[#0D9488]'} border-none py-1 px-4 font-bold text-xs `}>{plan.name}</Badge>
+                          <h3 className="text-5xl font-bold tracking-tight">
                             R$ {plan.priceMonthly}
                             <span className={`text-sm font-medium ${sPricingTextMuted(isRecommended)}`}>/mês</span>
                           </h3>
@@ -485,7 +485,7 @@ export default function LandingPage() {
                        </ul>
 
                        <div className={`space-y-3 pt-6 border-t ${sPricingBorderMuted(isRecommended)}`}>
-                           <p className={`text-[9px] font-black uppercase tracking-[0.2em] mb-4 ${sPricingTextMuted(isRecommended)}`}>Limites do Plano</p>
+                           <p className={`text-xs font-bold mb-4 ${sPricingTextMuted(isRecommended)}`}>Limites do Plano</p>
                            <div className={`flex justify-between items-center text-xs font-bold ${!plan.enableSdr ? 'opacity-40' : ''}`}>
                               <span className={`${sPricingTextMuted(isRecommended)} ${!plan.enableSdr ? 'line-through' : ''}`}>Agentes de IA Ativos</span>
                               <span>{plan.enableSdr ? `Até ${plan.maxSdrs}` : 'Não disponível'}</span>
@@ -501,14 +501,14 @@ export default function LandingPage() {
                         </div>
                        
                        <Link to="/register" className="block w-full">
-                          <Button className={`w-full h-16 ${isRecommended ? 'bg-white text-[#0D9488] hover:bg-slate-50 shadow-2xl' : 'bg-[#0D9488] text-white hover:bg-[#0F766E]'} font-black rounded-2xl text-lg transition-transform active:scale-95 border-none`}>
+                          <Button className={`w-full h-16 ${isRecommended ? 'bg-white text-[#0D9488] hover:bg-slate-50 shadow-2xl' : 'bg-[#0D9488] text-white hover:bg-[#0F766E]'} font-bold rounded-2xl text-lg transition-transform active:scale-95 border-none`}>
                             Começar Agora
                           </Button>
                        </Link>
                     </Card>
                   );
                }) : (
-                  <p className="text-white/20 text-center col-span-full py-20 font-black uppercase italic tracking-widest">Nenhum plano disponível no momento.</p>
+                  <p className="text-white/20 text-center col-span-full py-20 font-bold uppercase italic ">Nenhum plano disponível no momento.</p>
                )}
             </div>
          </div>
@@ -518,34 +518,34 @@ export default function LandingPage() {
       <section id="faq" className={`py-24 ${sFaq} px-6 lg:px-20 transition-colors duration-300`}>
          <div className="max-w-4xl mx-auto space-y-16">
             <div className="text-center space-y-4">
-               <h2 className={`text-3xl lg:text-5xl font-black tracking-tighter ${sSectionTitle}`}>Perguntas <span className="text-[#0D9488] italic">Frequentes</span></h2>
+               <h2 className={`text-3xl lg:text-5xl font-bold tracking-tight ${sSectionTitle}`}>Perguntas <span className="text-[#0D9488] italic">Frequentes</span></h2>
                <p className={`${sSectionDesc} font-medium`}>Esclareça suas dúvidas e ative sua operação com total segurança.</p>
             </div>
 
             <div className="space-y-6">
                <div className={`p-6 border rounded-2xl space-y-2 ${sFaqItem}`}>
-                  <h4 className={`font-black ${sFaqTitle} text-base`}>Os pacientes percebem que estão falando com uma Inteligência Artificial?</h4>
+                  <h4 className={`font-bold ${sFaqTitle} text-base`}>Os pacientes percebem que estão falando com uma Inteligência Artificial?</h4>
                   <p className={`${sFaqDesc} text-sm leading-relaxed`}>
                      A conversa é natural e humanizada, com o tom e as informações da sua clínica (base de conhecimento própria). E, sempre que o paciente pedir ou o assunto exigir, a conversa passa para a sua recepção com todo o histórico.
                   </p>
                </div>
 
                <div className={`p-6 border rounded-2xl space-y-2 ${sFaqItem}`}>
-                  <h4 className={`font-black ${sFaqTitle} text-base`}>A IA dá orientação médica ou responde dúvidas clínicas?</h4>
+                  <h4 className={`font-bold ${sFaqTitle} text-base`}>A IA dá orientação médica ou responde dúvidas clínicas?</h4>
                   <p className={`${sFaqDesc} text-sm leading-relaxed`}>
                      Não — por design. O agente tem regras invioláveis que o impedem de dar diagnóstico, prescrição ou qualquer orientação clínica. O papel dele é informar, qualificar e agendar; questões de saúde são sempre encaminhadas ao profissional.
                   </p>
                </div>
 
                <div className={`p-6 border rounded-2xl space-y-2 ${sFaqItem}`}>
-                  <h4 className={`font-black ${sFaqTitle} text-base`}>Uso o WhatsApp oficial? Meu número corre risco de bloqueio?</h4>
+                  <h4 className={`font-bold ${sFaqTitle} text-base`}>Uso o WhatsApp oficial? Meu número corre risco de bloqueio?</h4>
                   <p className={`${sFaqDesc} text-sm leading-relaxed`}>
                      Trabalhamos com a API oficial do WhatsApp (Meta), o canal aprovado para empresas — sem gambiarras que arriscam o número da clínica. Sua equipe pode intervir na conversa a qualquer momento pela Central de Atendimento.
                   </p>
                </div>
 
                <div className={`p-6 border rounded-2xl space-y-2 ${sFaqItem}`}>
-                  <h4 className={`font-black ${sFaqTitle} text-base`}>E a LGPD? Como ficam os dados dos pacientes?</h4>
+                  <h4 className={`font-bold ${sFaqTitle} text-base`}>E a LGPD? Como ficam os dados dos pacientes?</h4>
                   <p className={`${sFaqDesc} text-sm leading-relaxed`}>
                      A plataforma nasce adequada à LGPD: consentimento registrado, descadastro imediato quando o paciente pede ("PARAR"), e exportação ou exclusão definitiva dos dados de qualquer paciente direto no painel.
                   </p>
@@ -558,17 +558,17 @@ export default function LandingPage() {
       <section className={`py-28 text-center relative overflow-hidden ${sCTA} transition-colors duration-300`}>
          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#0D9488]/10 rounded-full blur-[180px] pointer-events-none" />
          <div className="max-w-4xl mx-auto space-y-8 relative z-10">
-            <h2 className="text-4xl lg:text-6xl font-black tracking-tighter">Chegou a hora de encher a agenda da sua clínica.</h2>
+            <h2 className="text-4xl lg:text-6xl font-bold tracking-tight">Chegou a hora de encher a agenda da sua clínica.</h2>
             <p className={`font-medium text-lg lg:text-xl max-w-2xl mx-auto leading-relaxed ${sCTADesc}`}>
                Pare de perder pacientes por demora no WhatsApp. Ative seu atendente de IA e veja as consultas sendo marcadas sozinhas — de dia, de noite e no fim de semana.
             </p>
             <div className="pt-4">
                <Link to="/register">
-                 <Button className="h-16 px-12 text-lg font-black bg-[#0D9488] hover:bg-[#0F766E] text-white rounded-2xl shadow-xl shadow-[#0D9488]/20 hover:scale-105 transition-all border-none">
+                 <Button className="h-16 px-12 text-lg font-bold bg-[#0D9488] hover:bg-[#0F766E] text-white rounded-2xl shadow-xl hover:scale-105 transition-all border-none">
                    Testar a Plataforma Grátis
                  </Button>
                </Link>
-               <p className="text-xs text-teal-300 font-bold uppercase tracking-widest mt-4">Teste grátis • Sem cartão de crédito • Cancele quando quiser</p>
+               <p className="text-xs text-teal-300 font-bold mt-4">Teste grátis • Sem cartão de crédito • Cancele quando quiser</p>
             </div>
          </div>
       </section>
@@ -579,7 +579,7 @@ export default function LandingPage() {
             <div className="flex flex-col gap-3">
                <div className="flex items-center gap-3">
                   {settings?.logoUrl ? <img src={settings.logoUrl} className="h-8 grayscale opacity-60" /> : <img src="/logo.png" className="h-8 w-auto grayscale opacity-60" />}
-                  <span className={`text-xl font-black ${sFooterTitle} tracking-tighter uppercase italic`}>Auto<span className="text-[#0D9488]">Sales</span></span>
+                  <span className={`text-xl font-bold ${sFooterTitle} tracking-tight uppercase italic`}>Auto<span className="text-[#0D9488]">Sales</span></span>
                </div>
                <p className={`text-xs font-bold ${sFooterDesc}`}>Atendimento inteligente 24h para clínicas no WhatsApp.</p>
             </div>
@@ -614,12 +614,12 @@ export default function LandingPage() {
 
       {/* SDR CHAT BOX */}
       {isChatOpen && (
-        <div className={`fixed bottom-32 right-10 w-96 ${isDarkMode ? 'bg-[#042F2E] border-teal-950/40' : 'bg-white border-teal-100'} border rounded-[30px] shadow-[0_50px_100px_rgba(0,0,0,0.4)] flex flex-col overflow-hidden z-[9999] animate-in slide-in-from-bottom-10 duration-500`}>
+        <div className={`fixed bottom-32 right-10 w-96 ${isDarkMode ? 'bg-[#042F2E] border-teal-950/40' : 'bg-white border-teal-100'} border rounded-2xl shadow-[0_50px_100px_rgba(0,0,0,0.4)] flex flex-col overflow-hidden z-[9999] animate-in slide-in-from-bottom-10 duration-500`}>
            <div className={`p-6 text-white flex items-center gap-4 border-b ${isDarkMode ? 'bg-[#0B4A47] border-teal-950/40' : 'bg-teal-50 border-teal-100'}`}>
-              <div className="w-12 h-12 bg-[#0D9488] rounded-full flex items-center justify-center font-black text-white">AI</div>
+              <div className="w-12 h-12 bg-[#0D9488] rounded-full flex items-center justify-center font-bold text-white">AI</div>
               <div>
-                 <h4 className={`font-black text-sm uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-[#134E4A]'}`}>Assistente AutoSales</h4>
-                 <p className="text-[10px] text-[#0D9488] font-bold flex items-center gap-1"><span className="w-2 h-2 bg-[#0D9488] rounded-full animate-ping" /> Especialista online agora</p>
+                 <h4 className={`font-bold text-sm ${isDarkMode ? 'text-white' : 'text-[#134E4A]'}`}>Assistente AutoSales</h4>
+                 <p className="text-xs text-[#0D9488] font-bold flex items-center gap-1"><span className="w-2 h-2 bg-[#0D9488] rounded-full animate-ping" /> Especialista online agora</p>
               </div>
            </div>
            
@@ -636,7 +636,7 @@ export default function LandingPage() {
                    </div>
                 </div>
               ))}
-              {loadingChat && <div className="text-[10px] font-black text-teal-500 animate-pulse pl-2">SDR está elaborando resposta...</div>}
+              {loadingChat && <div className="text-xs font-bold text-teal-500 animate-pulse pl-2">SDR está elaborando resposta...</div>}
            </div>
 
            <div className={`p-4 border-t ${isDarkMode ? 'bg-[#042F2E] border-teal-950/40' : 'bg-[#F0FDFA] border-teal-100'} flex gap-2`}>

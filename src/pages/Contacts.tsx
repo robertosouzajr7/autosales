@@ -241,10 +241,10 @@ export default function Contacts() {
         {/* HEADER CONTATOS */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
            <div className="space-y-1">
-              <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase flex items-center gap-3">
-                 Base de <span className="text-[#0D9488] italic">Contatos</span>
+              <h1 className="text-4xl font-semibold text-slate-900 tracking-tight uppercase flex items-center gap-3">
+                 Base de <span className="text-[#0D9488]">Contatos</span>
               </h1>
-              <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Gerenciamento Premium de Pipeline</p>
+              <p className="text-slate-400 font-bold text-xs">Gerenciamento Premium de Pipeline</p>
            </div>
            
             <div className="flex gap-4">
@@ -256,29 +256,29 @@ export default function Contacts() {
                     accept=".csv" 
                     onChange={handleImportClick} 
                  />
-                 <Button variant="outline" size="icon" onClick={handleExport} className="h-12 w-12 rounded-2xl border-2"><Download className="w-4 h-4" /></Button>
-                 <Button variant="outline" size="icon" onClick={() => document.getElementById('csvImport')?.click()} className="h-12 w-12 rounded-2xl border-2"><UserPlus className="w-4 h-4" /></Button>
+                 <Button variant="outline" size="icon" onClick={handleExport} className="h-10 w-10 rounded-2xl border-2"><Download className="w-4 h-4" /></Button>
+                 <Button variant="outline" size="icon" onClick={() => document.getElementById('csvImport')?.click()} className="h-10 w-10 rounded-2xl border-2"><UserPlus className="w-4 h-4" /></Button>
                  {selectedIds.size > 0 && (
                    <>
                      <Button 
                        onClick={handleBulkEnrich} 
-                       className="h-12 bg-[#0D9488] hover:bg-[#0F766E] px-6 rounded-2xl font-black uppercase text-[10px] tracking-widest text-white shadow-lg shadow-[#0D9488]/20 animate-in slide-in-from-right"
+                       className="h-10 bg-[#0D9488] hover:bg-[#0F766E] px-6 rounded-2xl font-semibold uppercase text-xs text-white shadow-lg animate-in slide-in-from-right"
                      >
                        Investigação BDR
                      </Button>
-                     <Button variant="destructive" size="icon" onClick={handleBulkDelete} className="h-12 w-12 rounded-2xl animate-in zoom-in"><Trash2 className="w-4 h-4" /></Button>
+                     <Button variant="destructive" size="icon" onClick={handleBulkDelete} className="h-10 w-10 rounded-2xl animate-in zoom-in"><Trash2 className="w-4 h-4" /></Button>
                    </>
                  )}
                </div>
-               <Tabs defaultValue="grid" className="w-[120px] h-12" onValueChange={(v) => setViewMode(v as any)}>
-                  <TabsList className="grid w-full grid-cols-2 bg-slate-100 p-1 rounded-2xl h-12">
+               <Tabs defaultValue="grid" className="w-[120px] h-10" onValueChange={(v) => setViewMode(v as any)}>
+                  <TabsList className="grid w-full grid-cols-2 bg-slate-100 p-1 rounded-2xl h-10">
                      <TabsTrigger value="grid" className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm"><LayoutGrid className="w-4 h-4" /></TabsTrigger>
                      <TabsTrigger value="list" className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm"><List className="w-4 h-4" /></TabsTrigger>
                   </TabsList>
                </Tabs>
                <Button 
                  onClick={() => setIsAddModalOpen(true)}
-                 className="h-12 bg-slate-900 hover:bg-slate-800 px-8 rounded-2xl font-black uppercase text-xs tracking-widest text-white shadow-2xl"
+                 className="h-10 bg-slate-900 hover:bg-slate-800 px-8 rounded-2xl font-semibold uppercase text-xs text-white shadow-sm"
                >
                   <UserPlus className="w-4 h-4 mr-2" /> Novo Contato
                </Button>
@@ -286,14 +286,14 @@ export default function Contacts() {
         </div>
 
         {/* BUSCA RAPIDA */}
-        <Card className="border-none shadow-2xl rounded-[35px] bg-white p-6 flex flex-col md:flex-row items-center gap-6">
+        <Card className="border-none shadow-sm rounded-2xl bg-white p-6 flex flex-col md:flex-row items-center gap-6">
             <div 
               onClick={handleSelectAll}
-              className={`flex-none w-14 h-14 rounded-2xl border-2 cursor-pointer flex items-center justify-center transition-all ${
-                selectedIds.size > 0 && selectedIds.size === contacts.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.phone.includes(searchTerm)).length
-                ? 'bg-[#0D9488] border-emerald-500 text-white' 
-                : 'bg-slate-50 border-slate-100 text-slate-300'
-              }`}
+              className={`flex-none w-10 h-10 rounded-2xl border-2 cursor-pointer flex items-center justify-center transition-all ${
+ selectedIds.size > 0 && selectedIds.size === contacts.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.phone.includes(searchTerm)).length
+ ? 'bg-[#0D9488] border-emerald-500 text-white' 
+ : 'bg-slate-50 border-slate-100 text-slate-300'
+ }`}
             >
                <CheckCircle2 className="w-6 h-6" />
             </div>
@@ -303,10 +303,10 @@ export default function Contacts() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Escreva o nome para filtrar..." 
-                className="h-14 pl-12 w-full border-none bg-slate-50 text-slate-900 rounded-2xl focus:ring-emerald-500/30 font-bold text-xs" 
+                className="h-10 pl-12 w-full border-none bg-slate-50 text-slate-900 rounded-2xl focus:ring-emerald-500/30 font-bold text-xs" 
               />
             </div>
-           <Badge className="h-14 px-8 rounded-2xl bg-teal-50 text-[#0D9488] border-none flex items-center gap-2 font-black text-[10px] uppercase tracking-widest">
+           <Badge className="h-10 px-8 rounded-2xl bg-teal-50 text-[#0D9488] border-none flex items-center gap-2 font-semibold text-xs ">
              {selectedIds.size > 0 ? `${selectedIds.size} Selecionados` : `${contacts.length} Na Base`}
            </Badge>
         </Card>
@@ -319,15 +319,15 @@ export default function Contacts() {
               <Card 
                 key={contact.id} 
                 onClick={() => setSelectedContact(contact)}
-                className={`border-none shadow-xl rounded-[40px] bg-white overflow-hidden hover:scale-[1.01] transition-all duration-500 group cursor-pointer relative ${
-                  viewMode === "list" ? "flex flex-row items-center p-4 h-24" : "flex flex-col"
-                }`}
+                className={`border-none shadow-sm rounded-2xl bg-white overflow-hidden hover:scale-[1.01] transition-all duration-500 group cursor-pointer relative ${
+ viewMode === "list" ? "flex flex-row items-center p-4 h-24" : "flex flex-col"
+ }`}
               >
                 <div 
                   onClick={(e) => toggleSelect(contact.id, e)}
                   className={`absolute top-6 left-6 w-6 h-6 rounded-full border-2 z-10 transition-all flex items-center justify-center ${
-                    selectedIds.has(contact.id) ? 'bg-[#0D9488] border-emerald-500' : 'bg-white/50 border-slate-200 opacity-0 group-hover:opacity-100'
-                  }`}
+ selectedIds.has(contact.id) ? 'bg-[#0D9488] border-emerald-500' : 'bg-white/50 border-slate-200 opacity-0 group-hover:opacity-100'
+ }`}
                 >
                   {selectedIds.has(contact.id) && <CheckCircle2 className="w-3 h-3 text-white" />}
                 </div>
@@ -335,24 +335,24 @@ export default function Contacts() {
                    {/* Avatar e Infos Principais */}
                    <div className={`p-8 space-y-6 ${viewMode === "list" ? "p-0 flex items-center gap-6 flex-1" : ""}`}>
                       <div className="flex items-center gap-4">
-                         <Avatar className={`${viewMode === "list" ? "h-12 w-12" : "h-16 w-16"}`}>
-                            <AvatarFallback className="bg-slate-900 text-white font-black text-lg">
+                         <Avatar className={`${viewMode === "list" ? "h-10 w-10" : "h-16 w-16"}`}>
+                            <AvatarFallback className="bg-slate-900 text-white font-semibold text-lg">
                                {contact.name.substring(0,2).toUpperCase()}
                             </AvatarFallback>
                          </Avatar>
                          <div className="flex-1 min-w-0">
-                            <p className="font-black text-lg text-slate-900 leading-tight truncate">{contact.name}</p>
+                            <p className="font-semibold text-lg text-slate-900 leading-tight truncate">{contact.name}</p>
                              <Badge className={`${
-                                contact.status === 'CONVERTED' ? 'bg-emerald-100 text-[#0D9488]' : 
-                                contact.status === 'APPOINTMENT' ? 'bg-teal-100 text-teal-600' : 
-                                contact.status === 'QUALIFYING' ? 'bg-orange-100 text-orange-600' : 
-                                contact.status === 'INTERESTED' ? 'bg-emerald-100 text-[#0D9488]' : 
-                                contact.status === 'NEW' ? 'bg-blue-100 text-[#0D9488]' : 'bg-slate-100 text-slate-400'
-                             } border-none font-bold text-[8px] uppercase tracking-tighter mt-1`}>
+ contact.status === 'CONVERTED' ? 'bg-emerald-100 text-[#0D9488]' : 
+ contact.status === 'APPOINTMENT' ? 'bg-teal-100 text-teal-600' : 
+ contact.status === 'QUALIFYING' ? 'bg-orange-100 text-orange-600' : 
+ contact.status === 'INTERESTED' ? 'bg-emerald-100 text-[#0D9488]' : 
+ contact.status === 'NEW' ? 'bg-blue-100 text-[#0D9488]' : 'bg-slate-100 text-slate-400'
+ } border-none font-bold text-xs tracking-tight mt-1`}>
                                 {contact.status || "Ativo"}
                              </Badge>
                              {contact.isToEnrich && (
-                               <Badge className="bg-[#0D9488] text-white animate-pulse border-none font-bold text-[8px] uppercase tracking-tighter mt-1 ml-2 shadow-lg shadow-[#0D9488]/20">
+                               <Badge className="bg-[#0D9488] text-white animate-pulse border-none font-bold text-xs tracking-tight mt-1 ml-2 shadow-lg ">
                                   BDR Investigando... 🕵️‍♂️
                                </Badge>
                              )}
@@ -370,7 +370,7 @@ export default function Contacts() {
                    {/* Ações (Apenas no Grid ou final da Lista) */}
                    {viewMode === "grid" ? (
                      <div className="bg-slate-50 p-6 flex justify-between items-center group-hover:bg-teal-50 transition-colors">
-                        <Button variant="ghost" className="text-slate-400 font-black uppercase text-[10px] tracking-widest hover:text-[#0D9488]">Ver Perfil</Button>
+                        <Button variant="ghost" className="text-slate-400 font-semibold uppercase text-xs hover:text-[#0D9488]">Ver Perfil</Button>
                         <div className="flex gap-2">
                            <Button 
                               onClick={(e) => { e.stopPropagation(); navigate(`/conversations?phone=${contact.phone}`); }}
@@ -382,7 +382,7 @@ export default function Contacts() {
                            <Button 
                               onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${contact.phone}`; }}
                               size="icon" 
-                              className="w-10 h-10 bg-[#0D9488] hover:bg-[#0F766E] rounded-xl shadow-lg shadow-[#0D9488]/20"
+                              className="w-10 h-10 bg-[#0D9488] hover:bg-[#0F766E] rounded-xl shadow-lg "
                            >
                               <Phone className="w-4 h-4 text-white" />
                            </Button>
@@ -391,7 +391,7 @@ export default function Contacts() {
                    ) : (
                      <div className="flex items-center gap-8 pr-10">
                         <div className="hidden lg:flex flex-col text-right">
-                           <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">WhatsApp</p>
+                           <p className="text-xs font-semibold text-slate-300 ">WhatsApp</p>
                            <p className="text-xs font-bold text-slate-600">{contact.phone}</p>
                         </div>
                         <div className="flex gap-2">
@@ -408,31 +408,31 @@ export default function Contacts() {
 
       {/* MODAL NOVO CONTATO */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-        <DialogContent className="max-w-2xl p-10 overflow-hidden border-none shadow-3xl rounded-[40px]">
+        <DialogContent className="max-w-2xl p-10 overflow-hidden border-none shadow-sm rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black flex items-center gap-2">
+            <DialogTitle className="text-2xl font-semibold flex items-center gap-2">
               <div className="bg-[#0D9488] p-2 rounded-xl"><UserPlus className="text-white w-5 h-5" /></div> Novo Contato
             </DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-8 py-4">
              <div className="space-y-2">
-                <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Nome de Exibição</Label>
-                <Input value={newContact.name} onChange={e => setNewContact({...newContact, name: e.target.value})} className="h-14 border-2 border-slate-50 rounded-2xl font-bold bg-slate-50/30" placeholder="Ex: Ana Maria" />
+                <Label className="font-semibold text-xs text-slate-400 pl-1">Nome de Exibição</Label>
+                <Input value={newContact.name} onChange={e => setNewContact({...newContact, name: e.target.value})} className="h-10 border-2 border-slate-50 rounded-2xl font-bold bg-slate-50/30" placeholder="Ex: Ana Maria" />
              </div>
              <div className="space-y-2">
-                <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Celular / WhatsApp</Label>
-                <Input value={newContact.phone} onChange={e => setNewContact({...newContact, phone: e.target.value})} className="h-14 border-2 border-slate-50 rounded-2xl font-bold bg-slate-50/30" placeholder="55119..." />
+                <Label className="font-semibold text-xs text-slate-400 pl-1">Celular / WhatsApp</Label>
+                <Input value={newContact.phone} onChange={e => setNewContact({...newContact, phone: e.target.value})} className="h-10 border-2 border-slate-50 rounded-2xl font-bold bg-slate-50/30" placeholder="55119..." />
              </div>
              <div className="col-span-2 space-y-2">
-                <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">E-mail de Contato</Label>
-                <Input value={newContact.email} onChange={e => setNewContact({...newContact, email: e.target.value})} className="h-14 border-2 border-slate-50 rounded-2xl font-bold bg-slate-50/30" placeholder="cliente@email.com" />
+                <Label className="font-semibold text-xs text-slate-400 pl-1">E-mail de Contato</Label>
+                <Input value={newContact.email} onChange={e => setNewContact({...newContact, email: e.target.value})} className="h-10 border-2 border-slate-50 rounded-2xl font-bold bg-slate-50/30" placeholder="cliente@email.com" />
              </div>
              <div className="col-span-2 space-y-2">
-                <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Tags (Separadas por vírgula)</Label>
-                <Input value={newContact.tags} onChange={e => setNewContact({...newContact, tags: e.target.value})} className="h-14 border-2 border-slate-50 rounded-2xl font-bold bg-slate-50/30" placeholder="vip, interessado, automacao" />
+                <Label className="font-semibold text-xs text-slate-400 pl-1">Tags (Separadas por vírgula)</Label>
+                <Input value={newContact.tags} onChange={e => setNewContact({...newContact, tags: e.target.value})} className="h-10 border-2 border-slate-50 rounded-2xl font-bold bg-slate-50/30" placeholder="vip, interessado, automacao" />
              </div>
              <div className="col-span-2 space-y-2">
-                <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Notas do Agente (Internal Only)</Label>
+                <Label className="font-semibold text-xs text-slate-400 pl-1">Notas do Agente (Internal Only)</Label>
                 <textarea 
                   value={newContact.notes} 
                   onChange={e => setNewContact({...newContact, notes: e.target.value})}
@@ -442,7 +442,7 @@ export default function Contacts() {
              </div>
           </div>
           <DialogFooter>
-             <Button onClick={handleCreateContact} className="w-full h-16 bg-slate-900 hover:bg-black text-white font-black rounded-2xl uppercase tracking-widest text-sm transition-all shadow-2xl">
+             <Button onClick={handleCreateContact} className="w-full h-11 bg-slate-900 hover:bg-black text-white font-semibold rounded-2xl text-sm transition-all shadow-sm">
                Criar Contato
              </Button>
           </DialogFooter>
@@ -451,18 +451,18 @@ export default function Contacts() {
 
       {/* MODAL DETALHES COMPLETO (EDITAR / APAGAR) */}
       <Dialog open={!!selectedContact} onOpenChange={(open) => !open && setSelectedContact(null)}>
-        <DialogContent className="max-w-2xl p-0 overflow-hidden border-none shadow-3xl rounded-[40px]">
+        <DialogContent className="max-w-2xl p-0 overflow-hidden border-none shadow-sm rounded-2xl">
            <div className="bg-slate-900 p-12 text-white relative">
               <Button onClick={() => setSelectedContact(null)} variant="ghost" className="absolute top-8 right-8 text-white/50 hover:text-white"><X className="w-6 h-6" /></Button>
               <div className="flex items-center gap-6">
                  <Avatar className="h-24 w-24 border-4 border-white/10">
-                    <AvatarFallback className="bg-[#0D9488] text-white font-black text-3xl">
+                    <AvatarFallback className="bg-[#0D9488] text-white font-semibold text-3xl">
                        {selectedContact?.name?.substring(0,2).toUpperCase()}
                     </AvatarFallback>
                  </Avatar>
                  <div className="space-y-1">
-                    <h2 className="text-4xl font-black leading-none uppercase tracking-tighter">{selectedContact?.name}</h2>
-                    <Badge className="bg-[#0D9488] text-white border-none font-black text-[10px] tracking-widest uppercase py-1 px-4">{selectedContact?.status || "Novo Lead"}</Badge>
+                    <h2 className="text-4xl font-semibold leading-none tracking-tight">{selectedContact?.name}</h2>
+                    <Badge className="bg-[#0D9488] text-white border-none font-semibold text-xs uppercase py-1 px-4">{selectedContact?.status || "Novo Lead"}</Badge>
                  </div>
               </div>
            </div>
@@ -470,10 +470,10 @@ export default function Contacts() {
            <div className="p-12 space-y-8 bg-white">
               {/* DOSSIÊ BDR (DEEP RESEARCH RESULTS) */}
               {selectedContact?.extractedData && (
-                <div className="bg-slate-50 rounded-[30px] p-8 border-2 border-emerald-500/10 animate-in fade-in zoom-in">
+                <div className="bg-slate-50 rounded-2xl p-8 border-2 border-emerald-500/10 animate-in fade-in zoom-in">
                    <div className="flex items-center gap-3 mb-6">
                       <div className="bg-[#0D9488] p-2 rounded-xl text-white"><Search className="w-4 h-4" /></div>
-                      <h3 className="font-black text-xs uppercase tracking-widest text-slate-900">Dossiê BDR (Inteligência)</h3>
+                      <h3 className="font-semibold text-xs text-slate-900">Dossiê BDR (Inteligência)</h3>
                    </div>
                    
                    {(() => {
@@ -483,25 +483,25 @@ export default function Contacts() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                              {data.decisionMaker && (
                                <div className="space-y-1">
-                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Decisor Encontrado</p>
+                                  <p className="text-xs font-semibold text-slate-400 ">Decisor Encontrado</p>
                                   <p className="font-bold text-slate-800">{data.decisionMaker.name} ({data.decisionMaker.role})</p>
                                   {data.decisionMaker.linkedIn && <a href={data.decisionMaker.linkedIn} target="_blank" className="text-xs text-[#0D9488] font-bold hover:underline">Perfil LinkedIn</a>}
                                </div>
                              )}
                              {data.companyInfo?.socialProfiles?.length > 0 && (
                                <div className="space-y-1">
-                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Canais Digitais</p>
+                                  <p className="text-xs font-semibold text-slate-400 ">Canais Digitais</p>
                                   <div className="flex flex-wrap gap-2">
                                      {data.companyInfo.socialProfiles.map((s: string, i: number) => (
-                                       <a key={i} href={s} target="_blank" className="bg-white p-1 px-3 rounded-lg border text-[10px] font-bold text-slate-500 hover:text-[#0D9488] truncate max-w-[150px]">{s}</a>
+                                       <a key={i} href={s} target="_blank" className="bg-white p-1 px-3 rounded-lg border text-xs font-bold text-slate-500 hover:text-[#0D9488] truncate max-w-[150px]">{s}</a>
                                      ))}
                                   </div>
                                </div>
                              )}
                              {data.strategicInsights && (
                                <div className="col-span-2 bg-white/50 p-4 rounded-2xl border border-dashed border-slate-200">
-                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Visão Estratégica</p>
-                                  <p className="text-xs text-slate-600 italic leading-relaxed">"{data.strategicInsights}"</p>
+                                  <p className="text-xs font-semibold text-slate-400 mb-2">Visão Estratégica</p>
+                                  <p className="text-xs text-slate-600 leading-relaxed">"{data.strategicInsights}"</p>
                                </div>
                              )}
                           </div>
@@ -513,23 +513,23 @@ export default function Contacts() {
 
               <div className="grid grid-cols-2 gap-8">
                  <div className="space-y-2">
-                    <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Nome de Exibição</Label>
-                    <Input value={selectedContact?.name} onChange={e => setSelectedContact({...selectedContact, name: e.target.value})} className="h-14 border-2 border-slate-50 rounded-2xl font-bold" />
+                    <Label className="font-semibold text-xs text-slate-400 pl-1">Nome de Exibição</Label>
+                    <Input value={selectedContact?.name} onChange={e => setSelectedContact({...selectedContact, name: e.target.value})} className="h-10 border-2 border-slate-50 rounded-2xl font-bold" />
                  </div>
                  <div className="space-y-2">
-                    <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Celular / WhatsApp</Label>
-                    <Input value={selectedContact?.phone} onChange={e => setSelectedContact({...selectedContact, phone: e.target.value})} className="h-14 border-2 border-slate-50 rounded-2xl font-bold" />
+                    <Label className="font-semibold text-xs text-slate-400 pl-1">Celular / WhatsApp</Label>
+                    <Input value={selectedContact?.phone} onChange={e => setSelectedContact({...selectedContact, phone: e.target.value})} className="h-10 border-2 border-slate-50 rounded-2xl font-bold" />
                  </div>
                   <div className="col-span-2 space-y-2">
-                     <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">E-mail de Contato</Label>
-                     <Input value={selectedContact?.email || ""} onChange={e => setSelectedContact({...selectedContact, email: e.target.value})} className="h-14 border-2 border-slate-50 rounded-2xl font-bold" placeholder="cliente@email.com" />
+                     <Label className="font-semibold text-xs text-slate-400 pl-1">E-mail de Contato</Label>
+                     <Input value={selectedContact?.email || ""} onChange={e => setSelectedContact({...selectedContact, email: e.target.value})} className="h-10 border-2 border-slate-50 rounded-2xl font-bold" placeholder="cliente@email.com" />
                   </div>
                   <div className="col-span-2 space-y-2">
-                     <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Tags (Separadas por vírgula)</Label>
-                     <Input value={selectedContact?.tags || ""} onChange={e => setSelectedContact({...selectedContact, tags: e.target.value})} className="h-14 border-2 border-slate-50 rounded-2xl font-bold" placeholder="vip, interessado, automacao" />
+                     <Label className="font-semibold text-xs text-slate-400 pl-1">Tags (Separadas por vírgula)</Label>
+                     <Input value={selectedContact?.tags || ""} onChange={e => setSelectedContact({...selectedContact, tags: e.target.value})} className="h-10 border-2 border-slate-50 rounded-2xl font-bold" placeholder="vip, interessado, automacao" />
                   </div>
                  <div className="col-span-2 space-y-2">
-                    <Label className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-1">Notas do Agente (Internal Only)</Label>
+                    <Label className="font-semibold text-xs text-slate-400 pl-1">Notas do Agente (Internal Only)</Label>
                     <textarea 
                       value={selectedContact?.notes || ""} 
                       onChange={e => setSelectedContact({...selectedContact, notes: e.target.value})}
@@ -540,10 +540,10 @@ export default function Contacts() {
               </div>
 
               <div className="flex gap-4 pt-4">
-                 <Button onClick={handleUpdateContact} className="flex-[3] h-16 bg-slate-900 hover:bg-black text-white font-black rounded-2xl uppercase tracking-widest shadow-2xl transition-all">
+                 <Button onClick={handleUpdateContact} className="flex-[3] h-11 bg-slate-900 hover:bg-black text-white font-semibold rounded-2xl shadow-sm transition-all">
                     <Save className="w-5 h-5 mr-3 text-[#0D9488]" /> Salvar Alterações
                  </Button>
-                 <Button onClick={() => handleDeleteContact(selectedContact.id)} variant="outline" className="flex-1 h-16 border-2 border-red-50 text-red-500 hover:bg-red-50 hover:text-red-600 font-black rounded-2xl uppercase tracking-widest transition-all">
+                 <Button onClick={() => handleDeleteContact(selectedContact.id)} variant="outline" className="flex-1 h-11 border-2 border-red-50 text-red-500 hover:bg-red-50 hover:text-red-600 font-semibold rounded-2xl transition-all">
                     <Trash2 className="w-5 h-5" />
                  </Button>
               </div>
@@ -553,17 +553,17 @@ export default function Contacts() {
 
       {/* MODAL DE CONFIRMAÇÃO DE IMPORTAÇÃO (PREVIEW) */}
       <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>
-        <DialogContent className="max-w-3xl p-0 overflow-hidden border-none shadow-3xl rounded-[40px]">
+        <DialogContent className="max-w-3xl p-0 overflow-hidden border-none shadow-sm rounded-2xl">
            <div className="bg-slate-900 p-10 text-white flex justify-between items-center">
               <div>
-                <h2 className="text-2xl font-black uppercase tracking-tighter">Revisar Importação</h2>
-                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
+                <h2 className="text-2xl font-semibold tracking-tight">Revisar Importação</h2>
+                <p className="text-slate-400 text-xs font-bold mt-1">
                   Encontramos {importPreview.length} contatos no seu arquivo
                 </p>
               </div>
               <div className="bg-[#0D9488]/10 border border-[#0D9488]/20 p-4 rounded-2xl">
-                 <p className="text-[10px] font-black text-[#2DD4BF] uppercase tracking-widest">Proteção Ativa</p>
-                 <p className="text-[9px] text-white/60 font-medium">IA iniciará desativada</p>
+                 <p className="text-xs font-semibold text-[#2DD4BF] ">Proteção Ativa</p>
+                 <p className="text-xs text-white/60 font-medium">IA iniciará desativada</p>
               </div>
            </div>
 
@@ -573,15 +573,15 @@ export default function Contacts() {
                     {importPreview.map((p, i) => (
                       <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
                          <div className="flex items-center gap-4">
-                            <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-black text-slate-500">
+                            <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-semibold text-slate-500">
                                {i + 1}
                             </div>
                             <div>
-                               <p className="text-sm font-black text-slate-800 uppercase">{p.name}</p>
-                               <p className="text-[11px] font-bold text-slate-400">{p.phone}</p>
+                               <p className="text-sm font-semibold text-slate-800 uppercase">{p.name}</p>
+                               <p className="text-xs font-bold text-slate-400">{p.phone}</p>
                             </div>
                          </div>
-                         <Badge variant="outline" className="text-[9px] font-black border-slate-200 text-slate-400 uppercase">Pendente</Badge>
+                         <Badge variant="outline" className="text-xs font-semibold border-slate-200 text-slate-400 uppercase">Pendente</Badge>
                       </div>
                     ))}
                  </div>
@@ -591,13 +591,13 @@ export default function Contacts() {
                  <Button 
                    variant="ghost" 
                    onClick={() => setIsImportModalOpen(false)}
-                   className="flex-1 h-16 font-black uppercase text-xs tracking-widest text-slate-400 hover:text-slate-900"
+                   className="flex-1 h-16 font-semibold uppercase text-xs text-slate-400 hover:text-slate-900"
                  >
                     Cancelar
                  </Button>
                  <Button 
                    onClick={confirmImport} 
-                   className="flex-[2] h-16 bg-slate-900 hover:bg-black text-white font-black rounded-2xl uppercase tracking-widest shadow-2xl transition-all"
+                   className="flex-[2] h-11 bg-slate-900 hover:bg-black text-white font-semibold rounded-2xl shadow-sm transition-all"
                  >
                     <Save className="w-5 h-5 mr-3 text-[#0D9488]" /> Confirmar e Salvar
                  </Button>

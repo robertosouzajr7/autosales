@@ -134,7 +134,7 @@ export default function PublicBooking() {
               <div className="p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
                 <CalIcon className="w-6 h-6" />
               </div>
-              <span className="font-bold tracking-widest text-xs uppercase">Agentes Virtuais Scheduling</span>
+              <span className="font-bold text-xs uppercase">Agentes Virtuais Scheduling</span>
             </div>
             <CardTitle className="text-4xl font-extrabold tracking-tight">Reserve seu Horário</CardTitle>
             <CardDescription className="text-slate-400 text-lg mt-2">
@@ -219,10 +219,10 @@ export default function PublicBooking() {
                   key={time}
                   onClick={() => setSelectedTime(time)}
                   className={`py-3 rounded-xl border text-sm font-bold transition-all ${
-                    selectedTime === time 
-                    ? "bg-indigo-600 border-indigo-400 text-white shadow-lg shadow-indigo-900/40" 
-                    : "bg-slate-800/50 border-slate-700 text-slate-400 hover:border-slate-500 hover:bg-slate-800"
-                  }`}
+ selectedTime === time 
+ ? "bg-indigo-600 border-indigo-400 text-white shadow-lg shadow-indigo-900/40" 
+ : "bg-slate-800/50 border-slate-700 text-slate-400 hover:border-slate-500 hover:bg-slate-800"
+ }`}
                 >
                   {time}
                 </button>

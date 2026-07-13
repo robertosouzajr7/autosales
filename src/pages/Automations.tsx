@@ -174,7 +174,7 @@ const FLOW_TEMPLATES = [
 // =================== CUSTOM NODE COMPONENT ===================
 
 function AutomationNode({ data, selected }: any) {
-  if (!data) return <div className="p-4 border-2 border-red-500 bg-red-50 rounded-xl font-bold uppercase text-[10px] text-red-600">Erro de Dado</div>;
+  if (!data) return <div className="p-4 border-2 border-red-500 bg-red-50 rounded-xl font-bold uppercase text-xs text-red-600">Erro de Dado</div>;
 
   const typeDef = NODE_TYPES_DEF.find(t => t.id === (data.nodeType || "SEND_MSG"));
   const nodeType = data.nodeType || "SEND_MSG";
@@ -192,20 +192,20 @@ function AutomationNode({ data, selected }: any) {
     <div className={`relative transition-all duration-200 ${selected ? 'scale-105' : ''}`}>
       <Handle type="target" position={Position.Top} className="!w-3 !h-3 !bg-slate-300 !border-2 !border-white" />
 
-      <div className={`min-w-[220px] max-w-[280px] rounded-2xl bg-white shadow-xl border-2 transition-all ${selected ? 'border-emerald-400 shadow-[#0D9488]/20' : 'border-slate-100 hover:border-slate-300'}`}>
+      <div className={`min-w-[220px] max-w-[280px] rounded-2xl bg-white shadow-sm border-2 transition-all ${selected ? 'border-emerald-400 ' : 'border-slate-100 hover:border-slate-300'}`}>
         <div className="flex items-center gap-3 p-4">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg shrink-0" style={{ backgroundColor: typeDef?.color || "#64748b" }}>
             {typeDef?.icon || <Zap className="w-4 h-4" />}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{nodeType}</p>
-            <p className="text-[11px] font-black text-slate-900 truncate">{data.label || typeDef?.label || "Bloco"}</p>
+            <p className="text-xs font-semibold text-slate-300 ">{nodeType}</p>
+            <p className="text-xs font-semibold text-slate-900 truncate">{data.label || typeDef?.label || "Bloco"}</p>
           </div>
         </div>
 
         {config.message && (
           <div className="px-4 pb-3">
-            <p className="text-[9px] text-slate-400 bg-slate-50 rounded-lg p-2 truncate font-medium">
+            <p className="text-xs text-slate-400 bg-slate-50 rounded-lg p-2 truncate font-medium">
               💬 {String(config.message).substring(0, 50)}...
             </p>
           </div>
@@ -213,7 +213,7 @@ function AutomationNode({ data, selected }: any) {
 
         {config.prompt && !['SEND_MSG', 'AB_TEST'].includes(nodeType) && (
           <div className="px-4 pb-3">
-            <p className="text-[9px] text-teal-400 bg-teal-50 rounded-lg p-2 truncate font-medium">
+            <p className="text-xs text-teal-400 bg-teal-50 rounded-lg p-2 truncate font-medium">
               🤖 {String(config.prompt).substring(0, 50)}...
             </p>
           </div>
@@ -221,8 +221,8 @@ function AutomationNode({ data, selected }: any) {
 
         {isCondition && (
           <div className="px-4 pb-3 grid grid-cols-2 gap-2">
-            <div className="text-center p-1.5 rounded-lg text-[8px] font-black uppercase bg-teal-50 text-[#0D9488]">✅ SIM</div>
-            <div className="text-center p-1.5 rounded-lg text-[8px] font-black uppercase bg-red-50 text-red-500">❌ NÃO</div>
+            <div className="text-center p-1.5 rounded-lg text-xs font-semibold uppercase bg-teal-50 text-[#0D9488]">✅ SIM</div>
+            <div className="text-center p-1.5 rounded-lg text-xs font-semibold uppercase bg-red-50 text-red-500">❌ NÃO</div>
           </div>
         )}
 
@@ -230,7 +230,7 @@ function AutomationNode({ data, selected }: any) {
           <div className="px-4 pb-3">
             <div className="flex flex-wrap gap-1">
               {(config.intents || [{id:'comprar'},{id:'duvida'},{id:'outro'}]).slice(0, 4).map((i: any) => (
-                <span key={i?.id || Math.random()} className="text-[7px] bg-teal-50 text-teal-600 px-1.5 py-0.5 rounded-full font-black uppercase">{i?.id || "OUTRO"}</span>
+                <span key={i?.id || Math.random()} className="text-xs bg-teal-50 text-teal-600 px-1.5 py-0.5 rounded-full font-semibold uppercase">{i?.id || "OUTRO"}</span>
               ))}
             </div>
           </div>
@@ -238,15 +238,15 @@ function AutomationNode({ data, selected }: any) {
 
         {isAIScore && (
           <div className="px-4 pb-3 grid grid-cols-3 gap-1">
-            <div className="text-center p-1 rounded-lg text-[7px] font-black uppercase bg-red-50 text-red-500">🥶 Frio</div>
-            <div className="text-center p-1 rounded-lg text-[7px] font-black uppercase bg-amber-50 text-amber-600">☀️ Morno</div>
-            <div className="text-center p-1 rounded-lg text-[7px] font-black uppercase bg-teal-50 text-[#0D9488]">🔥 Quente</div>
+            <div className="text-center p-1 rounded-lg text-xs font-semibold uppercase bg-red-50 text-red-500">🥶 Frio</div>
+            <div className="text-center p-1 rounded-lg text-xs font-semibold uppercase bg-amber-50 text-amber-600">☀️ Morno</div>
+            <div className="text-center p-1 rounded-lg text-xs font-semibold uppercase bg-teal-50 text-[#0D9488]">🔥 Quente</div>
           </div>
         )}
 
         {isABTest && config.variants && (
           <div className="px-4 pb-3">
-            <p className="text-[8px] text-orange-500 font-bold">{Array.isArray(config.variants) ? config.variants.length : 0} variantes</p>
+            <p className="text-xs text-orange-500 font-bold">{Array.isArray(config.variants) ? config.variants.length : 0} variantes</p>
           </div>
         )}
       </div>
@@ -591,11 +591,11 @@ export default function Automations() {
         {/* HEADER */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-1">
-            <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase flex items-center gap-3">
+            <h1 className="text-3xl font-semibold text-slate-900 tracking-tight uppercase flex items-center gap-3">
               <Zap className="w-8 h-8 text-[#0D9488]" />
-              Hub de <span className="text-[#0D9488] italic">Automações</span>
+              Hub de <span className="text-[#0D9488]">Automações</span>
             </h1>
-            <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">
+            <p className="text-slate-400 font-bold text-xs">
               Builder Visual Drag & Drop — Powered by ReactFlow
             </p>
           </div>
@@ -603,9 +603,9 @@ export default function Automations() {
           <div className="flex gap-3 items-center">
             {execStats && (
               <div className="hidden lg:flex items-center gap-6 mr-4">
-                <div className="text-center"><p className="text-[9px] font-black text-slate-300 uppercase">Total</p><p className="text-lg font-black text-slate-900">{execStats.total || 0}</p></div>
-                <div className="text-center"><p className="text-[9px] font-black text-[#2DD4BF] uppercase">OK</p><p className="text-lg font-black text-[#0D9488]">{execStats.completed || 0}</p></div>
-                <div className="text-center"><p className="text-[9px] font-black text-red-400 uppercase">Falhas</p><p className="text-lg font-black text-red-500">{execStats.failed || 0}</p></div>
+                <div className="text-center"><p className="text-xs font-semibold text-slate-300 uppercase">Total</p><p className="text-lg font-semibold text-slate-900">{execStats.total || 0}</p></div>
+                <div className="text-center"><p className="text-xs font-semibold text-[#2DD4BF] uppercase">OK</p><p className="text-lg font-semibold text-[#0D9488]">{execStats.completed || 0}</p></div>
+                <div className="text-center"><p className="text-xs font-semibold text-red-400 uppercase">Falhas</p><p className="text-lg font-semibold text-red-500">{execStats.failed || 0}</p></div>
               </div>
             )}
             <div className="flex flex-col items-end gap-1">
@@ -613,19 +613,19 @@ export default function Automations() {
                 <Button 
                   onClick={() => hasSdr ? setShowTemplates(true) : toast({ title: "SDR Necessário", description: "Contrate um SDR antes de criar automações.", variant: "destructive" })} 
                   variant="outline" 
-                  className={`h-11 px-6 rounded-2xl font-black uppercase text-[10px] tracking-widest border-2 ${!hasSdr ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`h-11 px-6 rounded-2xl font-semibold uppercase text-xs border-2 ${!hasSdr ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <Layers className="w-4 h-4 mr-2" /> Templates
                 </Button>
                 <Button 
                   onClick={() => hasSdr ? setIsAddModalOpen(true) : toast({ title: "SDR Necessário", description: "Contrate um SDR antes de criar automações.", variant: "destructive" })} 
-                  className={`h-11 px-6 rounded-2xl font-black uppercase text-[10px] tracking-widest text-white shadow-xl ${!hasSdr ? 'bg-slate-700 cursor-not-allowed' : 'bg-[#0D9488] hover:bg-[#0F766E] shadow-[#0D9488]/20'}`}
+                  className={`h-11 px-6 rounded-2xl font-semibold uppercase text-xs text-white shadow-sm ${!hasSdr ? 'bg-slate-700 cursor-not-allowed' : 'bg-[#0D9488] hover:bg-[#0F766E] '}`}
                 >
                   <Plus className="w-4 h-4 mr-2" /> Criar
                 </Button>
               </div>
               {!hasSdr && (
-                <p className="text-[8px] font-black text-[#0D9488] uppercase tracking-widest animate-pulse mr-1">Requer SDR Contratado</p>
+                <p className="text-xs font-semibold text-[#0D9488] animate-pulse mr-1">Requer SDR Contratado</p>
               )}
             </div>
           </div>
@@ -635,7 +635,7 @@ export default function Automations() {
         {autos.length === 0 && !loading ? (
           <div className="flex flex-col items-center justify-center py-32 opacity-40">
             <Zap className="w-16 h-16 text-slate-200 mb-4" />
-            <p className="text-sm font-black uppercase tracking-widest text-slate-400">Crie seu primeiro workflow</p>
+            <p className="text-sm font-semibold text-slate-400">Crie seu primeiro workflow</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -643,20 +643,20 @@ export default function Automations() {
               const triggerDef = TRIGGERS.find(t => t.id === auto.trigger);
               const nodeCount = (() => { try { return JSON.parse(auto.nodes || "[]").length; } catch { return 0; } })();
               return (
-                <Card key={auto.id} className="border-none shadow-xl rounded-[32px] bg-white overflow-hidden hover:-translate-y-1 transition-all duration-300 group">
+                <Card key={auto.id} className="border-none shadow-sm rounded-[32px] bg-white overflow-hidden hover:-translate-y-1 transition-all duration-300 group">
                   <CardContent className="p-0">
                     <div className="p-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between group-hover:bg-slate-900 transition-colors duration-300">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg" style={{ backgroundColor: auto.active ? (triggerDef?.color || "#10b981") : "#94a3b8" }}>
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg" style={{ backgroundColor: auto.active ? (triggerDef?.color || "#10b981") : "#94a3b8" }}>
                           {triggerDef?.icon || <Zap className="w-6 h-6" />}
                         </div>
                         <div>
-                          <h3 className="text-base font-black text-slate-800 tracking-tight group-hover:text-white transition-colors">{auto.name}</h3>
+                          <h3 className="text-base font-semibold text-slate-800 tracking-tight group-hover:text-white transition-colors">{auto.name}</h3>
                           <div className="flex items-center gap-2">
-                            <Badge className={`text-[7px] font-black border-none ${auto.active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>
+                            <Badge className={`text-xs font-semibold border-none ${auto.active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>
                               {auto.active ? "ATIVO" : "PAUSADO"}
                             </Badge>
-                            <span className="text-[8px] font-bold text-slate-400 group-hover:text-white/30">{triggerDef?.label}</span>
+                            <span className="text-xs font-bold text-slate-400 group-hover:text-white/30">{triggerDef?.label}</span>
                           </div>
                         </div>
                       </div>
@@ -664,16 +664,16 @@ export default function Automations() {
                     </div>
                     <div className="p-6 space-y-4">
                       <div className="grid grid-cols-2 gap-3">
-                        <div className="p-3 bg-slate-50 rounded-xl text-center"><p className="text-[7px] font-black text-slate-300 uppercase">Execuções</p><p className="text-lg font-black text-slate-700">{auto.totalExecutions || 0}</p></div>
-                        <div className="p-3 bg-slate-50 rounded-xl text-center"><p className="text-[7px] font-black text-slate-300 uppercase">Nós</p><p className="text-lg font-black text-slate-700">{nodeCount}</p></div>
+                        <div className="p-3 bg-slate-50 rounded-xl text-center"><p className="text-xs font-semibold text-slate-300 uppercase">Execuções</p><p className="text-lg font-semibold text-slate-700">{auto.totalExecutions || 0}</p></div>
+                        <div className="p-3 bg-slate-50 rounded-xl text-center"><p className="text-xs font-semibold text-slate-300 uppercase">Nós</p><p className="text-lg font-semibold text-slate-700">{nodeCount}</p></div>
                       </div>
-                      {auto.description && <p className="text-[10px] text-slate-400 font-medium line-clamp-2">{auto.description}</p>}
+                      {auto.description && <p className="text-xs text-slate-400 font-medium line-clamp-2">{auto.description}</p>}
                       <div className="flex items-center justify-between pt-1">
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg" onClick={() => duplicateAuto(auto.id)}><Copy className="w-3.5 h-3.5 text-slate-300" /></Button>
                           <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg hover:bg-red-50" onClick={() => deleteAuto(auto.id)}><Trash2 className="w-3.5 h-3.5 text-slate-300" /></Button>
                         </div>
-                        <button onClick={() => openBuilder(auto)} className="text-[#0D9488] font-black text-[10px] uppercase tracking-widest flex items-center gap-1 hover:gap-2 transition-all">
+                        <button onClick={() => openBuilder(auto)} className="text-[#0D9488] font-semibold text-xs flex items-center gap-1 hover:gap-2 transition-all">
                           Editar <ArrowRight className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -690,38 +690,38 @@ export default function Automations() {
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
         <DialogContent className="rounded-[32px] p-10 max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black flex items-center gap-2"><Zap className="text-[#0D9488]" /> Novo Workflow</DialogTitle>
+            <DialogTitle className="text-2xl font-semibold flex items-center gap-2"><Zap className="text-[#0D9488]" /> Novo Workflow</DialogTitle>
           </DialogHeader>
           <div className="grid gap-5 py-4">
             <div className="space-y-2">
-              <Label className="font-bold text-xs uppercase tracking-widest">Nome</Label>
-              <Input value={newAuto.name} onChange={e => setNewAuto({ ...newAuto, name: e.target.value })} className="h-14 rounded-2xl border-2 border-slate-50" placeholder="Ex: Follow-up Inteligente" />
+              <Label className="font-bold text-xs ">Nome</Label>
+              <Input value={newAuto.name} onChange={e => setNewAuto({ ...newAuto, name: e.target.value })} className="h-10 rounded-2xl border-2 border-slate-50" placeholder="Ex: Follow-up Inteligente" />
             </div>
             <div className="space-y-2">
-              <Label className="font-bold text-xs uppercase tracking-widest">Gatilho</Label>
+              <Label className="font-bold text-xs ">Gatilho</Label>
               <Select value={newAuto.trigger} onValueChange={v => setNewAuto({ ...newAuto, trigger: v })}>
-                <SelectTrigger className="h-14 rounded-2xl border-2 border-slate-50 font-bold"><SelectValue /></SelectTrigger>
-                <SelectContent className="rounded-2xl shadow-2xl">
+                <SelectTrigger className="h-10 rounded-2xl border-2 border-slate-50 font-bold"><SelectValue /></SelectTrigger>
+                <SelectContent className="rounded-2xl shadow-sm">
                   {TRIGGERS.map(t => <SelectItem key={t.id} value={t.id} className="font-bold py-3"><span className="flex items-center gap-2">{t.icon} {t.label}</span></SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             {newAuto.trigger === "KEYWORD" && (
               <div className="space-y-2">
-                <Label className="font-bold text-xs uppercase tracking-widest">Palavras-chave</Label>
-                <Input placeholder="preço, promoção, desconto" onChange={e => setNewAuto({ ...newAuto, triggerConfig: JSON.stringify({ keywords: e.target.value.split(",").map(k => k.trim()) }) })} className="h-12 rounded-2xl border-2 border-slate-50" />
+                <Label className="font-bold text-xs ">Palavras-chave</Label>
+                <Input placeholder="preço, promoção, desconto" onChange={e => setNewAuto({ ...newAuto, triggerConfig: JSON.stringify({ keywords: e.target.value.split(",").map(k => k.trim()) }) })} className="h-10 rounded-2xl border-2 border-slate-50" />
               </div>
             )}
             {newAuto.trigger === "INACTIVITY" && (
               <div className="space-y-2">
-                <Label className="font-bold text-xs uppercase tracking-widest">Minutos de Inatividade</Label>
-                <Input type="number" defaultValue={1440} onChange={e => setNewAuto({ ...newAuto, triggerConfig: JSON.stringify({ inactivityMinutes: parseInt(e.target.value) }) })} className="h-12 rounded-2xl border-2 border-slate-50" />
+                <Label className="font-bold text-xs ">Minutos de Inatividade</Label>
+                <Input type="number" defaultValue={1440} onChange={e => setNewAuto({ ...newAuto, triggerConfig: JSON.stringify({ inactivityMinutes: parseInt(e.target.value) }) })} className="h-10 rounded-2xl border-2 border-slate-50" />
               </div>
             )}
             {newAuto.trigger === "SCHEDULE" && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="font-bold text-xs uppercase tracking-widest">Frequência</Label>
+                  <Label className="font-bold text-xs ">Frequência</Label>
                   <Select defaultValue="daily_9" onValueChange={v => {
                     const presets: Record<string, string> = {
                       "every_hour": "0 * * * *",
@@ -734,8 +734,8 @@ export default function Automations() {
                     const prev = JSON.parse(newAuto.triggerConfig || "{}");
                     setNewAuto({ ...newAuto, triggerConfig: JSON.stringify({ ...prev, schedule: presets[v], preset: v }) });
                   }}>
-                    <SelectTrigger className="h-12 rounded-2xl border-2 border-slate-50 font-bold"><SelectValue placeholder="Diário às 9h" /></SelectTrigger>
-                    <SelectContent className="rounded-2xl shadow-xl">
+                    <SelectTrigger className="h-10 rounded-2xl border-2 border-slate-50 font-bold"><SelectValue placeholder="Diário às 9h" /></SelectTrigger>
+                    <SelectContent className="rounded-2xl shadow-sm">
                       <SelectItem value="every_hour">A cada hora</SelectItem>
                       <SelectItem value="daily_9">Diário às 9h</SelectItem>
                       <SelectItem value="daily_14">Diário às 14h</SelectItem>
@@ -747,26 +747,26 @@ export default function Automations() {
                 </div>
                 {(() => { try { return JSON.parse(newAuto.triggerConfig || "{}").preset === "custom"; } catch { return false; } })() && (
                   <div className="space-y-2">
-                    <Label className="font-bold text-xs uppercase tracking-widest">Expressão Cron</Label>
+                    <Label className="font-bold text-xs ">Expressão Cron</Label>
                     <Input placeholder="0 9 * * 1-5" onChange={e => {
                       const prev = JSON.parse(newAuto.triggerConfig || "{}");
                       setNewAuto({ ...newAuto, triggerConfig: JSON.stringify({ ...prev, schedule: e.target.value }) });
-                    }} className="h-12 rounded-2xl border-2 border-slate-50 font-mono tracking-widest" />
-                    <p className="text-[10px] font-bold text-slate-400">Formato: minuto hora dia mês dia_semana</p>
+                    }} className="h-10 rounded-2xl border-2 border-slate-50 font-mono " />
+                    <p className="text-xs font-bold text-slate-400">Formato: minuto hora dia mês dia_semana</p>
                   </div>
                 )}
                 <div className="space-y-2">
-                  <Label className="font-bold text-xs uppercase tracking-widest">Filtro Alvo (Aplicar para:)</Label>
+                  <Label className="font-bold text-xs ">Filtro Alvo (Aplicar para:)</Label>
                   <Select onValueChange={v => {
                       let cfg: any = { schedule: "0 9 * * *", targetFilter: { status: "NEW" }, preset: "daily_9" };
                       try { cfg = JSON.parse(newAuto.triggerConfig || "{}"); } catch(err){}
                       cfg.targetFilter = { status: v };
                       setNewAuto({ ...newAuto, triggerConfig: JSON.stringify(cfg) });
                   }}>
-                    <SelectTrigger className="h-12 rounded-2xl border-2 border-slate-50 font-bold">
+                    <SelectTrigger className="h-10 rounded-2xl border-2 border-slate-50 font-bold">
                       <SelectValue placeholder="Selecione o filtro dos leads..." />
                     </SelectTrigger>
-                    <SelectContent className="rounded-2xl shadow-xl">
+                    <SelectContent className="rounded-2xl shadow-sm">
                       <SelectItem value="NEW" className="font-bold">Leads Novos (Sem atendimento)</SelectItem>
                       <SelectItem value="INACTIVE_7_DAYS" className="font-bold">Leads Inativos (Últimos 7 dias)</SelectItem>
                       <SelectItem value="ALL" className="font-bold">Todos os Leads da Conta</SelectItem>
@@ -776,12 +776,12 @@ export default function Automations() {
               </div>
             )}
             <div className="space-y-2">
-              <Label className="font-bold text-xs uppercase tracking-widest">Descrição</Label>
+              <Label className="font-bold text-xs ">Descrição</Label>
               <Textarea value={newAuto.description} onChange={e => setNewAuto({ ...newAuto, description: e.target.value })} className="min-h-[80px] rounded-2xl border-2 border-slate-50" placeholder="O que este fluxo faz?" />
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleCreateAuto} className="w-full h-14 bg-slate-900 hover:bg-slate-800 text-white font-black rounded-2xl uppercase tracking-widest text-sm shadow-2xl">
+            <Button onClick={handleCreateAuto} className="w-full h-10 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-2xl text-sm shadow-sm">
               <Save className="w-4 h-4 mr-2 text-[#0D9488]" /> Criar Automação
             </Button>
           </DialogFooter>
@@ -792,7 +792,7 @@ export default function Automations() {
       <Dialog open={showTemplates} onOpenChange={setShowTemplates}>
         <DialogContent className="rounded-[32px] p-10 max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black flex items-center gap-2"><Layers className="text-teal-500" /> Templates Pré-Configurados</DialogTitle>
+            <DialogTitle className="text-2xl font-semibold flex items-center gap-2"><Layers className="text-teal-500" /> Templates Pré-Configurados</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             {FLOW_TEMPLATES.map((tmpl, i) => {
@@ -801,15 +801,15 @@ export default function Automations() {
                 <div key={i} className="p-6 rounded-2xl border-2 border-slate-100 hover:border-teal-200 transition-all cursor-pointer group" onClick={() => createFromTemplate(tmpl)}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg" style={{ backgroundColor: trigDef?.color || "#10b981" }}>
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg" style={{ backgroundColor: trigDef?.color || "#10b981" }}>
                         {trigDef?.icon || <Zap className="w-6 h-6" />}
                       </div>
                       <div>
-                        <h4 className="text-base font-black text-slate-900">{tmpl.name}</h4>
-                        <p className="text-[10px] text-slate-400 font-medium">{tmpl.description}</p>
+                        <h4 className="text-base font-semibold text-slate-900">{tmpl.name}</h4>
+                        <p className="text-xs text-slate-400 font-medium">{tmpl.description}</p>
                         <div className="flex gap-2 mt-2">
-                          <Badge className="text-[7px] bg-slate-100 text-slate-500 border-none font-black">{trigDef?.label}</Badge>
-                          <Badge className="text-[7px] bg-teal-100 text-teal-600 border-none font-black">{tmpl.nodes.length} nós</Badge>
+                          <Badge className="text-xs bg-slate-100 text-slate-500 border-none font-semibold">{trigDef?.label}</Badge>
+                          <Badge className="text-xs bg-teal-100 text-teal-600 border-none font-semibold">{tmpl.nodes.length} nós</Badge>
                         </div>
                       </div>
                     </div>
@@ -824,22 +824,22 @@ export default function Automations() {
 
       {/* =============== BUILDER (REACTFLOW) =============== */}
       <Dialog open={isBuilderOpen} onOpenChange={setIsBuilderOpen}>
-        <DialogContent className="max-w-[1500px] h-[94vh] p-0 overflow-hidden border-none shadow-3xl rounded-[32px] flex flex-col bg-slate-50">
+        <DialogContent className="max-w-[1500px] h-[94vh] p-0 overflow-hidden border-none shadow-sm rounded-[32px] flex flex-col bg-slate-50">
 
           {/* Header */}
           <div className="p-5 bg-white border-b border-slate-100 flex items-center justify-between shrink-0 z-10">
             <div className="flex items-center gap-4">
               <div className="bg-[#0D9488] p-2.5 rounded-xl shadow-lg"><Zap className="text-white w-5 h-5" /></div>
               <div>
-                <h2 className="text-lg font-black text-slate-900 tracking-tight leading-none uppercase">{selectedAuto?.name}</h2>
-                <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-widest">
+                <h2 className="text-lg font-semibold text-slate-900 tracking-tight leading-none uppercase">{selectedAuto?.name}</h2>
+                <p className="text-xs font-bold text-slate-400 mt-1 ">
                   {nodes.length} blocos · {edges.length} conexões · Trigger: {TRIGGERS.find(t => t.id === selectedAuto?.trigger)?.label || selectedAuto?.trigger}
                 </p>
               </div>
             </div>
             <div className="flex gap-3">
               <Button onClick={() => setIsBuilderOpen(false)} variant="ghost" className="h-10 w-10 rounded-xl text-slate-300"><X className="w-5 h-5" /></Button>
-              <Button onClick={handleSaveWorkflow} className="h-10 bg-slate-900 hover:bg-black px-6 rounded-xl font-black uppercase text-[10px] tracking-widest text-white shadow-xl">
+              <Button onClick={handleSaveWorkflow} className="h-10 bg-slate-900 hover:bg-black px-6 rounded-xl font-semibold uppercase text-xs text-white shadow-sm">
                 <Save className="w-4 h-4 mr-2 text-[#0D9488]" /> Salvar
               </Button>
             </div>
@@ -848,7 +848,7 @@ export default function Automations() {
           <div className="flex-1 flex overflow-hidden">
             {/* SIDEBAR */}
             <div className="w-56 bg-white border-r border-slate-100 p-3 flex flex-col gap-3 overflow-y-auto shrink-0">
-              <h4 className="text-[8px] font-black text-slate-300 uppercase tracking-widest px-2">Ações — arraste ou clique</h4>
+              <h4 className="text-xs font-semibold text-slate-300 px-2">Ações — arraste ou clique</h4>
               {NODE_TYPES_DEF.filter(t => t.category === "action").map(st => (
                 <div
                   key={st.id}
@@ -859,12 +859,12 @@ export default function Automations() {
                 >
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-md shrink-0" style={{ backgroundColor: st.color }}>{st.icon}</div>
                   <div className="flex flex-1 items-center justify-between">
-                     <span className="text-[9px] font-black uppercase text-slate-600 tracking-tight">{st.label}</span>
+                     <span className="text-xs font-semibold uppercase text-slate-600 tracking-tight">{st.label}</span>
                      {(st.id === "HTTP_REQUEST" && !tenantLimits?.webhookEnabled) && <Lock className="w-3 h-3 text-red-400" />}
                   </div>
                 </div>
               ))}
-              <h4 className="text-[8px] font-black text-teal-400 uppercase tracking-widest px-2 mt-2">⚡ IA Avançada</h4>
+              <h4 className="text-xs font-semibold text-teal-400 px-2 mt-2">⚡ IA Avançada</h4>
               {NODE_TYPES_DEF.filter(t => t.category === "ai").map(st => (
                 <div
                   key={st.id}
@@ -875,12 +875,12 @@ export default function Automations() {
                 >
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-md shrink-0" style={{ backgroundColor: st.color }}>{st.icon}</div>
                   <div className="flex flex-1 items-center justify-between">
-                    <span className="text-[9px] font-black uppercase text-slate-600 tracking-tight">{st.label}</span>
+                    <span className="text-xs font-semibold uppercase text-slate-600 tracking-tight">{st.label}</span>
                     {!tenantLimits.aiEnabled && <Lock className="w-3 h-3 text-red-400" />}
                   </div>
                 </div>
               ))}
-              <h4 className="text-[8px] font-black text-slate-300 uppercase tracking-widest px-2 mt-2">Lógica</h4>
+              <h4 className="text-xs font-semibold text-slate-300 px-2 mt-2">Lógica</h4>
               {NODE_TYPES_DEF.filter(t => t.category === "logic").map(st => (
                 <div
                   key={st.id}
@@ -890,15 +890,15 @@ export default function Automations() {
                   className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-slate-50 active:scale-95 transition-all cursor-grab active:cursor-grabbing border border-transparent hover:border-slate-100"
                 >
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-md shrink-0" style={{ backgroundColor: st.color }}>{st.icon}</div>
-                  <span className="text-[9px] font-black uppercase text-slate-600 tracking-tight">{st.label}</span>
+                  <span className="text-xs font-semibold uppercase text-slate-600 tracking-tight">{st.label}</span>
                 </div>
               ))}
 
               <div className="mt-auto p-3 bg-teal-50 border border-teal-100 rounded-xl">
-                <p className="text-[8px] font-black text-teal-700 uppercase tracking-widest mb-2">Variáveis</p>
+                <p className="text-xs font-semibold text-teal-700 mb-2">Variáveis</p>
                 <div className="flex flex-wrap gap-1">
                   {VARIABLE_HINTS.slice(0, 10).map(v => (
-                    <span key={v} className="text-[7px] bg-teal-100 text-teal-600 px-1.5 py-0.5 rounded-full font-bold cursor-pointer hover:bg-teal-200" onClick={() => navigator.clipboard.writeText(v)}>
+                    <span key={v} className="text-xs bg-teal-100 text-teal-600 px-1.5 py-0.5 rounded-full font-bold cursor-pointer hover:bg-teal-200" onClick={() => navigator.clipboard.writeText(v)}>
                       {v}
                     </span>
                   ))}
@@ -924,19 +924,19 @@ export default function Automations() {
                 deleteKeyCode={["Backspace", "Delete"]}
               >
                 <Background color="#e2e8f0" gap={20} size={1} />
-                <Controls className="!rounded-xl !shadow-xl !border-none" />
+                <Controls className="!rounded-xl !shadow-sm !border-none" />
                 <MiniMap
                   nodeColor={(node) => {
                     const typeDef = NODE_TYPES_DEF.find(t => t.id === (node.data as any).nodeType);
                     return typeDef?.color || "#94a3b8";
                   }}
-                  className="!rounded-xl !shadow-xl !border-none"
+                  className="!rounded-xl !shadow-sm !border-none"
                   maskColor="rgba(0,0,0,0.05)"
                 />
                 <Panel position="top-right" className="flex gap-2">
                   <div className="bg-white/80 backdrop-blur-sm rounded-xl px-4 py-2 shadow-lg flex items-center gap-2">
                     <Map className="w-4 h-4 text-slate-400" />
-                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                    <span className="text-xs font-semibold text-slate-500 ">
                       Arraste blocos do menu · Conecte arrastando os handles
                     </span>
                   </div>
@@ -948,7 +948,7 @@ export default function Automations() {
             {selectedNode && selectedNodeData && (
               <div className="w-72 bg-white border-l border-slate-100 p-5 overflow-y-auto shrink-0">
                 <div className="flex items-center justify-between mb-5">
-                  <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Propriedades</h4>
+                  <h4 className="text-xs font-semibold text-slate-400 ">Propriedades</h4>
                   <div className="flex gap-1">
                     <Button variant="ghost" size="icon" className="w-7 h-7 rounded-lg hover:bg-red-50" onClick={() => removeNode(selectedNode.id)}>
                       <Trash2 className="w-3.5 h-3.5 text-red-400" />
@@ -962,7 +962,7 @@ export default function Automations() {
                 <div className="space-y-4">
                   {selectedNodeData.nodeType === "SEND_MSG" && (
                     <div className="space-y-2">
-                      <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Mensagem</Label>
+                      <Label className="text-xs font-semibold text-slate-400">Mensagem</Label>
                       <Textarea value={selectedNodeData.config?.message || ""} onChange={e => updateNodeConfig(selectedNode.id, "message", e.target.value)} className="min-h-[100px] rounded-xl border-slate-100 text-xs" placeholder="Olá {{lead.name}}! 👋" />
                     </div>
                   )}
@@ -970,11 +970,11 @@ export default function Automations() {
                   {selectedNodeData.nodeType === "WAIT" && (
                     <>
                       <div className="space-y-2">
-                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Tempo</Label>
+                        <Label className="text-xs font-semibold text-slate-400">Tempo</Label>
                         <Input type="number" value={selectedNodeData.config?.value || 1} onChange={e => updateNodeConfig(selectedNode.id, "value", parseInt(e.target.value))} className="h-10 rounded-lg" />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Unidade</Label>
+                        <Label className="text-xs font-semibold text-slate-400">Unidade</Label>
                         <Select value={selectedNodeData.config?.unit || "hour"} onValueChange={v => updateNodeConfig(selectedNode.id, "unit", v)}>
                           <SelectTrigger className="h-10 rounded-lg"><SelectValue /></SelectTrigger>
                           <SelectContent><SelectItem value="min">Minutos</SelectItem><SelectItem value="hour">Horas</SelectItem><SelectItem value="day">Dias</SelectItem></SelectContent>
@@ -986,13 +986,13 @@ export default function Automations() {
                   {selectedNodeData.nodeType === "COLLECT_INPUT" && (
                     <>
                       <div className="space-y-2">
-                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Pergunta</Label>
+                        <Label className="text-xs font-semibold text-slate-400">Pergunta</Label>
                         <Textarea value={selectedNodeData.config?.prompt || ""} onChange={e => updateNodeConfig(selectedNode.id, "prompt", e.target.value)} className="min-h-[80px] rounded-xl text-xs" placeholder="Qual seu nome?" />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Variável</Label>
+                        <Label className="text-xs font-semibold text-slate-400">Variável</Label>
                         <Input value={selectedNodeData.config?.variable || "resposta"} onChange={e => updateNodeConfig(selectedNode.id, "variable", e.target.value)} className="h-10 rounded-lg" />
-                        <p className="text-[7px] text-cyan-500 font-bold">Acesse: {"{{input." + (selectedNodeData.config?.variable || "resposta") + "}}"}</p>
+                        <p className="text-xs text-cyan-500 font-bold">Acesse: {"{{input." + (selectedNodeData.config?.variable || "resposta") + "}}"}</p>
                       </div>
                     </>
                   )}
@@ -1000,11 +1000,11 @@ export default function Automations() {
                   {selectedNodeData.nodeType === "AI_RESPONSE" && (
                     <>
                       <div className="space-y-2">
-                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Prompt IA</Label>
+                        <Label className="text-xs font-semibold text-slate-400">Prompt IA</Label>
                         <Textarea value={selectedNodeData.config?.prompt || ""} onChange={e => updateNodeConfig(selectedNode.id, "prompt", e.target.value)} className="min-h-[100px] rounded-xl text-xs" placeholder="Qualifique o lead {{lead.name}}..." />
                       </div>
                       <div className="flex items-center justify-between p-2 bg-slate-50 rounded-lg">
-                        <span className="text-[8px] font-black uppercase text-slate-500">Enviar ao lead</span>
+                        <span className="text-xs font-semibold uppercase text-slate-500">Enviar ao lead</span>
                         <Switch checked={selectedNodeData.config?.sendToLead !== false} onCheckedChange={v => updateNodeConfig(selectedNode.id, "sendToLead", v)} />
                       </div>
                     </>
@@ -1018,20 +1018,20 @@ export default function Automations() {
                       </Select>
                       {(selectedNodeData.config?.rules || []).map((rule: any, rIdx: number) => (
                         <div key={rIdx} className="p-2 bg-slate-50 rounded-lg space-y-1.5">
-                          <Input value={rule.field} placeholder="{{lead.status}}" onChange={e => { const r = [...(selectedNodeData.config?.rules || [])]; r[rIdx] = { ...r[rIdx], field: e.target.value }; updateNodeConfig(selectedNode.id, "rules", r); }} className="h-8 rounded-md text-[10px]" />
+                          <Input value={rule.field} placeholder="{{lead.status}}" onChange={e => { const r = [...(selectedNodeData.config?.rules || [])]; r[rIdx] = { ...r[rIdx], field: e.target.value }; updateNodeConfig(selectedNode.id, "rules", r); }} className="h-8 rounded-md text-xs" />
                           <Select value={rule.operator} onValueChange={v => { const r = [...(selectedNodeData.config?.rules || [])]; r[rIdx] = { ...r[rIdx], operator: v }; updateNodeConfig(selectedNode.id, "rules", r); }}>
-                            <SelectTrigger className="h-8 rounded-md text-[10px]"><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="h-8 rounded-md text-xs"><SelectValue /></SelectTrigger>
                             <SelectContent>{OPERATORS.map(op => <SelectItem key={op.id} value={op.id}>{op.label}</SelectItem>)}</SelectContent>
                           </Select>
                           {!["empty", "not_empty"].includes(rule.operator) && (
-                            <Input value={rule.value} placeholder="Valor" onChange={e => { const r = [...(selectedNodeData.config?.rules || [])]; r[rIdx] = { ...r[rIdx], value: e.target.value }; updateNodeConfig(selectedNode.id, "rules", r); }} className="h-8 rounded-md text-[10px]" />
+                            <Input value={rule.value} placeholder="Valor" onChange={e => { const r = [...(selectedNodeData.config?.rules || [])]; r[rIdx] = { ...r[rIdx], value: e.target.value }; updateNodeConfig(selectedNode.id, "rules", r); }} className="h-8 rounded-md text-xs" />
                           )}
-                          <Button variant="ghost" size="sm" className="text-red-400 text-[8px] p-0 h-6" onClick={() => { const r = (selectedNodeData.config?.rules || []).filter((_: any, i: number) => i !== rIdx); updateNodeConfig(selectedNode.id, "rules", r); }}>
+                          <Button variant="ghost" size="sm" className="text-red-400 text-xs p-0 h-6" onClick={() => { const r = (selectedNodeData.config?.rules || []).filter((_: any, i: number) => i !== rIdx); updateNodeConfig(selectedNode.id, "rules", r); }}>
                             <Trash2 className="w-3 h-3 mr-1" /> Remover
                           </Button>
                         </div>
                       ))}
-                      <Button variant="outline" size="sm" className="w-full rounded-lg text-[8px] font-black uppercase" onClick={() => updateNodeConfig(selectedNode.id, "rules", [...(selectedNodeData.config?.rules || []), { field: "", operator: "contains", value: "" }])}>
+                      <Button variant="outline" size="sm" className="w-full rounded-lg text-xs font-semibold uppercase" onClick={() => updateNodeConfig(selectedNode.id, "rules", [...(selectedNodeData.config?.rules || []), { field: "", operator: "contains", value: "" }])}>
                         <Plus className="w-3 h-3 mr-1" /> Regra
                       </Button>
                     </>
@@ -1039,47 +1039,47 @@ export default function Automations() {
 
                   {selectedNodeData.nodeType === "ADD_TAG" && (
                     <div className="space-y-2">
-                      <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Tag</Label>
+                      <Label className="text-xs font-semibold text-slate-400">Tag</Label>
                       <Input value={selectedNodeData.config?.tag || ""} onChange={e => updateNodeConfig(selectedNode.id, "tag", e.target.value)} className="h-10 rounded-lg" placeholder="quente" />
                     </div>
                   )}
 
                   {selectedNodeData.nodeType === "MOVE_STAGE" && (
                     <div className="space-y-2">
-                      <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Etapa</Label>
+                      <Label className="text-xs font-semibold text-slate-400">Etapa</Label>
                       <Input value={selectedNodeData.config?.stageName || ""} onChange={e => updateNodeConfig(selectedNode.id, "stageName", e.target.value)} className="h-10 rounded-lg" placeholder="Qualificando" />
                     </div>
                   )}
 
                   {selectedNodeData.nodeType === "TRANSFER_HUMAN" && (
                     <div className="space-y-2">
-                      <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Mensagem</Label>
+                      <Label className="text-xs font-semibold text-slate-400">Mensagem</Label>
                       <Textarea value={selectedNodeData.config?.message || ""} onChange={e => updateNodeConfig(selectedNode.id, "message", e.target.value)} className="min-h-[80px] rounded-xl text-xs" placeholder="Transferindo..." />
                     </div>
                   )}
 
                   {selectedNodeData.nodeType === "HTTP_REQUEST" && (
                     <>
-                      <div className="space-y-2"><Label className="text-[8px] font-black uppercase text-slate-400">URL</Label><Input value={selectedNodeData.config?.url || ""} onChange={e => updateNodeConfig(selectedNode.id, "url", e.target.value)} className="h-9 rounded-lg text-xs" /></div>
+                      <div className="space-y-2"><Label className="text-xs font-semibold uppercase text-slate-400">URL</Label><Input value={selectedNodeData.config?.url || ""} onChange={e => updateNodeConfig(selectedNode.id, "url", e.target.value)} className="h-9 rounded-lg text-xs" /></div>
                       <Select value={selectedNodeData.config?.method || "POST"} onValueChange={v => updateNodeConfig(selectedNode.id, "method", v)}>
                         <SelectTrigger className="h-9 rounded-lg"><SelectValue /></SelectTrigger>
                         <SelectContent><SelectItem value="GET">GET</SelectItem><SelectItem value="POST">POST</SelectItem><SelectItem value="PUT">PUT</SelectItem></SelectContent>
                       </Select>
-                      <div className="space-y-2"><Label className="text-[8px] font-black uppercase text-slate-400">Body</Label><Textarea value={selectedNodeData.config?.body || ""} onChange={e => updateNodeConfig(selectedNode.id, "body", e.target.value)} className="min-h-[60px] rounded-xl font-mono text-[10px]" /></div>
+                      <div className="space-y-2"><Label className="text-xs font-semibold uppercase text-slate-400">Body</Label><Textarea value={selectedNodeData.config?.body || ""} onChange={e => updateNodeConfig(selectedNode.id, "body", e.target.value)} className="min-h-[60px] rounded-xl font-mono text-xs" /></div>
                     </>
                   )}
 
                   {selectedNodeData.nodeType === "SCHEDULE_APPOINTMENT" && (
                     <>
-                      <div className="space-y-2"><Label className="text-[8px] font-black uppercase text-slate-400">Título</Label><Input value={selectedNodeData.config?.title || ""} onChange={e => updateNodeConfig(selectedNode.id, "title", e.target.value)} className="h-9 rounded-lg text-xs" /></div>
-                      <div className="space-y-2"><Label className="text-[8px] font-black uppercase text-slate-400">Data (ISO)</Label><Input value={selectedNodeData.config?.date || ""} onChange={e => updateNodeConfig(selectedNode.id, "date", e.target.value)} className="h-9 rounded-lg text-xs" placeholder="{{input.data}}" /></div>
+                      <div className="space-y-2"><Label className="text-xs font-semibold uppercase text-slate-400">Título</Label><Input value={selectedNodeData.config?.title || ""} onChange={e => updateNodeConfig(selectedNode.id, "title", e.target.value)} className="h-9 rounded-lg text-xs" /></div>
+                      <div className="space-y-2"><Label className="text-xs font-semibold uppercase text-slate-400">Data (ISO)</Label><Input value={selectedNodeData.config?.date || ""} onChange={e => updateNodeConfig(selectedNode.id, "date", e.target.value)} className="h-9 rounded-lg text-xs" placeholder="{{input.data}}" /></div>
                     </>
                   )}
 
                   {selectedNodeData.nodeType === "UPDATE_LEAD" && (
                     <>
-                      <div className="space-y-2"><Label className="text-[8px] font-black uppercase text-slate-400">Nome</Label><Input value={selectedNodeData.config?.name || ""} onChange={e => updateNodeConfig(selectedNode.id, "name", e.target.value)} className="h-9 rounded-lg text-xs" /></div>
-                      <div className="space-y-2"><Label className="text-[8px] font-black uppercase text-slate-400">Email</Label><Input value={selectedNodeData.config?.email || ""} onChange={e => updateNodeConfig(selectedNode.id, "email", e.target.value)} className="h-9 rounded-lg text-xs" /></div>
+                      <div className="space-y-2"><Label className="text-xs font-semibold uppercase text-slate-400">Nome</Label><Input value={selectedNodeData.config?.name || ""} onChange={e => updateNodeConfig(selectedNode.id, "name", e.target.value)} className="h-9 rounded-lg text-xs" /></div>
+                      <div className="space-y-2"><Label className="text-xs font-semibold uppercase text-slate-400">Email</Label><Input value={selectedNodeData.config?.email || ""} onChange={e => updateNodeConfig(selectedNode.id, "email", e.target.value)} className="h-9 rounded-lg text-xs" /></div>
                     </>
                   )}
 
@@ -1087,20 +1087,20 @@ export default function Automations() {
 
                   {selectedNodeData.nodeType === "SUBFLOW" && (
                     <div className="space-y-2">
-                      <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">ID da Automação</Label>
+                      <Label className="text-xs font-semibold text-slate-400">ID da Automação</Label>
                       <Input value={selectedNodeData.config?.automationId || ""} onChange={e => updateNodeConfig(selectedNode.id, "automationId", e.target.value)} className="h-9 rounded-lg text-xs font-mono" placeholder="UUID da automação alvo" />
-                      <p className="text-[7px] text-teal-400 font-bold">Dispara outra automação para o mesmo lead (enfileirado)</p>
+                      <p className="text-xs text-teal-400 font-bold">Dispara outra automação para o mesmo lead (enfileirado)</p>
                     </div>
                   )}
 
                   {selectedNodeData.nodeType === "SEND_MEDIA" && (
                     <>
                       <div className="space-y-2">
-                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">URL da Mídia</Label>
+                        <Label className="text-xs font-semibold text-slate-400">URL da Mídia</Label>
                         <Input value={selectedNodeData.config?.mediaUrl || ""} onChange={e => updateNodeConfig(selectedNode.id, "mediaUrl", e.target.value)} className="h-9 rounded-lg text-xs" placeholder="https://..." />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Tipo</Label>
+                        <Label className="text-xs font-semibold text-slate-400">Tipo</Label>
                         <Select value={selectedNodeData.config?.mediaType || "image"} onValueChange={v => updateNodeConfig(selectedNode.id, "mediaType", v)}>
                           <SelectTrigger className="h-9 rounded-lg"><SelectValue /></SelectTrigger>
                           <SelectContent>
@@ -1112,7 +1112,7 @@ export default function Automations() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Legenda</Label>
+                        <Label className="text-xs font-semibold text-slate-400">Legenda</Label>
                         <Textarea value={selectedNodeData.config?.caption || ""} onChange={e => updateNodeConfig(selectedNode.id, "caption", e.target.value)} className="min-h-[60px] rounded-xl text-xs" placeholder="Veja nosso catálogo..." />
                       </div>
                     </>
@@ -1123,14 +1123,14 @@ export default function Automations() {
                   {selectedNodeData.nodeType === "AI_TOOLS" && (
                     <>
                       <div className="space-y-2">
-                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Prompt IA</Label>
+                        <Label className="text-xs font-semibold text-slate-400">Prompt IA</Label>
                         <Textarea value={selectedNodeData.config?.prompt || ""} onChange={e => updateNodeConfig(selectedNode.id, "prompt", e.target.value)} className="min-h-[80px] rounded-xl text-xs" placeholder="Atenda o lead usando as ferramentas do CRM..." />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Ferramentas Habilitadas</Label>
+                        <Label className="text-xs font-semibold text-slate-400">Ferramentas Habilitadas</Label>
                         {["search_leads", "create_appointment", "move_lead_stage", "add_tag", "get_availability"].map(tool => (
                           <div key={tool} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg">
-                            <span className="text-[8px] font-bold text-slate-600 font-mono">{tool}</span>
+                            <span className="text-xs font-bold text-slate-600 font-mono">{tool}</span>
                             <Switch
                               checked={(selectedNodeData.config?.tools || ["search_leads", "create_appointment"]).includes(tool)}
                               onCheckedChange={v => {
@@ -1143,28 +1143,28 @@ export default function Automations() {
                         ))}
                       </div>
                       <div className="flex items-center justify-between p-2 bg-slate-50 rounded-lg">
-                        <span className="text-[8px] font-black uppercase text-slate-500">Enviar ao lead</span>
+                        <span className="text-xs font-semibold uppercase text-slate-500">Enviar ao lead</span>
                         <Switch checked={selectedNodeData.config?.sendToLead !== false} onCheckedChange={v => updateNodeConfig(selectedNode.id, "sendToLead", v)} />
                       </div>
-                      <p className="text-[7px] text-teal-400 font-bold">Resultado: {"{{ai.response}}"} · Tools: {"{{ai.tool_calls}}"}</p>
+                      <p className="text-xs text-teal-400 font-bold">Resultado: {"{{ai.response}}"} · Tools: {"{{ai.tool_calls}}"}</p>
                     </>
                   )}
 
                   {selectedNodeData.nodeType === "EXTRACT_DATA" && (
                     <>
                       <div className="space-y-2">
-                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Texto Fonte</Label>
+                        <Label className="text-xs font-semibold text-slate-400">Texto Fonte</Label>
                         <Input value={selectedNodeData.config?.sourceText || "{{conversation.last_message}}"} onChange={e => updateNodeConfig(selectedNode.id, "sourceText", e.target.value)} className="h-9 rounded-lg text-xs" />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Campos para Extrair</Label>
+                        <Label className="text-xs font-semibold text-slate-400">Campos para Extrair</Label>
                         <Textarea
                           value={(selectedNodeData.config?.fields || ["nome", "empresa", "cargo", "email", "telefone", "interesse"]).join(", ")}
                           onChange={e => updateNodeConfig(selectedNode.id, "fields", e.target.value.split(",").map((f: string) => f.trim()).filter(Boolean))}
                           className="min-h-[60px] rounded-xl text-xs"
                           placeholder="nome, empresa, cargo, email, interesse"
                         />
-                        <p className="text-[7px] text-cyan-500 font-bold">Dados salvos em {"{{extracted.campo}}"} e no Lead.extractedData</p>
+                        <p className="text-xs text-cyan-500 font-bold">Dados salvos em {"{{extracted.campo}}"} e no Lead.extractedData</p>
                       </div>
                     </>
                   )}
@@ -1172,45 +1172,45 @@ export default function Automations() {
                   {selectedNodeData.nodeType === "CLASSIFY_INTENT" && (
                     <>
                       <div className="space-y-2">
-                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Texto para Classificar</Label>
+                        <Label className="text-xs font-semibold text-slate-400">Texto para Classificar</Label>
                         <Input value={selectedNodeData.config?.sourceText || "{{conversation.last_message}}"} onChange={e => updateNodeConfig(selectedNode.id, "sourceText", e.target.value)} className="h-9 rounded-lg text-xs" />
                       </div>
                       <div className="space-y-3">
-                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Intents (categorias)</Label>
+                        <Label className="text-xs font-semibold text-slate-400">Intents (categorias)</Label>
                         {(selectedNodeData.config?.intents || []).map((intent: any, idx: number) => (
                           <div key={idx} className="p-2 bg-teal-50 rounded-lg space-y-1.5">
                             <Input value={intent.id} placeholder="ID (ex: comprar)" onChange={e => {
                               const intents = [...(selectedNodeData.config?.intents || [])];
                               intents[idx] = { ...intents[idx], id: e.target.value };
                               updateNodeConfig(selectedNode.id, "intents", intents);
-                            }} className="h-8 rounded-md text-[10px] font-mono" />
+                            }} className="h-8 rounded-md text-xs font-mono" />
                             <Input value={intent.description} placeholder="Lead quer comprar..." onChange={e => {
                               const intents = [...(selectedNodeData.config?.intents || [])];
                               intents[idx] = { ...intents[idx], description: e.target.value };
                               updateNodeConfig(selectedNode.id, "intents", intents);
-                            }} className="h-8 rounded-md text-[10px]" />
-                            <Button variant="ghost" size="sm" className="text-red-400 text-[8px] p-0 h-5" onClick={() => {
+                            }} className="h-8 rounded-md text-xs" />
+                            <Button variant="ghost" size="sm" className="text-red-400 text-xs p-0 h-5" onClick={() => {
                               updateNodeConfig(selectedNode.id, "intents", (selectedNodeData.config?.intents || []).filter((_: any, i: number) => i !== idx));
                             }}><Trash2 className="w-3 h-3 mr-1" /> Remover</Button>
                           </div>
                         ))}
-                        <Button variant="outline" size="sm" className="w-full rounded-lg text-[8px] font-black uppercase" onClick={() => {
+                        <Button variant="outline" size="sm" className="w-full rounded-lg text-xs font-semibold uppercase" onClick={() => {
                           updateNodeConfig(selectedNode.id, "intents", [...(selectedNodeData.config?.intents || []), { id: "", description: "" }]);
                         }}><Plus className="w-3 h-3 mr-1" /> Intent</Button>
                       </div>
-                      <p className="text-[7px] text-teal-400 font-bold">Roteamento automático: cada intent gera uma saída. Resultado em {"{{ai.intent}}"}</p>
+                      <p className="text-xs text-teal-400 font-bold">Roteamento automático: cada intent gera uma saída. Resultado em {"{{ai.intent}}"}</p>
                     </>
                   )}
 
                   {selectedNodeData.nodeType === "AB_TEST" && (
                     <>
                       <div className="space-y-3">
-                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Variantes de Mensagem</Label>
+                        <Label className="text-xs font-semibold text-slate-400">Variantes de Mensagem</Label>
                         {(selectedNodeData.config?.variants || []).map((variant: any, idx: number) => (
                           <div key={idx} className="p-2 bg-orange-50 rounded-lg space-y-1.5">
                             <div className="flex items-center justify-between">
-                              <span className="text-[9px] font-black text-orange-600">Variante {variant.id || String.fromCharCode(65 + idx)}</span>
-                              <Button variant="ghost" size="sm" className="text-red-400 text-[8px] p-0 h-5" onClick={() => {
+                              <span className="text-xs font-semibold text-orange-600">Variante {variant.id || String.fromCharCode(65 + idx)}</span>
+                              <Button variant="ghost" size="sm" className="text-red-400 text-xs p-0 h-5" onClick={() => {
                                 updateNodeConfig(selectedNode.id, "variants", (selectedNodeData.config?.variants || []).filter((_: any, i: number) => i !== idx));
                               }}><Trash2 className="w-3 h-3" /></Button>
                             </div>
@@ -1218,27 +1218,27 @@ export default function Automations() {
                               const variants = [...(selectedNodeData.config?.variants || [])];
                               variants[idx] = { ...variants[idx], id: e.target.value };
                               updateNodeConfig(selectedNode.id, "variants", variants);
-                            }} className="h-7 rounded-md text-[10px] font-mono" />
+                            }} className="h-7 rounded-md text-xs font-mono" />
                             <Textarea value={variant.message} placeholder="Olá {{lead.name}}! Versão A..." onChange={e => {
                               const variants = [...(selectedNodeData.config?.variants || [])];
                               variants[idx] = { ...variants[idx], message: e.target.value };
                               updateNodeConfig(selectedNode.id, "variants", variants);
-                            }} className="min-h-[50px] rounded-md text-[10px]" />
+                            }} className="min-h-[50px] rounded-md text-xs" />
                           </div>
                         ))}
-                        <Button variant="outline" size="sm" className="w-full rounded-lg text-[8px] font-black uppercase" onClick={() => {
+                        <Button variant="outline" size="sm" className="w-full rounded-lg text-xs font-semibold uppercase" onClick={() => {
                           const variants = selectedNodeData.config?.variants || [];
                           updateNodeConfig(selectedNode.id, "variants", [...variants, { id: String.fromCharCode(65 + variants.length), message: "" }]);
                         }}><Plus className="w-3 h-3 mr-1" /> Variante</Button>
                       </div>
-                      <p className="text-[7px] text-orange-400 font-bold">Variante selecionada salva em {"{{ab.variant}}"}</p>
+                      <p className="text-xs text-orange-400 font-bold">Variante selecionada salva em {"{{ab.variant}}"}</p>
                     </>
                   )}
 
                   {selectedNodeData.nodeType === "AI_SCORE" && (
                     <>
                       <div className="space-y-2">
-                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Critérios de Qualificação</Label>
+                        <Label className="text-xs font-semibold text-slate-400">Critérios de Qualificação</Label>
                         <Textarea
                           value={selectedNodeData.config?.criteria || "Avalie com base em: interesse, urgência, fit com produto, engajamento."}
                           onChange={e => updateNodeConfig(selectedNode.id, "criteria", e.target.value)}
@@ -1247,10 +1247,10 @@ export default function Automations() {
                         />
                       </div>
                       <div className="p-3 bg-teal-50 rounded-xl space-y-1">
-                        <p className="text-[8px] font-black text-emerald-700 uppercase">Roteamento por Score</p>
-                        <p className="text-[7px] text-[#0D9488] font-medium">🔥 Quente: ≥ 70 · ☀️ Morno: 40-69 · 🥶 Frio: &lt; 40</p>
+                        <p className="text-xs font-semibold text-emerald-700 uppercase">Roteamento por Score</p>
+                        <p className="text-xs text-[#0D9488] font-medium">🔥 Quente: ≥ 70 · ☀️ Morno: 40-69 · 🥶 Frio: &lt; 40</p>
                       </div>
-                      <p className="text-[7px] text-[#0D9488] font-bold">Score salvo em {"{{ai.score}}"} e no Lead.qualificationScore</p>
+                      <p className="text-xs text-[#0D9488] font-bold">Score salvo em {"{{ai.score}}"} e no Lead.qualificationScore</p>
                     </>
                   )}
                 </div>
