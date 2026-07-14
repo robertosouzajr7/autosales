@@ -38,7 +38,7 @@ export default function Dashboard() {
   const [results, setResults] = useState<Results | null>(null);
   const [appts, setAppts] = useState<Appt[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [setup, setSetup] = useState({ whatsapp: false, agent: false });
+  const [setup, setSetup] = useState({ whatsapp: false, agent: false, business: false });
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -47,24 +47,38 @@ export default function Dashboard() {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const [rRes, aRes, lRes, sRes] = await Promise.all([
+      const [rRes, aRes, lRes, sRes, bRes] = await Promise.all([
         fetch("/api/stats/results?days=30", { headers }),
         fetch("/api/appointments", { headers }),
         fetch("/api/leads", { headers }),
         fetch("/api/settings", { headers }),
+        fetch("/api/business", { headers }),
       ]);
-      const [r, a, l, s] = await Promise.all([rRes.json(), aRes.json(), lRes.json(), sRes.json()]);
+      const [r, a, l, s, b] = await Promise.all([
+        rRes.json(), aRes.json(), lRes.json(), sRes.json(), bRes.json(),
+      ]);
 
       setResults(r && !r.error ? r : null);
       setAppts(Array.isArray(a) ? a : []);
       setLeads(Array.isArray(l) ? l : []);
-      setSetup({ whatsapp: !!s.hasWhatsAppConnection, agent: !!s.hasSdr });
+
+      // Se o tenant ainda não escolheu o tipo de negócio, entra no wizard.
+      const businessType = b?.profile?.businessType;
+      if (!businessType) {
+        navigate("/onboarding");
+        return;
+      }
+      setSetup({
+        whatsapp: !!s.hasWhatsAppConnection,
+        agent: !!s.hasSdr,
+        business: !!businessType,
+      });
     } catch (e) {
       console.error("Dashboard fetch error:", e);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [navigate]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -80,7 +94,7 @@ export default function Dashboard() {
     (l.conversations || []).some(c => c.botActive === false && (c.messages?.length || 0) > 0)
   );
 
-  const setupDone = setup.whatsapp && setup.agent;
+  const setupDone = setup.whatsapp && setup.agent && setup.business;
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
 
@@ -107,8 +121,9 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
+              <SetupItem done={setup.business} icon={<CircleDot className="w-4 h-4" />} label="Configurar seu negócio" onClick={() => navigate("/negocio")} />
               <SetupItem done={setup.whatsapp} icon={<Smartphone className="w-4 h-4" />} label="Conectar o WhatsApp" onClick={() => navigate("/connections")} />
-              <SetupItem done={setup.agent} icon={<Bot className="w-4 h-4" />} label="Criar seu assistente de IA" onClick={() => navigate("/sdrs")} />
+              <SetupItem done={setup.agent} icon={<Bot className="w-4 h-4" />} label="Criar seu agente de IA" onClick={() => navigate("/sdrs")} />
             </div>
           </div>
         )}
