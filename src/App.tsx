@@ -8,7 +8,7 @@ import Settings from "@/pages/Settings";
 import Connections from "@/pages/Connections";
 import AdminDashboard from "@/pages/AdminDashboard"; // Módulo SaaS Owner
 import SdrManagement from "@/pages/SdrManagement"; // Módulo Multi-SDR
-import MinhaClinica from "@/pages/MinhaClinica";
+import MeuNegocio from "@/pages/MeuNegocio";
 import Dashboard from "@/pages/Dashboard";
 import Conversations from "@/pages/Conversations";
 import Contacts from "@/pages/Contacts";
@@ -37,7 +37,8 @@ function App() {
         <Route path="/crm" element={<CRM />} />
         <Route path="/contacts" element={<Contacts />} />
         <Route path="/appointments" element={<Appointments />} />
-        <Route path="/clinica" element={<MinhaClinica />} />
+        <Route path="/negocio" element={<MeuNegocio />} />
+        <Route path="/clinica" element={<MeuNegocio />} />
         <Route path="/sdrs" element={<SdrManagement />} />
         {/* "Automações" no menu agora aponta para os Lembretes (config simples). */}
         <Route path="/automations" element={<AutomationConfig />} />

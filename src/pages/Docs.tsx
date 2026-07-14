@@ -67,7 +67,7 @@ const DOC_CONTENT = [
     id: "agendamentos",
     label: "Agendamentos",
     icon: <Calendar className="w-5 h-5" />,
-    title: "Gestão de Reuniões e Consultas",
+    title: "Gestão de Reuniões e Agendamentos",
     intro: "Visualize todos os horários que o seu SDR reservou diretamente na sua agenda ou na do seu time.",
     sections: [
       {
@@ -108,7 +108,7 @@ const DOC_CONTENT = [
       {
         title: "Entendendo os Gatilhos (Triggers)",
         bullets: [
-          "Novo Paciente: Dispara assim que um contato entrar na sua base (via WhatsApp ou formulário).",
+          "Novo Cliente: Dispara assim que um contato entrar na sua base (via WhatsApp ou formulário).",
           "Palavra-Chave: Excelente para 'Cupom de Desconto' ou 'Falar com Atendente'.",
           "Inatividade: Dispara se o lead visualizou mas não respondeu após X horas."
         ]

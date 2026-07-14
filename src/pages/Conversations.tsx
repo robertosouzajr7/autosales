@@ -652,7 +652,7 @@ export default function Conversations() {
                    </Avatar>
                    <div>
                       <p className="text-base font-semibold text-foreground">{selectedChat.name}</p>
-                      <p className="text-sm text-muted-foreground">Paciente</p>
+                      <p className="text-sm text-muted-foreground">Cliente</p>
                    </div>
                 </div>
 
