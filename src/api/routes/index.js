@@ -23,7 +23,8 @@ import * as FinancialController from "../controllers/FinancialController.js";
 import * as BillingController from "../controllers/BillingController.js";
 import BillingService from "../services/BillingService.js";
 import * as ComplianceController from "../controllers/ComplianceController.js";
-import * as ClinicController from "../controllers/ClinicController.js";
+import * as BusinessController from "../controllers/BusinessController.js";
+import { listVerticalTemplates } from "../services/VerticalTemplates.js";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -156,23 +157,28 @@ router.post("/admin/financial/trigger-billing", adminMiddleware, async (req, res
   }
 });
 
-// SaaS Billing Portal (Customer)
-// Minha Clínica (base de conhecimento do agente)
-router.get("/clinic", ClinicController.getClinic);
-router.put("/clinic/profile", ClinicController.updateProfile);
-router.put("/clinic/hours", ClinicController.updateBusinessHours);
-router.post("/clinic/professionals", ClinicController.professional.create);
-router.put("/clinic/professionals/:id", ClinicController.professional.update);
-router.delete("/clinic/professionals/:id", ClinicController.professional.remove);
-router.post("/clinic/services", ClinicController.service.create);
-router.put("/clinic/services/:id", ClinicController.service.update);
-router.delete("/clinic/services/:id", ClinicController.service.remove);
-router.post("/clinic/insurances", ClinicController.insurance.create);
-router.put("/clinic/insurances/:id", ClinicController.insurance.update);
-router.delete("/clinic/insurances/:id", ClinicController.insurance.remove);
-router.post("/clinic/faqs", ClinicController.faq.create);
-router.put("/clinic/faqs/:id", ClinicController.faq.update);
-router.delete("/clinic/faqs/:id", ClinicController.faq.remove);
+// Meu Negócio (base de conhecimento do agente) — vocabulário genérico
+router.get("/business", BusinessController.getBusiness);
+router.put("/business/profile", BusinessController.updateProfile);
+router.put("/business/hours", BusinessController.updateBusinessHours);
+router.post("/business/apply-template", BusinessController.applyTemplate);
+router.get("/business/verticals", (_req, res) => res.json(listVerticalTemplates()));
+
+router.post("/business/team", BusinessController.teamMember.create);
+router.put("/business/team/:id", BusinessController.teamMember.update);
+router.delete("/business/team/:id", BusinessController.teamMember.remove);
+
+router.post("/business/services", BusinessController.service.create);
+router.put("/business/services/:id", BusinessController.service.update);
+router.delete("/business/services/:id", BusinessController.service.remove);
+
+router.post("/business/payments", BusinessController.paymentMethod.create);
+router.put("/business/payments/:id", BusinessController.paymentMethod.update);
+router.delete("/business/payments/:id", BusinessController.paymentMethod.remove);
+
+router.post("/business/faqs", BusinessController.faq.create);
+router.put("/business/faqs/:id", BusinessController.faq.update);
+router.delete("/business/faqs/:id", BusinessController.faq.remove);
 
 // Compliance / Direitos do titular (LGPD)
 router.get("/compliance/account/export", ComplianceController.exportAccountData);

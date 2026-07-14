@@ -206,10 +206,10 @@ export default function LandingPage() {
                ⚡ SEU ATENDENTE DE IA NO WHATSAPP OFICIAL
             </Badge>
             <h1 className={`text-5xl lg:text-7xl font-bold ${sHeroTitle} tracking-tight leading-[0.95] text-balance`}>
-               Nenhum paciente sem resposta.<br/>Sua clínica <span className="text-[#0D9488] italic">agendando 24h</span> por dia.
+               Nenhum cliente sem resposta.<br/>Seu negócio <span className="text-[#0D9488] italic">agendando 24h</span> por dia.
             </h1>
             <p className={`text-lg lg:text-xl ${sHeroDesc} font-medium max-w-3xl mx-auto leading-relaxed`}>
-               Um agente de IA no WhatsApp oficial que responde na hora, qualifica o paciente e agenda a consulta direto na sua agenda — enquanto a sua recepção cuida de quem está na clínica.
+               Uma IA de agendamento no WhatsApp oficial que responde na hora, qualifica o cliente e marca o horário direto na sua agenda — para clínicas, salões, academias, restaurantes e escritórios.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
                <Link to="/register">
@@ -228,7 +228,7 @@ export default function LandingPage() {
       <section id="problem" className={`py-24 ${sSectionProblem} px-6 lg:px-20 transition-colors duration-300`}>
         <div className="max-w-6xl mx-auto space-y-16">
           <div className="text-center space-y-4">
-            <h2 className={`text-3xl lg:text-5xl font-bold tracking-tight ${sSectionTitle}`}>Por que sua clínica perde pacientes <span className="text-red-500 italic">todos os dias</span>?</h2>
+            <h2 className={`text-3xl lg:text-5xl font-bold tracking-tight ${sSectionTitle}`}>Por que seu negócio perde clientes <span className="text-red-500 italic">todos os dias</span>?</h2>
             <p className={`${sSectionDesc} font-medium max-w-2xl mx-auto`}>Três gargalos silenciosos esvaziam a sua agenda sem que ninguém perceba:</p>
           </div>
 
@@ -237,14 +237,14 @@ export default function LandingPage() {
               <div className="bg-red-500/10 p-3 w-fit rounded-xl text-red-500"><Clock className="w-6 h-6" /></div>
               <h3 className={`text-xl font-bold ${sProblemTitle}`}>Resposta que demora</h3>
               <p className={`${sProblemDesc} text-sm leading-relaxed`}>
-                Paciente sem resposta em minutos vira paciente do concorrente. No WhatsApp, quem responde primeiro agenda — e uma recepção humana não dá conta 24h por dia.
+                Cliente sem resposta em minutos vira cliente do concorrente. No WhatsApp, quem responde primeiro agenda — e uma equipe humana não dá conta 24h por dia.
               </p>
             </div>
             <div className={`p-8 border rounded-3xl space-y-4 ${sProblemCard} transition-all`}>
               <div className="bg-red-500/10 p-3 w-fit rounded-xl text-red-500"><Users className="w-6 h-6" /></div>
               <h3 className={`text-xl font-bold ${sProblemTitle}`}>Recepção sobrecarregada</h3>
               <p className={`${sProblemDesc} text-sm leading-relaxed`}>
-                Sua equipe não consegue atender o balcão e o WhatsApp ao mesmo tempo. As mensagens acumulam, as ligações caem e o paciente desiste.
+                Sua equipe não consegue atender o balcão e o WhatsApp ao mesmo tempo. As mensagens acumulam, as ligações caem e o cliente desiste.
               </p>
             </div>
             <div className={`p-8 border rounded-3xl space-y-4 ${sProblemCard} transition-all`}>
@@ -263,34 +263,34 @@ export default function LandingPage() {
          <div className="max-w-6xl mx-auto space-y-20">
             <div className="text-center space-y-4">
                <h2 className={`text-3xl lg:text-5xl font-bold tracking-tight ${sHowTitle}`}>Do "oi" ao agendamento em <span className="text-[#0D9488] italic">3 passos simples</span></h2>
-               <p className={`${sSectionDesc} font-medium max-w-xl mx-auto`}>Seu atendente de IA cuida do WhatsApp enquanto você cuida dos pacientes.</p>
+               <p className={`${sSectionDesc} font-medium max-w-xl mx-auto`}>Seu atendente de IA cuida do WhatsApp enquanto você cuida do que importa.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 relative">
                <div className="space-y-6 relative">
                   <div className={`absolute -top-6 -left-6 text-9xl font-bold ${sHowNumberText} pointer-events-none select-none`}>01</div>
-                  <div className="text-[#0D9488] font-bold text-xs ">PASSO 1: O PACIENTE CHAMA</div>
+                  <div className="text-[#0D9488] font-bold text-xs ">PASSO 1: O CLIENTE CHAMA</div>
                   <h3 className={`text-2xl font-bold ${sHowTitle} tracking-tight`}>Responde na hora, com a sua voz</h3>
                   <p className={`${sSectionDesc} text-sm leading-relaxed`}>
-                     A qualquer hora do dia, o agente responde no WhatsApp oficial da clínica com o tom que você definir. Tira as dúvidas comuns — convênios, valores, endereço, preparo — sem deixar ninguém esperando.
+                     A qualquer hora do dia, o agente responde no WhatsApp oficial do seu negócio com o tom que você definir. Tira as dúvidas comuns — serviços, valores, endereço, formas de pagamento — sem deixar ninguém esperando.
                   </p>
                </div>
 
                <div className="space-y-6 relative">
                   <div className={`absolute -top-6 -left-6 text-9xl font-bold ${sHowNumberText} pointer-events-none select-none`}>02</div>
                   <div className="text-[#0D9488] font-bold text-xs ">PASSO 2: QUALIFICA COM SEGURANÇA</div>
-                  <h3 className={`text-2xl font-bold ${sHowTitle} tracking-tight`}>Entende a necessidade do paciente</h3>
+                  <h3 className={`text-2xl font-bold ${sHowTitle} tracking-tight`}>Entende a necessidade do cliente</h3>
                   <p className={`${sSectionDesc} text-sm leading-relaxed`}>
-                     A IA descobre o procedimento desejado, o convênio e a urgência para oferecer o melhor horário — sempre dentro do escopo, sem nunca dar diagnóstico ou orientação clínica.
+                     A IA usa metodologia SDR profissional (SPIN Selling, escuta ativa) para entender o que o cliente quer e oferecer o melhor horário — sempre dentro dos limites que você definir.
                   </p>
                </div>
 
                <div className="space-y-6 relative">
                   <div className={`absolute -top-6 -left-6 text-9xl font-bold ${sHowNumberText} pointer-events-none select-none`}>03</div>
                   <div className="text-[#0D9488] font-bold text-xs ">PASSO 3: AGENDA E CONFIRMA</div>
-                  <h3 className={`text-2xl font-bold ${sHowTitle} tracking-tight`}>Marca a consulta automaticamente</h3>
+                  <h3 className={`text-2xl font-bold ${sHowTitle} tracking-tight`}>Marca o horário automaticamente</h3>
                   <p className={`${sSectionDesc} text-sm leading-relaxed`}>
-                     O agente consulta os horários livres na sua agenda, marca a consulta sem conflito, confirma na hora e envia lembretes automáticos no WhatsApp para reduzir as faltas.
+                     O agente consulta os horários livres na sua agenda, marca sem conflito, confirma na hora e envia lembretes automáticos no WhatsApp para reduzir as faltas.
                   </p>
                </div>
             </div>
@@ -312,7 +312,7 @@ export default function LandingPage() {
               </div>
               <h3 className={`text-xl font-bold ${sFeatureTitle} tracking-tight`}>Atendente de IA 24/7</h3>
               <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
-                Responde todo paciente em segundos, no WhatsApp oficial, com a identidade e as informações da sua clínica (convênios, valores, endereço, preparo).
+                Responde todo cliente em segundos, no WhatsApp oficial, com a identidade e as informações do seu negócio (serviços, valores, endereço, formas de pagamento).
               </p>
             </Card>
 
@@ -320,9 +320,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 bg-[#0D9488]/10 text-[#0D9488] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Sparkles className="w-6 h-6" />
               </div>
-              <h3 className={`text-xl font-bold ${sFeatureTitle} tracking-tight`}>Qualificação com segurança</h3>
+              <h3 className={`text-xl font-bold ${sFeatureTitle} tracking-tight`}>Qualificação com metodologia SDR</h3>
               <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
-                Entende a necessidade e agenda de forma natural, com guardrails que impedem qualquer diagnóstico ou orientação clínica. Treine o agente com a base de conhecimento da sua clínica.
+                SPIN Selling, escuta ativa e tratamento de objeções (LAER) embutidos. Treine o agente com a base de conhecimento do seu negócio — texto, PDF, DOCX, planilha.
               </p>
             </Card>
 
@@ -330,9 +330,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 bg-[#0D9488]/10 text-[#0D9488] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <BarChart className="w-6 h-6" />
               </div>
-              <h3 className={`text-xl font-bold ${sFeatureTitle} tracking-tight`}>Funil de Pacientes</h3>
+              <h3 className={`text-xl font-bold ${sFeatureTitle} tracking-tight`}>Funil de Clientes</h3>
               <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
-                Acompanhe cada paciente do primeiro contato à consulta marcada, em um quadro visual. Veja quem foi atendido, quem qualificou e quem agendou.
+                Acompanhe cada cliente do primeiro contato ao horário marcado, em um quadro visual. Veja quem foi atendido, quem qualificou e quem agendou.
               </p>
             </Card>
 
@@ -342,7 +342,7 @@ export default function LandingPage() {
               </div>
               <h3 className={`text-xl font-bold ${sFeatureTitle} tracking-tight`}>Agenda integrada</h3>
               <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
-                Marca direto na agenda da clínica (Google Calendar), sem conflito de horário, e confirma a consulta pelo WhatsApp automaticamente em tempo real.
+                Marca direto na sua agenda (Google Calendar), sem conflito de horário, e confirma pelo WhatsApp automaticamente em tempo real.
               </p>
             </Card>
 
@@ -352,7 +352,7 @@ export default function LandingPage() {
               </div>
               <h3 className={`text-xl font-bold ${sFeatureTitle} tracking-tight`}>Lembretes e follow-up</h3>
               <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
-                Confirmações e lembretes automáticos antes da consulta para reduzir faltas (no-show), além de retomar conversas paradas — tudo no-code.
+                Confirmações e lembretes automáticos antes do horário para reduzir faltas (no-show), além de retomar conversas paradas — tudo no-code.
               </p>
             </Card>
 
@@ -362,7 +362,7 @@ export default function LandingPage() {
               </div>
               <h3 className={`text-xl font-bold ${sFeatureTitle} tracking-tight`}>Atendimento humano quando precisa</h3>
               <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
-                Central de mensagens do WhatsApp oficial. Sua recepção assume a conversa a qualquer momento, com todo o histórico, exatamente onde a IA parou.
+                Central de mensagens do WhatsApp oficial. Sua equipe assume a conversa a qualquer momento, com todo o histórico, exatamente onde a IA parou.
               </p>
             </Card>
           </div>
@@ -373,8 +373,8 @@ export default function LandingPage() {
       <section id="testimonials" className={`py-24 ${sTestimonials} px-6 lg:px-20 transition-colors duration-300`}>
         <div className="max-w-6xl mx-auto space-y-16">
           <div className="text-center space-y-4">
-             <h2 className={`text-3xl lg:text-5xl font-bold tracking-tight ${sSectionTitle}`}>Clínicas que pararam de <span className="text-[#0D9488] italic">perder pacientes</span></h2>
-             <p className={`${sSectionDesc} font-medium max-w-xl mx-auto`}>Histórias de quem encheu a agenda respondendo todo paciente na hora, sem sobrecarregar a recepção.</p>
+             <h2 className={`text-3xl lg:text-5xl font-bold tracking-tight ${sSectionTitle}`}>Negócios que pararam de <span className="text-[#0D9488] italic">perder clientes</span></h2>
+             <p className={`${sSectionDesc} font-medium max-w-xl mx-auto`}>Histórias de quem encheu a agenda respondendo todo cliente na hora, sem sobrecarregar a equipe.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -382,14 +382,14 @@ export default function LandingPage() {
                 <div className="space-y-4">
                    <div className="flex text-amber-500"><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/></div>
                    <p className={`${sTestimonialText} text-sm italic leading-relaxed`}>
-                      "O agente responde os pacientes na hora, mesmo de madrugada. Nossa recepção parou de viver apagando incêndio no WhatsApp e a agenda encheu — mais de 120 consultas marcadas sozinhas no primeiro mês."
+                      "O agente responde os clientes na hora, mesmo de madrugada. Nossa equipe parou de viver apagando incêndio no WhatsApp e a agenda encheu — mais de 120 horários marcados sozinhos no primeiro mês."
                    </p>
                 </div>
                 <div className={`flex items-center gap-3 pt-4 border-t ${isDarkMode ? 'border-teal-950/30' : 'border-teal-100'}`}>
                    <div className="w-10 h-10 bg-[#0D9488]/20 rounded-full flex items-center justify-center font-bold text-[#0D9488]">TF</div>
                    <div>
                       <p className={`text-sm font-bold ${sTestimonialAuthor}`}>Thiago Fonseca</p>
-                      <p className={`text-xs uppercase font-bold ${sTestimonialRole}`}>Gestor - Clínica Vida Plena</p>
+                      <p className={`text-xs uppercase font-bold ${sTestimonialRole}`}>Gestor - Vida Plena Studio</p>
                    </div>
                 </div>
              </Card>
@@ -398,14 +398,14 @@ export default function LandingPage() {
                 <div className="space-y-4">
                    <div className="flex text-amber-500"><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/></div>
                    <p className={`${sTestimonialText} text-sm italic leading-relaxed`}>
-                      "Nossa maior dor era o tempo de resposta no WhatsApp. O paciente chegava e demorava horas para ser atendido. Agora recebe retorno instantâneo, tira as dúvidas e agenda a consulta sozinho, 24h por dia."
+                      "Nossa maior dor era o tempo de resposta no WhatsApp. O cliente chegava e demorava horas para ser atendido. Agora recebe retorno instantâneo, tira as dúvidas e agenda sozinho, 24h por dia."
                    </p>
                 </div>
                 <div className={`flex items-center gap-3 pt-4 border-t ${isDarkMode ? 'border-teal-950/30' : 'border-teal-100'}`}>
                    <div className="w-10 h-10 bg-[#0D9488]/20 rounded-full flex items-center justify-center font-bold text-[#0D9488]">AM</div>
                    <div>
                       <p className={`text-sm font-bold ${sTestimonialAuthor}`}>Aline Mendes</p>
-                      <p className={`text-xs uppercase font-bold ${sTestimonialRole}`}>Fundadora - Clínica Odonto Sorriso</p>
+                      <p className={`text-xs uppercase font-bold ${sTestimonialRole}`}>Fundadora - Odonto Sorriso</p>
                    </div>
                 </div>
              </Card>
@@ -414,14 +414,14 @@ export default function LandingPage() {
                 <div className="space-y-4">
                    <div className="flex text-amber-500"><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/></div>
                    <p className={`${sTestimonialText} text-sm italic leading-relaxed`}>
-                      "Reduzimos as faltas quase pela metade com os lembretes automáticos. E a recepção, que vivia presa no celular, voltou a focar no paciente que está na clínica. A IA cuida do primeiro contato."
+                      "Reduzimos as faltas quase pela metade com os lembretes automáticos. E a equipe, que vivia presa no celular, voltou a focar no cliente que está no local. A IA cuida do primeiro contato."
                    </p>
                 </div>
                 <div className={`flex items-center gap-3 pt-4 border-t ${isDarkMode ? 'border-teal-950/30' : 'border-teal-100'}`}>
                    <div className="w-10 h-10 bg-[#0D9488]/20 rounded-full flex items-center justify-center font-bold text-[#0D9488]">RC</div>
                    <div>
                       <p className={`text-sm font-bold ${sTestimonialAuthor}`}>Ricardo Cruz</p>
-                      <p className={`text-xs uppercase font-bold ${sTestimonialRole}`}>Gestor - Clínica Fisio Movimento</p>
+                      <p className={`text-xs uppercase font-bold ${sTestimonialRole}`}>Gestor - Fisio Movimento</p>
                    </div>
                 </div>
              </Card>
@@ -434,7 +434,7 @@ export default function LandingPage() {
          <div className="max-w-6xl mx-auto space-y-20">
             <div className="text-center space-y-4">
                <h2 className={`text-3xl lg:text-5xl font-bold ${sSectionTitle} tracking-tight leading-none`}>Preço justo para <span className="text-[#0D9488] italic">agenda cheia</span></h2>
-               <p className={`${sSectionDesc} text-lg font-medium`}>Sem taxas ocultas. Escolha o plano ideal para o tamanho da sua clínica.</p>
+               <p className={`${sSectionDesc} text-lg font-medium`}>Sem taxas ocultas. Escolha o plano ideal para o tamanho do seu negócio.</p>
             </div>
             
             <div className={`grid grid-cols-1 ${visiblePlans.length === 2 ? 'md:grid-cols-2' : visiblePlans.length >= 3 ? 'md:grid-cols-3' : 'md:grid-cols-1'} gap-10 max-w-5xl mx-auto items-end pt-8`}>
@@ -466,7 +466,7 @@ export default function LandingPage() {
                           </li>
                           <li className="flex items-center gap-2 text-xs font-bold">
                              <Check className="w-4 h-4 shrink-0" />
-                             <span>Funil de Pacientes (Kanban)</span>
+                             <span>Funil de Clientes (Kanban)</span>
                           </li>
                           <li className="flex items-center gap-2 text-xs font-bold">
                              <Check className="w-4 h-4 shrink-0" />
@@ -524,30 +524,30 @@ export default function LandingPage() {
 
             <div className="space-y-6">
                <div className={`p-6 border rounded-2xl space-y-2 ${sFaqItem}`}>
-                  <h4 className={`font-bold ${sFaqTitle} text-base`}>Os pacientes percebem que estão falando com uma Inteligência Artificial?</h4>
+                  <h4 className={`font-bold ${sFaqTitle} text-base`}>Os clientes percebem que estão falando com uma Inteligência Artificial?</h4>
                   <p className={`${sFaqDesc} text-sm leading-relaxed`}>
-                     A conversa é natural e humanizada, com o tom e as informações da sua clínica (base de conhecimento própria). E, sempre que o paciente pedir ou o assunto exigir, a conversa passa para a sua recepção com todo o histórico.
+                     A conversa é natural e humanizada, com o tom e as informações do seu negócio (base de conhecimento própria). E, sempre que o cliente pedir ou o assunto exigir, a conversa passa para a sua equipe com todo o histórico.
                   </p>
                </div>
 
                <div className={`p-6 border rounded-2xl space-y-2 ${sFaqItem}`}>
-                  <h4 className={`font-bold ${sFaqTitle} text-base`}>A IA dá orientação médica ou responde dúvidas clínicas?</h4>
+                  <h4 className={`font-bold ${sFaqTitle} text-base`}>Serve para qualquer tipo de negócio?</h4>
                   <p className={`${sFaqDesc} text-sm leading-relaxed`}>
-                     Não — por design. O agente tem regras invioláveis que o impedem de dar diagnóstico, prescrição ou qualquer orientação clínica. O papel dele é informar, qualificar e agendar; questões de saúde são sempre encaminhadas ao profissional.
+                     Sim. Clínicas, salões, academias, restaurantes, escritórios profissionais — qualquer negócio que agenda clientes pelo WhatsApp. Templates prontos por vertical aceleram sua configuração, e você personaliza o agente com a sua base de conhecimento.
                   </p>
                </div>
 
                <div className={`p-6 border rounded-2xl space-y-2 ${sFaqItem}`}>
                   <h4 className={`font-bold ${sFaqTitle} text-base`}>Uso o WhatsApp oficial? Meu número corre risco de bloqueio?</h4>
                   <p className={`${sFaqDesc} text-sm leading-relaxed`}>
-                     Trabalhamos com a API oficial do WhatsApp (Meta), o canal aprovado para empresas — sem gambiarras que arriscam o número da clínica. Sua equipe pode intervir na conversa a qualquer momento pela Central de Atendimento.
+                     Trabalhamos com a API oficial do WhatsApp (Meta), o canal aprovado para empresas — sem gambiarras que arriscam o seu número. Sua equipe pode intervir na conversa a qualquer momento pela Central de Atendimento.
                   </p>
                </div>
 
                <div className={`p-6 border rounded-2xl space-y-2 ${sFaqItem}`}>
-                  <h4 className={`font-bold ${sFaqTitle} text-base`}>E a LGPD? Como ficam os dados dos pacientes?</h4>
+                  <h4 className={`font-bold ${sFaqTitle} text-base`}>E a LGPD? Como ficam os dados dos clientes?</h4>
                   <p className={`${sFaqDesc} text-sm leading-relaxed`}>
-                     A plataforma nasce adequada à LGPD: consentimento registrado, descadastro imediato quando o paciente pede ("PARAR"), e exportação ou exclusão definitiva dos dados de qualquer paciente direto no painel.
+                     A plataforma nasce adequada à LGPD: consentimento registrado, descadastro imediato quando o cliente pede ("PARAR"), e exportação ou exclusão definitiva dos dados de qualquer cliente direto no painel.
                   </p>
                </div>
             </div>
@@ -558,7 +558,7 @@ export default function LandingPage() {
       <section className={`py-28 text-center relative overflow-hidden ${sCTA} transition-colors duration-300`}>
          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#0D9488]/10 rounded-full blur-[180px] pointer-events-none" />
          <div className="max-w-4xl mx-auto space-y-8 relative z-10">
-            <h2 className="text-4xl lg:text-6xl font-bold tracking-tight">Chegou a hora de encher a agenda da sua clínica.</h2>
+            <h2 className="text-4xl lg:text-6xl font-bold tracking-tight">Chegou a hora de encher a agenda do seu negócio.</h2>
             <p className={`font-medium text-lg lg:text-xl max-w-2xl mx-auto leading-relaxed ${sCTADesc}`}>
                Pare de perder pacientes por demora no WhatsApp. Ative seu atendente de IA e veja as consultas sendo marcadas sozinhas — de dia, de noite e no fim de semana.
             </p>
@@ -581,7 +581,7 @@ export default function LandingPage() {
                   {settings?.logoUrl ? <img src={settings.logoUrl} className="h-8 grayscale opacity-60" /> : <img src="/logo.png" className="h-8 w-auto grayscale opacity-60" />}
                   <span className={`text-xl font-bold ${sFooterTitle} tracking-tight uppercase italic`}>Auto<span className="text-[#0D9488]">Sales</span></span>
                </div>
-               <p className={`text-xs font-bold ${sFooterDesc}`}>Atendimento inteligente 24h para clínicas no WhatsApp.</p>
+               <p className={`text-xs font-bold ${sFooterDesc}`}>IA de agendamento no WhatsApp — para qualquer negócio.</p>
             </div>
             <div className="text-xs font-bold text-center md:text-right space-y-2">
                <div>E-mail oficial: contato@agentesvirtuais.com</div>
@@ -626,7 +626,7 @@ export default function LandingPage() {
            <div className={`flex-1 h-96 p-6 overflow-y-auto space-y-4 ${isDarkMode ? 'bg-[#042F2E]' : 'bg-[#F0FDFA]'}`}>
               {chatHistory.length === 0 && (
                 <div className={`p-4 rounded-2xl border text-xs font-bold italic ${isDarkMode ? 'bg-[#0B4A47] border-teal-950/40 text-teal-200' : 'bg-white border-teal-100 text-teal-950/70'}`}>
-                   Olá! Sou o assistente da AutoSales. Quer ver como um agente de IA pode atender e agendar os pacientes da sua clínica 24h por dia?
+                   Olá! Sou o assistente da AutoSales. Quer ver como uma IA de agendamento pode atender e marcar clientes para o seu negócio 24h por dia?
                 </div>
               )}
               {chatHistory.map((msg, i) => (

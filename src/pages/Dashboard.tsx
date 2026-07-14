@@ -89,7 +89,7 @@ export default function Dashboard() {
       <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
         <PageHeader
           title={`${greeting}${firstName(localStorage.getItem("companyName") || "") ? ", " + (localStorage.getItem("companyName") || "") : ""}`}
-          subtitle="Veja o que está acontecendo na sua clínica hoje."
+          subtitle="Veja o que está acontecendo no seu negócio hoje."
           actions={
             <Button onClick={() => navigate("/appointments")}>
               <CalendarDays className="w-4 h-4 mr-2" /> Agenda de hoje
@@ -102,7 +102,7 @@ export default function Dashboard() {
           <div className="mb-6 rounded-2xl border border-primary/20 bg-primary/5 p-5">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h3 className="text-base font-semibold text-foreground">Termine de configurar sua clínica</h3>
+                <h3 className="text-base font-semibold text-foreground">Termine de configurar seu negócio</h3>
                 <p className="text-sm text-muted-foreground">Faltam alguns passos para o seu assistente começar a atender.</p>
               </div>
             </div>
@@ -119,21 +119,21 @@ export default function Dashboard() {
             Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[104px] rounded-2xl" />)
           ) : (
             <>
-              <StatCard label="Consultas (30 dias)" value={results?.appointmentsScheduled ?? 0} icon={<CalendarDays className="w-5 h-5" />} hint="agendadas no período" />
+              <StatCard label="Agendamentos (30 dias)" value={results?.appointmentsScheduled ?? 0} icon={<CalendarDays className="w-5 h-5" />} hint="marcados no período" />
               <StatCard label="Conversas atendidas" value={results?.conversationsHandled ?? 0} icon={<MessageSquare className="w-5 h-5" />} hint="últimos 30 dias" />
-              <StatCard label="Comparecimento" value={results?.appointmentsCompleted ?? 0} icon={<CheckCircle2 className="w-5 h-5" />} hint="consultas concluídas" />
-              <StatCard label="Resposta média" value={fmtResponse(results?.avgResponseSeconds ?? null)} icon={<Timer className="w-5 h-5" />} hint="1ª resposta ao paciente" />
+              <StatCard label="Comparecimento" value={results?.appointmentsCompleted ?? 0} icon={<CheckCircle2 className="w-5 h-5" />} hint="agendamentos concluídos" />
+              <StatCard label="Resposta média" value={fmtResponse(results?.avgResponseSeconds ?? null)} icon={<Timer className="w-5 h-5" />} hint="1ª resposta ao cliente" />
             </>
           )}
         </div>
 
         {/* Duas colunas: Hoje + Aguardando */}
         <div className="grid gap-6 lg:grid-cols-2">
-          {/* Consultas de hoje */}
+          {/* Agendamentos de hoje */}
           <section className="rounded-2xl border border-border bg-card">
             <header className="flex items-center justify-between px-5 py-4 border-b border-border">
               <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <CalendarDays className="w-4 h-4 text-primary" /> Consultas de hoje
+                <CalendarDays className="w-4 h-4 text-primary" /> Agendamentos de hoje
               </h2>
               <button onClick={() => navigate("/appointments")} className="text-sm text-primary hover:underline flex items-center gap-1">
                 Ver agenda <ChevronRight className="w-3.5 h-3.5" />
@@ -144,7 +144,7 @@ export default function Dashboard() {
                 <div className="p-3 space-y-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-xl" />)}</div>
               ) : todayAppts.length === 0 ? (
                 <div className="py-10 text-center">
-                  <p className="text-sm text-muted-foreground">Nenhuma consulta marcada para hoje.</p>
+                  <p className="text-sm text-muted-foreground">Nenhum agendamento marcado para hoje.</p>
                 </div>
               ) : (
                 <ul className="divide-y divide-border">

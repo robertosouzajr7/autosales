@@ -53,11 +53,13 @@ model Tenant {
   listmonkToken  String?
   listmonkListId String?
 
-  // Perfil da Clínica (contexto do agente de IA)
-  clinicAbout      String? // descrição/apresentação da clínica
-  clinicAddress    String? // endereço completo
-  clinicPayment    String? // formas de pagamento aceitas
-  clinicExtraInfo  String? // estacionamento, acessibilidade, orientações gerais
+  // Perfil do Negócio (contexto do agente de IA)
+  businessType     String? // CLINIC, BEAUTY, FITNESS, SERVICES, RESTAURANT, OTHER
+  businessAbout    String? // descrição/apresentação do negócio
+  businessAddress  String? // endereço completo
+  businessPayment  String? // formas de pagamento aceitas
+  businessExtraInfo String? // estacionamento, acessibilidade, orientações gerais
+  labelOverrides   String? // JSON: rótulos customizados (ex.: {"customer":"Aluno","service":"Aula"})
 
   // Consumption Tracking (Real-time)
   usedTokens           Int      @default(0)
@@ -92,12 +94,12 @@ model Tenant {
   products      Product[]
   icpProfiles   IcpProfile[]
 
-  // Base de conhecimento estruturada da clínica
-  professionals Professional[]
-  services      ClinicService[]
-  insurances    InsuranceProvider[]
-  businessHours BusinessHour[]
-  faqs          ClinicFaq[]
+  // Base de conhecimento estruturada do negócio
+  teamMembers    TeamMember[]
+  services       Service[]
+  paymentMethods PaymentMethod[]
+  businessHours  BusinessHour[]
+  faqs           Faq[]
 }
 
 model PipelineStage {
@@ -624,33 +626,18 @@ model AuditLog {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Base de conhecimento estruturada da clínica (contexto do agente)
+// Base de conhecimento estruturada do negócio (contexto do agente)
+// Vocabulário genérico servindo qualquer vertical: clínicas, salões,
+// academias, restaurantes, serviços profissionais.
 // ═══════════════════════════════════════════════════════════════
 
-model Professional {
-  id           String  @id @default(uuid())
-  tenantId     String
-  name         String
-  specialty    String? // ex.: "Ortodontia", "Clínico Geral"
-  registration String? // CRM/CRO/registro do conselho
-  bio          String? // breve descrição / diferenciais
-  active       Boolean @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId])
-}
-
-model ClinicService {
+model TeamMember {
   id          String  @id @default(uuid())
   tenantId    String
   name        String
-  description String?
-  durationMin Int     @default(30) // duração média em minutos
-  price       Float? // valor particular (null = sob consulta)
-  prep        String? // preparo necessário (jejum, exames prévios, etc.)
+  role        String? // ex.: "Ortodontista", "Cabeleireira", "Personal", "Advogado"
+  credentials String? // registro profissional / OAB / CRM / CREF etc.
+  bio         String? // breve descrição / diferenciais
   active      Boolean @default(true)
 
   createdAt DateTime @default(now())
@@ -660,11 +647,29 @@ model ClinicService {
   @@index([tenantId])
 }
 
-model InsuranceProvider {
+model Service {
+  id          String  @id @default(uuid())
+  tenantId    String
+  name        String
+  description String?
+  durationMin Int     @default(30) // duração média em minutos
+  price       Float? // preço (null = sob consulta)
+  prep        String? // preparo/observações prévias
+  active      Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+// Formas de pagamento/convênios aceitos (opcional por vertical)
+model PaymentMethod {
   id       String  @id @default(uuid())
   tenantId String
-  name     String // ex.: "Unimed", "Bradesco Saúde"
-  notes    String? // observações (carência, procedimentos cobertos)
+  name     String  // ex.: "Unimed", "PIX", "Cartão", "Vale-Refeição"
+  notes    String? // observações (carência, limites, taxas)
   active   Boolean @default(true)
 
   createdAt DateTime @default(now())
@@ -686,7 +691,7 @@ model BusinessHour {
   @@unique([tenantId, weekday])
 }
 
-model ClinicFaq {
+model Faq {
   id       String @id @default(uuid())
   tenantId String
   question String
