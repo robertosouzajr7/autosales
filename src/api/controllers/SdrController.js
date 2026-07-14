@@ -163,22 +163,33 @@ export const trainSdr = async (req, res) => {
   }
 
   const file = req.file;
-  
-  // Basic mock extractor. In a real scenario, use pdf-parse or similar
-  const extractedText = `Conteúdo extraído do arquivo: ${file.originalname || "documento"}\n\nEste é um conhecimento processado pela IA.`;
 
   try {
-    const sdr = await prisma.sdrBot.findUnique({ where: { id, tenantId } });
+    const sdr = await prisma.sdrBot.findFirst({ where: { id, tenantId } });
     if (!sdr) return res.status(404).json({ error: "SDR not found" });
 
-    const newKb = sdr.knowledgeBase ? sdr.knowledgeBase + "\n\n" + extractedText : extractedText;
+    // Extração REAL do conteúdo do documento (PDF/DOCX/XLSX/CSV/TXT)
+    const { extractText } = await import("../services/DocumentExtractor.js");
+    let extractedText;
+    try {
+      extractedText = await extractText(file.buffer, file.originalname, file.mimetype);
+    } catch (e) {
+      return res.status(400).json({ error: e.message });
+    }
+
+    if (!extractedText || extractedText.length < 10) {
+      return res.status(400).json({ error: "Não consegui extrair texto legível deste arquivo. Ele pode ser um PDF só de imagem (escaneado)." });
+    }
+
+    const header = `\n\n===== ${file.originalname || "documento"} =====\n`;
+    const newKb = sdr.knowledgeBase ? sdr.knowledgeBase + header + extractedText : extractedText;
 
     const updated = await prisma.sdrBot.update({
       where: { id, tenantId },
       data: { knowledgeBase: newKb }
     });
 
-    res.json({ success: true, sdr: updated });
+    res.json({ success: true, sdr: updated, extractedChars: extractedText.length });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

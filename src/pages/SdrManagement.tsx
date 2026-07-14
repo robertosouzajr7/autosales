@@ -153,7 +153,7 @@ export default function SdrManagement() {
       });
       const data = await res.json();
       if (res.ok) {
-        toast({ title: "📚 Conhecimento Absorvido", description: "O SDR agora é especialista no documento enviado." });
+        toast({ title: "Documento processado", description: `${(data.extractedChars || 0).toLocaleString()} caracteres extraídos e adicionados à base de conhecimento.` });
         setForm({...form, knowledgeBase: data.sdr.knowledgeBase});
         fetchData();
       } else {
@@ -351,14 +351,14 @@ export default function SdrManagement() {
                             <Upload className="w-6 h-6 text-white" />
                           </div>
                           <div>
-                            <h4 className="text-sm font-semibold text-[#134E4A] tracking-tight">Treinamento Neural</h4>
-                            <p className="text-xs text-[#0D9488] font-bold ">Upload de PDF, DOCX ou TXT</p>
+                            <h4 className="text-sm font-semibold text-[#134E4A] tracking-tight">Treinar por documento</h4>
+                            <p className="text-xs text-[#0D9488] font-bold ">PDF, DOCX, planilha (XLSX/CSV) ou TXT</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-4">
-                          <Input 
-                            type="file" 
-                            accept=".pdf,.docx,.txt" 
+                          <Input
+                            type="file"
+                            accept=".pdf,.docx,.xlsx,.xls,.csv,.txt"
                             onChange={handleFileUpload}
                             disabled={uploading}
                             className="hidden" 
