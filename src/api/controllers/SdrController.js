@@ -1,4 +1,5 @@
 import prisma from "../config/prisma.js";
+import { knowledgeBaseHeadroom } from "../middlewares/planLimits.js";
 
 export const getSdrs = async (req, res) => {
   const tenantId = req.tenantId;
@@ -182,7 +183,17 @@ export const trainSdr = async (req, res) => {
     }
 
     const header = `\n\n===== ${file.originalname || "documento"} =====\n`;
-    const newKb = sdr.knowledgeBase ? sdr.knowledgeBase + header + extractedText : extractedText;
+    const chunkToAppend = header + extractedText;
+
+    // Gate: tamanho total da base de conhecimento do tenant (soma de todos os SDRs).
+    const headroom = await knowledgeBaseHeadroom(tenantId, chunkToAppend.length);
+    if (!headroom.ok) {
+      return res.status(403).json({
+        error: `Limite de treino do seu plano atingido: ${headroom.max.toLocaleString("pt-BR")} caracteres. Já em uso: ${headroom.used.toLocaleString("pt-BR")}. Este arquivo tem ${chunkToAppend.length.toLocaleString("pt-BR")} caracteres — faça upgrade do plano ou remova outros treinos.`,
+      });
+    }
+
+    const newKb = sdr.knowledgeBase ? sdr.knowledgeBase + chunkToAppend : extractedText;
 
     const updated = await prisma.sdrBot.update({
       where: { id, tenantId },

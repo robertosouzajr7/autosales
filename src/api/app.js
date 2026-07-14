@@ -123,10 +123,10 @@ export async function initDB() {
     if (planCount === 0) {
       await prisma.plan.createMany({
         data: [
-          { name: "BASIC", priceMonthly: 197, priceYearly: 0, maxLeads: 300, maxSdrs: 1, maxTokens: 50000, maxProspects: 100, maxResearch: 10, maxMessages: 1000 },
-          { name: "PRO", priceMonthly: 797, priceYearly: 0, maxLeads: 10000, maxSdrs: 5, maxTokens: 500000, maxProspects: 1000, maxResearch: 100, maxMessages: 10000 },
-          { name: "ENTERPRISE", priceMonthly: 997, priceYearly: 0, maxLeads: 999999, maxSdrs: 20, maxTokens: 2000000, maxProspects: 10000, maxResearch: 500, maxMessages: 50000 },
-          { name: "VITALICIO", priceMonthly: 0, priceYearly: 0, maxLeads: 9999999, maxSdrs: 999, maxTokens: 999999999, maxProspects: 9999999, maxResearch: 9999999, maxMessages: 9999999, features: JSON.stringify({ aiEnabled: true, webhookEnabled: true, bulkMessaging: true, calendar: true, crmIntegration: true, maxAutomations: -1, maxExecutions: -1 }) }
+          { name: "Starter",    priceMonthly: 297,  priceYearly: 2970,  maxLeads: 500,     maxSdrs: 1,   maxUsers: 2,  maxWhatsAppNumbers: 1,  maxKnowledgeBaseChars: 50000,   maxTokens: 100000,   maxMessages: 2000,  enableCalendar: true,  enableAutomations: true,  enableWebhooks: false },
+          { name: "Pro",        priceMonthly: 797,  priceYearly: 7970,  maxLeads: 3000,    maxSdrs: 3,   maxUsers: 5,  maxWhatsAppNumbers: 2,  maxKnowledgeBaseChars: 150000,  maxTokens: 500000,   maxMessages: 10000, enableCalendar: true,  enableAutomations: true,  enableWebhooks: true },
+          { name: "Enterprise", priceMonthly: 1997, priceYearly: 19970, maxLeads: 20000,   maxSdrs: 10,  maxUsers: 20, maxWhatsAppNumbers: 10, maxKnowledgeBaseChars: 500000,  maxTokens: 2500000,  maxMessages: 50000, enableCalendar: true,  enableAutomations: true,  enableWebhooks: true },
+          { name: "VITALICIO",  priceMonthly: 0,    priceYearly: 0,     maxLeads: 9999999, maxSdrs: 999, maxUsers: 999, maxWhatsAppNumbers: 999, maxKnowledgeBaseChars: 9999999, maxTokens: 999999999, maxMessages: 9999999, enableCalendar: true, enableAutomations: true, enableWebhooks: true, features: JSON.stringify({ support: "Dedicado", rag: true, priority: true }) }
         ]
       });
       console.log("💎 Planos iniciais criados.");

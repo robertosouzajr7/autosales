@@ -795,56 +795,6 @@ export default function Settings() {
                    )}
                  </div>
 
-                 {/* Prospects Search (BDR) */}
-                 <div className="p-6 bg-slate-50 rounded-2xl space-y-4">
-                   <div className="flex justify-between items-center">
-                     <div className="flex items-center gap-2">
-                       <Target className="w-5 h-5 text-emerald-500" />
-                       <span className="text-xs font-semibold text-slate-700">Varreduras BDR / Mês</span>
-                     </div>
-                     <span className="text-xs font-semibold text-slate-900">
-                       {billingData?.plan?.enableProspects ? `${billingData?.tenant?.usedProspects || 0} / ${billingData?.plan?.maxProspects || 0}` : "Bloqueado"}
-                     </span>
-                   </div>
-                   {billingData?.plan?.enableProspects ? (
-                     <div className="w-full bg-slate-200 h-3 rounded-full overflow-hidden">
-                       <div 
-                         className="bg-emerald-500 h-full rounded-full transition-all duration-500" 
-                         style={{ width: `${Math.min(100, ((billingData?.tenant?.usedProspects || 0) / (billingData?.plan?.maxProspects || 1)) * 100)}%` }} 
-                       />
-                     </div>
-                   ) : (
-                     <div className="text-xs font-semibold uppercase text-slate-400 bg-slate-100 p-2.5 rounded-xl border border-dashed text-center">
-                       Recurso Desativado
-                     </div>
-                   )}
-                 </div>
-
-                 {/* Deep Research */}
-                 <div className="p-6 bg-slate-50 rounded-2xl space-y-4">
-                   <div className="flex justify-between items-center">
-                     <div className="flex items-center gap-2">
-                       <Search className="w-5 h-5 text-amber-500" />
-                       <span className="text-xs font-semibold text-slate-700">Deep Research / Mês</span>
-                     </div>
-                     <span className="text-xs font-semibold text-slate-900">
-                       {billingData?.plan?.enableResearch ? `${billingData?.tenant?.usedResearch || 0} / ${billingData?.plan?.maxResearch || 0}` : "Bloqueado"}
-                     </span>
-                   </div>
-                   {billingData?.plan?.enableResearch ? (
-                     <div className="w-full bg-slate-200 h-3 rounded-full overflow-hidden">
-                       <div 
-                         className="bg-amber-500 h-full rounded-full transition-all duration-500" 
-                         style={{ width: `${Math.min(100, ((billingData?.tenant?.usedResearch || 0) / (billingData?.plan?.maxResearch || 1)) * 100)}%` }} 
-                       />
-                     </div>
-                   ) : (
-                     <div className="text-xs font-semibold uppercase text-slate-400 bg-slate-100 p-2.5 rounded-xl border border-dashed text-center">
-                       Recurso Desativado
-                     </div>
-                   )}
-                 </div>
-
                  {/* Messages/month */}
                  <div className="p-6 bg-slate-50 rounded-2xl space-y-4 col-span-1 md:col-span-2">
                    <div className="flex justify-between items-center">
@@ -980,24 +930,42 @@ export default function Settings() {
                          <ul className="space-y-3 pt-4 text-xs font-bold">
                            <li className="flex items-center gap-2">
                              <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-indigo-400' : 'text-indigo-600'}`} />
-                             <span>Até {p.maxSdrs} SDRs Ativos</span>
+                             <span>Até {p.maxSdrs} agentes de IA ativos</span>
                            </li>
                            <li className="flex items-center gap-2">
                              <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-indigo-400' : 'text-indigo-600'}`} />
-                             <span>{p.maxTokens.toLocaleString("pt-BR")} Tokens IA/mês</span>
+                             <span>{p.maxTokens.toLocaleString("pt-BR")} tokens IA/mês</span>
                            </li>
                            <li className="flex items-center gap-2">
                              <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-indigo-400' : 'text-indigo-600'}`} />
-                             <span>{p.maxProspects} Varreduras BDR/mês</span>
+                             <span>{p.maxMessages?.toLocaleString("pt-BR")} mensagens WhatsApp/mês</span>
                            </li>
                            <li className="flex items-center gap-2">
                              <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-indigo-400' : 'text-indigo-600'}`} />
-                             <span>{p.maxResearch} Deep Research/mês</span>
+                             <span>{p.maxLeads?.toLocaleString("pt-BR")} contatos</span>
                            </li>
                            <li className="flex items-center gap-2">
                              <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-indigo-400' : 'text-indigo-600'}`} />
-                             <span>{p.maxMessages} Mensagens/mês</span>
+                             <span>{p.maxWhatsAppNumbers || 1} nº WhatsApp · {p.maxUsers || 2} usuários</span>
                            </li>
+                           {p.enableCalendar && (
+                             <li className="flex items-center gap-2">
+                               <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-indigo-400' : 'text-indigo-600'}`} />
+                               <span>Google Calendar integrado</span>
+                             </li>
+                           )}
+                           {p.enableAutomations && (
+                             <li className="flex items-center gap-2">
+                               <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-indigo-400' : 'text-indigo-600'}`} />
+                               <span>Lembretes e automações</span>
+                             </li>
+                           )}
+                           {p.enableWebhooks && (
+                             <li className="flex items-center gap-2">
+                               <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-indigo-400' : 'text-indigo-600'}`} />
+                               <span>Webhooks / API pública</span>
+                             </li>
+                           )}
                          </ul>
                        </div>
 

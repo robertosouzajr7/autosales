@@ -49,29 +49,19 @@ export const getSummary = async (req, res) => {
           usage: {
             sdrs: tenant.sdrs?.length || 0,
             tokens: tenant.usedTokens || 0,
-            prospects: tenant.usedProspects || 0,
-            research: tenant.usedResearch || 0,
-            messages: tenant.usedMessages || 0
+            messages: tenant.usedMessages || 0,
           },
-          costs: {
-            sdrs: 0,
-            tokens: 0,
-            prospects: 0,
-            research: 0,
-            messages: 0
-          },
-          totalCost: 0
+          costs: { sdrs: 0, tokens: 0, messages: 0 },
+          totalCost: 0,
         };
       }
-      
+
       const plan = tenant.plan;
       const sdrCost = tenant.sdrs.length * plan.sdrUnitCost;
       const tokenCost = (tenant.usedTokens / 1000) * plan.tokenUnitCost;
-      const prospectCost = tenant.usedProspects * plan.prospectUnitCost;
-      const researchCost = tenant.usedResearch * plan.researchUnitCost;
       const messageCost = tenant.usedMessages * plan.messageUnitCost;
-      
-      const totalCost = sdrCost + tokenCost + prospectCost + researchCost + messageCost;
+
+      const totalCost = sdrCost + tokenCost + messageCost;
       totalClientOperationalCosts += totalCost;
 
       return {
@@ -82,18 +72,14 @@ export const getSummary = async (req, res) => {
         usage: {
           sdrs: tenant.sdrs.length,
           tokens: tenant.usedTokens,
-          prospects: tenant.usedProspects,
-          research: tenant.usedResearch,
-          messages: tenant.usedMessages
+          messages: tenant.usedMessages,
         },
         costs: {
           sdrs: sdrCost,
           tokens: tokenCost,
-          prospects: prospectCost,
-          research: researchCost,
-          messages: messageCost
+          messages: messageCost,
         },
-        totalCost
+        totalCost,
       };
     });
 

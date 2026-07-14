@@ -25,19 +25,19 @@ interface Plan {
   priceYearly: number;
   maxLeads: number;
   maxSdrs: number;
+  maxUsers: number;
+  maxWhatsAppNumbers: number;
+  maxKnowledgeBaseChars: number;
   maxTokens: number;
   maxMessages: number;
-  maxProspects: number;
-  maxResearch: number;
   enableSdr: boolean;
   enableTokens: boolean;
-  enableProspects: boolean;
-  enableResearch: boolean;
   enableMessages: boolean;
+  enableCalendar: boolean;
+  enableAutomations: boolean;
+  enableWebhooks: boolean;
   sdrUnitCost: number;
   tokenUnitCost: number;
-  prospectUnitCost: number;
-  researchUnitCost: number;
   messageUnitCost: number;
   features: string;
 }
@@ -76,34 +76,30 @@ export default function AdminDashboard() {
 
   const defaultPlanState = {
     id: null,
-    name: "", 
-    priceMonthly: 0, 
-    priceYearly: 0, 
-    maxLeads: 1000, 
-    maxSdrs: 2, 
+    name: "",
+    priceMonthly: 0,
+    priceYearly: 0,
+    maxLeads: 500,
+    maxSdrs: 1,
+    maxUsers: 2,
+    maxWhatsAppNumbers: 1,
+    maxKnowledgeBaseChars: 50000,
     maxTokens: 100000,
     maxMessages: 1000,
-    maxProspects: 100,
-    maxResearch: 20,
     enableSdr: true,
     enableTokens: true,
-    enableProspects: true,
-    enableResearch: true,
     enableMessages: true,
+    enableCalendar: true,
+    enableAutomations: true,
+    enableWebhooks: false,
     sdrUnitCost: 15.0,
     tokenUnitCost: 0.08,
-    prospectUnitCost: 0.15,
-    researchUnitCost: 1.00,
     messageUnitCost: 0.05,
     features: {
-      aiEnabled: true, 
-      webhookEnabled: false, 
-      bulkMessaging: false, 
-      calendar: false, 
-      crmIntegration: false,
-      maxAutomations: 3, 
-      maxExecutions: 1000 
-    }
+      support: "Email",
+      rag: false,
+      priority: false,
+    },
   };
 
   const [newPlan, setNewPlan] = useState<any>(defaultPlanState);
@@ -209,16 +205,10 @@ export default function AdminDashboard() {
   };
 
   const handleEditPlan = (plan: any) => {
-    let featuresData = {
-      aiEnabled: false, webhookEnabled: false, bulkMessaging: false, 
-      calendar: false, crmIntegration: false, maxAutomations: 3, maxExecutions: 1000
-    };
+    let featuresData: any = { support: "Email", rag: false, priority: false };
     try {
-      if (plan.features) {
-        const parsed = JSON.parse(plan.features);
-        featuresData = { ...featuresData, ...parsed };
-      }
-    } catch(e) {
+      if (plan.features) featuresData = { ...featuresData, ...JSON.parse(plan.features) };
+    } catch (e) {
       console.error("Erro ao analisar features:", e);
     }
 
@@ -229,21 +219,21 @@ export default function AdminDashboard() {
       priceYearly: plan.priceYearly || 0,
       maxLeads: plan.maxLeads || 0,
       maxSdrs: plan.maxSdrs || 0,
+      maxUsers: plan.maxUsers ?? 2,
+      maxWhatsAppNumbers: plan.maxWhatsAppNumbers ?? 1,
+      maxKnowledgeBaseChars: plan.maxKnowledgeBaseChars ?? 50000,
       maxTokens: plan.maxTokens || 0,
       maxMessages: plan.maxMessages || 0,
-      maxProspects: plan.maxProspects || 0,
-      maxResearch: plan.maxResearch || 0,
-      enableSdr: plan.enableSdr !== undefined ? plan.enableSdr : true,
-      enableTokens: plan.enableTokens !== undefined ? plan.enableTokens : true,
-      enableProspects: plan.enableProspects !== undefined ? plan.enableProspects : true,
-      enableResearch: plan.enableResearch !== undefined ? plan.enableResearch : true,
-      enableMessages: plan.enableMessages !== undefined ? plan.enableMessages : true,
-      sdrUnitCost: plan.sdrUnitCost !== undefined ? plan.sdrUnitCost : 15.0,
-      tokenUnitCost: plan.tokenUnitCost !== undefined ? plan.tokenUnitCost : 0.08,
-      prospectUnitCost: plan.prospectUnitCost !== undefined ? plan.prospectUnitCost : 0.15,
-      researchUnitCost: plan.researchUnitCost !== undefined ? plan.researchUnitCost : 1.00,
-      messageUnitCost: plan.messageUnitCost !== undefined ? plan.messageUnitCost : 0.05,
-      features: featuresData
+      enableSdr: plan.enableSdr ?? true,
+      enableTokens: plan.enableTokens ?? true,
+      enableMessages: plan.enableMessages ?? true,
+      enableCalendar: plan.enableCalendar ?? true,
+      enableAutomations: plan.enableAutomations ?? true,
+      enableWebhooks: plan.enableWebhooks ?? false,
+      sdrUnitCost: plan.sdrUnitCost ?? 15.0,
+      tokenUnitCost: plan.tokenUnitCost ?? 0.08,
+      messageUnitCost: plan.messageUnitCost ?? 0.05,
+      features: featuresData,
     });
     setIsPlanModalOpen(true);
   };
@@ -256,21 +246,21 @@ export default function AdminDashboard() {
         priceYearly: Number(newPlan.priceYearly || newPlan.priceMonthly * 10),
         maxLeads: Number(newPlan.maxLeads),
         maxSdrs: Number(newPlan.maxSdrs),
+        maxUsers: Number(newPlan.maxUsers),
+        maxWhatsAppNumbers: Number(newPlan.maxWhatsAppNumbers),
+        maxKnowledgeBaseChars: Number(newPlan.maxKnowledgeBaseChars),
         maxTokens: Number(newPlan.maxTokens),
         maxMessages: Number(newPlan.maxMessages),
-        maxProspects: Number(newPlan.maxProspects),
-        maxResearch: Number(newPlan.maxResearch),
         enableSdr: Boolean(newPlan.enableSdr),
         enableTokens: Boolean(newPlan.enableTokens),
-        enableProspects: Boolean(newPlan.enableProspects),
-        enableResearch: Boolean(newPlan.enableResearch),
         enableMessages: Boolean(newPlan.enableMessages),
+        enableCalendar: Boolean(newPlan.enableCalendar),
+        enableAutomations: Boolean(newPlan.enableAutomations),
+        enableWebhooks: Boolean(newPlan.enableWebhooks),
         sdrUnitCost: Number(newPlan.sdrUnitCost),
         tokenUnitCost: Number(newPlan.tokenUnitCost),
-        prospectUnitCost: Number(newPlan.prospectUnitCost),
-        researchUnitCost: Number(newPlan.researchUnitCost),
         messageUnitCost: Number(newPlan.messageUnitCost),
-        features: JSON.stringify(newPlan.features)
+        features: JSON.stringify(newPlan.features),
       };
 
       const method = newPlan.id ? "PUT" : "POST";
@@ -417,11 +407,9 @@ export default function AdminDashboard() {
   // Operational profit simulator calculation
   const simSdrCost = newPlan.enableSdr ? (Number(newPlan.maxSdrs) || 0) * (Number(newPlan.sdrUnitCost) || 0) : 0;
   const simTokenCost = newPlan.enableTokens ? ((Number(newPlan.maxTokens) || 0) / 1000) * (Number(newPlan.tokenUnitCost) || 0) : 0;
-  const simProspectCost = newPlan.enableProspects ? (Number(newPlan.maxProspects) || 0) * (Number(newPlan.prospectUnitCost) || 0) : 0;
-  const simResearchCost = newPlan.enableResearch ? (Number(newPlan.maxResearch) || 0) * (Number(newPlan.researchUnitCost) || 0) : 0;
   const simMessageCost = newPlan.enableMessages ? (Number(newPlan.maxMessages) || 0) * (Number(newPlan.messageUnitCost) || 0) : 0;
 
-  const simTotalCost = simSdrCost + simTokenCost + simProspectCost + simResearchCost + simMessageCost;
+  const simTotalCost = simSdrCost + simTokenCost + simMessageCost;
   const simPrice = Number(newPlan.priceMonthly) || 0;
   const simProfit = simPrice - simTotalCost;
   const simMargin = simPrice > 0 ? (simProfit / simPrice) * 100 : 0;
@@ -992,27 +980,31 @@ export default function AdminDashboard() {
                 </div>
 
                 <div>
-                  <h4 className="text-sm font-semibold uppercase text-slate-400 mb-3 ">Recursos Ativos</h4>
+                  <h4 className="text-sm font-semibold uppercase text-slate-400 mb-3 ">Módulos incluídos</h4>
                   <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-100">
                      <div className="flex items-center justify-between">
-                       <Label className="text-xs font-bold text-slate-700">Ativar Robôs SDR</Label>
+                       <Label className="text-xs font-bold text-slate-700">Agentes de IA (SDR)</Label>
                        <Switch checked={newPlan.enableSdr} onCheckedChange={v => setNewPlan({...newPlan, enableSdr: v})} />
                      </div>
                      <div className="flex items-center justify-between border-t pt-3">
-                       <Label className="text-xs font-bold text-slate-700">Tokens de IA / Créditos</Label>
+                       <Label className="text-xs font-bold text-slate-700">Créditos de IA (tokens)</Label>
                        <Switch checked={newPlan.enableTokens} onCheckedChange={v => setNewPlan({...newPlan, enableTokens: v})} />
                      </div>
                      <div className="flex items-center justify-between border-t pt-3">
-                       <Label className="text-xs font-bold text-slate-700">Disparador de Mensagens</Label>
+                       <Label className="text-xs font-bold text-slate-700">Mensagens WhatsApp</Label>
                        <Switch checked={newPlan.enableMessages} onCheckedChange={v => setNewPlan({...newPlan, enableMessages: v})} />
                      </div>
                      <div className="flex items-center justify-between border-t pt-3">
-                       <Label className="text-xs font-bold text-slate-700">Busca BDR / Prospecção</Label>
-                       <Switch checked={newPlan.enableProspects} onCheckedChange={v => setNewPlan({...newPlan, enableProspects: v})} />
+                       <Label className="text-xs font-bold text-slate-700">Google Calendar</Label>
+                       <Switch checked={newPlan.enableCalendar} onCheckedChange={v => setNewPlan({...newPlan, enableCalendar: v})} />
                      </div>
                      <div className="flex items-center justify-between border-t pt-3">
-                       <Label className="text-xs font-bold text-slate-700">Deep Research (IA Hunter)</Label>
-                       <Switch checked={newPlan.enableResearch} onCheckedChange={v => setNewPlan({...newPlan, enableResearch: v})} />
+                       <Label className="text-xs font-bold text-slate-700">Automações / Lembretes</Label>
+                       <Switch checked={newPlan.enableAutomations} onCheckedChange={v => setNewPlan({...newPlan, enableAutomations: v})} />
+                     </div>
+                     <div className="flex items-center justify-between border-t pt-3">
+                       <Label className="text-xs font-bold text-slate-700">Webhooks / API pública</Label>
+                       <Switch checked={newPlan.enableWebhooks} onCheckedChange={v => setNewPlan({...newPlan, enableWebhooks: v})} />
                      </div>
                   </div>
                 </div>
@@ -1022,52 +1014,48 @@ export default function AdminDashboard() {
              <div className="space-y-6">
                 <div>
                   <h4 className="text-sm font-semibold uppercase text-slate-400 mb-3 ">Limites & Custos Unitários</h4>
-                  <div className="grid grid-cols-2 gap-4 max-h-[320px] overflow-y-auto pr-1">
-                     
-                     {/* SDR */}
+                  <div className="grid grid-cols-2 gap-4 max-h-[380px] overflow-y-auto pr-1">
+
                      <div className="space-y-1 p-3 bg-slate-50 rounded-xl">
-                       <Label className="text-xs font-semibold uppercase text-slate-400">Máx SDRs</Label>
+                       <Label className="text-xs font-semibold uppercase text-slate-400">Agentes de IA</Label>
                        <Input disabled={!newPlan.enableSdr} type="number" value={newPlan.maxSdrs} onChange={e => setNewPlan({...newPlan, maxSdrs: parseInt(e.target.value) || 0})} className="h-9 bg-white border-none rounded-lg font-bold" />
-                       <span className="text-xs font-semibold text-slate-400 block mt-1">Custo/SDR: R$</span>
+                       <span className="text-xs font-semibold text-slate-400 block mt-1">Custo/agente/mês (R$)</span>
                        <Input type="number" step="0.01" value={newPlan.sdrUnitCost} onChange={e => setNewPlan({...newPlan, sdrUnitCost: parseFloat(e.target.value) || 0})} className="h-8 bg-white border-none rounded-lg text-xs" />
                      </div>
 
-                     {/* Tokens */}
                      <div className="space-y-1 p-3 bg-slate-50 rounded-xl">
-                       <Label className="text-xs font-semibold uppercase text-slate-400">Tokens/IA</Label>
+                       <Label className="text-xs font-semibold uppercase text-slate-400">Tokens IA</Label>
                        <Input disabled={!newPlan.enableTokens} type="number" value={newPlan.maxTokens} onChange={e => setNewPlan({...newPlan, maxTokens: parseInt(e.target.value) || 0})} className="h-9 bg-white border-none rounded-lg font-bold" />
-                       <span className="text-xs font-semibold text-slate-400 block mt-1">Custo/1k Tokens: R$</span>
+                       <span className="text-xs font-semibold text-slate-400 block mt-1">Custo/1k tokens (R$)</span>
                        <Input type="number" step="0.01" value={newPlan.tokenUnitCost} onChange={e => setNewPlan({...newPlan, tokenUnitCost: parseFloat(e.target.value) || 0})} className="h-8 bg-white border-none rounded-lg text-xs" />
                      </div>
 
-                     {/* Messages */}
                      <div className="space-y-1 p-3 bg-slate-50 rounded-xl">
-                       <Label className="text-xs font-semibold uppercase text-slate-400">Msg/mês</Label>
+                       <Label className="text-xs font-semibold uppercase text-slate-400">Mensagens/mês</Label>
                        <Input disabled={!newPlan.enableMessages} type="number" value={newPlan.maxMessages} onChange={e => setNewPlan({...newPlan, maxMessages: parseInt(e.target.value) || 0})} className="h-9 bg-white border-none rounded-lg font-bold" />
-                       <span className="text-xs font-semibold text-slate-400 block mt-1">Custo/Msg: R$</span>
+                       <span className="text-xs font-semibold text-slate-400 block mt-1">Custo/msg (R$)</span>
                        <Input type="number" step="0.01" value={newPlan.messageUnitCost} onChange={e => setNewPlan({...newPlan, messageUnitCost: parseFloat(e.target.value) || 0})} className="h-8 bg-white border-none rounded-lg text-xs" />
                      </div>
 
-                     {/* Prospects */}
                      <div className="space-y-1 p-3 bg-slate-50 rounded-xl">
-                       <Label className="text-xs font-semibold uppercase text-slate-400">Buscas BDR</Label>
-                       <Input disabled={!newPlan.enableProspects} type="number" value={newPlan.maxProspects} onChange={e => setNewPlan({...newPlan, maxProspects: parseInt(e.target.value) || 0})} className="h-9 bg-white border-none rounded-lg font-bold" />
-                       <span className="text-xs font-semibold text-slate-400 block mt-1">Custo/BDR: R$</span>
-                       <Input type="number" step="0.01" value={newPlan.prospectUnitCost} onChange={e => setNewPlan({...newPlan, prospectUnitCost: parseFloat(e.target.value) || 0})} className="h-8 bg-white border-none rounded-lg text-xs" />
+                       <Label className="text-xs font-semibold uppercase text-slate-400">Contatos (leads)</Label>
+                       <Input type="number" value={newPlan.maxLeads} onChange={e => setNewPlan({...newPlan, maxLeads: parseInt(e.target.value) || 0})} className="h-9 bg-white border-none rounded-lg font-bold" />
                      </div>
 
-                     {/* Research */}
+                     <div className="space-y-1 p-3 bg-slate-50 rounded-xl">
+                       <Label className="text-xs font-semibold uppercase text-slate-400">Usuários da equipe</Label>
+                       <Input type="number" value={newPlan.maxUsers} onChange={e => setNewPlan({...newPlan, maxUsers: parseInt(e.target.value) || 0})} className="h-9 bg-white border-none rounded-lg font-bold" />
+                     </div>
+
+                     <div className="space-y-1 p-3 bg-slate-50 rounded-xl">
+                       <Label className="text-xs font-semibold uppercase text-slate-400">Nºs WhatsApp</Label>
+                       <Input type="number" value={newPlan.maxWhatsAppNumbers} onChange={e => setNewPlan({...newPlan, maxWhatsAppNumbers: parseInt(e.target.value) || 0})} className="h-9 bg-white border-none rounded-lg font-bold" />
+                     </div>
+
                      <div className="space-y-1 p-3 bg-slate-50 rounded-xl col-span-2">
-                       <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <Label className="text-xs font-semibold uppercase text-slate-400">Deep Research</Label>
-                            <Input disabled={!newPlan.enableResearch} type="number" value={newPlan.maxResearch} onChange={e => setNewPlan({...newPlan, maxResearch: parseInt(e.target.value) || 0})} className="h-9 bg-white border-none rounded-lg font-bold" />
-                          </div>
-                          <div>
-                            <span className="text-xs font-semibold text-slate-400 block mt-1">Custo/Pesquisa: R$</span>
-                            <Input type="number" step="0.01" value={newPlan.researchUnitCost} onChange={e => setNewPlan({...newPlan, researchUnitCost: parseFloat(e.target.value) || 0})} className="h-8 bg-white border-none rounded-lg text-xs mt-1" />
-                          </div>
-                       </div>
+                       <Label className="text-xs font-semibold uppercase text-slate-400">Treino do agente (caracteres máx.)</Label>
+                       <Input type="number" value={newPlan.maxKnowledgeBaseChars} onChange={e => setNewPlan({...newPlan, maxKnowledgeBaseChars: parseInt(e.target.value) || 0})} className="h-9 bg-white border-none rounded-lg font-bold" />
+                       <p className="text-xs text-slate-500 mt-1">Referência: 50.000 ≈ 35 páginas de texto.</p>
                      </div>
 
                   </div>
