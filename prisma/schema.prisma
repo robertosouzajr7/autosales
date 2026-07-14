@@ -53,6 +53,12 @@ model Tenant {
   listmonkToken  String?
   listmonkListId String?
 
+  // Perfil da Clínica (contexto do agente de IA)
+  clinicAbout      String? // descrição/apresentação da clínica
+  clinicAddress    String? // endereço completo
+  clinicPayment    String? // formas de pagamento aceitas
+  clinicExtraInfo  String? // estacionamento, acessibilidade, orientações gerais
+
   // Consumption Tracking (Real-time)
   usedTokens           Int      @default(0)
   usedProspects        Int      @default(0)
@@ -85,6 +91,13 @@ model Tenant {
   messages      Message[]
   products      Product[]
   icpProfiles   IcpProfile[]
+
+  // Base de conhecimento estruturada da clínica
+  professionals Professional[]
+  services      ClinicService[]
+  insurances    InsuranceProvider[]
+  businessHours BusinessHour[]
+  faqs          ClinicFaq[]
 }
 
 model PipelineStage {
@@ -608,4 +621,80 @@ model AuditLog {
 
   @@index([tenantId])
   @@index([action])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Base de conhecimento estruturada da clínica (contexto do agente)
+// ═══════════════════════════════════════════════════════════════
+
+model Professional {
+  id           String  @id @default(uuid())
+  tenantId     String
+  name         String
+  specialty    String? // ex.: "Ortodontia", "Clínico Geral"
+  registration String? // CRM/CRO/registro do conselho
+  bio          String? // breve descrição / diferenciais
+  active       Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model ClinicService {
+  id          String  @id @default(uuid())
+  tenantId    String
+  name        String
+  description String?
+  durationMin Int     @default(30) // duração média em minutos
+  price       Float? // valor particular (null = sob consulta)
+  prep        String? // preparo necessário (jejum, exames prévios, etc.)
+  active      Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model InsuranceProvider {
+  id       String  @id @default(uuid())
+  tenantId String
+  name     String // ex.: "Unimed", "Bradesco Saúde"
+  notes    String? // observações (carência, procedimentos cobertos)
+  active   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model BusinessHour {
+  id        String  @id @default(uuid())
+  tenantId  String
+  weekday   Int // 0=Domingo ... 6=Sábado
+  openTime  String? // "09:00"
+  closeTime String? // "18:00"
+  isClosed  Boolean @default(false)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, weekday])
+}
+
+model ClinicFaq {
+  id       String @id @default(uuid())
+  tenantId String
+  question String
+  answer   String
+  order    Int    @default(0)
+
+  createdAt DateTime @default(now())
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
 }
