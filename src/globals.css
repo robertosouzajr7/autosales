@@ -4,85 +4,85 @@
 
 @layer base {
   :root {
-    /* Health Light Palette — teal/verde-azulado (calma, cuidado, confiança) */
-    --background: 170 40% 98%;
-    --foreground: 180 25% 12%;
+    /* Clean Light Palette — azul profissional + neutros (slate/branco) */
+    --background: 210 40% 98%;         /* near-white com toque frio */
+    --foreground: 222 47% 11%;         /* slate-900 */
 
-    --card: 0 0% 100%;
-    --card-foreground: 180 25% 12%;
+    --card: 0 0% 100%;                 /* branco puro */
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 180 25% 12%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 175 84% 32%; /* Teal #0D9488 */
+    --primary: 217 91% 53%;            /* Blue-600 #2563EB */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 170 40% 94%;
-    --secondary-foreground: 180 25% 12%;
+    --secondary: 210 40% 96%;          /* slate-100 */
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 170 40% 94%;
-    --muted-foreground: 178 15% 42%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;   /* slate-500 */
 
-    --accent: 170 40% 94%;
-    --accent-foreground: 176 61% 16%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 170 30% 90%;
-    --input: 170 30% 90%;
-    --ring: 175 84% 32%;
+    --border: 214 32% 91%;             /* slate-200 */
+    --input: 214 32% 91%;
+    --ring: 217 91% 53%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 170 40% 98%;
-    --sidebar-foreground: 180 25% 12%;
-    --sidebar-primary: 175 84% 32%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 217 91% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 170 40% 94%;
-    --sidebar-accent-foreground: 176 61% 16%;
-    --sidebar-border: 170 30% 90%;
-    --sidebar-ring: 175 84% 32%;
+    --sidebar-accent: 210 40% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 217 91% 53%;
   }
 
   .dark {
-    /* Health Dark Palette — teal profundo */
-    --background: 178 84% 8%; /* Deep Teal #043432 */
-    --foreground: 170 40% 98%;
+    /* Clean Dark Palette — slate profundo + azul */
+    --background: 222 47% 6%;          /* slate-950 */
+    --foreground: 210 40% 98%;
 
-    --card: 177 64% 12%; /* Dark Teal Card #0b4a47 */
-    --card-foreground: 170 40% 98%;
+    --card: 222 47% 10%;               /* slate-900 */
+    --card-foreground: 210 40% 98%;
 
-    --popover: 177 64% 12%;
-    --popover-foreground: 170 40% 98%;
+    --popover: 222 47% 10%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 172 66% 44%; /* Teal claro p/ contraste no escuro #26bfae */
-    --primary-foreground: 178 84% 8%;
+    --primary: 217 91% 60%;            /* Blue-500 (mais claro no dark) */
+    --primary-foreground: 222 47% 11%;
 
-    --secondary: 176 40% 16%;
-    --secondary-foreground: 170 40% 98%;
+    --secondary: 217 33% 17%;          /* slate-800 */
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 176 40% 16%;
-    --muted-foreground: 170 20% 65%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;   /* slate-400 */
 
-    --accent: 176 40% 16%;
-    --accent-foreground: 170 40% 98%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 176 45% 15%;
-    --input: 176 45% 15%;
-    --ring: 172 66% 44%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 217 91% 60%;
 
-    --sidebar-background: 178 84% 8%;
-    --sidebar-foreground: 170 40% 98%;
-    --sidebar-primary: 172 66% 44%;
-    --sidebar-primary-foreground: 178 84% 8%;
-    --sidebar-accent: 176 40% 16%;
-    --sidebar-accent-foreground: 170 40% 98%;
-    --sidebar-border: 176 45% 15%;
-    --sidebar-ring: 172 66% 44%;
+    --sidebar-background: 222 47% 6%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-accent: 217 33% 17%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 17%;
+    --sidebar-ring: 217 91% 60%;
   }
 }
 

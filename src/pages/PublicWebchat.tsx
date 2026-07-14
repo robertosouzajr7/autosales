@@ -96,7 +96,7 @@ export default function PublicWebchat() {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
          <div className="animate-pulse flex flex-col items-center gap-4">
-            <Target className="w-12 h-12 text-[#0D9488] animate-spin" />
+            <Target className="w-12 h-12 text-[#2563EB] animate-spin" />
             <p className="text-white/20 font-bold text-xs">Carregando Portal de Atendimento...</p>
          </div>
       </div>
@@ -109,17 +109,17 @@ export default function PublicWebchat() {
          <Shield className="w-16 h-16 text-red-500/50" />
          <h1 className="text-2xl font-bold text-white tracking-tight">Portal não encontrado</h1>
          <p className="text-white/40 max-w-sm">Este endereço de webchat pode ter sido removido ou o plano do cliente expirou.</p>
-         <Button variant="ghost" className="text-[#0D9488] font-bold" onClick={() => window.history.back()}>Voltar</Button>
+         <Button variant="ghost" className="text-[#2563EB] font-bold" onClick={() => window.history.back()}>Voltar</Button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0F172A] flex flex-col items-center justify-center p-0 md:p-10 font-sans selection:bg-[#0D9488]/30">
+    <div className="min-h-screen bg-[#0F172A] flex flex-col items-center justify-center p-0 md:p-10 font-sans selection:bg-[#2563EB]/30">
       
       {/* BACKGROUND DECORATION */}
       <div className="fixed inset-0 overflow-hidden -z-10 pointer-events-none">
-         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-full bg-[#0D9488]/5 blur-[120px] rounded-full" />
+         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-full bg-[#2563EB]/5 blur-[120px] rounded-full" />
       </div>
 
       <Card className="w-full max-w-5xl h-screen md:h-[85vh] border-none shadow-[0_50px_100px_rgba(0,0,0,0.5)] bg-slate-900/50 backdrop-blur-2xl overflow-hidden flex flex-col md:flex-row rounded-none md:rounded-3xl">
@@ -132,11 +132,11 @@ export default function PublicWebchat() {
                     <img src={data.logo} alt="Logo" className="h-10 w-auto" />
                   ) : (
                     <div className="flex items-center gap-3">
-                       <div className="bg-[#0D9488] p-2 rounded-xl"><Target className="w-6 h-6 text-white" /></div>
+                       <div className="bg-[#2563EB] p-2 rounded-xl"><Target className="w-6 h-6 text-white" /></div>
                        <span className="text-xl font-bold text-white tracking-tight uppercase italic">{data.tenantName}</span>
                     </div>
                   )}
-                  <Badge className="bg-[#0D9488]/10 text-[#0D9488] border-none font-bold text-xs px-3 py-1">Online agora</Badge>
+                  <Badge className="bg-[#2563EB]/10 text-[#2563EB] border-none font-bold text-xs px-3 py-1">Online agora</Badge>
                </div>
 
                <div className="space-y-6">
@@ -152,9 +152,9 @@ export default function PublicWebchat() {
                   </div>
 
                   <div className="space-y-3">
-                     <div className="flex items-center gap-2 text-white/40 text-xs font-bold"><CheckCircle2 className="w-4 h-4 text-[#0D9488]" /> Resposta Imediata</div>
-                     <div className="flex items-center gap-2 text-white/40 text-xs font-bold"><CheckCircle2 className="w-4 h-4 text-[#0D9488]" /> Sem Espera</div>
-                     <div className="flex items-center gap-2 text-white/40 text-xs font-bold"><CheckCircle2 className="w-4 h-4 text-[#0D9488]" /> Agendamento Integrado</div>
+                     <div className="flex items-center gap-2 text-white/40 text-xs font-bold"><CheckCircle2 className="w-4 h-4 text-[#2563EB]" /> Resposta Imediata</div>
+                     <div className="flex items-center gap-2 text-white/40 text-xs font-bold"><CheckCircle2 className="w-4 h-4 text-[#2563EB]" /> Sem Espera</div>
+                     <div className="flex items-center gap-2 text-white/40 text-xs font-bold"><CheckCircle2 className="w-4 h-4 text-[#2563EB]" /> Agendamento Integrado</div>
                   </div>
                </div>
             </div>
@@ -162,7 +162,7 @@ export default function PublicWebchat() {
             <div className="pt-10 border-t border-white/5 space-y-4">
                <p className="text-xs text-white/20 font-bold leading-relaxed">Este é um canal oficial da <b>{data.tenantName}</b> operado por Inteligência Artificial Especializada.</p>
                <Button variant="ghost" className="w-full justify-start text-white/40 hover:text-white hover:bg-white/5 rounded-xl text-xs gap-3 font-bold group">
-                  <Shield className="w-4 h-4 group-hover:text-[#0D9488] transition-colors" /> Privacidade & Segurança
+                  <Shield className="w-4 h-4 group-hover:text-[#2563EB] transition-colors" /> Privacidade & Segurança
                </Button>
             </div>
          </div>
@@ -172,10 +172,10 @@ export default function PublicWebchat() {
             {/* MOBILE HEADER */}
             <div className="md:hidden bg-slate-900 p-4 flex items-center justify-between border-b border-white/5">
                 <div className="flex items-center gap-3">
-                   <div className="w-8 h-8 bg-[#0D9488] rounded-lg flex items-center justify-center"><Target className="w-4 h-4 text-white" /></div>
+                   <div className="w-8 h-8 bg-[#2563EB] rounded-lg flex items-center justify-center"><Target className="w-4 h-4 text-white" /></div>
                    <span className="font-bold text-white text-sm tracking-tight">{data.tenantName}</span>
                 </div>
-                <div className="w-2 h-2 bg-[#0D9488] rounded-full animate-pulse" />
+                <div className="w-2 h-2 bg-[#2563EB] rounded-full animate-pulse" />
             </div>
 
             {/* MESSAGES */}
@@ -201,7 +201,7 @@ export default function PublicWebchat() {
                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in zoom-in-95`}>
                     <div className={`shadow-2xl max-w-[85%] p-6 rounded-2xl ${
  msg.role === 'user' 
- ? 'bg-[#0D9488] text-slate-950 font-bold rounded-tr-none' 
+ ? 'bg-[#2563EB] text-slate-950 font-bold rounded-tr-none' 
  : 'bg-white/5 border border-white/5 text-white font-bold rounded-tl-none'
  }`}>
                        <p className="leading-relaxed">{msg.content}</p>
@@ -213,9 +213,9 @@ export default function PublicWebchat() {
                  <div className="flex justify-start">
                     <div className="flex items-center gap-2 text-white/20 font-bold uppercase text-xs pl-4">
                        <div className="flex gap-1">
-                          <span className="w-1 h-1 bg-[#0D9488] rounded-full animate-bounce" style={{animationDelay: '0ms'}} />
-                          <span className="w-1 h-1 bg-[#0D9488] rounded-full animate-bounce" style={{animationDelay: '150ms'}} />
-                          <span className="w-1 h-1 bg-[#0D9488] rounded-full animate-bounce" style={{animationDelay: '300ms'}} />
+                          <span className="w-1 h-1 bg-[#2563EB] rounded-full animate-bounce" style={{animationDelay: '0ms'}} />
+                          <span className="w-1 h-1 bg-[#2563EB] rounded-full animate-bounce" style={{animationDelay: '150ms'}} />
+                          <span className="w-1 h-1 bg-[#2563EB] rounded-full animate-bounce" style={{animationDelay: '300ms'}} />
                        </div>
                        Digitando resposta estratégica...
                     </div>
@@ -238,7 +238,7 @@ export default function PublicWebchat() {
                      <Button 
                        onClick={handleSend}
                        disabled={sending || !message.trim()}
-                       className="h-14 w-14 rounded-2xl bg-[#0D9488] hover:bg-emerald-400 text-slate-950 shadow-xl active:scale-90 transition-all p-0 flex items-center justify-center shrink-0"
+                       className="h-14 w-14 rounded-2xl bg-[#2563EB] hover:bg-emerald-400 text-slate-950 shadow-xl active:scale-90 transition-all p-0 flex items-center justify-center shrink-0"
                      >
                         <Send className="w-6 h-6" />
                      </Button>

@@ -98,7 +98,7 @@ export default function PublicBooking() {
             Sua reunião foi confirmada para o dia <br />
             <strong>{format(date!, "dd 'de' MMMM", { locale: ptBR })} às {selectedTime}</strong>.
           </CardDescription>
-          <Button onClick={() => window.close()} className="w-full py-6 bg-[#0F766E] hover:bg-[#0D9488] text-lg font-bold">
+          <Button onClick={() => window.close()} className="w-full py-6 bg-[#1D4ED8] hover:bg-[#2563EB] text-lg font-bold">
             Pode fechar esta janela
           </Button>
         </Card>

@@ -117,13 +117,13 @@ function SidebarNav({ collapsed, onNavClick, features }: SidebarNavProps & { fea
             <Icon
               className={cn(
                 "shrink-0 transition-colors duration-200",
-                isActive ? "text-[#0D9488]" : "text-slate-400 group-hover:text-white",
+                isActive ? "text-[#2563EB]" : "text-slate-400 group-hover:text-white",
                 collapsed ? "h-5 w-5" : "h-4 w-4"
               )}
             />
             {!collapsed && <span className="truncate">{item.label}</span>}
             {!collapsed && isActive && (
-              <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#0D9488]" />
+              <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#2563EB]" />
             )}
           </Link>
         );
@@ -360,11 +360,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     )?.label ?? "Dashboard";
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-[#042F2E]">
+    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-[#0F172A]">
       {/* Desktop Sidebar */}
       <aside
         className={cn(
-          "relative hidden flex-col border-r border-slate-200 dark:border-teal-950/40 lg:flex",
+          "relative hidden flex-col border-r border-slate-200 dark:border-slate-900/40 lg:flex",
           "transition-[width] duration-300 ease-in-out",
           collapsed ? "w-[68px]" : "w-[260px]"
         )}
@@ -385,7 +385,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <SheetTrigger asChild>
           <span className="hidden" />
         </SheetTrigger>
-        <SheetContent side="left" className="w-[260px] p-0 border-r border-slate-200 dark:border-teal-950/40">
+        <SheetContent side="left" className="w-[260px] p-0 border-r border-slate-200 dark:border-slate-900/40">
           <SidebarContent
             collapsed={false}
             showCollapseButton={false}
@@ -401,12 +401,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="flex h-11 shrink-0 items-center gap-4 border-b border-slate-200 dark:border-teal-950/40 bg-white dark:bg-[#0B4A47] px-4 md:px-6">
+        <header className="flex h-11 shrink-0 items-center gap-4 border-b border-slate-200 dark:border-slate-900/40 bg-white dark:bg-[#1E293B] px-4 md:px-6">
           {/* Mobile hamburger */}
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden text-slate-500 dark:text-teal-300 hover:bg-slate-100 dark:hover:bg-teal-950/20"
+            className="lg:hidden text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900/20"
             onClick={() => setMobileOpen(true)}
           >
             <Menu className="h-5 w-5" />
@@ -422,10 +422,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {/* Notification bell */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative text-slate-500 dark:text-teal-300 hover:bg-slate-100 dark:hover:bg-teal-950/20 rounded-xl transition-all">
+              <Button variant="ghost" size="icon" className="relative text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900/20 rounded-xl transition-all">
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
-                  <Badge className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#0D9488] p-0 text-xs font-bold text-white animate-bounce border-2 border-white dark:border-[#0B4A47]">
+                  <Badge className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#2563EB] p-0 text-xs font-bold text-white animate-bounce border-2 border-white dark:border-[#1E293B]">
                     {unreadCount}
                   </Badge>
                 )}
@@ -488,7 +488,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
-                className="flex items-center gap-2 px-2 hover:bg-slate-100 dark:hover:bg-teal-950/20"
+                className="flex items-center gap-2 px-2 hover:bg-slate-100 dark:hover:bg-slate-900/20"
               >
                 <Avatar className="h-8 w-8">
                   <AvatarImage src="" />
@@ -501,21 +501,21 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 </span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 rounded-xl dark:bg-[#0B4A47] dark:border-teal-950/40 dark:text-white">
+            <DropdownMenuContent align="end" className="w-56 rounded-xl dark:bg-[#1E293B] dark:border-slate-900/40 dark:text-white">
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col gap-0.5">
                   <p className="text-sm font-semibold truncate">{localStorage.getItem("companyName") || "Minha Empresa"}</p>
-                  <p className="text-xs text-muted-foreground dark:text-teal-300/40">Plano {planData.name || "Básico"}</p>
+                  <p className="text-xs text-muted-foreground dark:text-slate-400/40">Plano {planData.name || "Básico"}</p>
                 </div>
               </DropdownMenuLabel>
-              <DropdownMenuSeparator className="dark:bg-teal-950/45" />
+              <DropdownMenuSeparator className="dark:bg-slate-900/45" />
               <DropdownMenuItem asChild>
-                <Link to="/settings" className="flex cursor-pointer items-center gap-2 dark:hover:bg-[#0B3A38]">
+                <Link to="/settings" className="flex cursor-pointer items-center gap-2 dark:hover:bg-[#1E293B]">
                   <Settings className="h-4 w-4 text-muted-foreground" />
                   Configurações
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="dark:bg-teal-950/45" />
+              <DropdownMenuSeparator className="dark:bg-slate-900/45" />
               <DropdownMenuItem onClick={handleLogout} className="flex cursor-pointer items-center gap-2 text-red-600 focus:text-red-600 dark:hover:bg-red-500/10">
                 <LogOut className="h-4 w-4" />
                 Sair

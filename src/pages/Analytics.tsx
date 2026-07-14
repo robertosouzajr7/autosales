@@ -38,7 +38,7 @@ export default function Analytics() {
             <Card className="border-l-4 border-l-blue-500 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-slate-600">Total de Leads Tratados</CardTitle>
-                <Users className="w-5 h-5 text-[#0D9488] opacity-80" />
+                <Users className="w-5 h-5 text-[#2563EB] opacity-80" />
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-slate-800">{stats.totalLeads}</div>
