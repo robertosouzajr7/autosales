@@ -1,19 +1,39 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CheckCircle2, ArrowRight, Loader2 } from "lucide-react";
+import { CheckCircle2, ArrowRight, Loader2, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Register() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
 
   const [formData, setFormData] = useState({
-    name: "", email: "", phone: "", password: "", companyName: ""
+    name: "", email: "", phone: "", password: "", companyName: "",
+    planId: params.get("plan") || "",
   });
+
+  // Plano escolhido (para exibir no topo do form).
+  const [selectedPlan, setSelectedPlan] = useState<any>(null);
+
+  useEffect(() => {
+    const planId = params.get("plan");
+    if (!planId) return;
+    (async () => {
+      try {
+        const res = await fetch("/api/billing/plans");
+        const plans = await res.json();
+        const p = Array.isArray(plans) ? plans.find((x: any) => x.id === planId) : null;
+        if (p) setSelectedPlan(p);
+      } catch {
+        /* silent */
+      }
+    })();
+  }, [params]);
 
   const handleRegister = async () => {
     if (!formData.name || !formData.email || !formData.password || !formData.companyName) {
@@ -83,8 +103,22 @@ export default function Register() {
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
                <div className="space-y-2">
                   <h3 className="text-2xl font-bold text-slate-900 tracking-tight">Criar conta</h3>
-                  <p className="text-slate-400 font-bold text-xs">Comece seu teste grátis. Sem cartão agora.</p>
+                  <p className="text-slate-400 font-bold text-xs">7 dias grátis para testar. Sem cartão agora.</p>
                </div>
+
+               {selectedPlan && (
+                 <div className="rounded-2xl border border-[#2563EB]/30 bg-[#2563EB]/5 p-4 flex items-center gap-3">
+                   <div className="h-10 w-10 rounded-xl bg-[#2563EB] text-white grid place-items-center shrink-0">
+                     <Sparkles className="w-5 h-5" />
+                   </div>
+                   <div className="flex-1 min-w-0">
+                     <p className="text-xs font-bold text-[#2563EB] uppercase tracking-wide">Plano escolhido</p>
+                     <p className="text-sm font-semibold text-slate-900 truncate">
+                       {selectedPlan.name} — 7 dias grátis, depois R$ {selectedPlan.priceMonthly}/mês
+                     </p>
+                   </div>
+                 </div>
+               )}
                <div className="space-y-3">
                   <div className="space-y-1">
                      <Label className="text-xs font-bold text-slate-400 pl-1">Nome completo</Label>

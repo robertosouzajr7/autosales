@@ -500,9 +500,9 @@ export default function LandingPage() {
                            </div>
                         </div>
                        
-                       <Link to="/register" className="block w-full">
+                       <Link to={`/register?plan=${plan.id}`} className="block w-full">
                           <Button className={`w-full h-16 ${isRecommended ? 'bg-white text-[#2563EB] hover:bg-slate-50 shadow-2xl' : 'bg-[#2563EB] text-white hover:bg-[#1D4ED8]'} font-bold rounded-2xl text-lg transition-transform active:scale-95 border-none`}>
-                            Começar Agora
+                            Testar 7 dias grátis
                           </Button>
                        </Link>
                     </Card>
