@@ -242,7 +242,7 @@ export default function Contacts() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
            <div className="space-y-1">
               <h1 className="text-4xl font-semibold text-slate-900 tracking-tight uppercase flex items-center gap-3">
-                 Base de <span className="text-[#0D9488]">Contatos</span>
+                 Base de <span className="text-[#2563EB]">Contatos</span>
               </h1>
               <p className="text-slate-400 font-bold text-xs">Gerenciamento Premium de Pipeline</p>
            </div>
@@ -262,7 +262,7 @@ export default function Contacts() {
                    <>
                      <Button 
                        onClick={handleBulkEnrich} 
-                       className="h-10 bg-[#0D9488] hover:bg-[#0F766E] px-6 rounded-2xl font-semibold uppercase text-xs text-white shadow-lg animate-in slide-in-from-right"
+                       className="h-10 bg-[#2563EB] hover:bg-[#1D4ED8] px-6 rounded-2xl font-semibold uppercase text-xs text-white shadow-lg animate-in slide-in-from-right"
                      >
                        Investigação BDR
                      </Button>
@@ -291,7 +291,7 @@ export default function Contacts() {
               onClick={handleSelectAll}
               className={`flex-none w-10 h-10 rounded-2xl border-2 cursor-pointer flex items-center justify-center transition-all ${
  selectedIds.size > 0 && selectedIds.size === contacts.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.phone.includes(searchTerm)).length
- ? 'bg-[#0D9488] border-emerald-500 text-white' 
+ ? 'bg-[#2563EB] border-emerald-500 text-white' 
  : 'bg-slate-50 border-slate-100 text-slate-300'
  }`}
             >
@@ -306,7 +306,7 @@ export default function Contacts() {
                 className="h-10 pl-12 w-full border-none bg-slate-50 text-slate-900 rounded-2xl focus:ring-emerald-500/30 font-bold text-xs" 
               />
             </div>
-           <Badge className="h-10 px-8 rounded-2xl bg-teal-50 text-[#0D9488] border-none flex items-center gap-2 font-semibold text-xs ">
+           <Badge className="h-10 px-8 rounded-2xl bg-blue-50 text-[#2563EB] border-none flex items-center gap-2 font-semibold text-xs ">
              {selectedIds.size > 0 ? `${selectedIds.size} Selecionados` : `${contacts.length} Na Base`}
            </Badge>
         </Card>
@@ -326,7 +326,7 @@ export default function Contacts() {
                 <div 
                   onClick={(e) => toggleSelect(contact.id, e)}
                   className={`absolute top-6 left-6 w-6 h-6 rounded-full border-2 z-10 transition-all flex items-center justify-center ${
- selectedIds.has(contact.id) ? 'bg-[#0D9488] border-emerald-500' : 'bg-white/50 border-slate-200 opacity-0 group-hover:opacity-100'
+ selectedIds.has(contact.id) ? 'bg-[#2563EB] border-emerald-500' : 'bg-white/50 border-slate-200 opacity-0 group-hover:opacity-100'
  }`}
                 >
                   {selectedIds.has(contact.id) && <CheckCircle2 className="w-3 h-3 text-white" />}
@@ -343,16 +343,16 @@ export default function Contacts() {
                          <div className="flex-1 min-w-0">
                             <p className="font-semibold text-lg text-slate-900 leading-tight truncate">{contact.name}</p>
                              <Badge className={`${
- contact.status === 'CONVERTED' ? 'bg-emerald-100 text-[#0D9488]' : 
- contact.status === 'APPOINTMENT' ? 'bg-teal-100 text-teal-600' : 
+ contact.status === 'CONVERTED' ? 'bg-emerald-100 text-[#2563EB]' : 
+ contact.status === 'APPOINTMENT' ? 'bg-slate-200 text-blue-600' : 
  contact.status === 'QUALIFYING' ? 'bg-orange-100 text-orange-600' : 
- contact.status === 'INTERESTED' ? 'bg-emerald-100 text-[#0D9488]' : 
- contact.status === 'NEW' ? 'bg-blue-100 text-[#0D9488]' : 'bg-slate-100 text-slate-400'
+ contact.status === 'INTERESTED' ? 'bg-emerald-100 text-[#2563EB]' : 
+ contact.status === 'NEW' ? 'bg-blue-100 text-[#2563EB]' : 'bg-slate-100 text-slate-400'
  } border-none font-bold text-xs tracking-tight mt-1`}>
                                 {contact.status || "Ativo"}
                              </Badge>
                              {contact.isToEnrich && (
-                               <Badge className="bg-[#0D9488] text-white animate-pulse border-none font-bold text-xs tracking-tight mt-1 ml-2 shadow-lg ">
+                               <Badge className="bg-[#2563EB] text-white animate-pulse border-none font-bold text-xs tracking-tight mt-1 ml-2 shadow-lg ">
                                   BDR Investigando... 🕵️‍♂️
                                </Badge>
                              )}
@@ -369,8 +369,8 @@ export default function Contacts() {
 
                    {/* Ações (Apenas no Grid ou final da Lista) */}
                    {viewMode === "grid" ? (
-                     <div className="bg-slate-50 p-6 flex justify-between items-center group-hover:bg-teal-50 transition-colors">
-                        <Button variant="ghost" className="text-slate-400 font-semibold uppercase text-xs hover:text-[#0D9488]">Ver Perfil</Button>
+                     <div className="bg-slate-50 p-6 flex justify-between items-center group-hover:bg-blue-50 transition-colors">
+                        <Button variant="ghost" className="text-slate-400 font-semibold uppercase text-xs hover:text-[#2563EB]">Ver Perfil</Button>
                         <div className="flex gap-2">
                            <Button 
                               onClick={(e) => { e.stopPropagation(); navigate(`/conversations?phone=${contact.phone}`); }}
@@ -382,7 +382,7 @@ export default function Contacts() {
                            <Button 
                               onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${contact.phone}`; }}
                               size="icon" 
-                              className="w-10 h-10 bg-[#0D9488] hover:bg-[#0F766E] rounded-xl shadow-lg "
+                              className="w-10 h-10 bg-[#2563EB] hover:bg-[#1D4ED8] rounded-xl shadow-lg "
                            >
                               <Phone className="w-4 h-4 text-white" />
                            </Button>
@@ -396,7 +396,7 @@ export default function Contacts() {
                         </div>
                         <div className="flex gap-2">
                            <Button onClick={(e) => { e.stopPropagation(); navigate(`/conversations?phone=${contact.phone}`); }} size="icon" className="w-10 h-10 bg-slate-900 rounded-xl"><MessageSquare className="w-4 h-4 text-white" /></Button>
-                           <Button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${contact.phone}`; }} size="icon" className="w-10 h-10 bg-[#0D9488] rounded-xl"><Phone className="w-4 h-4 text-white" /></Button>
+                           <Button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${contact.phone}`; }} size="icon" className="w-10 h-10 bg-[#2563EB] rounded-xl"><Phone className="w-4 h-4 text-white" /></Button>
                         </div>
                      </div>
                    )}
@@ -411,7 +411,7 @@ export default function Contacts() {
         <DialogContent className="max-w-2xl p-10 overflow-hidden border-none shadow-sm rounded-2xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-semibold flex items-center gap-2">
-              <div className="bg-[#0D9488] p-2 rounded-xl"><UserPlus className="text-white w-5 h-5" /></div> Novo Contato
+              <div className="bg-[#2563EB] p-2 rounded-xl"><UserPlus className="text-white w-5 h-5" /></div> Novo Contato
             </DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-8 py-4">
@@ -456,13 +456,13 @@ export default function Contacts() {
               <Button onClick={() => setSelectedContact(null)} variant="ghost" className="absolute top-8 right-8 text-white/50 hover:text-white"><X className="w-6 h-6" /></Button>
               <div className="flex items-center gap-6">
                  <Avatar className="h-24 w-24 border-4 border-white/10">
-                    <AvatarFallback className="bg-[#0D9488] text-white font-semibold text-3xl">
+                    <AvatarFallback className="bg-[#2563EB] text-white font-semibold text-3xl">
                        {selectedContact?.name?.substring(0,2).toUpperCase()}
                     </AvatarFallback>
                  </Avatar>
                  <div className="space-y-1">
                     <h2 className="text-4xl font-semibold leading-none tracking-tight">{selectedContact?.name}</h2>
-                    <Badge className="bg-[#0D9488] text-white border-none font-semibold text-xs uppercase py-1 px-4">{selectedContact?.status || "Novo Lead"}</Badge>
+                    <Badge className="bg-[#2563EB] text-white border-none font-semibold text-xs uppercase py-1 px-4">{selectedContact?.status || "Novo Lead"}</Badge>
                  </div>
               </div>
            </div>
@@ -472,7 +472,7 @@ export default function Contacts() {
               {selectedContact?.extractedData && (
                 <div className="bg-slate-50 rounded-2xl p-8 border-2 border-emerald-500/10 animate-in fade-in zoom-in">
                    <div className="flex items-center gap-3 mb-6">
-                      <div className="bg-[#0D9488] p-2 rounded-xl text-white"><Search className="w-4 h-4" /></div>
+                      <div className="bg-[#2563EB] p-2 rounded-xl text-white"><Search className="w-4 h-4" /></div>
                       <h3 className="font-semibold text-xs text-slate-900">Dossiê BDR (Inteligência)</h3>
                    </div>
                    
@@ -485,7 +485,7 @@ export default function Contacts() {
                                <div className="space-y-1">
                                   <p className="text-xs font-semibold text-slate-400 ">Decisor Encontrado</p>
                                   <p className="font-bold text-slate-800">{data.decisionMaker.name} ({data.decisionMaker.role})</p>
-                                  {data.decisionMaker.linkedIn && <a href={data.decisionMaker.linkedIn} target="_blank" className="text-xs text-[#0D9488] font-bold hover:underline">Perfil LinkedIn</a>}
+                                  {data.decisionMaker.linkedIn && <a href={data.decisionMaker.linkedIn} target="_blank" className="text-xs text-[#2563EB] font-bold hover:underline">Perfil LinkedIn</a>}
                                </div>
                              )}
                              {data.companyInfo?.socialProfiles?.length > 0 && (
@@ -493,7 +493,7 @@ export default function Contacts() {
                                   <p className="text-xs font-semibold text-slate-400 ">Canais Digitais</p>
                                   <div className="flex flex-wrap gap-2">
                                      {data.companyInfo.socialProfiles.map((s: string, i: number) => (
-                                       <a key={i} href={s} target="_blank" className="bg-white p-1 px-3 rounded-lg border text-xs font-bold text-slate-500 hover:text-[#0D9488] truncate max-w-[150px]">{s}</a>
+                                       <a key={i} href={s} target="_blank" className="bg-white p-1 px-3 rounded-lg border text-xs font-bold text-slate-500 hover:text-[#2563EB] truncate max-w-[150px]">{s}</a>
                                      ))}
                                   </div>
                                </div>
@@ -541,7 +541,7 @@ export default function Contacts() {
 
               <div className="flex gap-4 pt-4">
                  <Button onClick={handleUpdateContact} className="flex-[3] h-11 bg-slate-900 hover:bg-black text-white font-semibold rounded-2xl shadow-sm transition-all">
-                    <Save className="w-5 h-5 mr-3 text-[#0D9488]" /> Salvar Alterações
+                    <Save className="w-5 h-5 mr-3 text-[#2563EB]" /> Salvar Alterações
                  </Button>
                  <Button onClick={() => handleDeleteContact(selectedContact.id)} variant="outline" className="flex-1 h-11 border-2 border-red-50 text-red-500 hover:bg-red-50 hover:text-red-600 font-semibold rounded-2xl transition-all">
                     <Trash2 className="w-5 h-5" />
@@ -561,7 +561,7 @@ export default function Contacts() {
                   Encontramos {importPreview.length} contatos no seu arquivo
                 </p>
               </div>
-              <div className="bg-[#0D9488]/10 border border-[#0D9488]/20 p-4 rounded-2xl">
+              <div className="bg-[#2563EB]/10 border border-[#2563EB]/20 p-4 rounded-2xl">
                  <p className="text-xs font-semibold text-[#2DD4BF] ">Proteção Ativa</p>
                  <p className="text-xs text-white/60 font-medium">IA iniciará desativada</p>
               </div>
@@ -599,7 +599,7 @@ export default function Contacts() {
                    onClick={confirmImport} 
                    className="flex-[2] h-11 bg-slate-900 hover:bg-black text-white font-semibold rounded-2xl shadow-sm transition-all"
                  >
-                    <Save className="w-5 h-5 mr-3 text-[#0D9488]" /> Confirmar e Salvar
+                    <Save className="w-5 h-5 mr-3 text-[#2563EB]" /> Confirmar e Salvar
                  </Button>
               </div>
            </div>
@@ -612,7 +612,7 @@ export default function Contacts() {
 function ContactItem({ icon, value }: { icon: any, value: string }) {
   return (
     <div className="flex items-center gap-3 text-slate-600">
-       <div className="text-[#0D9488]">{icon}</div>
+       <div className="text-[#2563EB]">{icon}</div>
        <span className="text-xs font-bold truncate">{value}</span>
     </div>
   );

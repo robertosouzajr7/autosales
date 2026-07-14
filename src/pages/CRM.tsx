@@ -192,7 +192,7 @@ export default function CRM() {
                 key={stage.id} 
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => onDrop(e, stage.id)}
-                className="flex-shrink-0 w-80 bg-slate-50/50 p-4 rounded-2xl border-2 border-transparent hover:border-teal-200 transition-all flex flex-col gap-4 snap-start h-[calc(100vh-250px)]"
+                className="flex-shrink-0 w-80 bg-slate-50/50 p-4 rounded-2xl border-2 border-transparent hover:border-slate-300 transition-all flex flex-col gap-4 snap-start h-[calc(100vh-250px)]"
               >
                  <div className="flex items-center justify-between px-2">
                     <div className="flex items-center gap-2">
@@ -215,11 +215,11 @@ export default function CRM() {
                           className="border-none shadow-sm rounded-xl bg-white p-3 hover:shadow-md hover:translate-y-[-2px] transition-all duration-300 group cursor-grab active:cursor-grabbing border-l-4 border-l-transparent hover:border-l-emerald-500"
                         >
                            <div className="space-y-2">
-                              <p className="text-[13px] font-semibold text-slate-800 leading-tight truncate group-hover:text-[#0D9488] transition-colors uppercase tracking-tight">{lead.name}</p>
+                              <p className="text-[13px] font-semibold text-slate-800 leading-tight truncate group-hover:text-[#2563EB] transition-colors uppercase tracking-tight">{lead.name}</p>
                               
                               <div className="flex items-center justify-between pt-1">
                                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400">
-                                    <Phone className="w-3 h-3 text-[#0D9488]/50" /> {lead.phone}
+                                    <Phone className="w-3 h-3 text-[#2563EB]/50" /> {lead.phone}
                                  </div>
                                  {lead.source && (
                                    <Badge variant="outline" className="text-xs font-semibold uppercase text-slate-300 border-slate-100">{lead.source}</Badge>
@@ -244,12 +244,12 @@ export default function CRM() {
             
             <button 
               onClick={handleAddStage}
-              className="flex-shrink-0 w-80 border-4 border-dashed border-slate-100 rounded-2xl flex flex-col items-center justify-center gap-4 hover:border-teal-200 group transition-all h-[calc(100vh-250px)]"
+              className="flex-shrink-0 w-80 border-4 border-dashed border-slate-100 rounded-2xl flex flex-col items-center justify-center gap-4 hover:border-slate-300 group transition-all h-[calc(100vh-250px)]"
             >
-               <div className="w-16 h-11 bg-slate-100 rounded-full flex items-center justify-center group-hover:bg-[#0D9488] transition-all">
+               <div className="w-16 h-11 bg-slate-100 rounded-full flex items-center justify-center group-hover:bg-[#2563EB] transition-all">
                   <Plus className="w-8 h-8 text-slate-400 group-hover:text-white" />
                </div>
-               <span className="font-semibold text-xs text-slate-300 group-hover:text-[#0D9488]">Novo Pipeline</span>
+               <span className="font-semibold text-xs text-slate-300 group-hover:text-[#2563EB]">Novo Pipeline</span>
             </button>
         </div>
       </div>
@@ -261,7 +261,7 @@ export default function CRM() {
               <Button onClick={() => setSelectedLead(null)} variant="ghost" className="absolute top-8 right-8 text-white/50 hover:text-white"><X className="w-6 h-6" /></Button>
               <div className="flex items-center gap-6">
                  <Avatar className="h-20 w-20 border-4 border-white/10 shadow-sm">
-                    <AvatarFallback className="bg-[#0D9488] text-white font-semibold text-2xl">
+                    <AvatarFallback className="bg-[#2563EB] text-white font-semibold text-2xl">
                        {selectedLead?.name?.substring(0,2).toUpperCase()}
                     </AvatarFallback>
                  </Avatar>
@@ -304,7 +304,7 @@ export default function CRM() {
 
               <div className="flex gap-4 pt-4">
                  <Button onClick={handleUpdateLead} className="flex-[4] h-11 bg-slate-900 hover:bg-black text-white font-semibold rounded-2xl shadow-sm transition-all">
-                    <Save className="w-5 h-5 mr-3 text-[#0D9488]" /> Atualizar Pipeline
+                    <Save className="w-5 h-5 mr-3 text-[#2563EB]" /> Atualizar Pipeline
                  </Button>
                  <Button onClick={() => handleDeleteLead(selectedLead.id)} variant="outline" className="flex-1 h-11 border-2 border-red-50 text-red-500 hover:bg-red-50 hover:text-red-600 font-semibold rounded-2xl transition-all ">
                     <Trash2 className="w-5 h-5" />
@@ -319,7 +319,7 @@ export default function CRM() {
         <DialogContent className="max-w-md p-10 rounded-2xl border-none shadow-sm">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold tracking-tight flex items-center gap-2">
-              <Edit3 className="w-5 h-5 text-[#0D9488]" /> Gerenciar Pipelines
+              <Edit3 className="w-5 h-5 text-[#2563EB]" /> Gerenciar Pipelines
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -364,7 +364,7 @@ export default function CRM() {
         <DialogContent className="rounded-2xl p-10 max-w-lg border-none shadow-sm">
           <DialogHeader>
             <DialogTitle className="text-2xl font-semibold flex items-center gap-2">
-              <div className="bg-[#0D9488] p-2 rounded-xl shadow-lg"><UserPlus className="text-white w-5 h-5" /></div> Adicionar Lead
+              <div className="bg-[#2563EB] p-2 rounded-xl shadow-lg"><UserPlus className="text-white w-5 h-5" /></div> Adicionar Lead
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-6 py-4">

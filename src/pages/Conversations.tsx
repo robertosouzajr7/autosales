@@ -90,7 +90,7 @@ function AudioPlayer({ url, isOut }: { url: string, isOut: boolean }) {
       <button 
         onClick={togglePlay}
         className={`w-8 h-8 flex items-center justify-center rounded-full shrink-0 transition-all ${
- isOut ? 'bg-white text-[#0D9488]' : 'bg-[#0D9488] text-white shadow-lg '
+ isOut ? 'bg-white text-[#2563EB]' : 'bg-[#2563EB] text-white shadow-lg '
  }`}
       >
         {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
@@ -104,7 +104,7 @@ function AudioPlayer({ url, isOut }: { url: string, isOut: boolean }) {
           value={progress || 0}
           onChange={handleSeek}
           className={`w-full h-1 rounded-full appearance-none cursor-pointer accent-current ${
- isOut ? 'text-white/40 bg-white/20' : 'text-[#0D9488] bg-slate-100'
+ isOut ? 'text-white/40 bg-white/20' : 'text-[#2563EB] bg-slate-100'
  }`}
           style={{
             background: isOut 
@@ -393,7 +393,7 @@ export default function Conversations() {
           <div className="p-8 border-b border-slate-50 bg-slate-50/30 space-y-6">
              <div className="flex items-center justify-between">
                 <h3 className="text-xl font-semibold text-slate-800 tracking-tight">Conversas</h3>
-                <Badge className={`${hasWhatsApp ? "bg-[#0D9488]/10 text-[#0D9488]" : "bg-red-500/10 text-red-600"} border-none font-bold text-xs `}>
+                <Badge className={`${hasWhatsApp ? "bg-[#2563EB]/10 text-[#2563EB]" : "bg-red-500/10 text-red-600"} border-none font-bold text-xs `}>
                   {hasWhatsApp ? "WhatsApp Conectado" : "WhatsApp Desconectado"}
                 </Badge>
              </div>
@@ -429,7 +429,7 @@ export default function Conversations() {
                     className={`p-4 rounded-2xl transition-all cursor-pointer flex items-center gap-4 group ${selectedChat?.id === chat.id ? 'bg-slate-900 text-white shadow-sm' : 'hover:bg-slate-50 text-slate-600'}`}
                   >
                     <Avatar className="h-10 w-10 border-2 border-white shadow-sm ring-2 ring-emerald-500/20">
-                      <AvatarFallback className={`${selectedChat?.id === chat.id ? 'bg-[#0D9488] text-white' : 'bg-slate-100 text-slate-500'} font-semibold text-xs`}>
+                      <AvatarFallback className={`${selectedChat?.id === chat.id ? 'bg-[#2563EB] text-white' : 'bg-slate-100 text-slate-500'} font-semibold text-xs`}>
                         {chat.name.substring(0,2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
@@ -474,13 +474,13 @@ export default function Conversations() {
 
                  <div className="flex items-center gap-4">
                     <Avatar className="h-10 w-10">
-                      <AvatarFallback className="bg-[#0D9488] text-white font-semibold text-xs">
+                      <AvatarFallback className="bg-[#2563EB] text-white font-semibold text-xs">
                         {selectedChat.name.substring(0,2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div>
                        <p className="font-semibold text-slate-800 leading-none">{selectedChat.name}</p>
-                       <p className="text-xs font-bold text-[#0D9488] mt-1.5 flex items-center gap-1.5">
+                       <p className="text-xs font-bold text-[#2563EB] mt-1.5 flex items-center gap-1.5">
                          {selectedChat.conversations?.[0]?.botActive !== false ? (
                             <><Circle className="w-2 h-2 fill-emerald-500" /> Atendimento via IA</>
                          ) : (
@@ -493,15 +493,15 @@ export default function Conversations() {
                     <Button 
                       onClick={toggleBot} 
                       variant="outline" 
-                      className={`rounded-xl border-slate-100 font-bold text-xs ${selectedChat.conversations?.[0]?.botActive !== false ? 'hover:bg-slate-50' : 'bg-teal-50 border-emerald-100 text-[#0D9488] hover:bg-emerald-100'}`}
+                      className={`rounded-xl border-slate-100 font-bold text-xs ${selectedChat.conversations?.[0]?.botActive !== false ? 'hover:bg-slate-50' : 'bg-blue-50 border-emerald-100 text-[#2563EB] hover:bg-emerald-100'}`}
                     >
                       {selectedChat.conversations?.[0]?.botActive !== false ? "Assumir conversa" : "Devolver ao assistente"}
                     </Button>
-                      <Button variant="outline" size="icon" className="rounded-xl border-slate-100 hover:bg-teal-50 hover:border-teal-200 group/call transition-colors"
+                      <Button variant="outline" size="icon" className="rounded-xl border-slate-100 hover:bg-blue-50 hover:border-slate-300 group/call transition-colors"
                         onClick={handleOpenCallModal}
                         title="Iniciar contato por WhatsApp"
                       >
-                        <Phone className="w-4 h-4 text-slate-400 group-hover/call:text-[#0D9488] transition-colors" />
+                        <Phone className="w-4 h-4 text-slate-400 group-hover/call:text-[#2563EB] transition-colors" />
                       </Button>
                      <DropdownMenu>
                        <DropdownMenuTrigger asChild>
@@ -514,7 +514,7 @@ export default function Conversations() {
                            className="rounded-xl font-bold text-xs cursor-pointer"
                            onClick={() => navigate(`/crm?lead=${selectedChat?.id}`)}
                          >
-                           <User className="w-4 h-4 mr-2 text-[#0D9488]" />
+                           <User className="w-4 h-4 mr-2 text-[#2563EB]" />
                            Ver no CRM
                          </DropdownMenuItem>
                          <DropdownMenuItem
@@ -526,7 +526,7 @@ export default function Conversations() {
                              }
                            }}
                          >
-                           <Phone className="w-4 h-4 mr-2 text-[#0D9488]" />
+                           <Phone className="w-4 h-4 mr-2 text-[#2563EB]" />
                            Copiar Telefone
                          </DropdownMenuItem>
                          <DropdownMenuSeparator />
@@ -593,14 +593,14 @@ export default function Conversations() {
               <div className="p-6 px-8 bg-white border-t border-slate-50">
                 {audioUrl ? (
                   // Preview de áudio gravado
-                  <div className="flex items-center gap-3 bg-teal-50 p-3 pl-5 rounded-2xl border border-emerald-100">
+                  <div className="flex items-center gap-3 bg-blue-50 p-3 pl-5 rounded-2xl border border-emerald-100">
                     <div className="flex-1">
                       <p className="text-xs font-semibold text-emerald-700 mb-2">Prévia da Mensagem</p>
                       <AudioPlayer url={audioUrl} isOut={false} />
                     </div>
-                    <div className="flex items-center gap-2 border-l border-teal-200 pl-4 ml-2">
+                    <div className="flex items-center gap-2 border-l border-slate-300 pl-4 ml-2">
                       <Button onClick={cancelAudio} variant="ghost" size="icon" className="text-slate-400 hover:text-red-500 rounded-xl"><MicOff className="w-4 h-4" /></Button>
-                      <Button onClick={sendAudio} className="h-10 px-5 bg-[#0D9488] hover:bg-[#0F766E] rounded-2xl text-xs font-semibold shadow-lg "><Send className="w-4 h-4 mr-1" /> Enviar</Button>
+                      <Button onClick={sendAudio} className="h-10 px-5 bg-[#2563EB] hover:bg-[#1D4ED8] rounded-2xl text-xs font-semibold shadow-lg "><Send className="w-4 h-4 mr-1" /> Enviar</Button>
                     </div>
                   </div>
                 ) : isRecording ? (
@@ -619,10 +619,10 @@ export default function Conversations() {
                       className="border-none bg-transparent shadow-none focus-visible:ring-0 font-bold text-xs"
                       value={message} onChange={e => setMessage(e.target.value)} />
                     <button type="button" onClick={startRecording}
-                      className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-[#0D9488] hover:bg-teal-50 transition-colors shrink-0">
+                      className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-[#2563EB] hover:bg-blue-50 transition-colors shrink-0">
                       <Mic className="w-5 h-5" />
                     </button>
-                    <Button type="submit" className="h-10 w-10 bg-[#0D9488] hover:bg-[#0F766E] rounded-2xl shadow-lg shrink-0">
+                    <Button type="submit" className="h-10 w-10 bg-[#2563EB] hover:bg-[#1D4ED8] rounded-2xl shadow-lg shrink-0">
                       <Send className="w-4 h-4 text-white" />
                     </Button>
                   </form>
@@ -673,7 +673,7 @@ export default function Conversations() {
           {/* Header */}
           <div className="bg-slate-900 p-10 text-white">
             <div className="flex items-center gap-4 mb-2">
-              <div className="w-10 h-10 rounded-2xl bg-[#0D9488] flex items-center justify-center shadow-lg ">
+              <div className="w-10 h-10 rounded-2xl bg-[#2563EB] flex items-center justify-center shadow-lg ">
                 <Phone className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -702,7 +702,7 @@ export default function Conversations() {
                 className="rounded-2xl border-slate-100 bg-slate-50 font-medium text-sm resize-none focus-visible:ring-emerald-500/30"
               />
               <p className="text-xs text-slate-400 font-bold">
-                Para: <span className="text-[#0D9488]">{selectedChat?.phone}</span>
+                Para: <span className="text-[#2563EB]">{selectedChat?.phone}</span>
               </p>
             </div>
 
@@ -715,7 +715,7 @@ export default function Conversations() {
                 Cancelar
               </Button>
               <Button
-                className="flex-[2] h-10 bg-[#0D9488] hover:bg-[#0F766E] text-white rounded-2xl font-semibold uppercase text-xs shadow-sm transition-all"
+                className="flex-[2] h-10 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-2xl font-semibold uppercase text-xs shadow-sm transition-all"
                 onClick={handleCallIntent}
                 disabled={callingLoading || !callMessage.trim()}
               >

@@ -169,7 +169,7 @@ export default function Connections() {
         {/* STATUS TILES */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
            <Card className="p-6 border-none shadow-sm rounded-2xl bg-white flex items-center gap-6">
-              <div className="bg-teal-50 p-4 rounded-2xl text-[#0D9488]"><Activity className="w-6 h-6" /></div>
+              <div className="bg-blue-50 p-4 rounded-2xl text-[#2563EB]"><Activity className="w-6 h-6" /></div>
               <div>
                  <p className="text-xs font-semibold text-slate-400 ">Conexões Ativas</p>
                  <p className="text-2xl font-semibold text-slate-900">{connections.filter(c => c.status === 'CONNECTED').length} / {connections.length}</p>
@@ -183,10 +183,10 @@ export default function Connections() {
               </div>
            </Card>
            <Card className="p-6 border-none shadow-sm rounded-2xl bg-white flex items-center gap-6">
-              <div className="bg-teal-50 p-4 rounded-2xl text-[#0D9488]"><Globe className="w-6 h-6" /></div>
+              <div className="bg-blue-50 p-4 rounded-2xl text-[#2563EB]"><Globe className="w-6 h-6" /></div>
               <div>
                  <p className="text-xs font-semibold text-slate-400 ">Status da API</p>
-                 <p className="text-2xl font-semibold text-[#0D9488]">Online</p>
+                 <p className="text-2xl font-semibold text-[#2563EB]">Online</p>
               </div>
            </Card>
         </div>
@@ -198,7 +198,7 @@ export default function Connections() {
                 <CardContent className="p-10 space-y-8">
                    <div className="flex justify-between items-start">
                       <div className="flex items-center gap-5">
-                         <div className={`w-16 h-11 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-110 ${conn.status === 'CONNECTED' ? 'bg-[#0D9488] text-white' : 'bg-slate-100 text-slate-400'}`}>
+                         <div className={`w-16 h-11 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-110 ${conn.status === 'CONNECTED' ? 'bg-[#2563EB] text-white' : 'bg-slate-100 text-slate-400'}`}>
                             <Smartphone className="w-8 h-8" />
                          </div>
                          <div className="space-y-1">
@@ -213,7 +213,7 @@ export default function Connections() {
                       </div>
                       <div className="flex gap-2">
                          {conn.status === 'CONNECTED' ? (
-                           <div className="bg-teal-50 text-[#0D9488] p-2 rounded-xl">
+                           <div className="bg-blue-50 text-[#2563EB] p-2 rounded-xl">
                               <CheckCircle2 className="w-6 h-6" />
                            </div>
                          ) : (
@@ -236,7 +236,7 @@ export default function Connections() {
                    </div>
 
                    <div className="flex items-center justify-between pt-4">
-                      <div className="flex items-center gap-2 text-[#0D9488] font-semibold text-xs ">
+                      <div className="flex items-center gap-2 text-[#2563EB] font-semibold text-xs ">
                          <CheckCircle2 className="w-4 h-4" /> Criptografia Ponta-a-Ponta
                       </div>
                        <Button variant="ghost" className="text-red-400 hover:text-red-600 hover:bg-red-50 text-xs font-semibold gap-2" onClick={() => handleDeleteConnection(conn.id)}>

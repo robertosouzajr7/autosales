@@ -307,7 +307,7 @@ export default function Settings() {
       } catch (e) {}
   }
 
-  if (loading) return <div className="flex h-screen items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-[#0D9488]" /></div>;
+  if (loading) return <div className="flex h-screen items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-[#2563EB]" /></div>;
 
   return (
     <DashboardLayout>
@@ -317,7 +317,7 @@ export default function Settings() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
             <div className="space-y-1">
                 <h1 className="text-4xl font-semibold text-slate-900 tracking-tight uppercase mb-1 flex items-center gap-3">
-                   Configurações <span className="text-[#0D9488]">SaaS</span>
+                   Configurações <span className="text-[#2563EB]">SaaS</span>
                 </h1>
                 <p className="text-slate-400 font-bold text-xs">Ecossistema de SDR & Vendas Automáticas</p>
             </div>
@@ -363,7 +363,7 @@ export default function Settings() {
                 <Card className="border-none shadow-sm rounded-2xl overflow-hidden bg-white p-12 space-y-8 relative">
                     <div className="flex items-center justify-between mb-2">
                         <h3 className="text-xl font-semibold text-slate-900 uppercase">Seu Hub Digital</h3>
-                        <Badge className="bg-[#0D9488] text-white border-none font-semibold text-xs px-4">Gerado Automaticamente</Badge>
+                        <Badge className="bg-[#2563EB] text-white border-none font-semibold text-xs px-4">Gerado Automaticamente</Badge>
                     </div>
                     <div className="space-y-6">
                        <div className="space-y-4">
@@ -406,7 +406,7 @@ export default function Settings() {
                    </div>
                    <Dialog>
                       <DialogTrigger asChild>
-                         <Button className="bg-white text-slate-900 hover:bg-[#0D9488] hover:text-white rounded-2xl h-10 px-8 font-semibold uppercase text-xs transition-all">
+                         <Button className="bg-white text-slate-900 hover:bg-[#2563EB] hover:text-white rounded-2xl h-10 px-8 font-semibold uppercase text-xs transition-all">
                             <Plus className="w-5 h-5 mr-2" /> Novo ICP
                          </Button>
                       </DialogTrigger>
@@ -436,7 +436,7 @@ export default function Settings() {
                            <Button size="icon" variant="ghost" onClick={() => handleDeleteIcp(profile.id)} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></Button>
                         </div>
                         <div className="flex flex-wrap gap-2 mb-8">
-                           <Badge className="bg-teal-50 text-[#0D9488] px-4 py-1.5 rounded-full text-xs uppercase font-semibold ">{profile.location}</Badge>
+                           <Badge className="bg-blue-50 text-[#2563EB] px-4 py-1.5 rounded-full text-xs uppercase font-semibold ">{profile.location}</Badge>
                            <Badge className="bg-slate-100 text-slate-600 px-4 py-1.5 rounded-full text-xs uppercase font-semibold ">{profile.role}</Badge>
                         </div>
                         <div className="flex items-center justify-between border-t border-slate-50 pt-8">
@@ -461,7 +461,7 @@ export default function Settings() {
                    </div>
                 </Card>
                 <Card className="border-none shadow-sm rounded-2xl bg-white p-12 space-y-8">
-                    <div className="flex items-center gap-4 text-[#0D9488] mb-4"><Bot className="w-8 h-8" /><h3 className="text-xl font-semibold text-slate-900 uppercase">Modelos de IA (LLMs)</h3></div>
+                    <div className="flex items-center gap-4 text-[#2563EB] mb-4"><Bot className="w-8 h-8" /><h3 className="text-xl font-semibold text-slate-900 uppercase">Modelos de IA (LLMs)</h3></div>
                     <div className="space-y-6">
                        <div className="space-y-2"><Label className="text-xs font-semibold text-slate-400 pl-1">Google Gemini API Key</Label><Input type="password" value={aiConfig.aiApiKey} onChange={(e) => setAiConfig({...aiConfig, aiApiKey: e.target.value})} className="h-11 bg-slate-50 rounded-2xl px-8 font-bold" /></div>
                        <div className="space-y-2"><Label className="text-xs font-semibold text-slate-400 pl-1">OpenAI API Key (Opcional)</Label><Input type="password" value={aiConfig.openAiKey} onChange={(e) => setAiConfig({...aiConfig, openAiKey: e.target.value})} className="h-11 bg-slate-50 rounded-2xl px-8 font-bold" /></div>
@@ -471,7 +471,7 @@ export default function Settings() {
                        <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <Label className="text-xs font-semibold text-slate-400 pl-1">ElevenLabs API Key (Voz Natural)</Label>
-                            <Badge className="bg-teal-50 text-[#0D9488] border-none text-xs">Novo</Badge>
+                            <Badge className="bg-blue-50 text-[#2563EB] border-none text-xs">Novo</Badge>
                           </div>
                           <Input type="password" value={aiConfig.elevenLabsKey} onChange={(e) => setAiConfig({...aiConfig, elevenLabsKey: e.target.value})} className="h-11 bg-slate-50 rounded-2xl px-8 font-bold" placeholder="Sua chave da ElevenLabs" />
                        </div>
@@ -499,7 +499,7 @@ export default function Settings() {
 
                 <Card className="border-none shadow-sm rounded-2xl bg-white p-12 space-y-8 relative overflow-hidden">
                    <div className="absolute top-0 right-0 p-8 opacity-5"><Smartphone className="w-48 h-48" /></div>
-                   <div className="flex items-center gap-4 text-[#0D9488] mb-4"><Smartphone className="w-8 h-8" /><h3 className="text-xl font-semibold text-slate-900 uppercase underline decoration-[#0F766E] decoration-4">WhatsApp Cloud API (Meta)</h3></div>
+                   <div className="flex items-center gap-4 text-[#2563EB] mb-4"><Smartphone className="w-8 h-8" /><h3 className="text-xl font-semibold text-slate-900 uppercase underline decoration-[#1D4ED8] decoration-4">WhatsApp Cloud API (Meta)</h3></div>
                    <div className="space-y-6">
                       <div className="grid grid-cols-2 gap-6">
                          <div className="space-y-2"><Label className="text-xs font-semibold text-slate-400 pl-1">Phone Number ID</Label><Input value={metaConfig.phoneId} onChange={(e) => setMetaConfig({...metaConfig, phoneId: e.target.value})} className="h-10 bg-slate-50 rounded-2xl px-6 font-bold" /></div>
@@ -514,7 +514,7 @@ export default function Settings() {
                          <div className="flex items-center gap-2 text-[#2DD4BF]"><Code2 className="w-4 h-4" /><p className="text-xs font-semibold ">Webhook URL Configuration</p></div>
                          <div className="space-y-2">
                              <p className="text-xs text-slate-400 font-bold">Callback URL:</p>
-                             <div className="bg-black/50 p-3 rounded-xl text-[#0D9488] font-mono text-xs break-all border border-[#0D9488]/20">https://{window.location.hostname}/api/webhooks/meta</div>
+                             <div className="bg-black/50 p-3 rounded-xl text-[#2563EB] font-mono text-xs break-all border border-[#2563EB]/20">https://{window.location.hostname}/api/webhooks/meta</div>
                          </div>
                          <div className="space-y-2">
                              <p className="text-xs text-slate-400 font-bold">Verify Token:</p>
@@ -531,7 +531,7 @@ export default function Settings() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                   <Card className="border-none shadow-sm rounded-2xl bg-white p-12 space-y-8 relative overflow-hidden">
                       <div className="absolute top-0 right-0 p-8 opacity-5"><Mail className="w-48 h-48" /></div>
-                      <div className="flex items-center gap-4 text-[#0D9488] mb-4"><Mail className="w-8 h-8" /><h3 className="text-xl font-semibold text-slate-900 uppercase underline decoration-[#0D9488] decoration-4">Servidor de E-mail (SMTP)</h3></div>
+                      <div className="flex items-center gap-4 text-[#2563EB] mb-4"><Mail className="w-8 h-8" /><h3 className="text-xl font-semibold text-slate-900 uppercase underline decoration-[#2563EB] decoration-4">Servidor de E-mail (SMTP)</h3></div>
                       
                       <div className="space-y-6">
                           <div className="grid grid-cols-1 gap-6">
@@ -589,13 +589,13 @@ export default function Settings() {
                   <Card className="border-none shadow-sm rounded-2xl bg-slate-50 p-12 space-y-8 relative overflow-hidden">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4 text-slate-800 mb-4">
-                          <div className="p-4 bg-white rounded-2xl shadow-sm"><RefreshCw className="w-8 h-8 text-[#0D9488]" /></div>
+                          <div className="p-4 bg-white rounded-2xl shadow-sm"><RefreshCw className="w-8 h-8 text-[#2563EB]" /></div>
                           <div>
-                            <h3 className="text-xl font-semibold uppercase underline decoration-[#0D9488] decoration-4">E-mail em Massa (Listmonk API)</h3>
+                            <h3 className="text-xl font-semibold uppercase underline decoration-[#2563EB] decoration-4">E-mail em Massa (Listmonk API)</h3>
                             <p className="text-xs font-bold text-slate-400 mt-1">Conecte sua infraestrutura de prospecção em massa</p>
                           </div>
                         </div>
-                        <Badge className="bg-blue-100 text-[#0D9488] border-none font-semibold px-4 py-2 rounded-full text-xs ">Enterprise Ready</Badge>
+                        <Badge className="bg-blue-100 text-[#2563EB] border-none font-semibold px-4 py-2 rounded-full text-xs ">Enterprise Ready</Badge>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -613,7 +613,7 @@ export default function Settings() {
                           </div>
                       </div>
                       
-                      <div className="p-6 bg-teal-50 rounded-2xl border border-teal-100 flex items-center gap-4 text-[#134E4A]">
+                      <div className="p-6 bg-blue-50 rounded-2xl border border-slate-200 flex items-center gap-4 text-[#0F172A]">
                         <AlertCircle className="w-6 h-6 shrink-0" />
                         <p className="text-xs font-bold leading-relaxed">
                           Ao configurar o Listmonk, Agentes Virtuais passará a gerenciar seus contatos e campanhas através dele, permitindo maior taxa de entrega e controle de bounces automático.
@@ -656,7 +656,7 @@ export default function Settings() {
                                     </div>
                                  </td>
                                  <td className="p-6">
-                                    <Badge variant="outline" className={`font-semibold text-xs ${user.role === 'ADMIN' ? 'border-teal-200 text-teal-600 bg-teal-50' : 'border-slate-200 text-slate-500 bg-slate-50'}`}>
+                                    <Badge variant="outline" className={`font-semibold text-xs ${user.role === 'ADMIN' ? 'border-slate-300 text-blue-600 bg-blue-50' : 'border-slate-200 text-slate-500 bg-slate-50'}`}>
                                        {user.role}
                                     </Badge>
                                  </td>
@@ -774,7 +774,7 @@ export default function Settings() {
                  <div className="p-6 bg-slate-50 rounded-2xl space-y-4">
                    <div className="flex justify-between items-center">
                      <div className="flex items-center gap-2">
-                       <Zap className="w-5 h-5 text-[#0D9488]" />
+                       <Zap className="w-5 h-5 text-[#2563EB]" />
                        <span className="text-xs font-semibold text-slate-700">Créditos de Tokens / IA</span>
                      </div>
                      <span className="text-xs font-semibold text-slate-900">
@@ -784,7 +784,7 @@ export default function Settings() {
                    {billingData?.plan?.enableTokens ? (
                      <div className="w-full bg-slate-200 h-3 rounded-full overflow-hidden">
                        <div 
-                         className="bg-[#0D9488] h-full rounded-full transition-all duration-500" 
+                         className="bg-[#2563EB] h-full rounded-full transition-all duration-500" 
                          style={{ width: `${Math.min(100, ((billingData?.tenant?.usedTokens || 0) / (billingData?.plan?.maxTokens || 1)) * 100)}%` }} 
                        />
                      </div>
@@ -927,7 +927,7 @@ export default function Settings() {
                                    setSelectedInvoice(invoice);
                                    handlePayInvoice(invoice.id);
                                  }}
-                                 className="bg-[#0D9488] hover:bg-[#0F766E] text-white font-semibold uppercase text-xs rounded-xl px-4 h-9 shadow-md active:scale-95 transition-all"
+                                 className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold uppercase text-xs rounded-xl px-4 h-9 shadow-md active:scale-95 transition-all"
                                >
                                  {isPaying ? "Redirecionando..." : "Pagar Fatura"}
                                </Button>
@@ -944,7 +944,7 @@ export default function Settings() {
              {/* Upgrade de Planos */}
              <Card className="border-none shadow-sm rounded-2xl bg-slate-900 text-white p-12 space-y-10">
                <div className="text-center space-y-2 max-w-2xl mx-auto">
-                 <Badge className="bg-[#0D9488] text-white border-none font-semibold px-4 py-1.5 rounded-full text-xs ">Nossos Planos</Badge>
+                 <Badge className="bg-[#2563EB] text-white border-none font-semibold px-4 py-1.5 rounded-full text-xs ">Nossos Planos</Badge>
                  <h2 className="text-3xl font-semibold uppercase tracking-tight">Eleve seus resultados com mais performance</h2>
                  <p className="text-sm text-slate-400 font-medium">Faça upgrade a qualquer momento. Mudanças são aplicadas instantaneamente.</p>
                </div>
@@ -957,7 +957,7 @@ export default function Settings() {
                        key={p.id} 
                        className={`border-none shadow-sm rounded-2xl overflow-hidden flex flex-col p-8 ${
  isCurrent 
- ? 'bg-slate-850 ring-4 ring-[#0D9488] text-white' 
+ ? 'bg-slate-850 ring-4 ring-[#2563EB] text-white' 
  : 'bg-white text-slate-900'
  }`}
                      >
@@ -965,7 +965,7 @@ export default function Settings() {
                          <div className="flex justify-between items-start">
                            <h4 className="text-xl font-semibold uppercase tracking-tight">{p.name}</h4>
                            {isCurrent && (
-                             <Badge className="bg-[#0D9488] text-white border-none font-semibold text-xs uppercase px-3 py-1 rounded-full">Atual</Badge>
+                             <Badge className="bg-[#2563EB] text-white border-none font-semibold text-xs uppercase px-3 py-1 rounded-full">Atual</Badge>
                            )}
                          </div>
 
@@ -1016,7 +1016,7 @@ export default function Settings() {
                              className={`w-full h-10 rounded-2xl font-semibold uppercase text-xs transition-all ${
  isCurrent 
  ? 'bg-slate-700 text-white' 
- : 'bg-[#0D9488] hover:bg-[#0F766E] text-white shadow-sm hover:scale-105 active:scale-95'
+ : 'bg-[#2563EB] hover:bg-[#1D4ED8] text-white shadow-sm hover:scale-105 active:scale-95'
  }`}
                            >
                              Contratar Plano
@@ -1034,7 +1034,7 @@ export default function Settings() {
 
       <Dialog open={isNewUserModalOpen} onOpenChange={setIsNewUserModalOpen}>
          <DialogContent className="rounded-2xl p-10 max-w-md border-none shadow-sm">
-            <h2 className="text-2xl font-semibold tracking-tight mb-6">Novo <span className="text-[#0D9488]">Colaborador</span></h2>
+            <h2 className="text-2xl font-semibold tracking-tight mb-6">Novo <span className="text-[#2563EB]">Colaborador</span></h2>
             <div className="space-y-4">
                <div className="space-y-1">
                   <Label className="text-xs font-semibold uppercase text-slate-400 pl-1">Nome Completo</Label>
@@ -1061,7 +1061,7 @@ export default function Settings() {
                   </Select>
                </div>
                <Button 
-                  className="w-full h-11 bg-[#0D9488] hover:bg-[#0F766E] text-white font-semibold rounded-2xl mt-4 shadow-sm "
+                  className="w-full h-11 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold rounded-2xl mt-4 shadow-sm "
                   onClick={async () => {
                      const token = localStorage.getItem("token");
                      const res = await fetch("/api/users", {
