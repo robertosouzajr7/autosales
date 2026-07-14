@@ -71,7 +71,7 @@ const navItems: NavItem[] = [
   { label: "Pacientes", icon: BookUser, href: "/contacts" },
   { label: "Consultas", icon: Calendar, href: "/appointments", feature: "calendar" },
   { label: "Agente de IA", icon: Bot, href: "/sdrs" },
-  { label: "Automações", icon: Zap, href: "/automations" },
+  { label: "Lembretes", icon: Zap, href: "/automations" },
   { label: "Conexões", icon: Smartphone, href: "/connections" },
   { label: "Configurações", icon: Settings, href: "/settings" },
   { label: "Admin SaaS", icon: ShieldCheck, href: "/admin", adminOnly: true },

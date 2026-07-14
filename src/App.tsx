@@ -37,8 +37,11 @@ function App() {
         <Route path="/contacts" element={<Contacts />} />
         <Route path="/appointments" element={<Appointments />} />
         <Route path="/sdrs" element={<SdrManagement />} />
-        <Route path="/automations" element={<Automations />} />
+        {/* "Automações" no menu agora aponta para os Lembretes (config simples). */}
+        <Route path="/automations" element={<AutomationConfig />} />
         <Route path="/automations/config" element={<AutomationConfig />} />
+        {/* Flow builder avançado — fora do menu, acessível por URL/power users. */}
+        <Route path="/automations/builder" element={<Automations />} />
         <Route path="/docs" element={<Docs />} />
         <Route path="/connections" element={<Connections />} />
         <Route path="/settings" element={<Settings />} />

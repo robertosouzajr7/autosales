@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import {
   Send,
   X,
   Plus,
+  Sliders,
 } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────
@@ -192,6 +194,7 @@ function NumberField({
 // ─────────────────────────────────────────────────────────────
 
 export default function AutomationConfig() {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -260,19 +263,20 @@ export default function AutomationConfig() {
         {/* Header */}
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Parâmetros de Automação</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Lembretes e follow-ups</h1>
             <p className="text-sm text-slate-500 mt-0.5">
-              Configure as regras globais do seu robô SDR — funciona para qualquer tipo de negócio.
+              Confirmações, lembretes e mensagens automáticas para reduzir faltas na sua clínica.
             </p>
           </div>
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="bg-[#0F766E] hover:bg-emerald-700 gap-2 shrink-0"
-          >
-            {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            {saving ? "Salvando…" : "Salvar Configurações"}
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/automations/builder")} className="text-muted-foreground gap-1.5">
+              <Sliders className="h-4 w-4" /> Fluxos avançados
+            </Button>
+            <Button onClick={handleSave} disabled={saving} className="gap-2">
+              {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {saving ? "Salvando…" : "Salvar"}
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="confirmations">

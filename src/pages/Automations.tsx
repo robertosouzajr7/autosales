@@ -55,7 +55,6 @@ interface NodeTypeDef {
 }
 
 const NODE_TYPES_DEF: NodeTypeDef[] = [
-  { id: "PROSPECT_LEAD", label: "Prospecção Inteligente", icon: <Target className="w-4 h-4" />, color: "#0ea5e9", category: "action" },
   { id: "SEND_MSG", label: "Enviar Texto", icon: <MessageCircle className="w-4 h-4" />, color: "#10b981", category: "action" },
   { id: "AI_RESPONSE", label: "Chamar IA", icon: <Bot className="w-4 h-4" />, color: "#0D9488", category: "action" },
   { id: "COLLECT_INPUT", label: "Coletar Resposta", icon: <Inbox className="w-4 h-4" />, color: "#06b6d4", category: "action" },
