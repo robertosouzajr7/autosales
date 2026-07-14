@@ -215,36 +215,36 @@ model MessageTemplate {
 
 model Plan {
   id           String  @id @default(uuid())
-  name         String // Pro, Basic, Enterprise
+  name         String // Starter, Pro, Enterprise
   priceMonthly Float
   priceYearly  Float
-  
-  // Hard Limits
-  maxLeads     Int
-  maxSdrs      Int
-  
-  // Usage Credits (Monthly Refill)
-  maxTokens    Int     @default(100000)
-  maxMessages  Int     @default(1000)
-  maxProspects Int     @default(100)
-  maxResearch  Int     @default(20)
 
-  // Granular Switches
-  enableSdr       Boolean @default(true)
-  enableTokens    Boolean @default(true)
-  enableProspects Boolean @default(true)
-  enableResearch  Boolean @default(true)
-  enableMessages  Boolean @default(true)
+  // Hard Limits (aplicados no acesso ao recurso)
+  maxLeads              Int @default(500)
+  maxSdrs               Int @default(1)
+  maxUsers              Int @default(2)  // usuários na equipe
+  maxWhatsAppNumbers    Int @default(1)  // números conectados
+  maxKnowledgeBaseChars Int @default(50000) // tamanho do treino do agente
 
-  // Unit Operating Costs (for margins)
-  sdrUnitCost      Float   @default(15.0)   // Cost per bot/month
-  tokenUnitCost    Float   @default(0.08)   // Cost per 1k tokens
-  prospectUnitCost Float   @default(0.15)   // Cost per prospect sweep
-  researchUnitCost Float   @default(1.00)   // Cost per deep research
-  messageUnitCost  Float   @default(0.05)   // Cost per message
+  // Usage Credits (renovam por mês)
+  maxTokens   Int @default(100000)
+  maxMessages Int @default(1000)
 
-  features     String? // JSON list of features
-  active       Boolean @default(true)
+  // Feature toggles — ligam/desligam módulos inteiros
+  enableSdr         Boolean @default(true)
+  enableTokens      Boolean @default(true)
+  enableMessages    Boolean @default(true)
+  enableCalendar    Boolean @default(true)  // Google Calendar
+  enableAutomations Boolean @default(true)  // Lembretes/no-show
+  enableWebhooks    Boolean @default(false) // API pública/webhooks
+
+  // Custos operacionais unitários (para cálculo de margem no admin)
+  sdrUnitCost     Float @default(15.0)
+  tokenUnitCost   Float @default(0.08)
+  messageUnitCost Float @default(0.05)
+
+  features String? // JSON — extras futuros (RAG, integrações específicas, etc.)
+  active   Boolean @default(true)
 
   tenants   Tenant[]
   createdAt DateTime @default(now())

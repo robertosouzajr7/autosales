@@ -16,15 +16,20 @@ import * as WhatsAppController from "../controllers/WhatsAppController.js";
 import * as AutomationController from "../controllers/AutomationController.js";
 import * as SdrController from "../controllers/SdrController.js";
 import * as MessageController from "../controllers/MessageController.js";
-import * as ProspectController from "../controllers/ProspectController.js";
 import * as AnalyticsController from "../controllers/AnalyticsController.js";
-import * as ProspectionStatsController from "../controllers/ProspectionStatsController.js";
 import * as FinancialController from "../controllers/FinancialController.js";
 import * as BillingController from "../controllers/BillingController.js";
 import BillingService from "../services/BillingService.js";
 import * as ComplianceController from "../controllers/ComplianceController.js";
 import * as BusinessController from "../controllers/BusinessController.js";
 import { listVerticalTemplates } from "../services/VerticalTemplates.js";
+import {
+  requireCalendar,
+  requireAutomations,
+  requireWebhooks,
+  requireWhatsAppSlot,
+  requireUserSlot,
+} from "../middlewares/planLimits.js";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -49,11 +54,11 @@ router.post("/leads/bulk-enrich", LeadController.bulkEnrichLeads);
 router.get("/contacts/export", LeadController.exportContacts);
 router.post("/contacts/import-bulk", LeadController.importBulk);
 
-// Appointments
+// Appointments (integração com Google Calendar exige plano com enableCalendar)
 router.get("/appointments", AppointmentController.getAppointments);
-router.post("/appointments", AppointmentController.createAppointment);
-router.put("/appointments/:id", AppointmentController.updateAppointment);
-router.delete("/appointments/:id", AppointmentController.deleteAppointment);
+router.post("/appointments", requireCalendar, AppointmentController.createAppointment);
+router.put("/appointments/:id", requireCalendar, AppointmentController.updateAppointment);
+router.delete("/appointments/:id", requireCalendar, AppointmentController.deleteAppointment);
 
 // Bulk Messaging
 router.get("/bulk/campaigns", BulkController.getCampaigns);
@@ -65,22 +70,22 @@ router.post("/bulk/import-csv", BulkController.importCSV);
 router.get("/settings", SettingsController.getSettings);
 router.put("/settings", SettingsController.updateSettings);
 
-// WhatsApp Connections
+// WhatsApp Connections — criação bloqueada quando maxWhatsAppNumbers estoura
 router.get("/whatsapp/accounts", WhatsAppController.getAccounts);
-router.post("/whatsapp/accounts", WhatsAppController.createAccount);
+router.post("/whatsapp/accounts", requireWhatsAppSlot, WhatsAppController.createAccount);
 router.delete("/whatsapp/accounts/:id", WhatsAppController.deleteAccount);
-router.post("/whatsapp/accounts/meta", WhatsAppController.createMetaAccount);
+router.post("/whatsapp/accounts/meta", requireWhatsAppSlot, WhatsAppController.createMetaAccount);
 router.get("/whatsapp/qr/:id", WhatsAppController.qrCodeStream);
 
-// Automations
+// Automations — gate por enableAutomations
 router.get("/automations", AutomationController.getAutomations);
-router.post("/automations", AutomationController.createAutomation);
-router.put("/automations/:id", AutomationController.updateAutomation);
+router.post("/automations", requireAutomations, AutomationController.createAutomation);
+router.put("/automations/:id", requireAutomations, AutomationController.updateAutomation);
 router.delete("/automations/:id", AutomationController.deleteAutomation);
-router.post("/automations/:id/duplicate", AutomationController.duplicateAutomation);
+router.post("/automations/:id/duplicate", requireAutomations, AutomationController.duplicateAutomation);
 router.get("/automations/executions/stats", AutomationController.getStats);
 router.get("/automations/config", AutomationController.getConfig);
-router.post("/automations/config", AutomationController.updateConfig);
+router.post("/automations/config", requireAutomations, AutomationController.updateConfig);
 
 // Stats & Analytics
 router.get("/stats/dashboard", StatsController.getDashboardStats);
@@ -94,17 +99,11 @@ router.post("/messages/call-intent", requireActiveSubscription, MessageControlle
 router.put("/conversations/:leadId/toggle-bot", MessageController.toggleBot);
 router.get("/events", MessageController.sseEvents);
 
-// Prospecting (B2B) — geram custo, exigem assinatura ativa
-router.post("/prospect", requireActiveSubscription, ProspectController.prospectGeneric);
-router.post("/apollo/search", requireActiveSubscription, ProspectController.searchApollo);
-router.post("/prospect/linkedin", requireActiveSubscription, ProspectController.prospectLinkedIn);
-router.post("/prospect/enrich", requireActiveSubscription, ProspectController.enrichData);
-router.get("/prospect/stats", ProspectionStatsController.getProspectionStats);
-router.post("/prospect/trigger-hunt", requireActiveSubscription, ProspectionStatsController.triggerManualHunt);
+// (Rotas de prospecção outbound removidas — produto é inbound)
 
-// Users
+// Users — criação bloqueada quando maxUsers estoura
 router.get("/users", UserController.getUsers);
-router.post("/users", UserController.createUser);
+router.post("/users", requireUserSlot, UserController.createUser);
 router.delete("/users/:id", UserController.deleteUser);
 
 // Pipeline Stages
