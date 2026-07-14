@@ -39,6 +39,10 @@ export default function Dashboard() {
   const [appts, setAppts] = useState<Appt[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [setup, setSetup] = useState({ whatsapp: false, agent: false, business: false });
+  const [trial, setTrial] = useState<{ active: boolean; daysLeft: number; planName?: string }>({
+    active: false,
+    daysLeft: 0,
+  });
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -61,6 +65,17 @@ export default function Dashboard() {
       setResults(r && !r.error ? r : null);
       setAppts(Array.isArray(a) ? a : []);
       setLeads(Array.isArray(l) ? l : []);
+
+      // Trial banner: mostra dias restantes se ainda está em TRIAL.
+      if (s?.subscriptionStatus === "TRIAL" && s?.trialEnd) {
+        const daysLeft = Math.max(
+          0,
+          Math.ceil((new Date(s.trialEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+        );
+        setTrial({ active: true, daysLeft, planName: s?.plan?.name });
+      } else {
+        setTrial({ active: false, daysLeft: 0 });
+      }
 
       // Se o tenant ainda não escolheu o tipo de negócio, entra no wizard.
       const businessType = b?.profile?.businessType;
@@ -110,6 +125,30 @@ export default function Dashboard() {
             </Button>
           }
         />
+
+        {/* Banner de trial — some quando plano está ATIVO */}
+        {!loading && trial.active && (
+          <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-lg bg-amber-500 text-white grid place-items-center shrink-0">
+                <Timer className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-amber-900">
+                  {trial.daysLeft > 0
+                    ? `${trial.daysLeft} ${trial.daysLeft === 1 ? "dia restante" : "dias restantes"} no seu trial${trial.planName ? ` do plano ${trial.planName}` : ""}`
+                    : "Seu período de teste acabou hoje"}
+                </p>
+                <p className="text-xs text-amber-800/80">
+                  Assine para não interromper o atendimento do seu agente.
+                </p>
+              </div>
+            </div>
+            <Button size="sm" onClick={() => navigate("/settings#billing")} className="bg-amber-500 hover:bg-amber-600 text-white">
+              Assinar agora
+            </Button>
+          </div>
+        )}
 
         {/* Checklist de setup — some quando concluído */}
         {!loading && !setupDone && (

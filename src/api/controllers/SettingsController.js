@@ -28,6 +28,8 @@ export const getSettings = async (req, res) => {
       aiProvider: tenant?.aiProvider,
       aiApiKey: tenant?.aiApiKey,
       openAiKey: tenant?.openAiKey,
+      subscriptionStatus: tenant?.subscriptionStatus,
+      trialEnd: tenant?.trialEnd,
       apolloApiKey: tenant?.apolloApiKey,
       snovClientId: tenant?.snovClientId,
       snovClientSecret: tenant?.snovClientSecret,

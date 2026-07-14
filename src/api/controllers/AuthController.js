@@ -36,12 +36,12 @@ export const login = async (req, res) => {
   }
 };
 
-// Duração do trial gratuito ao cadastrar.
-const TRIAL_DAYS = parseInt(process.env.TRIAL_DAYS || "14", 10);
+// Duração padrão do trial gratuito. Todo plano pode ser testado por 7 dias.
+const TRIAL_DAYS = parseInt(process.env.TRIAL_DAYS || "7", 10);
 
 export const register = async (req, res) => {
   try {
-    const { name, email, password, companyName, phone } = req.body;
+    const { name, email, password, companyName, phone, planId } = req.body;
 
     if (!email || !password || password.length < 8) {
       return res.status(400).json({ error: "Senha deve ter ao menos 8 caracteres." });
@@ -52,13 +52,21 @@ export const register = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // O plano NÃO é escolhido pelo cliente no cadastro. Todo signup entra em
-    // TRIAL no plano de entrada (mais barato ativo). Upgrade/pagamento é feito
-    // depois, pelo portal de billing.
-    const trialPlan = await prisma.plan.findFirst({
-      where: { active: true, priceMonthly: { gt: 0 } },
-      orderBy: { priceMonthly: "asc" }
-    });
+    // O cliente pode escolher o plano no cadastro (todos com trial de N dias).
+    // Se não escolher (ou o plano informado for inválido), cai no plano de
+    // entrada mais barato.
+    let selectedPlan = null;
+    if (planId) {
+      selectedPlan = await prisma.plan.findFirst({
+        where: { id: planId, active: true },
+      });
+    }
+    if (!selectedPlan) {
+      selectedPlan = await prisma.plan.findFirst({
+        where: { active: true, priceMonthly: { gt: 0 } },
+        orderBy: { priceMonthly: "asc" },
+      });
+    }
 
     const trialEnd = new Date();
     trialEnd.setDate(trialEnd.getDate() + TRIAL_DAYS);
@@ -68,13 +76,13 @@ export const register = async (req, res) => {
         name: companyName,
         email,
         phone,
-        planId: trialPlan?.id,
+        planId: selectedPlan?.id,
         subscriptionStatus: "TRIAL",
         trialEnd,
         nextBillingDate: trialEnd,
         // Aceite de Termos/Privacidade capturado no cadastro (LGPD).
-        acceptedTermsAt: new Date()
-      }
+        acceptedTermsAt: new Date(),
+      },
     });
 
     const user = await prisma.user.create({
