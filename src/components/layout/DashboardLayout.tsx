@@ -70,6 +70,7 @@ const navItems: NavItem[] = [
   { label: "Funil de Pacientes", icon: Users, href: "/crm" },
   { label: "Pacientes", icon: BookUser, href: "/contacts" },
   { label: "Consultas", icon: Calendar, href: "/appointments", feature: "calendar" },
+  { label: "Minha Clínica", icon: Building2, href: "/clinica" },
   { label: "Agente de IA", icon: Bot, href: "/sdrs" },
   { label: "Lembretes", icon: Zap, href: "/automations" },
   { label: "Conexões", icon: Smartphone, href: "/connections" },

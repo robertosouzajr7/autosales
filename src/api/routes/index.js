@@ -23,6 +23,7 @@ import * as FinancialController from "../controllers/FinancialController.js";
 import * as BillingController from "../controllers/BillingController.js";
 import BillingService from "../services/BillingService.js";
 import * as ComplianceController from "../controllers/ComplianceController.js";
+import * as ClinicController from "../controllers/ClinicController.js";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -156,6 +157,23 @@ router.post("/admin/financial/trigger-billing", adminMiddleware, async (req, res
 });
 
 // SaaS Billing Portal (Customer)
+// Minha Clínica (base de conhecimento do agente)
+router.get("/clinic", ClinicController.getClinic);
+router.put("/clinic/profile", ClinicController.updateProfile);
+router.put("/clinic/hours", ClinicController.updateBusinessHours);
+router.post("/clinic/professionals", ClinicController.professional.create);
+router.put("/clinic/professionals/:id", ClinicController.professional.update);
+router.delete("/clinic/professionals/:id", ClinicController.professional.remove);
+router.post("/clinic/services", ClinicController.service.create);
+router.put("/clinic/services/:id", ClinicController.service.update);
+router.delete("/clinic/services/:id", ClinicController.service.remove);
+router.post("/clinic/insurances", ClinicController.insurance.create);
+router.put("/clinic/insurances/:id", ClinicController.insurance.update);
+router.delete("/clinic/insurances/:id", ClinicController.insurance.remove);
+router.post("/clinic/faqs", ClinicController.faq.create);
+router.put("/clinic/faqs/:id", ClinicController.faq.update);
+router.delete("/clinic/faqs/:id", ClinicController.faq.remove);
+
 // Compliance / Direitos do titular (LGPD)
 router.get("/compliance/account/export", ComplianceController.exportAccountData);
 router.get("/compliance/leads/:id/export", ComplianceController.exportLeadData);
