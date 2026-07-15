@@ -16,6 +16,7 @@ import AutomationEngine from "../../automation_engine.js";
 import { receiveWhatsappWebhook } from "./controllers/LeadController.js";
 import { verifyMetaWebhook, receiveMetaWebhook } from "./controllers/MetaWebhookController.js";
 import { receivePaymentWebhook } from "./controllers/PaymentWebhookController.js";
+import { serveWidget } from "./controllers/WidgetController.js";
 import { logger } from "./config/logger.js";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
@@ -108,6 +109,9 @@ app.post("/api/webhook/meta", receiveMetaWebhook);
 
 // ⚡ Webhook de pagamento (confirma fatura; assinado por HMAC)
 app.post("/api/webhook/payment", receivePaymentWebhook);
+
+// ⚡ Widget de chat público (embed em site de cliente)
+app.get("/widget.js", serveWidget);
 
 // Routes
 app.use("/api/public", publicApiRouter);
