@@ -328,6 +328,23 @@ model User {
   phone     String? // WhatsApp do admin para Modo Comando
   role      String   @default("ADMIN") // ADMIN, AGENT, OWNER, SUPERADMIN
   tenantId  String
+
+  // Verificação de e-mail
+  emailVerified              Boolean   @default(false)
+  emailVerificationToken     String?   @unique
+  emailVerificationExpiresAt DateTime?
+
+  // Reset de senha
+  passwordResetToken     String?   @unique
+  passwordResetExpiresAt DateTime?
+
+  // 2FA (TOTP)
+  twoFactorEnabled     Boolean @default(false)
+  twoFactorSecret      String? // segredo base32
+  twoFactorBackupCodes String? // JSON com códigos de recuperação já usados/pendentes
+
+  lastLoginAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

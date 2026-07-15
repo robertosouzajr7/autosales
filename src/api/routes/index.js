@@ -38,6 +38,11 @@ const router = express.Router();
 // Public / Auth
 router.post("/auth/login", AuthController.login);
 router.post("/auth/register", AuthController.register);
+router.post("/auth/verify-email", AuthController.verifyEmail);
+router.post("/auth/resend-verification", AuthController.resendVerification);
+router.post("/auth/forgot-password", AuthController.forgotPassword);
+router.post("/auth/reset-password", AuthController.resetPassword);
+// Endpoints legados
 router.post("/auth/send-code", AuthController.sendCode);
 router.post("/auth/verify-code", AuthController.verifyCode);
 
@@ -105,6 +110,13 @@ router.get("/events", MessageController.sseEvents);
 router.get("/users", UserController.getUsers);
 router.post("/users", requireUserSlot, UserController.createUser);
 router.delete("/users/:id", UserController.deleteUser);
+
+// Conta do usuário logado (perfil, senha, 2FA)
+router.get("/users/me", UserController.getMe);
+router.post("/users/me/password", UserController.changePassword);
+router.post("/users/me/2fa/setup", UserController.setup2FA);
+router.post("/users/me/2fa/enable", UserController.enable2FA);
+router.post("/users/me/2fa/disable", UserController.disable2FA);
 
 // Pipeline Stages
 router.get("/pipeline-stages", PipelineController.getStages);

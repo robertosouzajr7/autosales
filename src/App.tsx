@@ -19,6 +19,9 @@ import AutomationConfig from "@/pages/AutomationConfig";
 import PublicBooking from "@/pages/PublicBooking";
 import PublicWebchat from "@/pages/PublicWebchat";
 import Docs from "@/pages/Docs";
+import VerifyEmail from "@/pages/VerifyEmail";
+import ForgotPassword from "@/pages/ForgotPassword";
+import ResetPassword from "@/pages/ResetPassword";
 import { Toaster } from "@/components/ui/toaster";
 
 function App() {
@@ -29,6 +32,9 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/verify-email/:token" element={<VerifyEmail />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/b/:tenantId" element={<PublicBooking />} />
         <Route path="/chat/:tenantId" element={<PublicWebchat />} />
 

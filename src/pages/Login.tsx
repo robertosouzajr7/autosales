@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Target, Mail, Lock, Loader2, ArrowRight } from "lucide-react";
+import { Target, Mail, Lock, Loader2, ArrowRight, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [needsTwoFactor, setNeedsTwoFactor] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -21,20 +23,26 @@ export default function Login() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password, twoFactorCode: twoFactorCode || undefined })
       });
       const data = await res.json();
-      
+
+      // 2FA — servidor pediu o código e ainda não emitiu token.
+      if (res.ok && data.twoFactorRequired) {
+        setNeedsTwoFactor(true);
+        setLoading(false);
+        return;
+      }
+
       if (res.ok) {
         localStorage.setItem("token", data.token);
         localStorage.setItem("userRole", data.user.role);
         if (data.tenant) {
-            localStorage.setItem("tenantId", data.tenant.id);
-            localStorage.setItem("userPlan", data.tenant.planId);
+          localStorage.setItem("tenantId", data.tenant.id);
+          localStorage.setItem("userPlan", data.tenant.planId);
         }
-        
         if (data.user.role === "SUPERADMIN") navigate("/admin");
-        else navigate("/crm");
+        else navigate("/dashboard");
       } else {
         toast({ title: "Erro no login", description: data.error, variant: "destructive" });
       }
@@ -58,37 +66,74 @@ export default function Login() {
 
         <Card className="border-none shadow-xl bg-white p-10 rounded-3xl">
           <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-400 pl-1">Seu E-mail</Label>
-                <div className="relative">
-                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-                   <Input 
-                     type="email" 
-                     placeholder="seu@email.com" 
-                     value={email} 
-                     onChange={e => setEmail(e.target.value)} 
-                     className="h-16 pl-12 border-slate-100 rounded-2xl bg-slate-50 shadow-none text-lg font-bold focus:ring-primary/10 transition-all"
-                   />
+            {!needsTwoFactor && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-slate-400 pl-1">Seu E-mail</Label>
+                  <div className="relative">
+                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                     <Input
+                       type="email"
+                       placeholder="seu@email.com"
+                       value={email}
+                       onChange={e => setEmail(e.target.value)}
+                       className="h-16 pl-12 border-slate-100 rounded-2xl bg-slate-50 shadow-none text-lg font-bold focus:ring-primary/10 transition-all"
+                     />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-slate-400 pl-1">Senha</Label>
+                  <div className="relative">
+                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                     <Input
+                       type="password"
+                       placeholder="••••••••"
+                       value={password}
+                       onChange={e => setPassword(e.target.value)}
+                       className="h-16 pl-12 border-slate-100 rounded-2xl bg-slate-50 shadow-none text-lg font-bold focus:ring-primary/10 transition-all"
+                     />
+                  </div>
+                </div>
+                <div className="text-right">
+                  <Link to="/forgot-password" className="text-xs font-semibold text-primary hover:underline">
+                    Esqueci minha senha
+                  </Link>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-400 pl-1">Senha</Label>
-                <div className="relative">
-                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-                   <Input 
-                     type="password" 
-                     placeholder="••••••••" 
-                     value={password} 
-                     onChange={e => setPassword(e.target.value)} 
-                     className="h-16 pl-12 border-slate-100 rounded-2xl bg-slate-50 shadow-none text-lg font-bold focus:ring-primary/10 transition-all"
-                   />
+            )}
+
+            {needsTwoFactor && (
+              <div className="space-y-4">
+                <div className="rounded-2xl bg-primary/5 border border-primary/20 p-4 flex items-start gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-primary text-white grid place-items-center shrink-0">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Verificação em 2 passos</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Abra seu app autenticador e digite o código de 6 dígitos.
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-slate-400 pl-1">Código do autenticador</Label>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    placeholder="000000"
+                    value={twoFactorCode}
+                    onChange={e => setTwoFactorCode(e.target.value.replace(/\D/g, ""))}
+                    className="h-16 border-slate-100 rounded-2xl bg-slate-50 text-2xl tracking-[0.5em] font-bold text-center"
+                    autoFocus
+                  />
                 </div>
               </div>
-            </div>
+            )}
 
             <Button type="submit" className="w-full h-16 bg-slate-900 hover:bg-black rounded-2xl font-bold text-xl shadow-2xl shadow-slate-200 gap-3" disabled={loading}>
-               {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Entrar Painel SDR"}
+               {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : (needsTwoFactor ? "Confirmar" : "Entrar")}
                {!loading && <ArrowRight className="w-6 h-6 text-primary" />}
             </Button>
           </form>
