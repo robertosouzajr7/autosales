@@ -139,9 +139,17 @@ router.post("/sdrs/:id/training", upload.single("file"), SdrController.trainSdr)
 
 // Admin / SaaS Central (Required for AdminDashboard.tsx)
 router.get("/admin/tenants", adminMiddleware, AdminController.getTenants);
+router.post("/admin/tenants", adminMiddleware, AdminController.createTenant);
 router.get("/admin/tenants/:id", adminMiddleware, AdminController.getTenantDetail);
 router.put("/admin/tenants/:id", adminMiddleware, AdminController.updateTenant);
 router.delete("/admin/tenants/:id", adminMiddleware, AdminController.deleteTenant);
+
+// Configurações da plataforma (gateway de pagamento etc.)
+router.get("/admin/platform-settings", adminMiddleware, AdminController.getPlatformSettings);
+router.put("/admin/platform-settings", adminMiddleware, AdminController.updatePlatformSettings);
+
+// Relatórios do SaaS
+router.get("/admin/reports", adminMiddleware, AdminController.getReports);
 router.post("/admin/tenants/:id/users", adminMiddleware, AdminController.createTenantUser);
 router.delete("/admin/tenants/:id/users/:userId", adminMiddleware, AdminController.deleteTenantUser);
 

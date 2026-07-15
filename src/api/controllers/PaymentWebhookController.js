@@ -12,10 +12,19 @@ import prisma from "../config/prisma.js";
  * Payload normalizado esperado (o adaptador do gateway traduz para isto):
  *   { invoiceId?, external_reference?, gatewayId?, status: "approved"|... }
  */
-export function isValidPaymentSignature(req) {
-  const secret = process.env.PAYMENT_WEBHOOK_SECRET;
+async function getWebhookSecret() {
+  try {
+    const s = await prisma.platformSettings.findUnique({ where: { id: "singleton" } });
+    return s?.paymentWebhookSecret || process.env.PAYMENT_WEBHOOK_SECRET || null;
+  } catch {
+    return process.env.PAYMENT_WEBHOOK_SECRET || null;
+  }
+}
+
+export async function isValidPaymentSignature(req) {
+  const secret = await getWebhookSecret();
   if (!secret) {
-    console.error("[Payment Webhook] PAYMENT_WEBHOOK_SECRET não configurado — rejeitando.");
+    console.error("[Payment Webhook] Segredo do webhook não configurado (painel admin ou PAYMENT_WEBHOOK_SECRET) — rejeitando.");
     return false;
   }
   const signature = req.get("x-signature-256") || req.get("x-signature");
@@ -37,7 +46,7 @@ export function isValidPaymentSignature(req) {
 const APPROVED = new Set(["approved", "paid", "PAID", "APPROVED", "success"]);
 
 export const receivePaymentWebhook = async (req, res) => {
-  if (!isValidPaymentSignature(req)) {
+  if (!(await isValidPaymentSignature(req))) {
     return res.sendStatus(403);
   }
 
