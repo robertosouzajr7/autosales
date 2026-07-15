@@ -238,6 +238,11 @@ model SdrBot {
   id     String  @id @default(uuid())
   name   String
   role   String  @default("INBOUND") // INBOUND, OUTBOUND
+
+  // Função do agente (preset de persona + skills). Ver AgentFunctions.js.
+  agentFunction String  @default("SCHEDULER") // SDR, SELLER, SUPPORT, SCHEDULER, CONSULTANT
+  skills        String? // JSON array de skills habilitadas (ex.: ["schedule","send_catalog"])
+
   prompt String? @default("Você é um SDR focado em qualificar leads.")
   
   // Áudio e Voz (ElevenLabs)
@@ -523,11 +528,18 @@ model Product {
   id          String  @id @default(uuid())
   name        String
   type        String  @default("PRODUCT") // PRODUCT, SERVICE
+  category    String? // agrupamento livre (ex.: "Estética", "Planos")
   description String?
   price       Float?
   size        String? // P, M, G ou dimensões
   buyUrl      String? @default("https://")
-  isActive    Boolean @default(true)
+
+  // Mídia que o agente pode enviar durante a conversa.
+  imageUrl String?
+  audioUrl String?
+  videoUrl String?
+
+  isActive Boolean @default(true)
 
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)

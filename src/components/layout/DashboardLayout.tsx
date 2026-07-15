@@ -26,7 +26,8 @@ import {
   BookOpen,
   MessageCircle,
   Clock,
-  Sparkles
+  Sparkles,
+  Package
 } from "lucide-react";
 import { notificationStore } from "@/lib/notifications";
 
@@ -71,6 +72,7 @@ const navItems: NavItem[] = [
   { label: "Clientes", icon: BookUser, href: "/contacts" },
   { label: "Agendamentos", icon: Calendar, href: "/appointments", feature: "calendar" },
   { label: "Meu Negócio", icon: Building2, href: "/negocio" },
+  { label: "Catálogo", icon: Package, href: "/catalogo" },
   { label: "Agente de IA", icon: Bot, href: "/sdrs" },
   { label: "Lembretes", icon: Zap, href: "/automations" },
   { label: "Conexões", icon: Smartphone, href: "/connections" },

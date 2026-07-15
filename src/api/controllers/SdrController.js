@@ -21,7 +21,7 @@ export const createSdr = async (req, res) => {
   if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
 
   const {
-    name, role, prompt, knowledgeBase, trainingUrls,
+    name, role, agentFunction, skills, prompt, knowledgeBase, trainingUrls,
     responseDelay, voiceTone, escalationKeywords,
     followUpInterval, preConfirmationHours, noShowGraceMinutes,
     postServiceCheckHours, enableWaitlist, active,
@@ -38,7 +38,7 @@ export const createSdr = async (req, res) => {
       if (!tenant.plan.enableSdr) {
         return res.status(403).json({ error: "O recurso de SDRs não está habilitado no seu plano." });
       }
-      
+
       const sdrCount = await prisma.sdrBot.count({
         where: { tenantId, active: true }
       });
@@ -52,6 +52,8 @@ export const createSdr = async (req, res) => {
       data: {
         name,
         role: role || "SDR",
+        agentFunction: agentFunction || "SCHEDULER",
+        skills: skills ? (typeof skills === "string" ? skills : JSON.stringify(skills)) : null,
         prompt,
         knowledgeBase,
         trainingUrls,
@@ -81,7 +83,7 @@ export const updateSdr = async (req, res) => {
 
   const { id } = req.params;
   const {
-    name, role, prompt, knowledgeBase, trainingUrls,
+    name, role, agentFunction, skills, prompt, knowledgeBase, trainingUrls,
     responseDelay, voiceTone, escalationKeywords,
     followUpInterval, preConfirmationHours, noShowGraceMinutes,
     postServiceCheckHours, enableWaitlist, active,
@@ -115,6 +117,8 @@ export const updateSdr = async (req, res) => {
       data: {
         name,
         role,
+        agentFunction: agentFunction || undefined,
+        skills: skills !== undefined ? (typeof skills === "string" ? skills : JSON.stringify(skills)) : undefined,
         prompt,
         knowledgeBase,
         trainingUrls,

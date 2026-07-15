@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
-  Bot, Plus, Trash2, Brain, Zap, Globe, Save, RefreshCw, Sliders, User, ShieldCheck, Clock, CheckCircle2, MessageSquare, Upload, FileText, FileJson, Power
+  Bot, Plus, Trash2, Brain, Zap, Globe, Save, RefreshCw, Sliders, User, ShieldCheck, Clock, CheckCircle2, MessageSquare, Upload, FileText, FileJson, Power, Check
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
@@ -26,9 +26,14 @@ export default function SdrManagement() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSdr, setEditingSdr] = useState<any>(null);
 
+  const [functions, setFunctions] = useState<any[]>([]);
+  const [skillsCatalog, setSkillsCatalog] = useState<any[]>([]);
+
   const [form, setForm] = useState({
     name: "",
     role: "SDR",
+    agentFunction: "SCHEDULER",
+    skills: [] as string[],
     prompt: "",
     knowledgeBase: "",
     trainingUrls: "",
@@ -52,16 +57,20 @@ export default function SdrManagement() {
   const fetchData = async () => {
     const token = localStorage.getItem("token");
     try {
-      const [sdrsRes, settingsRes] = await Promise.all([
+      const [sdrsRes, settingsRes, fnRes] = await Promise.all([
         fetch("/api/sdrs", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch("/api/settings", { headers: { "Authorization": `Bearer ${token}` } })
+        fetch("/api/settings", { headers: { "Authorization": `Bearer ${token}` } }),
+        fetch("/api/agent-functions", { headers: { "Authorization": `Bearer ${token}` } })
       ]);
-      
+
       const sdrData = await sdrsRes.json();
       const settingsData = await settingsRes.json();
-      
+      const fnData = await fnRes.json();
+
       setSdrs(Array.isArray(sdrData) ? sdrData : []);
       setHasWhatsApp(!!settingsData.hasWhatsAppConnection);
+      setFunctions(fnData.functions || []);
+      setSkillsCatalog(fnData.skills || []);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
@@ -71,9 +80,13 @@ export default function SdrManagement() {
   const handleOpenModal = (sdr: any = null) => {
     if (sdr) {
       setEditingSdr(sdr);
+      let parsedSkills: string[] = [];
+      try { parsedSkills = sdr.skills ? JSON.parse(sdr.skills) : []; } catch { parsedSkills = []; }
       setForm({
         name: sdr.name || "",
         role: sdr.role || "SDR",
+        agentFunction: sdr.agentFunction || "SCHEDULER",
+        skills: parsedSkills,
         prompt: sdr.prompt || "",
         knowledgeBase: sdr.knowledgeBase || "",
         trainingUrls: sdr.trainingUrls || "",
@@ -91,10 +104,13 @@ export default function SdrManagement() {
       });
     } else {
       setEditingSdr(null);
+      const defaultFn = functions.find((f) => f.id === "SCHEDULER") || functions[0];
       setForm({
         name: "",
         role: "SDR",
-        prompt: "Você é um SDR amigável focado em conversão e agendamento.",
+        agentFunction: defaultFn?.id || "SCHEDULER",
+        skills: defaultFn?.skills || [],
+        prompt: "",
         knowledgeBase: "",
         trainingUrls: "",
         responseDelay: 2000,
@@ -237,7 +253,7 @@ export default function SdrManagement() {
                       </div>
                       <div>
                          <h3 className="text-slate-900 group-hover:text-white font-semibold text-lg leading-none uppercase">{sdr.name}</h3>
-                         <Badge className="bg-[#2563EB]/10 text-[#2563EB] font-semibold text-xs mt-1 uppercase border-none">{sdr.role}</Badge>
+                         <Badge className="bg-[#2563EB]/10 text-[#2563EB] font-semibold text-xs mt-1 uppercase border-none">{functions.find((f) => f.id === sdr.agentFunction)?.label || sdr.role}</Badge>
                       </div>
                    </div>
                    <div className="flex items-center gap-3">
@@ -321,25 +337,62 @@ export default function SdrManagement() {
                   </TabsList>
 
                   <TabsContent value="perfil" className="space-y-6 animate-in fade-in slide-in-from-top-4">
-                    <div className="grid grid-cols-2 gap-4">
-                       <div className="space-y-2">
-                          <Label className="font-semibold text-xs text-slate-400 pl-1">Identificação da IA</Label>
-                          <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="h-10 rounded-2xl border-none bg-slate-50 font-bold px-6 shadow-inner" placeholder="Ex: Joana Bronze" />
+                    <div className="space-y-2">
+                       <Label className="font-semibold text-xs text-slate-400 pl-1">Identificação da IA</Label>
+                       <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="h-10 rounded-2xl border-none bg-slate-50 font-bold px-6 shadow-inner" placeholder="Ex: Joana Bronze" />
+                    </div>
+
+                    {/* FUNÇÃO DO AGENTE */}
+                    <div className="space-y-2">
+                       <Label className="font-semibold text-xs text-slate-400 pl-1">Função do agente</Label>
+                       <div className="grid sm:grid-cols-2 gap-2">
+                          {functions.map((f) => {
+                            const active = form.agentFunction === f.id;
+                            return (
+                              <button
+                                key={f.id}
+                                type="button"
+                                onClick={() => setForm({ ...form, agentFunction: f.id, skills: f.skills })}
+                                className={`text-left rounded-2xl border p-3 transition-all ${active ? "border-[#2563EB] bg-[#2563EB]/5 ring-2 ring-[#2563EB]/20" : "border-slate-200 hover:border-[#2563EB]/40"}`}
+                              >
+                                <p className="text-sm font-semibold text-slate-900">{f.label}</p>
+                                <p className="text-xs text-slate-500 mt-0.5">{f.hint}</p>
+                              </button>
+                            );
+                          })}
                        </div>
-                       <div className="space-y-2">
-                          <Label className="font-semibold text-xs text-slate-400 pl-1">Especialidade</Label>
-                          <Select value={form.role} onValueChange={v => setForm({...form, role: v})}>
-                             <SelectTrigger className="h-10 rounded-2xl border-none bg-slate-50 font-bold shadow-inner"><SelectValue /></SelectTrigger>
-                             <SelectContent className="rounded-xl border-none shadow-sm">
-                                <SelectItem value="SDR" className="font-bold py-2">PRÉ-VENDAS / AGENDAMENTO</SelectItem>
-                                <SelectItem value="POS_VENDAS" className="font-bold py-2">PÓS-VENDAS / FEEDBACK</SelectItem>
-                             </SelectContent>
-                          </Select>
+                       <p className="text-xs text-slate-400 pl-1">A função define a persona e liga as skills recomendadas. Você ajusta abaixo.</p>
+                    </div>
+
+                    {/* SKILLS */}
+                    <div className="space-y-2">
+                       <Label className="font-semibold text-xs text-slate-400 pl-1">Skills (o que o agente pode fazer)</Label>
+                       <div className="grid sm:grid-cols-2 gap-2">
+                          {skillsCatalog.map((s) => {
+                            const on = form.skills.includes(s.id);
+                            return (
+                              <button
+                                key={s.id}
+                                type="button"
+                                onClick={() => setForm({ ...form, skills: on ? form.skills.filter((x) => x !== s.id) : [...form.skills, s.id] })}
+                                className={`text-left rounded-2xl border p-3 flex items-start gap-2 transition-all ${on ? "border-emerald-300 bg-emerald-50" : "border-slate-200 hover:border-slate-300"}`}
+                              >
+                                <div className={`h-4 w-4 rounded mt-0.5 shrink-0 grid place-items-center ${on ? "bg-emerald-500 text-white" : "bg-slate-200"}`}>
+                                  {on && <Check className="w-3 h-3" />}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-900">{s.label}</p>
+                                  <p className="text-xs text-slate-500">{s.desc}</p>
+                                </div>
+                              </button>
+                            );
+                          })}
                        </div>
                     </div>
+
                     <div className="space-y-2">
-                       <Label className="font-semibold text-xs text-slate-400 pl-1">Diretriz de Comportamento (Prompt)</Label>
-                       <Textarea value={form.prompt} onChange={e => setForm({...form, prompt: e.target.value})} className="min-h-[140px] rounded-2xl border-none bg-slate-50 p-6 font-medium leading-relaxed" placeholder="Como ele deve se comportar?" />
+                       <Label className="font-semibold text-xs text-slate-400 pl-1">Instruções adicionais (opcional)</Label>
+                       <Textarea value={form.prompt} onChange={e => setForm({...form, prompt: e.target.value})} className="min-h-[120px] rounded-2xl border-none bg-slate-50 p-6 font-medium leading-relaxed" placeholder="Regras específicas do seu negócio, tom de voz, o que evitar…" />
                     </div>
                   </TabsContent>
 
