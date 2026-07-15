@@ -59,7 +59,7 @@ export default function Login() {
       <div className="max-w-md w-full space-y-10 relative z-10">
         
         <div className="text-center space-y-3 flex flex-col items-center">
-          <img src="/logo.png" alt="AutoSales Logo" className="h-12 w-auto mb-2" />
+          <img src="/logo.png" alt="Agentes Virtuais" className="h-12 w-auto mb-2" />
           <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Bem-vindo de volta.</h1>
           <p className="text-slate-500 font-bold">Faça login para gerenciar seus SDRs e Leads.</p>
         </div>

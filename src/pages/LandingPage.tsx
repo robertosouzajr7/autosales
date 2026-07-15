@@ -164,8 +164,8 @@ export default function LandingPage() {
             <img src={settings.logoUrl} alt="Logo" className="h-10 w-auto" />
           ) : (
             <>
-              <img src="/logo.png" alt="AutoSales Logo" className="h-10 w-auto" />
-              <span className={`text-2xl font-bold ${sLogoText} tracking-tight uppercase italic`}>Auto<span className="text-[#2563EB]">Sales</span></span>
+              <img src="/logo.png" alt="Agentes Virtuais" className="h-10 w-auto" />
+              <span className={`text-2xl font-bold ${sLogoText} tracking-tight uppercase italic`}>Agentes <span className="text-[#2563EB]">Virtuais</span></span>
             </>
           )}
         </div>
@@ -579,7 +579,7 @@ export default function LandingPage() {
             <div className="flex flex-col gap-3">
                <div className="flex items-center gap-3">
                   {settings?.logoUrl ? <img src={settings.logoUrl} className="h-8 grayscale opacity-60" /> : <img src="/logo.png" className="h-8 w-auto grayscale opacity-60" />}
-                  <span className={`text-xl font-bold ${sFooterTitle} tracking-tight uppercase italic`}>Auto<span className="text-[#2563EB]">Sales</span></span>
+                  <span className={`text-xl font-bold ${sFooterTitle} tracking-tight uppercase italic`}>Agentes <span className="text-[#2563EB]">Virtuais</span></span>
                </div>
                <p className={`text-xs font-bold ${sFooterDesc}`}>IA de agendamento no WhatsApp — para qualquer negócio.</p>
             </div>
@@ -587,7 +587,7 @@ export default function LandingPage() {
                <div>E-mail oficial: contato@agentesvirtuais.com</div>
                <div>Suporte via WhatsApp: 71 99204-2802</div>
                <div>Endereço: Rua Vereador Zezeu Ribeiro, 1117, Boca da Mata, Salvador - Ba. Cep: 41.345-100</div>
-               <div className={`pt-2 ${sFooterDesc}`}>© 2026 AutoSales. Todos os direitos reservados.</div>
+               <div className={`pt-2 ${sFooterDesc}`}>© 2026 Agentes Virtuais. Todos os direitos reservados.</div>
             </div>
          </div>
       </footer>
@@ -618,7 +618,7 @@ export default function LandingPage() {
            <div className={`p-6 text-white flex items-center gap-4 border-b ${isDarkMode ? 'bg-[#1E293B] border-slate-900/40' : 'bg-blue-50 border-slate-200'}`}>
               <div className="w-12 h-12 bg-[#2563EB] rounded-full flex items-center justify-center font-bold text-white">AI</div>
               <div>
-                 <h4 className={`font-bold text-sm ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>Assistente AutoSales</h4>
+                 <h4 className={`font-bold text-sm ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>Assistente Agentes Virtuais</h4>
                  <p className="text-xs text-[#2563EB] font-bold flex items-center gap-1"><span className="w-2 h-2 bg-[#2563EB] rounded-full animate-ping" /> Especialista online agora</p>
               </div>
            </div>
@@ -626,7 +626,7 @@ export default function LandingPage() {
            <div className={`flex-1 h-96 p-6 overflow-y-auto space-y-4 ${isDarkMode ? 'bg-[#0F172A]' : 'bg-[#F8FAFC]'}`}>
               {chatHistory.length === 0 && (
                 <div className={`p-4 rounded-2xl border text-xs font-bold italic ${isDarkMode ? 'bg-[#1E293B] border-slate-900/40 text-slate-300' : 'bg-white border-slate-200 text-slate-900/70'}`}>
-                   Olá! Sou o assistente da AutoSales. Quer ver como uma IA de agendamento pode atender e marcar clientes para o seu negócio 24h por dia?
+                   Olá! Sou o assistente da Agentes Virtuais. Quer ver como uma IA de agendamento pode atender e marcar clientes para o seu negócio 24h por dia?
                 </div>
               )}
               {chatHistory.map((msg, i) => (

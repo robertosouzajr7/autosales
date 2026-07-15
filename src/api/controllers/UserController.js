@@ -124,7 +124,7 @@ export const setup2FA = async (req, res) => {
     }
 
     const secret = speakeasy.generateSecret({
-      name: `AutoSales (${user.email})`,
+      name: `Agentes Virtuais (${user.email})`,
       length: 20,
     });
     await prisma.user.update({

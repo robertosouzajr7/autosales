@@ -90,8 +90,8 @@ export default function Register() {
               <div className="absolute bottom-20 right-10 w-64 h-64 border border-white rounded-full translate-x-1/2" />
            </div>
            <div className="flex items-center gap-3 relative z-10">
-              <img src="/logo.png" alt="AutoSales" className="h-8 w-auto" />
-              <span className="text-2xl font-bold tracking-tight text-white">Auto<span className="text-[#2563EB] italic">Sales</span></span>
+              <img src="/logo.png" alt="Agentes Virtuais" className="h-8 w-auto" />
+              <span className="text-2xl font-bold tracking-tight text-white">Agentes <span className="text-[#2563EB] italic">Virtuais</span></span>
            </div>
            <div className="space-y-6 relative z-10">
               <h2 className="text-4xl font-bold leading-none tracking-tight">Sua recepção que nunca dorme.</h2>

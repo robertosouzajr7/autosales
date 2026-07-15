@@ -65,7 +65,7 @@ export default function Settings() {
     phoneId: "",
     wabaId: "",
     accessToken: "",
-    verifyToken: "autosales_webhook_token"
+    verifyToken: "agentesvirtuais_webhook_token"
   });
 
   const { toast } = useToast();
