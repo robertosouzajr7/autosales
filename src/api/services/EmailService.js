@@ -35,7 +35,12 @@ function publicUrl() {
 }
 
 async function send({ to, subject, html, text }) {
-  const from = process.env.SMTP_FROM || "AutoSales <no-reply@autosales.local>";
+  // Padrão seguro: se SMTP_FROM não estiver setado, usa o próprio SMTP_USER
+  // (evita rejeição por "sender not owned" em provedores como Hostinger).
+  const from =
+    process.env.SMTP_FROM ||
+    process.env.SMTP_USER ||
+    "AutoSales <no-reply@autosales.local>";
   const t = transporter();
   if (!t) {
     console.log(
