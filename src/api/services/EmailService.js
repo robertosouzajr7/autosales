@@ -40,9 +40,7 @@ async function send({ to, subject, html, text }) {
   const from =
     process.env.SMTP_FROM ||
     process.env.SMTP_USER ||
-claude/session-continuation-eitxyp
     "Agentes Virtuais <no-reply@agentesvirtuais.local>";
- main
   const t = transporter();
   if (!t) {
     console.log(

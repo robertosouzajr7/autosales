@@ -12,8 +12,17 @@ import { audit } from "./AuditService.js";
  *   cliente. `markInvoicePaid` é idempotente.
  */
 class PaymentService {
-  get isConfigured() {
-    return !!process.env.MP_ACCESS_TOKEN;
+  /**
+   * Token do gateway: valor salvo no painel admin (PlatformSettings) tem
+   * precedência; env MP_ACCESS_TOKEN é fallback.
+   */
+  async getAccessToken() {
+    try {
+      const s = await prisma.platformSettings.findUnique({ where: { id: "singleton" } });
+      return s?.mpAccessToken || process.env.MP_ACCESS_TOKEN || null;
+    } catch {
+      return process.env.MP_ACCESS_TOKEN || null;
+    }
   }
 
   /**
@@ -23,8 +32,9 @@ class PaymentService {
    */
   async createCheckout(tenant, invoice) {
     const frontend = process.env.FRONTEND_URL || "http://localhost:8080";
+    const accessToken = await this.getAccessToken();
 
-    if (this.isConfigured) {
+    if (accessToken) {
       const res = await axios.post(
         "https://api.mercadopago.com/checkout/preferences",
         {
@@ -43,7 +53,7 @@ class PaymentService {
           auto_return: "approved",
           notification_url: `${process.env.PUBLIC_URL || frontend}/api/webhook/payment`
         },
-        { headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` }, timeout: 15000 }
+        { headers: { Authorization: `Bearer ${accessToken}` }, timeout: 15000 }
       );
 
       // Guarda o id da preference para reconciliar no webhook.
@@ -86,8 +96,6 @@ class PaymentService {
         nextBillingDate: nextDate,
         // Reinicia consumo no início do ciclo pago
         usedTokens: 0,
-        usedProspects: 0,
-        usedResearch: 0,
         usedMessages: 0,
         lastUsageReset: new Date()
       },

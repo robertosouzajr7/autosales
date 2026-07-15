@@ -8,11 +8,13 @@ datasource db {
 }
 
 model Tenant {
-  id     String  @id @default(uuid())
-  name   String
-  email  String  @unique
-  phone  String?
-  active Boolean @default(true)
+  id      String  @id @default(uuid())
+  name    String
+  email   String  @unique
+  phone   String?
+  cnpj    String? // CNPJ/CPF do cliente (dados cadastrais do admin)
+  address String? // endereço fiscal/comercial
+  active  Boolean @default(true)
 
   // SaaS Subscription
   planId             String?
@@ -470,6 +472,16 @@ model WhatsAppAccount {
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Configurações globais da plataforma (singleton), editáveis pelo
+// SUPERADMIN no portal. Valores do banco têm precedência; env é fallback.
+model PlatformSettings {
+  id                   String  @id @default("singleton")
+  mpAccessToken        String? // Mercado Pago access token
+  paymentWebhookSecret String? // segredo HMAC do webhook de pagamento
+  defaultTrialDays     Int     @default(7)
+  updatedAt            DateTime @updatedAt
 }
 
 model LandingPageSettings {
