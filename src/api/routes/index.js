@@ -22,7 +22,9 @@ import * as BillingController from "../controllers/BillingController.js";
 import BillingService from "../services/BillingService.js";
 import * as ComplianceController from "../controllers/ComplianceController.js";
 import * as BusinessController from "../controllers/BusinessController.js";
+import * as ProductController from "../controllers/ProductController.js";
 import { listVerticalTemplates } from "../services/VerticalTemplates.js";
+import { listFunctions, SKILLS } from "../services/AgentFunctions.js";
 import {
   requireCalendar,
   requireAutomations,
@@ -139,6 +141,18 @@ router.post("/sdrs", SdrController.createSdr);
 router.put("/sdrs/:id", SdrController.updateSdr);
 router.delete("/sdrs/:id", SdrController.deleteSdr);
 router.post("/sdrs/:id/training", upload.single("file"), SdrController.trainSdr);
+
+// Funções e skills disponíveis para os agentes (catálogo estático)
+router.get("/agent-functions", (_req, res) => {
+  res.json({ functions: listFunctions(), skills: SKILLS });
+});
+
+// Catálogo de produtos/serviços (com mídia)
+router.get("/products", ProductController.getProducts);
+router.post("/products", ProductController.createProduct);
+router.put("/products/:id", ProductController.updateProduct);
+router.delete("/products/:id", ProductController.deleteProduct);
+router.post("/products/upload", upload.single("file"), ProductController.uploadMedia);
 
 // Admin / SaaS Central (Required for AdminDashboard.tsx)
 router.get("/admin/tenants", adminMiddleware, AdminController.getTenants);
