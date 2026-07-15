@@ -16,6 +16,7 @@ import AutomationEngine from "../../automation_engine.js";
 import { receiveWhatsappWebhook } from "./controllers/LeadController.js";
 import { verifyMetaWebhook, receiveMetaWebhook } from "./controllers/MetaWebhookController.js";
 import { receivePaymentWebhook } from "./controllers/PaymentWebhookController.js";
+import { receiveStripeWebhook } from "./controllers/StripeWebhookController.js";
 import { serveWidget } from "./controllers/WidgetController.js";
 import { logger } from "./config/logger.js";
 import crypto from "crypto";
@@ -81,7 +82,7 @@ const apiLimiter = rateLimit({
   // Webhooks são chamados por origem única (loop interno localhost, ou a
   // infra da Meta em rajada) — limitá-los por IP estrangularia todos os
   // tenants de uma vez. O webhook da Meta é autenticado por HMAC.
-  skip: (req) => ["/webhook/whatsapp", "/webhook/meta", "/webhook/payment"].includes(req.path)
+  skip: (req) => ["/webhook/whatsapp", "/webhook/meta", "/webhook/payment", "/webhook/stripe"].includes(req.path)
 });
 
 // Login/registro: janela pequena contra força bruta e enumeração de contas
@@ -107,8 +108,11 @@ app.post("/api/webhook/whatsapp", receiveWhatsappWebhook);
 app.get("/api/webhook/meta", verifyMetaWebhook);
 app.post("/api/webhook/meta", receiveMetaWebhook);
 
-// ⚡ Webhook de pagamento (confirma fatura; assinado por HMAC)
+// ⚡ Webhook de pagamento Mercado Pago (confirma fatura; assinado por HMAC)
 app.post("/api/webhook/payment", receivePaymentWebhook);
+
+// ⚡ Webhook do Stripe (assinatura verificada pelo SDK do Stripe)
+app.post("/api/webhook/stripe", receiveStripeWebhook);
 
 // ⚡ Widget de chat público (embed em site de cliente)
 app.get("/widget.js", serveWidget);

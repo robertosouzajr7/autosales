@@ -202,12 +202,17 @@ export const getPlatformSettings = async (_req, res) => {
       create: { id: "singleton" },
     });
     res.json({
+      paymentProvider: s.paymentProvider || "MERCADO_PAGO",
       defaultTrialDays: s.defaultTrialDays,
       // Segredos nunca voltam em claro — só máscara + flag de configurado.
       mpAccessTokenMasked: maskSecret(s.mpAccessToken || process.env.MP_ACCESS_TOKEN),
       mpConfigured: !!(s.mpAccessToken || process.env.MP_ACCESS_TOKEN),
       webhookSecretMasked: maskSecret(s.paymentWebhookSecret || process.env.PAYMENT_WEBHOOK_SECRET),
       webhookConfigured: !!(s.paymentWebhookSecret || process.env.PAYMENT_WEBHOOK_SECRET),
+      stripeSecretMasked: maskSecret(s.stripeSecretKey || process.env.STRIPE_SECRET_KEY),
+      stripeConfigured: !!(s.stripeSecretKey || process.env.STRIPE_SECRET_KEY),
+      stripeWebhookMasked: maskSecret(s.stripeWebhookSecret || process.env.STRIPE_WEBHOOK_SECRET),
+      stripeWebhookConfigured: !!(s.stripeWebhookSecret || process.env.STRIPE_WEBHOOK_SECRET),
       updatedAt: s.updatedAt,
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -215,11 +220,21 @@ export const getPlatformSettings = async (_req, res) => {
 
 export const updatePlatformSettings = async (req, res) => {
   try {
-    const { mpAccessToken, paymentWebhookSecret, defaultTrialDays } = req.body;
+    const {
+      paymentProvider, defaultTrialDays,
+      mpAccessToken, paymentWebhookSecret,
+      stripeSecretKey, stripeWebhookSecret,
+    } = req.body;
     const data = {};
+
+    if (paymentProvider === "STRIPE" || paymentProvider === "MERCADO_PAGO") {
+      data.paymentProvider = paymentProvider;
+    }
     // Só sobrescreve segredo se veio valor novo (string não vazia).
     if (typeof mpAccessToken === "string" && mpAccessToken.trim()) data.mpAccessToken = mpAccessToken.trim();
     if (typeof paymentWebhookSecret === "string" && paymentWebhookSecret.trim()) data.paymentWebhookSecret = paymentWebhookSecret.trim();
+    if (typeof stripeSecretKey === "string" && stripeSecretKey.trim()) data.stripeSecretKey = stripeSecretKey.trim();
+    if (typeof stripeWebhookSecret === "string" && stripeWebhookSecret.trim()) data.stripeWebhookSecret = stripeWebhookSecret.trim();
     if (Number.isFinite(parseInt(defaultTrialDays))) data.defaultTrialDays = parseInt(defaultTrialDays);
 
     await prisma.platformSettings.upsert({
