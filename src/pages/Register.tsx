@@ -51,12 +51,21 @@ export default function Register() {
       });
       const data = await res.json();
       if (res.ok) {
-        toast({ title: "🚀 Conta criada!", description: "Seu período de teste começou. Bem-vindo(a)!" });
+        toast({
+          title: "Conta criada! Confira seu e-mail",
+          description: "Enviamos um link de confirmação para " + formData.email,
+        });
         localStorage.setItem("token", data.token);
         localStorage.setItem("userRole", data.user?.role || "OWNER");
         localStorage.setItem("tenantId", data.tenant.id);
         localStorage.setItem("userId", data.user.id);
         navigate("/dashboard");
+      } else if (res.status === 409) {
+        toast({
+          title: "E-mail já cadastrado",
+          description: "Se essa conta é sua, faça login ou recupere a senha.",
+          variant: "destructive",
+        });
       } else {
         toast({ title: "Erro no cadastro", description: data.error, variant: "destructive" });
       }

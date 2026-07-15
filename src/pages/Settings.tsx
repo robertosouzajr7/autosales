@@ -10,9 +10,10 @@ import {
   Settings as SettingsIcon, Shield, Bell, Database, Globe, Sliders, Save, CheckCircle2, 
   Trash2, Plus, Zap, Bot, Target, HelpCircle, Loader2, Sparkles, MapPin, Search, Linkedin,
   ExternalLink, Mail, Smartphone, Phone, Calendar, Share2, Terminal, Code2, Key, RefreshCw, AlertCircle,
-  CreditCard, DollarSign, Wallet, AlertTriangle, Check
+  CreditCard, DollarSign, Wallet, AlertTriangle, Check, Lock, ShieldCheck, KeyRound, QrCode
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SecurityPanel } from "@/components/settings/SecurityPanel";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
@@ -295,6 +296,9 @@ export default function Settings() {
             <TabsTrigger value="users" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm">
               <Shield className="w-4 h-4 mr-2" /> Equipe
             </TabsTrigger>
+            <TabsTrigger value="account" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm">
+              <Lock className="w-4 h-4 mr-2" /> Segurança
+            </TabsTrigger>
             <TabsTrigger value="integrations" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm">
               <Database className="w-4 h-4 mr-2" /> Avançado
             </TabsTrigger>
@@ -470,6 +474,11 @@ export default function Settings() {
                    </div>
                 </Card>
              </div>
+          </TabsContent>
+
+          {/* ABA SEGURANÇA — senha, 2FA, verificação de email */}
+          <TabsContent value="account" className="space-y-6">
+            <SecurityPanel />
           </TabsContent>
 
           <TabsContent value="users" className="space-y-6 animate-in slide-in-from-bottom-4">
