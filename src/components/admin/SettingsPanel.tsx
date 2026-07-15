@@ -14,8 +14,11 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
 
   // Gateway
   const [gw, setGw] = useState<any>(null);
+  const [provider, setProvider] = useState("MERCADO_PAGO");
   const [mpToken, setMpToken] = useState("");
   const [webhookSecret, setWebhookSecret] = useState("");
+  const [stripeKey, setStripeKey] = useState("");
+  const [stripeWebhook, setStripeWebhook] = useState("");
   const [trialDays, setTrialDays] = useState<number | string>(7);
   const [savingGw, setSavingGw] = useState(false);
 
@@ -33,6 +36,7 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
     ]);
     if (gwRes.ok) {
       setGw(gwRes.data);
+      setProvider(gwRes.data.paymentProvider || "MERCADO_PAGO");
       setTrialDays(gwRes.data.defaultTrialDays ?? 7);
     }
     if (lpRes.ok && lpRes.data) setLp((prev: any) => ({ ...prev, ...lpRes.data }));
@@ -42,8 +46,11 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
   const saveGateway = async () => {
     setSavingGw(true);
     const res = await adminApi.put("/api/admin/platform-settings", {
+      paymentProvider: provider,
       mpAccessToken: mpToken || undefined,
       paymentWebhookSecret: webhookSecret || undefined,
+      stripeSecretKey: stripeKey || undefined,
+      stripeWebhookSecret: stripeWebhook || undefined,
       defaultTrialDays: trialDays,
     });
     setSavingGw(false);
@@ -51,11 +58,15 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
       toast({ title: "Configurações salvas" });
       setMpToken("");
       setWebhookSecret("");
+      setStripeKey("");
+      setStripeWebhook("");
       load();
     } else {
       toast({ title: "Erro ao salvar", description: res.data?.error, variant: "destructive" });
     }
   };
+
+  const webhookUrl = typeof window !== "undefined" ? `${window.location.origin}/api/webhook/${provider === "STRIPE" ? "stripe" : "payment"}` : "";
 
   const saveLanding = async () => {
     setSavingLp(true);
@@ -74,45 +85,83 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
   return (
     <div className="space-y-6">
       {/* GATEWAY DE PAGAMENTO */}
-      <Card className="rounded-2xl border-border p-6 space-y-4">
+      <Card className="rounded-2xl border-border p-6 space-y-5">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary grid place-items-center">
             <CreditCard className="w-5 h-5" />
           </div>
           <div className="flex-1">
-            <h3 className="text-sm font-semibold text-foreground">Gateway de pagamento (Mercado Pago)</h3>
-            <p className="text-xs text-muted-foreground">O valor salvo aqui tem precedência sobre a variável de ambiente.</p>
+            <h3 className="text-sm font-semibold text-foreground">Gateway de pagamento</h3>
+            <p className="text-xs text-muted-foreground">Escolha o provedor ativo. O valor salvo aqui tem precedência sobre variáveis de ambiente.</p>
           </div>
-          {gw?.mpConfigured ? (
-            <Badge className="bg-emerald-100 text-emerald-700 border-none">Configurado</Badge>
-          ) : (
-            <Badge className="bg-amber-100 text-amber-800 border-none">Pendente</Badge>
-          )}
         </div>
 
+        {/* Seletor de provider */}
         <div className="grid sm:grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">
-              Access Token {gw?.mpAccessTokenMasked && <span className="font-mono">({gw.mpAccessTokenMasked})</span>}
-            </Label>
-            <Input
-              type="password"
-              placeholder="Cole um novo token para substituir"
-              value={mpToken}
-              onChange={(e) => setMpToken(e.target.value)}
-            />
+          {[
+            { id: "MERCADO_PAGO", label: "Mercado Pago", hint: "PIX, boleto e cartão (BR)", ok: gw?.mpConfigured },
+            { id: "STRIPE", label: "Stripe", hint: "Cartão internacional", ok: gw?.stripeConfigured },
+          ].map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => setProvider(p.id)}
+              className={`text-left rounded-2xl border p-4 transition-all ${
+                provider === p.id ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/40"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-foreground">{p.label}</span>
+                {p.ok
+                  ? <Badge className="bg-emerald-100 text-emerald-700 border-none text-xs">Configurado</Badge>
+                  : <Badge className="bg-amber-100 text-amber-800 border-none text-xs">Pendente</Badge>}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">{p.hint}</p>
+              {provider === p.id && <p className="text-xs text-primary mt-2 font-medium">✓ Provedor ativo</p>}
+            </button>
+          ))}
+        </div>
+
+        {/* Campos do Mercado Pago */}
+        {provider === "MERCADO_PAGO" && (
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                Access Token {gw?.mpAccessTokenMasked && <span className="font-mono">({gw.mpAccessTokenMasked})</span>}
+              </Label>
+              <Input type="password" placeholder="Cole um novo token para substituir" value={mpToken} onChange={(e) => setMpToken(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                Webhook Secret {gw?.webhookSecretMasked && <span className="font-mono">({gw.webhookSecretMasked})</span>}
+              </Label>
+              <Input type="password" placeholder="Segredo HMAC do webhook" value={webhookSecret} onChange={(e) => setWebhookSecret(e.target.value)} />
+            </div>
           </div>
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">
-              Webhook Secret {gw?.webhookSecretMasked && <span className="font-mono">({gw.webhookSecretMasked})</span>}
-            </Label>
-            <Input
-              type="password"
-              placeholder="Segredo HMAC do webhook"
-              value={webhookSecret}
-              onChange={(e) => setWebhookSecret(e.target.value)}
-            />
+        )}
+
+        {/* Campos do Stripe */}
+        {provider === "STRIPE" && (
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                Secret Key {gw?.stripeSecretMasked && <span className="font-mono">({gw.stripeSecretMasked})</span>}
+              </Label>
+              <Input type="password" placeholder="sk_live_… ou sk_test_…" value={stripeKey} onChange={(e) => setStripeKey(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                Webhook Signing Secret {gw?.stripeWebhookMasked && <span className="font-mono">({gw.stripeWebhookMasked})</span>}
+              </Label>
+              <Input type="password" placeholder="whsec_…" value={stripeWebhook} onChange={(e) => setStripeWebhook(e.target.value)} />
+            </div>
           </div>
+        )}
+
+        {/* URL do webhook para colar no painel do gateway */}
+        <div className="rounded-xl bg-slate-950 text-slate-100 p-3 space-y-1">
+          <p className="text-xs text-slate-400">URL do webhook (cole no painel do {provider === "STRIPE" ? "Stripe" : "Mercado Pago"}):</p>
+          <p className="text-xs font-mono break-all">{webhookUrl}</p>
         </div>
 
         <div className="grid sm:grid-cols-2 gap-3 items-end">

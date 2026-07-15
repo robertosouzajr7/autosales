@@ -477,11 +477,20 @@ model WhatsAppAccount {
 // Configurações globais da plataforma (singleton), editáveis pelo
 // SUPERADMIN no portal. Valores do banco têm precedência; env é fallback.
 model PlatformSettings {
-  id                   String  @id @default("singleton")
-  mpAccessToken        String? // Mercado Pago access token
-  paymentWebhookSecret String? // segredo HMAC do webhook de pagamento
-  defaultTrialDays     Int     @default(7)
-  updatedAt            DateTime @updatedAt
+  id              String @id @default("singleton")
+  // Gateway ativo: "MERCADO_PAGO" ou "STRIPE"
+  paymentProvider String @default("MERCADO_PAGO")
+
+  // Mercado Pago
+  mpAccessToken        String? // access token
+  paymentWebhookSecret String? // segredo HMAC do webhook MP
+
+  // Stripe
+  stripeSecretKey     String? // sk_live_… / sk_test_…
+  stripeWebhookSecret String? // whsec_… (assinatura do webhook Stripe)
+
+  defaultTrialDays Int      @default(7)
+  updatedAt        DateTime @updatedAt
 }
 
 model LandingPageSettings {
