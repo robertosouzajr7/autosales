@@ -54,12 +54,9 @@ export default function Settings() {
     openAiKey: "",
     aiApiKey: "",
     elevenLabsKey: "",
-    apolloApiKey: "",
-    snovClientId: "",
-    snovClientSecret: "",
     googleRefreshToken: "",
     webChatUrl: "",
-    systemPrompt: "Você é um SDR de elite focado em qualificação de leads B2B.",
+    systemPrompt: "Você é um agente de atendimento inbound. Qualifica e agenda no WhatsApp.",
     language: "pt-BR",
   });
 
@@ -68,20 +65,6 @@ export default function Settings() {
     wabaId: "",
     accessToken: "",
     verifyToken: "autosales_webhook_token"
-  });
-
-  const [smtpConfig, setSmtpConfig] = useState({
-    host: "",
-    port: 587,
-    user: "",
-    pass: "",
-    from: ""
-  });
-
-  const [listmonkConfig, setListmonkConfig] = useState({
-    url: "",
-    token: "",
-    listId: ""
   });
 
   const { toast } = useToast();
@@ -114,27 +97,10 @@ export default function Settings() {
         openAiKey: dataSettings.openAiKey || "",
         aiApiKey: dataSettings.aiApiKey || "",
         elevenLabsKey: dataSettings.elevenLabsKey || "",
-        apolloApiKey: dataSettings.apolloApiKey || "",
-        snovClientId: dataSettings.snovClientId || "",
-        snovClientSecret: dataSettings.snovClientSecret || "",
         googleRefreshToken: dataSettings.googleRefreshToken || "",
         webChatUrl: dataSettings.webChatUrl || "",
-        systemPrompt: dataSettings.systemPrompt || "Você é um SDR de elite focado em qualificação de leads B2B.",
+        systemPrompt: dataSettings.systemPrompt || "Você é um agente de atendimento inbound. Qualifica e agenda no WhatsApp.",
         language: dataSettings.language || "pt-BR",
-      });
-
-      setSmtpConfig({
-        host: dataSettings.smtpHost || "",
-        port: dataSettings.smtpPort || 587,
-        user: dataSettings.smtpUser || "",
-        pass: dataSettings.smtpPass || "",
-        from: dataSettings.smtpFrom || ""
-      });
-
-      setListmonkConfig({
-        url: dataSettings.listmonkUrl || "",
-        token: dataSettings.listmonkToken || "",
-        listId: dataSettings.listmonkListId || ""
       });
 
       setIcpProfiles(Array.isArray(dataIcp) ? dataIcp : []);
@@ -238,17 +204,8 @@ export default function Settings() {
         headers,
         body: JSON.stringify({
           ...aiConfig,
-          elevenLabsKey: aiConfig.elevenLabsKey,
-          smtpHost: smtpConfig.host,
-          smtpPort: smtpConfig.port,
-          smtpUser: smtpConfig.user,
-          smtpPass: smtpConfig.pass,
-          smtpFrom: smtpConfig.from,
-          listmonkUrl: listmonkConfig.url,
-          listmonkToken: listmonkConfig.token,
-          listmonkListId: listmonkConfig.listId,
-          metaConfig
-        })
+          metaConfig,
+        }),
       });
       if (res.ok) toast({ title: "Configurações salvas!", description: "Tudo atualizado!" });
     } catch (e) {
@@ -337,9 +294,6 @@ export default function Settings() {
             </TabsTrigger>
             <TabsTrigger value="users" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm">
               <Shield className="w-4 h-4 mr-2" /> Equipe
-            </TabsTrigger>
-            <TabsTrigger value="channels" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm">
-              <Mail className="w-4 h-4 mr-2" /> Canais
             </TabsTrigger>
             <TabsTrigger value="integrations" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm">
               <Database className="w-4 h-4 mr-2" /> Avançado
@@ -449,17 +403,9 @@ export default function Settings() {
              </div>
           </TabsContent>
 
-          {/* ABA INTEGRAÇÕES (APIs Intel) */}
+          {/* ABA AVANÇADO — configurações de IA (LLM + voz opcional) */}
           <TabsContent value="integrations">
              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                <Card className="border-none shadow-sm rounded-2xl bg-white p-12 space-y-8">
-                   <div className="flex items-center gap-4 text-rose-500 mb-4"><Zap className="w-8 h-8" /><h3 className="text-xl font-semibold text-slate-900 uppercase">Inteligência Apollo & Snov</h3></div>
-                   <div className="space-y-6">
-                      <div className="space-y-2"><Label className="text-xs font-semibold text-slate-400 pl-1">Apollo.io API Key</Label><Input type="password" value={aiConfig.apolloApiKey} onChange={(e) => setAiConfig({...aiConfig, apolloApiKey: e.target.value})} className="h-11 bg-slate-50 rounded-2xl px-8 font-bold" /></div>
-                      <div className="space-y-2"><Label className="text-xs font-semibold text-slate-400 pl-1">Snov.io Client ID</Label><Input value={aiConfig.snovClientId} onChange={(e) => setAiConfig({...aiConfig, snovClientId: e.target.value})} className="h-10 bg-slate-50 rounded-2xl px-6 font-bold" /></div>
-                      <div className="space-y-2"><Label className="text-xs font-semibold text-slate-400 pl-1">Snov.io Client Secret</Label><Input type="password" value={aiConfig.snovClientSecret} onChange={(e) => setAiConfig({...aiConfig, snovClientSecret: e.target.value})} className="h-10 bg-slate-50 rounded-2xl px-6 font-bold" /></div>
-                   </div>
-                </Card>
                 <Card className="border-none shadow-sm rounded-2xl bg-white p-12 space-y-8">
                     <div className="flex items-center gap-4 text-[#2563EB] mb-4"><Bot className="w-8 h-8" /><h3 className="text-xl font-semibold text-slate-900 uppercase">Modelos de IA (LLMs)</h3></div>
                     <div className="space-y-6">
@@ -526,102 +472,6 @@ export default function Settings() {
              </div>
           </TabsContent>
 
-          {/* ABA USUÁRIOS */}
-          <TabsContent value="channels" className="animate-in slide-in-from-bottom-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                  <Card className="border-none shadow-sm rounded-2xl bg-white p-12 space-y-8 relative overflow-hidden">
-                      <div className="absolute top-0 right-0 p-8 opacity-5"><Mail className="w-48 h-48" /></div>
-                      <div className="flex items-center gap-4 text-[#2563EB] mb-4"><Mail className="w-8 h-8" /><h3 className="text-xl font-semibold text-slate-900 uppercase underline decoration-[#2563EB] decoration-4">Servidor de E-mail (SMTP)</h3></div>
-                      
-                      <div className="space-y-6">
-                          <div className="grid grid-cols-1 gap-6">
-                              <div className="space-y-2">
-                                  <Label className="text-xs font-semibold text-slate-400">Host SMTP</Label>
-                                  <Input value={smtpConfig.host} onChange={(e) => setSmtpConfig({...smtpConfig, host: e.target.value})} className="h-10 bg-slate-50 rounded-2xl font-bold" placeholder="smtp.exemplo.com" />
-                              </div>
-                              <div className="grid grid-cols-2 gap-4">
-                                  <div className="space-y-2">
-                                      <Label className="text-xs font-semibold text-slate-400">Porta</Label>
-                                      <Input type="number" value={smtpConfig.port} onChange={(e) => setSmtpConfig({...smtpConfig, port: parseInt(e.target.value)})} className="h-10 bg-slate-50 rounded-2xl font-bold" />
-                                  </div>
-                                  <div className="space-y-2">
-                                      <Label className="text-xs font-semibold text-slate-400">E-mail de Envio (From)</Label>
-                                      <Input value={smtpConfig.from} onChange={(e) => setSmtpConfig({...smtpConfig, from: e.target.value})} className="h-10 bg-slate-50 rounded-2xl font-bold" placeholder="disparos@seu-dominio.com" />
-                                  </div>
-                              </div>
-                              <div className="space-y-2">
-                                  <Label className="text-xs font-semibold text-slate-400">Usuário SMTP</Label>
-                                  <Input value={smtpConfig.user} onChange={(e) => setSmtpConfig({...smtpConfig, user: e.target.value})} className="h-10 bg-slate-50 rounded-2xl font-bold" />
-                              </div>
-                              <div className="space-y-2">
-                                  <Label className="text-xs font-semibold text-slate-400">Senha SMTP</Label>
-                                  <Input type="password" value={smtpConfig.pass} onChange={(e) => setSmtpConfig({...smtpConfig, pass: e.target.value})} className="h-10 bg-slate-50 rounded-2xl font-bold" />
-                              </div>
-                          </div>
-                      </div>
-                  </Card>
-
-                  <Card className="border-none shadow-sm rounded-2xl bg-slate-900 text-white p-12 space-y-8 relative overflow-hidden">
-                      <div className="absolute top-0 right-0 p-8 opacity-5"><Smartphone className="w-48 h-48" /></div>
-                      <div className="flex items-center gap-4 text-[#2DD4BF] mb-4"><Smartphone className="w-8 h-8" /><h3 className="text-xl font-semibold uppercase underline decoration-[#2DD4BF] decoration-4">WhatsApp Sender</h3></div>
-                      
-                      <div className="space-y-6">
-                        <p className="text-slate-400 text-sm font-medium leading-relaxed">
-                          O remetente de WhatsApp é configurado automaticamente através das conexões ativas no seu painel de <span className="text-[#2DD4BF] font-semibold">Conexões Diárias</span>.
-                        </p>
-                        <div className="p-6 bg-white/5 rounded-2xl border border-white/10 space-y-4">
-                           <div className="flex items-center gap-3">
-                              <CheckCircle2 className="w-5 h-5 text-[#2DD4BF]" />
-                              <span className="text-xs font-semibold ">Multi-Instância Ativa</span>
-                           </div>
-                           <p className="text-xs text-white/40 font-bold">
-                             * O sistema rotaciona automaticamente entre os números conectados para evitar bloqueios em disparos em massa.
-                           </p>
-                        </div>
-                        <Button variant="outline" className="w-full border-white/20 text-white hover:bg-white/5 h-10 rounded-2xl font-semibold uppercase text-xs " onClick={() => window.location.href="/connections"}>
-                          Gerenciar Conexões
-                        </Button>
-                      </div>
-                  </Card>
-              </div>
-
-              <div className="mt-10">
-                  <Card className="border-none shadow-sm rounded-2xl bg-slate-50 p-12 space-y-8 relative overflow-hidden">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4 text-slate-800 mb-4">
-                          <div className="p-4 bg-white rounded-2xl shadow-sm"><RefreshCw className="w-8 h-8 text-[#2563EB]" /></div>
-                          <div>
-                            <h3 className="text-xl font-semibold uppercase underline decoration-[#2563EB] decoration-4">E-mail em Massa (Listmonk API)</h3>
-                            <p className="text-xs font-bold text-slate-400 mt-1">Conecte sua infraestrutura de prospecção em massa</p>
-                          </div>
-                        </div>
-                        <Badge className="bg-blue-100 text-[#2563EB] border-none font-semibold px-4 py-2 rounded-full text-xs ">Enterprise Ready</Badge>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                          <div className="space-y-2">
-                              <Label className="text-xs font-semibold text-slate-400">URL do Listmonk</Label>
-                              <Input value={listmonkConfig.url} onChange={(e) => setListmonkConfig({...listmonkConfig, url: e.target.value})} className="h-10 bg-white rounded-2xl font-bold" placeholder="https://listmonk.exemplo.com" />
-                          </div>
-                          <div className="space-y-2">
-                              <Label className="text-xs font-semibold text-slate-400">API Token</Label>
-                              <Input type="password" value={listmonkConfig.token} onChange={(e) => setListmonkConfig({...listmonkConfig, token: e.target.value})} className="h-10 bg-white rounded-2xl font-bold" />
-                          </div>
-                          <div className="space-y-2">
-                              <Label className="text-xs font-semibold text-slate-400">Default List ID</Label>
-                              <Input value={listmonkConfig.listId} onChange={(e) => setListmonkConfig({...listmonkConfig, listId: e.target.value})} className="h-10 bg-white rounded-2xl font-bold" placeholder="1" />
-                          </div>
-                      </div>
-                      
-                      <div className="p-6 bg-blue-50 rounded-2xl border border-slate-200 flex items-center gap-4 text-[#0F172A]">
-                        <AlertCircle className="w-6 h-6 shrink-0" />
-                        <p className="text-xs font-bold leading-relaxed">
-                          Ao configurar o Listmonk, Agentes Virtuais passará a gerenciar seus contatos e campanhas através dele, permitindo maior taxa de entrega e controle de bounces automático.
-                        </p>
-                      </div>
-                  </Card>
-              </div>
-          </TabsContent>
           <TabsContent value="users" className="space-y-6 animate-in slide-in-from-bottom-4">
             <div className="flex justify-between items-center">
                <h3 className="text-xl font-semibold text-slate-800 tracking-tight">Gestão da Equipe</h3>

@@ -36,23 +36,6 @@ model Tenant {
   aiApiKey           String?
   elevenLabsKey      String?
 
-  // Lead Discovery Integrations
-  apolloApiKey     String?
-  snovClientId     String?
-  snovClientSecret String?
-
-  // Email Marketing Configuration (SMTP)
-  smtpHost String?
-  smtpPort Int?
-  smtpUser String?
-  smtpPass String?
-  smtpFrom String? @default("disparos@agentesvirtuais.com")
-
-  // Listmonk Integration
-  listmonkUrl    String?
-  listmonkToken  String?
-  listmonkListId String?
-
   // Perfil do Negócio (contexto do agente de IA)
   businessType     String? // CLINIC, BEAUTY, FITNESS, SERVICES, RESTAURANT, OTHER
   businessAbout    String? // descrição/apresentação do negócio
@@ -63,8 +46,6 @@ model Tenant {
 
   // Consumption Tracking (Real-time)
   usedTokens           Int      @default(0)
-  usedProspects        Int      @default(0)
-  usedResearch         Int      @default(0)
   usedMessages         Int      @default(0)
   qualifiedLeadsCount  Int      @default(0)
   lastUsageReset       DateTime @default(now())

@@ -30,23 +30,12 @@ export const getSettings = async (req, res) => {
       openAiKey: tenant?.openAiKey,
       subscriptionStatus: tenant?.subscriptionStatus,
       trialEnd: tenant?.trialEnd,
-      apolloApiKey: tenant?.apolloApiKey,
-      snovClientId: tenant?.snovClientId,
-      snovClientSecret: tenant?.snovClientSecret,
       systemPrompt: tenant?.systemPrompt,
       webChatUrl: tenant?.webChatUrl,
       usedTokens: tenant?.usedTokens || 0,
       qualifiedLeadsCount: tenant?.qualifiedLeadsCount || 0,
       plan: tenant?.plan,
-      smtpHost: tenant?.smtpHost,
-      smtpPort: tenant?.smtpPort,
-      smtpUser: tenant?.smtpUser,
-      smtpPass: tenant?.smtpPass,
-      smtpFrom: tenant?.smtpFrom,
-      listmonkUrl: tenant?.listmonkUrl,
-      listmonkToken: tenant?.listmonkToken,
-      listmonkListId: tenant?.listmonkListId,
-      elevenLabsKey: tenant?.elevenLabsKey
+      elevenLabsKey: tenant?.elevenLabsKey,
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -56,14 +45,11 @@ export const getSettings = async (req, res) => {
 export const updateSettings = async (req, res) => {
   const tenantId = req.tenantId;
   
-  const { 
-    name, phone, aiProvider, aiApiKey, openAiKey, 
-    systemPrompt, googleRefreshToken, webChatUrl,
-    apolloApiKey, snovClientId, snovClientSecret,
-    smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom,
-    listmonkUrl, listmonkToken, listmonkListId, elevenLabsKey
+  const {
+    name, phone, aiProvider, aiApiKey, openAiKey,
+    systemPrompt, googleRefreshToken, webChatUrl, elevenLabsKey,
   } = req.body;
-  
+
   if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
 
   try {
@@ -75,21 +61,10 @@ export const updateSettings = async (req, res) => {
         aiProvider,
         aiApiKey,
         openAiKey,
-        apolloApiKey,
-        snovClientId,
-        snovClientSecret,
         systemPrompt,
         webChatUrl,
-        smtpHost,
-        smtpPort: smtpPort ? parseInt(smtpPort) : null,
-        smtpUser,
-        smtpPass,
-        smtpFrom,
-        listmonkUrl,
-        listmonkToken,
-        listmonkListId,
-        elevenLabsKey
-      }
+        elevenLabsKey,
+      },
     });
     res.json(tenant);
   } catch (e) {

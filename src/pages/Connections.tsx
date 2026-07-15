@@ -1,19 +1,21 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { Button } from "@/components/ui/button";
-import { 
-  Plus, Smartphone, MessageSquare, CheckCircle2, 
-  RefreshCw, Trash2, ShieldCheck, QrCode, AlertTriangle, 
-  Activity, Globe, Link as LinkIcon
-} from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { 
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription 
-} from "@/components/ui/dialog";
+import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 import { QRCodeCanvas } from "qrcode.react";
+import {
+  Plus, Smartphone, CheckCircle2, RefreshCw, Trash2, Code2,
+  Globe, Instagram, Copy, ExternalLink, ShieldCheck,
+} from "lucide-react";
 
 interface Connection {
   id: string;
@@ -24,34 +26,49 @@ interface Connection {
   lastActive: string;
 }
 
+function authHeaders() {
+  const token = localStorage.getItem("token");
+  const h: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) h["Authorization"] = `Bearer ${token}`;
+  return h;
+}
+
 export default function Connections() {
+  const { toast } = useToast();
   const [connections, setConnections] = useState<Connection[]>([]);
-  const [showQrModal, setShowQrModal] = useState(false);
+  const [tenantId, setTenantId] = useState<string>("");
+
+  // WhatsApp add modal
   const [showAddModal, setShowAddModal] = useState(false);
   const [newName, setNewName] = useState("");
-  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
-  const [qrCode, setQrCode] = useState<string | null>(null);
-  const [qrStatus, setQrStatus] = useState<string>("Aguardando...");
   const [loading, setLoading] = useState(false);
-  const [cooldownSeconds, setCooldownSeconds] = useState(0);
-  const { toast } = useToast();
 
-  // Conta regressiva do cooldown
+  // QR modal
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [qrStatus, setQrStatus] = useState("Aguardando…");
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+
   useEffect(() => {
     if (cooldownSeconds <= 0) return;
-    const timer = setTimeout(() => setCooldownSeconds(s => s - 1), 1000);
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => setCooldownSeconds((s) => s - 1), 1000);
+    return () => clearTimeout(t);
   }, [cooldownSeconds]);
 
   const fetchConnections = async () => {
     try {
-      const res = await fetch("/api/whatsapp/accounts");
+      const res = await fetch("/api/whatsapp/accounts", { headers: authHeaders() });
       const data = await res.json();
       setConnections(Array.isArray(data) ? data : []);
-    } catch (e) { console.error(e); }
+    } catch {
+      /* silent */
+    }
   };
 
-  useEffect(() => { fetchConnections(); }, []);
+  useEffect(() => {
+    fetchConnections();
+    setTenantId(localStorage.getItem("tenantId") || "");
+  }, []);
 
   const handleAddConnection = async () => {
     if (!newName) return;
@@ -59,250 +76,291 @@ export default function Connections() {
     try {
       const res = await fetch("/api/whatsapp/accounts", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newName })
+        headers: authHeaders(),
+        body: JSON.stringify({ name: newName }),
       });
-      if (!res.ok) throw new Error("API Failure");
+      if (!res.ok) throw new Error();
       const data = await res.json();
-      setSelectedAccountId(data.id);
       setShowAddModal(false);
       setNewName("");
       setTimeout(() => handleOpenQr(data.id), 500);
       fetchConnections();
-    } catch (e) {
-      toast({ title: "Erro ao criar", variant: "destructive" });
-    } finally {
-      setLoading(false);
+    } catch {
+      toast({ title: "Erro ao criar conexão", variant: "destructive" });
     }
+    setLoading(false);
   };
 
   const handleOpenQr = (id: string) => {
-    setSelectedAccountId(id);
     setShowQrModal(true);
     setQrCode(null);
-    setQrStatus("Conectando...");
-
-    const token = localStorage.getItem("token");
-    const eventSource = new EventSource(`/api/whatsapp/qr/${id}?token=${token}`);
-
-    eventSource.onmessage = (event) => {
+    setQrStatus("Solicitando QR…");
+    const eventSource = new EventSource(`/api/whatsapp/qr/${id}`);
+    eventSource.onmessage = (ev) => {
       try {
-        const data = JSON.parse(event.data);
-
-        if (data.status === "CONNECTED") {
-          setQrCode(null);
-          setQrStatus("✅ Conectado!");
-          toast({ title: "✅ WhatsApp Conectado!", description: data.phone ? `Número: ${data.phone}` : undefined });
-          eventSource.close();
-          setTimeout(() => { setShowQrModal(false); fetchConnections(); }, 2000);
-        } else if (data.status === "DISCONNECTED") {
-          setQrCode(null);
-          setQrStatus("Desconectado. Tente novamente.");
-          eventSource.close();
-          fetchConnections();
-        } else if (data.status === "COOLDOWN") {
-          setQrCode(null);
-          setCooldownSeconds(data.remainingSeconds || 300);
-          setQrStatus(`⏳ ${data.message || "Aguarde antes de tentar novamente."}`);
-          toast({ title: "⏳ Aguarde", description: data.message, variant: "destructive" });
-          eventSource.close();
-        } else if (data.status === "ERROR") {
-          setQrCode(null);
-          setQrStatus(`Erro: ${data.message || "Falha na conexão"}`);
-          toast({ title: "Erro na conexão", description: data.message, variant: "destructive" });
-          eventSource.close();
-        } else if (data.status === "WAITING") {
-          setQrStatus("Gerando QR Code...");
-        } else if (data.qr) {
-          // QR code recebido — exibe para o usuário escanear
+        const data = JSON.parse(ev.data);
+        if (data.qr) {
           setQrCode(data.qr);
-          setQrStatus("Escaneie o QR Code com seu WhatsApp");
+          setQrStatus("Escaneie com seu WhatsApp");
         }
-      } catch (e) {
-        // Fallback para texto puro (compatibilidade)
-        if (event.data === "CONNECTED") {
-          setQrStatus("✅ Conectado!");
+        if (data.status === "CONNECTED") {
+          setQrStatus("Conectado com sucesso ✅");
+          fetchConnections();
+          setTimeout(() => setShowQrModal(false), 1500);
           eventSource.close();
-          setTimeout(() => { setShowQrModal(false); fetchConnections(); }, 2000);
-        } else if (event.data && event.data.length > 20) {
-          setQrCode(event.data);
-          setQrStatus("Escaneie o QR Code");
         }
+        if (data.status === "COOLDOWN") {
+          setCooldownSeconds(data.seconds || 60);
+          setQrStatus(`Aguarde ${Math.ceil((data.seconds || 60) / 60)} min`);
+          eventSource.close();
+        }
+      } catch {
+        /* silent */
       }
     };
-
     eventSource.onerror = () => {
-      setQrStatus("Erro na conexão com o servidor. Verifique se o backend está rodando.");
+      setQrStatus("Erro de conexão com o servidor.");
       eventSource.close();
     };
   };
 
   const handleDeleteConnection = async (id: string) => {
-    if (!confirm("Remover esta conexão permanentemente?")) return;
+    if (!confirm("Remover esta conexão?")) return;
     try {
-      const res = await fetch(`/api/whatsapp/accounts/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/whatsapp/accounts/${id}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
       if (res.ok) {
-        toast({ title: "🗑️ Conexão Removida" });
+        toast({ title: "Conexão removida" });
         fetchConnections();
       }
-    } catch (e) { toast({ title: "Erro ao remover", variant: "destructive" }); }
+    } catch {
+      toast({ title: "Erro ao remover", variant: "destructive" });
+    }
+  };
+
+  // Widget snippet — o cliente cola isso no site dele.
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const snippet = `<script src="${origin}/widget.js" data-tenant="${tenantId}" defer></script>`;
+  const copySnippet = async () => {
+    try {
+      await navigator.clipboard.writeText(snippet);
+      toast({ title: "Código copiado", description: "Cole antes do </body> no seu site." });
+    } catch {
+      toast({ title: "Não foi possível copiar", variant: "destructive" });
+    }
   };
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-10 p-6 lg:p-12 max-w-screen-xl mx-auto">
-        
-        {/* HEADER */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-           <div className="space-y-1">
-              <h1 className="text-4xl font-semibold text-slate-900 tracking-tight flex items-center gap-4 uppercase">
-                 <Smartphone className="w-10 h-10 text-primary" />
-                 Canais de <span className="text-primary">Atendimento</span>
-              </h1>
-              <p className="text-slate-500 font-bold">Conecte suas contas de WhatsApp para ativar os SDRs.</p>
-           </div>
-           <Button onClick={() => setShowAddModal(true)} className="h-10 px-8 bg-slate-900 hover:bg-black text-lg font-semibold rounded-2xl shadow-sm shadow-slate-200 gap-3">
-              <Plus className="w-6 h-6 text-primary" /> Nova Conexão
-           </Button>
-        </div>
+      <div className="mx-auto max-w-5xl p-4 sm:p-6 lg:p-8">
+        <PageHeader
+          icon={<Smartphone className="w-5 h-5" />}
+          title="Canais de atendimento"
+          subtitle="Conecte os canais onde o seu agente vai atender clientes."
+        />
 
-        {/* STATUS TILES */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-           <Card className="p-6 border-none shadow-sm rounded-2xl bg-white flex items-center gap-6">
-              <div className="bg-blue-50 p-4 rounded-2xl text-[#2563EB]"><Activity className="w-6 h-6" /></div>
-              <div>
-                 <p className="text-xs font-semibold text-slate-400 ">Conexões Ativas</p>
-                 <p className="text-2xl font-semibold text-slate-900">{connections.filter(c => c.status === 'CONNECTED').length} / {connections.length}</p>
+        <Tabs defaultValue="whatsapp" className="space-y-6">
+          <TabsList className="bg-muted p-1 rounded-xl inline-flex h-11 w-full md:w-auto overflow-x-auto scrollbar-thin">
+            <TabsTrigger value="whatsapp" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm">
+              <Smartphone className="w-4 h-4 mr-2" /> WhatsApp
+            </TabsTrigger>
+            <TabsTrigger value="widget" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm">
+              <Globe className="w-4 h-4 mr-2" /> Widget para site
+            </TabsTrigger>
+            <TabsTrigger value="instagram" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm">
+              <Instagram className="w-4 h-4 mr-2" /> Instagram
+              <Badge className="ml-2 bg-amber-100 text-amber-800 border-none text-[10px] px-1.5 py-0">Em breve</Badge>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* WHATSAPP ─────────────────────────────────────────── */}
+          <TabsContent value="whatsapp" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-foreground">
+                {connections.length} conta{connections.length === 1 ? "" : "s"} conectada{connections.length === 1 ? "" : "s"}
+              </h2>
+              <Button onClick={() => setShowAddModal(true)} className="gap-2">
+                <Plus className="w-4 h-4" /> Nova conexão
+              </Button>
+            </div>
+
+            {connections.length === 0 ? (
+              <Card className="rounded-2xl border-border">
+                <EmptyState
+                  icon={<Smartphone className="w-6 h-6" />}
+                  title="Nenhuma conta conectada"
+                  description="Conecte um número para o agente começar a atender pelo WhatsApp."
+                  action={{ label: "Conectar WhatsApp", onClick: () => setShowAddModal(true) }}
+                />
+              </Card>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {connections.map((conn) => (
+                  <Card key={conn.id} className="rounded-2xl border-border p-5 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`h-10 w-10 rounded-xl grid place-items-center ${conn.status === "CONNECTED" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                          <Smartphone className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-foreground truncate">{conn.name}</p>
+                          <p className="text-xs text-muted-foreground">{conn.phone || "sem número"}</p>
+                        </div>
+                      </div>
+                      <Badge className={conn.status === "CONNECTED" ? "bg-emerald-100 text-emerald-700 border-none" : "bg-rose-100 text-rose-700 border-none"}>
+                        {conn.status === "CONNECTED" ? "Conectado" : "Desconectado"}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t border-border">
+                      {conn.status === "CONNECTED" ? (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Pronto pra atender
+                        </span>
+                      ) : (
+                        <Button variant="outline" size="sm" onClick={() => handleOpenQr(conn.id)}>
+                          Reconectar
+                        </Button>
+                      )}
+                      <button
+                        onClick={() => handleDeleteConnection(conn.id)}
+                        className="p-2 rounded-lg text-muted-foreground hover:bg-rose-50 hover:text-rose-600"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </Card>
+                ))}
               </div>
-           </Card>
-           <Card className="p-6 border-none shadow-sm rounded-2xl bg-white flex items-center gap-6">
-              <div className="bg-primary/5 p-4 rounded-2xl text-primary"><MessageSquare className="w-6 h-6" /></div>
-              <div>
-                 <p className="text-xs font-semibold text-slate-400 ">Saúde da Instância</p>
-                 <p className="text-2xl font-semibold text-slate-900">{connections.length > 0 ? "Operacional" : "Sem Conexões"}</p>
+            )}
+          </TabsContent>
+
+          {/* WIDGET WEB ────────────────────────────────────────── */}
+          <TabsContent value="widget" className="space-y-6">
+            <Card className="rounded-2xl border-border p-6 space-y-5">
+              <div className="flex items-start gap-4">
+                <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary grid place-items-center shrink-0">
+                  <Globe className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-base font-semibold text-foreground">Widget para o seu site</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Adiciona um botão flutuante no seu site que abre o chat com o agente. Funciona em qualquer site — WordPress, Wix, HTML puro, etc.
+                  </p>
+                </div>
               </div>
-           </Card>
-           <Card className="p-6 border-none shadow-sm rounded-2xl bg-white flex items-center gap-6">
-              <div className="bg-blue-50 p-4 rounded-2xl text-[#2563EB]"><Globe className="w-6 h-6" /></div>
-              <div>
-                 <p className="text-xs font-semibold text-slate-400 ">Status da API</p>
-                 <p className="text-2xl font-semibold text-[#2563EB]">Online</p>
+
+              <div className="rounded-xl bg-slate-950 text-slate-100 p-4 font-mono text-xs overflow-x-auto">
+                <code>{snippet}</code>
               </div>
-           </Card>
-        </div>
 
-        {/* CONNECTION LIST */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-           {connections.map(conn => (
-             <Card key={conn.id} className="overflow-hidden border-none shadow-sm rounded-2xl bg-white group">
-                <CardContent className="p-10 space-y-8">
-                   <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-5">
-                         <div className={`w-16 h-11 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-110 ${conn.status === 'CONNECTED' ? 'bg-[#2563EB] text-white' : 'bg-slate-100 text-slate-400'}`}>
-                            <Smartphone className="w-8 h-8" />
-                         </div>
-                         <div className="space-y-1">
-                            <h3 className="text-2xl font-semibold text-slate-900 tracking-tight">{conn.name}</h3>
-                            <div className="flex items-center gap-2">
-                               <Badge className={`text-xs font-semibold border-none ${conn.status === 'CONNECTED' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
-                                  {conn.status}
-                               </Badge>
-                               <span className="text-xs font-bold text-slate-400">ID: {conn.instance}</span>
-                            </div>
-                         </div>
-                      </div>
-                      <div className="flex gap-2">
-                         {conn.status === 'CONNECTED' ? (
-                           <div className="bg-blue-50 text-[#2563EB] p-2 rounded-xl">
-                              <CheckCircle2 className="w-6 h-6" />
-                           </div>
-                         ) : (
-                           <Button className="h-10 px-4 bg-primary hover:bg-primary/90 font-semibold rounded-xl text-xs uppercase" onClick={() => handleOpenQr(conn.id)}>
-                              Reconectar
-                           </Button>
-                         )}
-                      </div>
-                   </div>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={copySnippet} className="gap-2">
+                  <Copy className="w-4 h-4" /> Copiar código
+                </Button>
+                <a href={`/chat/${tenantId}`} target="_blank" rel="noreferrer">
+                  <Button variant="outline" className="gap-2">
+                    <ExternalLink className="w-4 h-4" /> Visualizar chat
+                  </Button>
+                </a>
+              </div>
 
-                   <div className="p-6 bg-slate-50 rounded-2xl space-y-4 border border-slate-100">
-                      <div className="flex justify-between items-center text-sm">
-                         <span className="text-slate-400 font-bold">Número Ativo</span>
-                         <span className="text-slate-900 font-semibold tracking-tight">{conn.phone || "--"}</span>
-                      </div>
-                      <div className="flex justify-between items-center text-sm">
-                         <span className="text-slate-400 font-bold">Última Atividade</span>
-                         <span className="text-slate-900 font-bold">{conn.lastActive || "Nunca"}</span>
-                      </div>
-                   </div>
+              <div className="rounded-xl bg-muted p-4 space-y-2">
+                <p className="text-xs font-semibold text-foreground uppercase tracking-wide flex items-center gap-2">
+                  <Code2 className="w-3.5 h-3.5" /> Como instalar
+                </p>
+                <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                  <li>Copie o código acima.</li>
+                  <li>No seu site, cole logo antes da tag <code className="text-foreground">&lt;/body&gt;</code>.</li>
+                  <li>Salve e recarregue a página — o botão aparece no canto inferior direito.</li>
+                  <li>Todo visitante que abrir o chat cai como conversa nova no seu inbox.</li>
+                </ol>
+              </div>
+            </Card>
+          </TabsContent>
 
-                   <div className="flex items-center justify-between pt-4">
-                      <div className="flex items-center gap-2 text-[#2563EB] font-semibold text-xs ">
-                         <CheckCircle2 className="w-4 h-4" /> Criptografia Ponta-a-Ponta
-                      </div>
-                       <Button variant="ghost" className="text-red-400 hover:text-red-600 hover:bg-red-50 text-xs font-semibold gap-2" onClick={() => handleDeleteConnection(conn.id)}>
-                          <Trash2 className="w-4 h-4" /> Deletar Canal
-                       </Button>
-                   </div>
-                </CardContent>
-             </Card>
-           ))}
-        </div>
+          {/* INSTAGRAM ─────────────────────────────────────────── */}
+          <TabsContent value="instagram" className="space-y-6">
+            <Card className="rounded-2xl border-border p-8 space-y-5">
+              <div className="flex items-start gap-4">
+                <div className="h-11 w-11 rounded-xl bg-pink-100 text-pink-600 grid place-items-center shrink-0">
+                  <Instagram className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h2 className="text-base font-semibold text-foreground">Instagram Direct</h2>
+                    <Badge className="bg-amber-100 text-amber-800 border-none text-xs">Em breve</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Deixe o mesmo agente responder DMs no Instagram, com todo o contexto do seu negócio.
+                  </p>
+                </div>
+              </div>
 
-        {/* SECURITY INFO */}
-        <div className="bg-slate-900 p-10 rounded-2xl text-white flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
-           <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 blur-3xl rounded-full translate-x-1/2" />
-           <ShieldCheck className="w-16 h-16 text-primary shrink-0" />
-           <div className="space-y-2 flex-1">
-              <h4 className="text-xl font-semibold tracking-tight">Arquitetura SaaS Multi-Instância</h4>
-              <p className="text-white/40 text-sm font-medium leading-relaxed">Cada conexão roda em um container isolado (Isolation Layer). Seus dados de sessão são criptografados e destruídos em caso de desconexão forçada.</p>
-           </div>
-           <Button className="h-10 px-10 bg-white text-slate-900 hover:bg-slate-100 font-semibold rounded-2xl gap-3">
-              <LinkIcon className="w-5 h-5" /> Documentação API
-           </Button>
-        </div>
+              <div className="rounded-xl bg-muted p-4 space-y-2 text-sm text-muted-foreground">
+                <p className="font-semibold text-foreground uppercase text-xs tracking-wide">O que vai ser necessário</p>
+                <ul className="space-y-1 list-disc list-inside">
+                  <li>Conta comercial no Instagram (não pessoal)</li>
+                  <li>Página do Facebook conectada à conta</li>
+                  <li>Autorizar o app com Facebook Login (OAuth)</li>
+                </ul>
+                <p className="pt-2">Estamos aguardando aprovação da Meta para liberar. Sinal verde: você recebe aviso por e-mail.</p>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <ShieldCheck className="w-4 h-4" /> Integração oficial via Meta Messaging API — sem risco de bloqueio.
+              </div>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
-      {/* MODAL ADICIONAR CONEXÃO */}
+      {/* MODAL ADD WHATSAPP */}
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-        <DialogContent className="max-w-md p-10 border-none shadow-sm rounded-2xl bg-white">
+        <DialogContent className="rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-semibold text-slate-900 uppercase">Novo Canal</DialogTitle>
-            <DialogDescription>Escolha como deseja conectar seu WhatsApp.</DialogDescription>
+            <DialogTitle>Nova conexão WhatsApp</DialogTitle>
+            <DialogDescription>Escolha como conectar seu número.</DialogDescription>
           </DialogHeader>
 
           <Tabs defaultValue="baileys" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 rounded-2xl bg-slate-100 p-1 mb-6">
-              <TabsTrigger value="baileys" className="rounded-xl font-bold text-xs uppercase">QR Code (Baileys)</TabsTrigger>
-              <TabsTrigger value="meta" className="rounded-xl font-bold text-xs uppercase">Meta Oficial (Cloud API)</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 rounded-xl bg-muted p-1 mb-4">
+              <TabsTrigger value="baileys" className="rounded-lg text-xs">QR Code</TabsTrigger>
+              <TabsTrigger value="meta" className="rounded-lg text-xs">Meta Oficial (Cloud API)</TabsTrigger>
             </TabsList>
-            
-            <TabsContent value="baileys" className="space-y-4">
-               <input 
-                 type="text" 
-                 placeholder="Nome da Conexão (ex: Comercial)"
-                 value={newName}
-                 onChange={(e) => setNewName(e.target.value)}
-                 className="w-full h-10 px-6 bg-slate-100 rounded-2xl border-none font-bold text-slate-900 focus:ring-2 focus:ring-primary outline-none"
-               />
-               <Button onClick={handleAddConnection} disabled={loading || !newName} className="w-full h-10 bg-slate-900 font-semibold rounded-2xl text-white">
-                  {loading ? "Processando..." : "GERAR QR CODE"}
-               </Button>
+
+            <TabsContent value="baileys" className="space-y-3">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Nome da conexão</Label>
+                <Input
+                  placeholder="Ex.: Recepção Vila Mariana"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                />
+              </div>
+              <Button onClick={handleAddConnection} disabled={loading || !newName} className="w-full">
+                {loading ? "Gerando…" : "Gerar QR Code"}
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Modo simples via QR Code. Bom pra testar; para produção séria, use a Meta Oficial.
+              </p>
             </TabsContent>
 
-            <TabsContent value="meta" className="space-y-4">
-               <div className="space-y-3">
-                   <input type="text" id="meta-name" placeholder="Nome do Canal" className="w-full h-10 px-6 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all" />
-                   <input type="text" id="meta-phone" placeholder="Seu Número (ex: 5511999999999)" className="w-full h-10 px-6 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all" />
-                   <input type="text" id="meta-phoneid" placeholder="Phone Number ID" className="w-full h-10 px-6 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all" />
-                   <input type="text" id="meta-waba" placeholder="WABA (Business Account ID)" className="w-full h-10 px-6 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all" />
-                   <input type="text" id="meta-verify" placeholder="Verify Token (Escolha uma Senha p/ Webhook)" className="w-full h-10 px-6 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all" />
-                  <div className="p-4 bg-slate-900 rounded-xl space-y-2">
-                     <p className="text-xs text-white/50 font-semibold ">Webhook URL p/ Colar no Facebook:</p>
-                     <p className="text-xs text-primary font-mono font-bold break-all">{window.location.origin}/api/webhook/whatsapp/meta</p>
-                  </div>
-                   <textarea id="meta-token" placeholder="Access Token Permanente (Bearer)" className="w-full h-24 px-6 py-4 bg-slate-50 border-none rounded-2xl font-bold text-xs outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all resize-none" />
-               </div>
-               <Button 
+            <TabsContent value="meta" className="space-y-3">
+              <div className="grid gap-2">
+                <Input id="meta-name" placeholder="Nome do canal" />
+                <Input id="meta-phone" placeholder="Número (ex.: 5511999999999)" />
+                <Input id="meta-phoneid" placeholder="Phone Number ID" />
+                <Input id="meta-waba" placeholder="WABA ID" />
+                <Input id="meta-verify" placeholder="Verify Token (senha que você escolhe)" />
+                <Textarea id="meta-token" placeholder="Access Token permanente (Bearer)" rows={3} />
+              </div>
+              <div className="rounded-xl bg-slate-950 text-slate-100 p-3 font-mono text-xs">
+                <p className="text-slate-400 mb-1">Webhook URL para colar no Meta:</p>
+                <p className="break-all">{origin}/api/webhook/meta</p>
+              </div>
+              <Button
                 onClick={async () => {
                   setLoading(true);
                   const payload = {
@@ -316,65 +374,54 @@ export default function Connections() {
                   try {
                     await fetch("/api/whatsapp/accounts/meta", {
                       method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify(payload)
+                      headers: authHeaders(),
+                      body: JSON.stringify(payload),
                     });
-                    toast({ title: "✅ Conta Meta Vinculada!" });
+                    toast({ title: "Conta Meta vinculada" });
                     setShowAddModal(false);
                     fetchConnections();
-                  } catch (e) { toast({ title: "Erro na conexão", variant: "destructive" }); }
-                  finally { setLoading(false); }
+                  } catch {
+                    toast({ title: "Erro ao vincular", variant: "destructive" });
+                  }
+                  setLoading(false);
                 }}
-                disabled={loading} 
-                className="w-full h-10 bg-primary font-semibold rounded-2xl text-white"
-               >
-                  {loading ? "Vinculando..." : "VINCULAR CONTA OFICIAL"}
-               </Button>
+                disabled={loading}
+                className="w-full"
+              >
+                {loading ? "Vinculando…" : "Vincular conta oficial"}
+              </Button>
             </TabsContent>
           </Tabs>
         </DialogContent>
       </Dialog>
 
-      {/* QR CODE MODAL (Requirement 5) */}
+      {/* MODAL QR CODE */}
       <Dialog open={showQrModal} onOpenChange={setShowQrModal}>
-        <DialogContent className="max-w-md p-10 border-none shadow-sm rounded-2xl bg-white overflow-hidden text-center">
-            <div className="space-y-6">
-               <div className="space-y-2 mb-8">
-                  <h2 className="text-3xl font-semibold text-slate-900 tracking-tight uppercase leading-none">Conectar <span className="text-primary">WhatsApp</span></h2>
-                  <p className="text-slate-400 font-bold text-xs ">Aponte a câmera do seu celular</p>
-               </div>
-               
-               <div className="relative group p-6 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 aspect-square flex items-center justify-center">
-                   <div className="relative z-10">
-                      <Card className="p-8 shadow-sm border-none rounded-2xl bg-white">
-                         <div className="w-48 h-48 bg-white flex items-center justify-center rounded-2xl overflow-hidden border-4 border-slate-900">
-                            {qrCode ? (
-                               <QRCodeCanvas value={qrCode} size={192} level="H" includeMargin={true} />
-                            ) : cooldownSeconds > 0 ? (
-                               <div className="flex flex-col items-center gap-3 text-orange-500">
-                                  <span className="text-5xl font-semibold">{Math.floor(cooldownSeconds / 60)}:{String(cooldownSeconds % 60).padStart(2, '0')}</span>
-                                  <span className="text-xs font-semibold tracking-tight text-center text-slate-500">Aguarde para tentar novamente</span>
-                               </div>
-                            ) : (
-                               <div className="flex flex-col items-center gap-2 text-slate-300">
-                                  <RefreshCw className="w-10 h-10 animate-spin" />
-                                  <span className="text-xs font-semibold tracking-tight">{qrStatus}</span>
-                               </div>
-                            )}
-                         </div>
-                      </Card>
-                   </div>
-               </div>
+        <DialogContent className="rounded-2xl text-center">
+          <DialogHeader>
+            <DialogTitle className="text-center">Conectar WhatsApp</DialogTitle>
+            <DialogDescription className="text-center">Aponte a câmera do seu celular para o QR.</DialogDescription>
+          </DialogHeader>
 
-               <div className={`px-8 py-4 rounded-2xl font-semibold flex items-center justify-center gap-3 shadow-sm ${cooldownSeconds > 0 ? 'bg-orange-500' : 'bg-slate-900'} text-white`}>
-                  <ShieldCheck className="w-5 h-5 text-white" /> {qrStatus}
-               </div>
-               
-               <p className="text-slate-400 text-xs font-bold px-10 leading-relaxed">
-                  Seus dados de sessão são <span className="text-slate-900">criptografados de ponta a ponta</span> e nunca saem do servidor.
-               </p>
-            </div>
-            <Button onClick={() => setShowQrModal(false)} variant="ghost" className="mt-8 font-semibold text-slate-300 hover:text-slate-900 w-full rounded-2xl uppercase text-xs">Fechar Janela</Button>
+          <div className="p-6 bg-muted rounded-2xl grid place-items-center aspect-square">
+            {qrCode ? (
+              <QRCodeCanvas value={qrCode} size={220} level="H" includeMargin />
+            ) : cooldownSeconds > 0 ? (
+              <div className="flex flex-col items-center gap-2 text-amber-600">
+                <span className="text-4xl font-bold tabular-nums">
+                  {Math.floor(cooldownSeconds / 60)}:{String(cooldownSeconds % 60).padStart(2, "0")}
+                </span>
+                <span className="text-xs text-muted-foreground">Aguarde para tentar de novo</span>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                <RefreshCw className="w-8 h-8 animate-spin" />
+                <span className="text-xs">{qrStatus}</span>
+              </div>
+            )}
+          </div>
+
+          <p className="text-xs text-muted-foreground">{qrStatus}</p>
         </DialogContent>
       </Dialog>
     </DashboardLayout>
