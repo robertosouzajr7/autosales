@@ -65,8 +65,55 @@ export default function Connections() {
     }
   };
 
+  // Instagram
+  const [igAccounts, setIgAccounts] = useState<any[]>([]);
+  const [igForm, setIgForm] = useState({ name: "", igId: "", pageId: "", accessToken: "" });
+  const [igLoading, setIgLoading] = useState(false);
+
+  const fetchInstagram = async () => {
+    try {
+      const res = await fetch("/api/whatsapp/accounts?channel=INSTAGRAM", { headers: authHeaders() });
+      const data = await res.json();
+      setIgAccounts(Array.isArray(data) ? data : []);
+    } catch {
+      /* silent */
+    }
+  };
+
+  const connectInstagram = async () => {
+    if (!igForm.name || !igForm.igId || !igForm.pageId || !igForm.accessToken) {
+      return toast({ title: "Preencha todos os campos", variant: "destructive" });
+    }
+    setIgLoading(true);
+    try {
+      const res = await fetch("/api/channels/instagram", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify(igForm),
+      });
+      const d = await res.json();
+      if (res.ok) {
+        toast({ title: "Instagram conectado", description: "O agente já responde DMs desta conta." });
+        setIgForm({ name: "", igId: "", pageId: "", accessToken: "" });
+        fetchInstagram();
+      } else {
+        toast({ title: "Erro ao conectar", description: d.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Erro de conexão", variant: "destructive" });
+    }
+    setIgLoading(false);
+  };
+
+  const disconnectInstagram = async (id: string) => {
+    if (!confirm("Desconectar esta conta do Instagram?")) return;
+    const res = await fetch(`/api/whatsapp/accounts/${id}`, { method: "DELETE", headers: authHeaders() });
+    if (res.ok) { toast({ title: "Conta desconectada" }); fetchInstagram(); }
+  };
+
   useEffect(() => {
     fetchConnections();
+    fetchInstagram();
     setTenantId(localStorage.getItem("tenantId") || "");
   }, []);
 
@@ -171,7 +218,9 @@ export default function Connections() {
             </TabsTrigger>
             <TabsTrigger value="instagram" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm">
               <Instagram className="w-4 h-4 mr-2" /> Instagram
-              <Badge className="ml-2 bg-amber-100 text-amber-800 border-none text-[10px] px-1.5 py-0">Em breve</Badge>
+              {igAccounts.length > 0 && (
+                <Badge className="ml-2 bg-emerald-100 text-emerald-700 border-none text-[10px] px-1.5 py-0">{igAccounts.length}</Badge>
+              )}
             </TabsTrigger>
           </TabsList>
 
@@ -282,34 +331,84 @@ export default function Connections() {
 
           {/* INSTAGRAM ─────────────────────────────────────────── */}
           <TabsContent value="instagram" className="space-y-6">
-            <Card className="rounded-2xl border-border p-8 space-y-5">
+            {/* Contas conectadas */}
+            {igAccounts.length > 0 && (
+              <div className="grid gap-4 md:grid-cols-2">
+                {igAccounts.map((acc) => (
+                  <Card key={acc.id} className="rounded-2xl border-border p-5 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-pink-100 text-pink-600 grid place-items-center">
+                        <Instagram className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{acc.name}</p>
+                        <p className="text-xs text-muted-foreground">Instagram Direct</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-emerald-100 text-emerald-700 border-none">Conectado</Badge>
+                      <button onClick={() => disconnectInstagram(acc.id)} className="p-2 rounded-lg text-muted-foreground hover:bg-rose-50 hover:text-rose-600">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* Conectar nova conta */}
+            <Card className="rounded-2xl border-border p-6 space-y-5">
               <div className="flex items-start gap-4">
                 <div className="h-11 w-11 rounded-xl bg-pink-100 text-pink-600 grid place-items-center shrink-0">
                   <Instagram className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h2 className="text-base font-semibold text-foreground">Instagram Direct</h2>
-                    <Badge className="bg-amber-100 text-amber-800 border-none text-xs">Em breve</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Deixe o mesmo agente responder DMs no Instagram, com todo o contexto do seu negócio.
+                  <h2 className="text-base font-semibold text-foreground">Conectar Instagram Direct</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    O mesmo agente responde DMs no Instagram, com o contexto do seu negócio.
                   </p>
                 </div>
               </div>
 
-              <div className="rounded-xl bg-muted p-4 space-y-2 text-sm text-muted-foreground">
-                <p className="font-semibold text-foreground uppercase text-xs tracking-wide">O que vai ser necessário</p>
-                <ul className="space-y-1 list-disc list-inside">
-                  <li>Conta comercial no Instagram (não pessoal)</li>
-                  <li>Página do Facebook conectada à conta</li>
-                  <li>Autorizar o app com Facebook Login (OAuth)</li>
-                </ul>
-                <p className="pt-2">Estamos aguardando aprovação da Meta para liberar. Sinal verde: você recebe aviso por e-mail.</p>
+              <div className="rounded-xl bg-muted p-4 space-y-2 text-xs text-muted-foreground">
+                <p className="font-semibold text-foreground uppercase tracking-wide">Pré-requisitos</p>
+                <ol className="space-y-1 list-decimal list-inside">
+                  <li>Conta <b>comercial/criador</b> no Instagram (não pessoal), vinculada a uma Página do Facebook.</li>
+                  <li>No <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noreferrer" className="text-primary underline">Graph API Explorer</a>, gere um <b>Page Access Token</b> com as permissões <code>instagram_manage_messages</code> e <code>pages_messaging</code>.</li>
+                  <li>Configure o webhook do seu app Meta apontando para a URL abaixo, no campo <code>messages</code> do produto Instagram.</li>
+                </ol>
+                <div className="rounded-lg bg-slate-950 text-slate-100 p-2 font-mono break-all mt-2">
+                  {origin}/api/webhook/meta
+                </div>
               </div>
 
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <ShieldCheck className="w-4 h-4" /> Integração oficial via Meta Messaging API — sem risco de bloqueio.
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Nome (identifica no painel)</Label>
+                  <Input value={igForm.name} onChange={(e) => setIgForm({ ...igForm, name: e.target.value })} placeholder="Ex.: @clinicasorrisovivo" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Instagram Business Account ID</Label>
+                  <Input value={igForm.igId} onChange={(e) => setIgForm({ ...igForm, igId: e.target.value })} placeholder="1784xxxxxxxxxxx" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Facebook Page ID</Label>
+                  <Input value={igForm.pageId} onChange={(e) => setIgForm({ ...igForm, pageId: e.target.value })} placeholder="1029xxxxxxxxxxx" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Page Access Token</Label>
+                  <Input type="password" value={igForm.accessToken} onChange={(e) => setIgForm({ ...igForm, accessToken: e.target.value })} placeholder="EAAG…" />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <ShieldCheck className="w-4 h-4" /> Integração oficial via Meta — sem risco de bloqueio.
+                </div>
+                <Button onClick={connectInstagram} disabled={igLoading} className="gap-2">
+                  {igLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Instagram className="w-4 h-4" />}
+                  Conectar Instagram
+                </Button>
               </div>
             </Card>
           </TabsContent>

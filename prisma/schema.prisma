@@ -456,16 +456,23 @@ model AutomationStepLog {
   execution AutomationExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
 }
 
+// Conta de canal de atendimento. Apesar do nome histórico, suporta
+// WhatsApp e Instagram Direct (ambos via infra Meta).
 model WhatsAppAccount {
-  id     String  @id @default(uuid())
-  name   String
-  phone  String?
-  status String  @default("DISCONNECTED")
+  id      String  @id @default(uuid())
+  name    String
+  phone   String?
+  status  String  @default("DISCONNECTED")
+  channel String  @default("WHATSAPP") // WHATSAPP | INSTAGRAM
 
-  // Meta Cloud API Fields
+  // Meta Cloud API Fields (WhatsApp)
   phoneId     String?
-  accessToken String?
+  accessToken String? // WhatsApp: permanent token · Instagram: page access token
   wabaId      String?
+
+  // Instagram Direct (Messenger Platform)
+  igId   String? // Instagram Business Account ID (roteia o webhook)
+  pageId String? // Facebook Page ID vinculada
 
   tenantId String
 

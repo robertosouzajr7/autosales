@@ -82,6 +82,9 @@ router.delete("/whatsapp/accounts/:id", WhatsAppController.deleteAccount);
 router.post("/whatsapp/accounts/meta", requireWhatsAppSlot, WhatsAppController.createMetaAccount);
 router.get("/whatsapp/qr/:id", WhatsAppController.qrCodeStream);
 
+// Instagram Direct — conexão manual (reaproveita o modelo de contas)
+router.post("/channels/instagram", WhatsAppController.createInstagramAccount);
+
 // Automations — gate por enableAutomations
 router.get("/automations", AutomationController.getAutomations);
 router.post("/automations", requireAutomations, AutomationController.createAutomation);
