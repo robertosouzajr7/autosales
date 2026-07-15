@@ -22,7 +22,7 @@ export const serveWidget = (req, res) => {
   var currentScript = document.currentScript;
   var tenantId = currentScript && currentScript.getAttribute("data-tenant");
   if (!tenantId) {
-    console.warn("[AutoSales widget] Faltou data-tenant no <script>.");
+    console.warn("[Agentes Virtuais widget] Faltou data-tenant no <script>.");
     return;
   }
   var origin = ${JSON.stringify(origin)};

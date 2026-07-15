@@ -9,7 +9,7 @@ import nodemailer from "nodemailer";
  *   SMTP_PORT      (ex.: 587)
  *   SMTP_USER      (usuário/API key)
  *   SMTP_PASS      (senha/API key)
- *   SMTP_FROM      (remetente, ex.: "AutoSales <no-reply@seu-dominio.com>")
+ *   SMTP_FROM      (remetente, ex.: "Agentes Virtuais <no-reply@seu-dominio.com>")
  *   PUBLIC_URL     (URL do frontend, usada para gerar links)
  *
  * Se SMTP não estiver configurado, o serviço loga o e-mail no console
@@ -40,7 +40,7 @@ async function send({ to, subject, html, text }) {
   const from =
     process.env.SMTP_FROM ||
     process.env.SMTP_USER ||
-    "AutoSales <no-reply@autosales.local>";
+    "Agentes Virtuais <no-reply@agentesvirtuais.local>";
   const t = transporter();
   if (!t) {
     console.log(

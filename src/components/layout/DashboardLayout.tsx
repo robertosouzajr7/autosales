@@ -175,7 +175,7 @@ function SidebarContent({
           <img src="/logo.png" alt="Logo" className="h-8 w-auto" />
           {!collapsed && (
             <span className="text-lg font-bold tracking-tight text-white">
-              Auto<span className="text-primary">Sales</span>
+              Agentes <span className="text-primary">Virtuais</span>
             </span>
           )}
           {!collapsed && showCollapseButton && (
