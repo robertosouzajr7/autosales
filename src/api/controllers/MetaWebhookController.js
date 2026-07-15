@@ -75,9 +75,11 @@ export const receiveMetaWebhook = async (req, res) => {
 
   try {
     const { MetaManager } = await import("../../../meta.js");
-    const entries = req.body?.entry || [];
+    const body = req.body || {};
+    const entries = body.entry || [];
 
     for (const entry of entries) {
+      // ── WhatsApp: entry.changes[].value.messages ──────────────
       for (const change of entry.changes || []) {
         const value = change.value || {};
         const phoneId = value.metadata?.phone_number_id;
@@ -85,7 +87,6 @@ export const receiveMetaWebhook = async (req, res) => {
         const messages = value.messages || [];
 
         for (const message of messages) {
-          // Só tratamos mensagens de texto no MVP; outros tipos são ignorados.
           if (message.type !== "text") {
             console.log(`[Meta Webhook] Ignorando mensagem tipo '${message.type}'.`);
             continue;
@@ -93,10 +94,21 @@ export const receiveMetaWebhook = async (req, res) => {
           const from = message.from;
           const content = message.text?.body || "";
           const name = contacts.find(c => c.wa_id === from)?.profile?.name || null;
-
           if (!phoneId || !from || !content) continue;
           await MetaManager.handleIncoming(phoneId, from, name, content);
         }
+      }
+
+      // ── Instagram Direct: entry.messaging[] (Messenger format) ─
+      // O igId da conta é o entry.id (Instagram Business Account ID).
+      const igId = entry.id;
+      for (const event of entry.messaging || []) {
+        const senderId = event.sender?.id;
+        const msg = event.message;
+        // Ignora echoes (mensagens que a própria página enviou) e não-texto.
+        if (!msg || msg.is_echo || !msg.text) continue;
+        if (!igId || !senderId) continue;
+        await MetaManager.handleIncomingInstagram(igId, senderId, null, msg.text);
       }
     }
   } catch (err) {
