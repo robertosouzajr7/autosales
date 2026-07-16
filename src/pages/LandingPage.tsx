@@ -9,6 +9,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
+import { ChatMockup } from "@/components/landing/ChatMockup";
+import { DashboardMockup } from "@/components/landing/DashboardMockup";
 
 export default function LandingPage() {
   const [settings, setSettings] = useState<any>(null);
@@ -201,25 +203,32 @@ export default function LandingPage() {
          <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(37, 99, 235, 0.08),transparent_50%)]" />
          <div className="absolute top-10 right-10 w-96 h-96 bg-[#2563EB]/10 rounded-full blur-[150px] pointer-events-none" />
          
-         <div className="max-w-5xl mx-auto text-center space-y-8 relative z-10">
-            <Badge className="bg-[#2563EB]/10 text-[#2563EB] border-none py-1.5 px-4 font-bold text-xs leading-loose">
-               ⚡ AGENTES DE IA MULTICANAL · WHATSAPP · INSTAGRAM · SITE
-            </Badge>
-            <h1 className={`text-5xl lg:text-7xl font-bold ${sHeroTitle} tracking-tight leading-[0.95] text-balance`}>
-               Um agente de IA que <span className="text-[#2563EB] italic">atende, vende e agenda</span> pelo seu negócio.
-            </h1>
-            <p className={`text-lg lg:text-xl ${sHeroDesc} font-medium max-w-3xl mx-auto leading-relaxed`}>
-               Plataforma de agentes de IA no WhatsApp, Instagram e no seu site. Ele responde na hora, tira dúvidas, apresenta seus produtos, qualifica, agenda na sua agenda e organiza tudo no CRM — 24 horas por dia. Para clínicas, salões, academias, restaurantes, lojas e escritórios.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-               <Link to="/register">
-                 <Button className="h-16 px-10 text-lg font-bold bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-2xl shadow-[0_20px_40px_-5px_rgba(37, 99, 235, 0.4)] hover:scale-105 transition-all border-none">
-                   Criar meu agente de IA
-                 </Button>
-               </Link>
-               <a href="#how-it-works" className={`h-16 px-10 flex items-center justify-center text-sm font-bold border rounded-2xl ${sButtonSecondary} transition-all`}>
-                 Ver Como Funciona <ArrowRight className="ml-2 w-4 h-4" />
-               </a>
+         <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-16 items-center relative z-10">
+            <div className="text-center lg:text-left space-y-8">
+               <Badge className="bg-[#2563EB]/10 text-[#2563EB] border-none py-1.5 px-4 font-bold text-xs leading-loose">
+                  ⚡ AGENTES DE IA MULTICANAL · WHATSAPP · INSTAGRAM · SITE
+               </Badge>
+               <h1 className={`text-5xl lg:text-6xl font-bold ${sHeroTitle} tracking-tight leading-[0.95] text-balance`}>
+                  Um agente de IA que <span className="text-[#2563EB] italic">atende, vende e agenda</span> pelo seu negócio.
+               </h1>
+               <p className={`text-lg lg:text-xl ${sHeroDesc} font-medium max-w-xl mx-auto lg:mx-0 leading-relaxed`}>
+                  Plataforma de agentes de IA no WhatsApp, Instagram e no seu site. Ele responde na hora, tira dúvidas, apresenta seus produtos, qualifica, agenda na sua agenda e organiza tudo no CRM — 24 horas por dia. Para clínicas, salões, academias, restaurantes, lojas e escritórios.
+               </p>
+               <div className="flex flex-col sm:flex-row items-center lg:justify-start justify-center gap-4 pt-4">
+                  <Link to="/register">
+                    <Button className="h-16 px-10 text-lg font-bold bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-2xl shadow-[0_20px_40px_-5px_rgba(37, 99, 235, 0.4)] hover:scale-105 transition-all border-none">
+                      Criar meu agente de IA
+                    </Button>
+                  </Link>
+                  <a href="#how-it-works" className={`h-16 px-10 flex items-center justify-center text-sm font-bold border rounded-2xl ${sButtonSecondary} transition-all`}>
+                    Ver Como Funciona <ArrowRight className="ml-2 w-4 h-4" />
+                  </a>
+               </div>
+            </div>
+
+            {/* Mockup do chat de venda */}
+            <div className="flex justify-center lg:justify-end">
+               <ChatMockup dark={isDarkMode} />
             </div>
          </div>
       </section>
@@ -293,6 +302,23 @@ export default function LandingPage() {
                      O agente marca na sua agenda sem conflito, encaminha pro fechamento ou passa a conversa pra um humano — e organiza cada contato no CRM, com lembretes automáticos que reduzem as faltas.
                   </p>
                </div>
+            </div>
+         </div>
+      </section>
+
+      {/* DASHBOARD SHOWCASE */}
+      <section className={`py-28 ${sFeatures} px-6 lg:px-20 transition-colors duration-300 relative overflow-hidden`}>
+         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-[#2563EB]/10 rounded-full blur-[180px] pointer-events-none" />
+         <div className="max-w-6xl mx-auto space-y-14 relative z-10">
+            <div className="text-center space-y-4">
+               <Badge className="bg-[#2563EB]/10 text-[#2563EB] border-none py-1.5 px-4 font-bold text-xs">
+                  UM PAINEL, TODOS OS CANAIS
+               </Badge>
+               <h2 className={`text-3xl lg:text-5xl font-bold tracking-tight ${sSectionTitle}`}>Tudo o que acontece, <span className="text-[#2563EB] italic">num lugar só</span></h2>
+               <p className={`${sSectionDesc} font-medium max-w-xl mx-auto`}>WhatsApp, Instagram e site na mesma caixa de entrada, com o funil de clientes atualizado em tempo real.</p>
+            </div>
+            <div className="max-w-5xl mx-auto">
+               <DashboardMockup dark={isDarkMode} />
             </div>
          </div>
       </section>
