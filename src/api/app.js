@@ -18,7 +18,7 @@ import { verifyMetaWebhook, receiveMetaWebhook } from "./controllers/MetaWebhook
 import { receivePaymentWebhook } from "./controllers/PaymentWebhookController.js";
 import { receiveStripeWebhook } from "./controllers/StripeWebhookController.js";
 import { serveWidget } from "./controllers/WidgetController.js";
-import { logger } from "./config/logger.js";
+import { logger, captureException } from "./config/logger.js";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { EventEmitter } from "events";
@@ -121,8 +121,16 @@ app.get("/widget.js", serveWidget);
 app.use("/api/public", publicApiRouter);
 app.use("/api", apiRouter);
 app.use("/api/v2", apiRouter);
-app.use("/uploads", express.static(path.join(process.cwd(), "public", "uploads")));
+app.use("/uploads", express.static(process.env.UPLOAD_DIR || path.join(process.cwd(), "public", "uploads")));
 app.use("/", publicRouter);
+
+// Error-handling middleware final: qualquer erro não tratado nas rotas é
+// reportado (Sentry se configurado) e vira uma resposta 500 limpa.
+app.use((err, req, res, _next) => {
+  captureException(err, { path: req.path, method: req.method, tenantId: req.tenantId });
+  if (res.headersSent) return;
+  res.status(err.status || 500).json({ error: "Erro interno." });
+});
 
 // Database Initialization
 export async function initDB() {

@@ -1317,14 +1317,39 @@ class AutomationEngine {
         const price = item.price != null ? `R$ ${Number(item.price).toFixed(2)}` : "sob consulta";
         const caption = `*${item.name}* — ${price}${item.description ? `\n${item.description}` : ""}`;
 
-        // Efeito colateral: envia a mídia imediatamente pelo WhatsApp.
+        // Escolhe a primeira mídia disponível (imagem > vídeo > áudio).
+        const media = item.imageUrl
+          ? { url: item.imageUrl, type: "image" }
+          : item.videoUrl
+            ? { url: item.videoUrl, type: "video" }
+            : item.audioUrl
+              ? { url: item.audioUrl, type: "audio" }
+              : null;
+
+        // Efeito colateral: envia a mídia imediatamente pelo canal do lead.
         let mediaSent = false;
-        try {
-          if (item.imageUrl) { await WhatsAppManager.sendMedia(lead.tenantId, lead.phone, item.imageUrl, "image", caption); mediaSent = true; }
-          else if (item.videoUrl) { await WhatsAppManager.sendMedia(lead.tenantId, lead.phone, item.videoUrl, "video", caption); mediaSent = true; }
-          else if (item.audioUrl) { await WhatsAppManager.sendMedia(lead.tenantId, lead.phone, item.audioUrl, "audio", ""); mediaSent = true; }
-        } catch (e) {
-          console.error("[AutoEngine] Falha ao enviar mídia do catálogo:", e.message);
+        if (media) {
+          const isInstagram = (lead.source || "").toLowerCase().includes("instagram");
+          try {
+            if (isInstagram) {
+              const acc = await prisma.whatsAppAccount.findFirst({
+                where: { tenantId: lead.tenantId, channel: "INSTAGRAM" },
+              });
+              if (acc?.pageId && acc?.accessToken) {
+                const { MetaManager } = await import("./meta.js");
+                await MetaManager.sendInstagramMedia(acc.pageId, acc.accessToken, lead.phone, media.url, media.type);
+                if (media.type !== "audio") {
+                  await MetaManager.sendInstagramMessage(acc.pageId, acc.accessToken, lead.phone, caption);
+                }
+                mediaSent = true;
+              }
+            } else {
+              await WhatsAppManager.sendMedia(lead.tenantId, lead.phone, media.url, media.type, media.type === "audio" ? "" : caption);
+              mediaSent = true;
+            }
+          } catch (e) {
+            console.error("[AutoEngine] Falha ao enviar mídia do catálogo:", e.message);
+          }
         }
         return {
           success: true,

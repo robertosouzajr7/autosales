@@ -59,6 +59,35 @@ export class MetaManager {
     }
 
     /**
+     * Envia mídia (imagem/áudio/vídeo) por DM no Instagram via attachment
+     * do Messenger Platform. `type` ∈ {image, audio, video}.
+     */
+    static async sendInstagramMedia(pageId, pageToken, recipientId, mediaUrl, type = "image") {
+        if (!pageId || !pageToken) throw new Error("Instagram: pageId/pageToken ausentes");
+        try {
+            const url = `https://graph.facebook.com/${GRAPH_VERSION}/${pageId}/messages`;
+            const response = await axios.post(url, {
+                recipient: { id: recipientId },
+                message: {
+                    attachment: {
+                        type, // image | audio | video
+                        payload: { url: mediaUrl, is_reusable: true }
+                    }
+                },
+                messaging_type: "RESPONSE"
+            }, {
+                headers: { 'Authorization': `Bearer ${pageToken}` },
+                timeout: 20000
+            });
+            console.log(`[Instagram API] Mídia (${type}) enviada para ${recipientId}`);
+            return response.data;
+        } catch (e) {
+            console.error(`[Instagram API Error]`, e.response?.data || e.message);
+            throw e;
+        }
+    }
+
+    /**
      * Roteia uma mensagem inbound (já validada no webhook) para o webhook
      * interno de processamento — o mesmo pipeline usado pelo Baileys — e
      * devolve a resposta da IA pelo canal oficial.
