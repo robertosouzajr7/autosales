@@ -33,4 +33,7 @@ COPY . .
 RUN node scripts/switch-db.js postgresql && npx prisma generate
 
 EXPOSE 3000
-CMD ["sh", "-c", "node scripts/switch-db.js postgresql && npx prisma db push --accept-data-loss && node server.js"]
+# Aplica migrations versionadas (nunca db push --accept-data-loss) e sobe.
+# O script faz baseline automático em banco pré-existente. Ver
+# scripts/migrate-and-start.js e OPERACAO.md.
+CMD ["node", "scripts/migrate-and-start.js"]

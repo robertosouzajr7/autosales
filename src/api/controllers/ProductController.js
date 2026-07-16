@@ -1,7 +1,5 @@
-import path from "path";
-import fs from "fs";
-import crypto from "crypto";
 import prisma from "../config/prisma.js";
+import { saveMedia } from "../services/StorageService.js";
 
 /**
  * Catálogo de produtos/serviços com mídia (imagem/áudio/vídeo).
@@ -79,13 +77,9 @@ export const uploadMedia = async (req, res) => {
     if (!kind) return res.status(400).json({ error: "Formato não suportado. Use imagem, áudio ou vídeo." });
 
     const ext = (req.file.originalname.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "");
-    const dir = path.join(process.cwd(), "public", "uploads", req.tenantId);
-    fs.mkdirSync(dir, { recursive: true });
-    const filename = `${crypto.randomBytes(8).toString("hex")}.${ext}`;
-    fs.writeFileSync(path.join(dir, filename), req.file.buffer);
-
-    const base = (process.env.PUBLIC_URL || `${req.protocol}://${req.get("host")}`).replace(/\/$/, "");
-    const url = `${base}/uploads/${req.tenantId}/${filename}`;
+    const publicBase = `${req.protocol}://${req.get("host")}`;
+    // StorageService decide entre S3/R2 (produção) e disco local (fallback).
+    const url = await saveMedia(req.file.buffer, ext, req.file.mimetype, req.tenantId, publicBase);
     res.json({ url, kind });
   } catch (e) {
     res.status(500).json({ error: e.message });
