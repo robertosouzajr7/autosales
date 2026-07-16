@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { 
   Zap, Check, Target, MessageSquare, ArrowRight, Shield, TrendingUp, Users,
   BarChart, Globe, Mail, Phone, Star, Send, X, Play, Clock, Sparkles, AlertCircle,
-  Sun, Moon
+  Sun, Moon, Bot, Instagram, Package, CalendarDays, LayoutGrid
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -203,18 +203,18 @@ export default function LandingPage() {
          
          <div className="max-w-5xl mx-auto text-center space-y-8 relative z-10">
             <Badge className="bg-[#2563EB]/10 text-[#2563EB] border-none py-1.5 px-4 font-bold text-xs leading-loose">
-               ⚡ SEU ATENDENTE DE IA NO WHATSAPP OFICIAL
+               ⚡ AGENTES DE IA MULTICANAL · WHATSAPP · INSTAGRAM · SITE
             </Badge>
             <h1 className={`text-5xl lg:text-7xl font-bold ${sHeroTitle} tracking-tight leading-[0.95] text-balance`}>
-               Nenhum cliente sem resposta.<br/>Seu negócio <span className="text-[#2563EB] italic">agendando 24h</span> por dia.
+               Um agente de IA que <span className="text-[#2563EB] italic">atende, vende e agenda</span> pelo seu negócio.
             </h1>
             <p className={`text-lg lg:text-xl ${sHeroDesc} font-medium max-w-3xl mx-auto leading-relaxed`}>
-               Uma IA de agendamento no WhatsApp oficial que responde na hora, qualifica o cliente e marca o horário direto na sua agenda — para clínicas, salões, academias, restaurantes e escritórios.
+               Plataforma de agentes de IA no WhatsApp, Instagram e no seu site. Ele responde na hora, tira dúvidas, apresenta seus produtos, qualifica, agenda na sua agenda e organiza tudo no CRM — 24 horas por dia. Para clínicas, salões, academias, restaurantes, lojas e escritórios.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
                <Link to="/register">
                  <Button className="h-16 px-10 text-lg font-bold bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-2xl shadow-[0_20px_40px_-5px_rgba(37, 99, 235, 0.4)] hover:scale-105 transition-all border-none">
-                   Ativar meu atendente de IA
+                   Criar meu agente de IA
                  </Button>
                </Link>
                <a href="#how-it-works" className={`h-16 px-10 flex items-center justify-center text-sm font-bold border rounded-2xl ${sButtonSecondary} transition-all`}>
@@ -228,8 +228,8 @@ export default function LandingPage() {
       <section id="problem" className={`py-24 ${sSectionProblem} px-6 lg:px-20 transition-colors duration-300`}>
         <div className="max-w-6xl mx-auto space-y-16">
           <div className="text-center space-y-4">
-            <h2 className={`text-3xl lg:text-5xl font-bold tracking-tight ${sSectionTitle}`}>Por que seu negócio perde clientes <span className="text-red-500 italic">todos os dias</span>?</h2>
-            <p className={`${sSectionDesc} font-medium max-w-2xl mx-auto`}>Três gargalos silenciosos esvaziam a sua agenda sem que ninguém perceba:</p>
+            <h2 className={`text-3xl lg:text-5xl font-bold tracking-tight ${sSectionTitle}`}>Por que seu negócio perde vendas <span className="text-red-500 italic">todos os dias</span>?</h2>
+            <p className={`${sSectionDesc} font-medium max-w-2xl mx-auto`}>Três gargalos silenciosos deixam dinheiro na mesa sem que ninguém perceba:</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -237,21 +237,21 @@ export default function LandingPage() {
               <div className="bg-red-500/10 p-3 w-fit rounded-xl text-red-500"><Clock className="w-6 h-6" /></div>
               <h3 className={`text-xl font-bold ${sProblemTitle}`}>Resposta que demora</h3>
               <p className={`${sProblemDesc} text-sm leading-relaxed`}>
-                Cliente sem resposta em minutos vira cliente do concorrente. No WhatsApp, quem responde primeiro agenda — e uma equipe humana não dá conta 24h por dia.
+                Cliente sem resposta em minutos vira cliente do concorrente. Quem responde primeiro fecha — e uma equipe humana não dá conta de WhatsApp, Instagram e site ao mesmo tempo, 24h por dia.
               </p>
             </div>
             <div className={`p-8 border rounded-3xl space-y-4 ${sProblemCard} transition-all`}>
               <div className="bg-red-500/10 p-3 w-fit rounded-xl text-red-500"><Users className="w-6 h-6" /></div>
-              <h3 className={`text-xl font-bold ${sProblemTitle}`}>Recepção sobrecarregada</h3>
+              <h3 className={`text-xl font-bold ${sProblemTitle}`}>Equipe sobrecarregada em vários canais</h3>
               <p className={`${sProblemDesc} text-sm leading-relaxed`}>
-                Sua equipe não consegue atender o balcão e o WhatsApp ao mesmo tempo. As mensagens acumulam, as ligações caem e o cliente desiste.
+                Mensagem no WhatsApp, DM no Instagram, dúvida no site — tudo ao mesmo tempo. As conversas acumulam, as respostas atrasam e o cliente desiste no meio do caminho.
               </p>
             </div>
             <div className={`p-8 border rounded-3xl space-y-4 ${sProblemCard} transition-all`}>
               <div className="bg-red-500/10 p-3 w-fit rounded-xl text-red-500"><AlertCircle className="w-6 h-6" /></div>
               <h3 className={`text-xl font-bold ${sProblemTitle}`}>Fora do horário</h3>
               <p className={`${sProblemDesc} text-sm leading-relaxed`}>
-                Grande parte das mensagens chega à noite e nos fins de semana. Sem ninguém para responder, o interesse esfria e a agenda da semana seguinte fica vazia.
+                Boa parte das mensagens chega à noite e nos fins de semana. Sem ninguém pra responder, tirar a dúvida e apresentar o produto, o interesse esfria e a venda não acontece.
               </p>
             </div>
           </div>
@@ -262,35 +262,35 @@ export default function LandingPage() {
       <section id="how-it-works" className={`py-28 ${sHowItWorks} px-6 lg:px-20 transition-colors duration-300`}>
          <div className="max-w-6xl mx-auto space-y-20">
             <div className="text-center space-y-4">
-               <h2 className={`text-3xl lg:text-5xl font-bold tracking-tight ${sHowTitle}`}>Do "oi" ao agendamento em <span className="text-[#2563EB] italic">3 passos simples</span></h2>
-               <p className={`${sSectionDesc} font-medium max-w-xl mx-auto`}>Seu atendente de IA cuida do WhatsApp enquanto você cuida do que importa.</p>
+               <h2 className={`text-3xl lg:text-5xl font-bold tracking-tight ${sHowTitle}`}>Do primeiro "oi" ao <span className="text-[#2563EB] italic">cliente fechado</span></h2>
+               <p className={`${sSectionDesc} font-medium max-w-xl mx-auto`}>Seus agentes de IA cuidam de todos os canais enquanto você cuida do que importa.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 relative">
                <div className="space-y-6 relative">
                   <div className={`absolute -top-6 -left-6 text-9xl font-bold ${sHowNumberText} pointer-events-none select-none`}>01</div>
                   <div className="text-[#2563EB] font-bold text-xs ">PASSO 1: O CLIENTE CHAMA</div>
-                  <h3 className={`text-2xl font-bold ${sHowTitle} tracking-tight`}>Responde na hora, com a sua voz</h3>
+                  <h3 className={`text-2xl font-bold ${sHowTitle} tracking-tight`}>Responde na hora, em qualquer canal</h3>
                   <p className={`${sSectionDesc} text-sm leading-relaxed`}>
-                     A qualquer hora do dia, o agente responde no WhatsApp oficial do seu negócio com o tom que você definir. Tira as dúvidas comuns — serviços, valores, endereço, formas de pagamento — sem deixar ninguém esperando.
+                     WhatsApp, Instagram ou o chat do seu site — o agente responde na hora, com o tom e a identidade do seu negócio. Tira dúvidas de serviços, valores, endereço e formas de pagamento sem deixar ninguém esperando.
                   </p>
                </div>
 
                <div className="space-y-6 relative">
                   <div className={`absolute -top-6 -left-6 text-9xl font-bold ${sHowNumberText} pointer-events-none select-none`}>02</div>
-                  <div className="text-[#2563EB] font-bold text-xs ">PASSO 2: QUALIFICA COM SEGURANÇA</div>
-                  <h3 className={`text-2xl font-bold ${sHowTitle} tracking-tight`}>Entende a necessidade do cliente</h3>
+                  <div className="text-[#2563EB] font-bold text-xs ">PASSO 2: ENTENDE E APRESENTA</div>
+                  <h3 className={`text-2xl font-bold ${sHowTitle} tracking-tight`}>Qualifica e mostra o produto certo</h3>
                   <p className={`${sSectionDesc} text-sm leading-relaxed`}>
-                     A IA usa metodologia SDR profissional (SPIN Selling, escuta ativa) para entender o que o cliente quer e oferecer o melhor horário — sempre dentro dos limites que você definir.
+                     Com metodologia de vendas profissional (SPIN Selling, escuta ativa, tratamento de objeções), a IA entende a necessidade, recomenda a solução ideal e envia foto, áudio e vídeo do seu catálogo na conversa.
                   </p>
                </div>
 
                <div className="space-y-6 relative">
                   <div className={`absolute -top-6 -left-6 text-9xl font-bold ${sHowNumberText} pointer-events-none select-none`}>03</div>
-                  <div className="text-[#2563EB] font-bold text-xs ">PASSO 3: AGENDA E CONFIRMA</div>
-                  <h3 className={`text-2xl font-bold ${sHowTitle} tracking-tight`}>Marca o horário automaticamente</h3>
+                  <div className="text-[#2563EB] font-bold text-xs ">PASSO 3: CONVERTE</div>
+                  <h3 className={`text-2xl font-bold ${sHowTitle} tracking-tight`}>Agenda, vende ou passa pra equipe</h3>
                   <p className={`${sSectionDesc} text-sm leading-relaxed`}>
-                     O agente consulta os horários livres na sua agenda, marca sem conflito, confirma na hora e envia lembretes automáticos no WhatsApp para reduzir as faltas.
+                     O agente marca na sua agenda sem conflito, encaminha pro fechamento ou passa a conversa pra um humano — e organiza cada contato no CRM, com lembretes automáticos que reduzem as faltas.
                   </p>
                </div>
             </div>
@@ -301,58 +301,58 @@ export default function LandingPage() {
       <section id="features" className={`py-28 ${sFeatures} px-6 lg:px-20 transition-colors duration-300`}>
         <div className="max-w-6xl mx-auto space-y-20">
           <div className="text-center space-y-4">
-            <h2 className={`text-3xl lg:text-5xl font-bold tracking-tight ${sSectionTitle}`}>Desenvolvido para gerar <span className="text-[#2563EB] italic">resultados operacionais reais</span></h2>
-            <p className={`${sSectionDesc} font-medium max-w-xl mx-auto`}>Funcionalidades nativas, maduras e prontas para rodar no seu negócio.</p>
+            <h2 className={`text-3xl lg:text-5xl font-bold tracking-tight ${sSectionTitle}`}>Uma plataforma completa de <span className="text-[#2563EB] italic">agentes de IA</span></h2>
+            <p className={`${sSectionDesc} font-medium max-w-xl mx-auto`}>Muito além de agendar: atendimento, vendas e organização — tudo num lugar só.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             <Card className={`p-8 border rounded-2xl space-y-6 transition-all group ${sFeatureCard}`}>
               <div className="w-12 h-12 bg-[#2563EB]/10 text-[#2563EB] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Target className="w-6 h-6" />
+                <Bot className="w-6 h-6" />
               </div>
-              <h3 className={`text-xl font-bold ${sFeatureTitle} tracking-tight`}>Atendente de IA 24/7</h3>
+              <h3 className={`text-xl font-bold ${sFeatureTitle} tracking-tight`}>Agente de IA personalizável</h3>
               <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
-                Responde todo cliente em segundos, no WhatsApp oficial, com a identidade e as informações do seu negócio (serviços, valores, endereço, formas de pagamento).
+                Escolha a função — Vendedor, Atendimento, Agendador, Consultor ou SDR — e cada uma vem com skills especializadas. Treine com seus documentos (PDF, DOCX, planilha) e ele fala com a identidade do seu negócio.
               </p>
             </Card>
 
             <Card className={`p-8 border rounded-2xl space-y-6 transition-all group ${sFeatureCard}`}>
               <div className="w-12 h-12 bg-[#2563EB]/10 text-[#2563EB] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Sparkles className="w-6 h-6" />
+                <Instagram className="w-6 h-6" />
               </div>
-              <h3 className={`text-xl font-bold ${sFeatureTitle} tracking-tight`}>Qualificação com metodologia SDR</h3>
+              <h3 className={`text-xl font-bold ${sFeatureTitle} tracking-tight`}>Multicanal de verdade</h3>
               <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
-                SPIN Selling, escuta ativa e tratamento de objeções (LAER) embutidos. Treine o agente com a base de conhecimento do seu negócio — texto, PDF, DOCX, planilha.
+                O mesmo agente atende no WhatsApp oficial, no Instagram Direct e num chat que você instala no seu site. Todas as conversas caem numa caixa de entrada só.
               </p>
             </Card>
 
             <Card className={`p-8 border rounded-2xl space-y-6 transition-all group ${sFeatureCard}`}>
               <div className="w-12 h-12 bg-[#2563EB]/10 text-[#2563EB] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <BarChart className="w-6 h-6" />
+                <Package className="w-6 h-6" />
               </div>
-              <h3 className={`text-xl font-bold ${sFeatureTitle} tracking-tight`}>Funil de Clientes</h3>
+              <h3 className={`text-xl font-bold ${sFeatureTitle} tracking-tight`}>Catálogo com mídia</h3>
               <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
-                Acompanhe cada cliente do primeiro contato ao horário marcado, em um quadro visual. Veja quem foi atendido, quem qualificou e quem agendou.
+                Cadastre produtos e serviços com foto, áudio e vídeo. Na conversa, o agente apresenta o item certo e envia a mídia automaticamente — como um vendedor mostrando a vitrine.
               </p>
             </Card>
 
             <Card className={`p-8 border rounded-2xl space-y-6 transition-all group ${sFeatureCard}`}>
               <div className="w-12 h-12 bg-[#2563EB]/10 text-[#2563EB] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Clock className="w-6 h-6" />
+                <CalendarDays className="w-6 h-6" />
               </div>
-              <h3 className={`text-xl font-bold ${sFeatureTitle} tracking-tight`}>Agenda integrada</h3>
+              <h3 className={`text-xl font-bold ${sFeatureTitle} tracking-tight`}>Agenda integrada + lembretes</h3>
               <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
-                Marca direto na sua agenda (Google Calendar), sem conflito de horário, e confirma pelo WhatsApp automaticamente em tempo real.
+                Marca direto no Google Calendar, sem conflito de horário, confirma na hora e dispara lembretes automáticos que reduzem as faltas (no-show).
               </p>
             </Card>
 
             <Card className={`p-8 border rounded-2xl space-y-6 transition-all group ${sFeatureCard}`}>
               <div className="w-12 h-12 bg-[#2563EB]/10 text-[#2563EB] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Zap className="w-6 h-6" />
+                <LayoutGrid className="w-6 h-6" />
               </div>
-              <h3 className={`text-xl font-bold ${sFeatureTitle} tracking-tight`}>Lembretes e follow-up</h3>
+              <h3 className={`text-xl font-bold ${sFeatureTitle} tracking-tight`}>CRM e funil de clientes</h3>
               <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
-                Confirmações e lembretes automáticos antes do horário para reduzir faltas (no-show), além de retomar conversas paradas — tudo no-code.
+                Cada contato do primeiro "oi" ao fechamento, num quadro visual (Kanban). Veja quem está sendo atendido, quem qualificou, quem agendou e quem comprou.
               </p>
             </Card>
 
@@ -360,9 +360,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 bg-[#2563EB]/10 text-[#2563EB] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <MessageSquare className="w-6 h-6" />
               </div>
-              <h3 className={`text-xl font-bold ${sFeatureTitle} tracking-tight`}>Atendimento humano quando precisa</h3>
+              <h3 className={`text-xl font-bold ${sFeatureTitle} tracking-tight`}>Central de conversas + humano</h3>
               <p className={`${sFeatureDesc} text-xs leading-relaxed`}>
-                Central de mensagens do WhatsApp oficial. Sua equipe assume a conversa a qualquer momento, com todo o histórico, exatamente onde a IA parou.
+                Inbox unificado dos seus canais. Sua equipe assume qualquer conversa a qualquer momento, com todo o histórico, exatamente onde a IA parou.
               </p>
             </Card>
           </div>
@@ -374,7 +374,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto space-y-16">
           <div className="text-center space-y-4">
              <h2 className={`text-3xl lg:text-5xl font-bold tracking-tight ${sSectionTitle}`}>Negócios que pararam de <span className="text-[#2563EB] italic">perder clientes</span></h2>
-             <p className={`${sSectionDesc} font-medium max-w-xl mx-auto`}>Histórias de quem encheu a agenda respondendo todo cliente na hora, sem sobrecarregar a equipe.</p>
+             <p className={`${sSectionDesc} font-medium max-w-xl mx-auto`}>Histórias de quem atende, vende e agenda no automático — sem sobrecarregar a equipe.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -398,7 +398,7 @@ export default function LandingPage() {
                 <div className="space-y-4">
                    <div className="flex text-amber-500"><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/><Star className="fill-current w-4 h-4"/></div>
                    <p className={`${sTestimonialText} text-sm italic leading-relaxed`}>
-                      "Nossa maior dor era o tempo de resposta no WhatsApp. O cliente chegava e demorava horas para ser atendido. Agora recebe retorno instantâneo, tira as dúvidas e agenda sozinho, 24h por dia."
+                      "Ligamos o agente no WhatsApp e no Instagram. Ele responde na hora, manda a foto do procedimento, tira as dúvidas e já agenda. Vendeu mais no primeiro mês do que a gente conseguia respondendo na mão."
                    </p>
                 </div>
                 <div className={`flex items-center gap-3 pt-4 border-t ${isDarkMode ? 'border-slate-900/30' : 'border-slate-200'}`}>
@@ -433,8 +433,8 @@ export default function LandingPage() {
       <section id="pricing" className={`py-28 ${sPricing} px-6 lg:px-20 transition-colors duration-300`}>
          <div className="max-w-6xl mx-auto space-y-20">
             <div className="text-center space-y-4">
-               <h2 className={`text-3xl lg:text-5xl font-bold ${sSectionTitle} tracking-tight leading-none`}>Preço justo para <span className="text-[#2563EB] italic">agenda cheia</span></h2>
-               <p className={`${sSectionDesc} text-lg font-medium`}>Sem taxas ocultas. Escolha o plano ideal para o tamanho do seu negócio.</p>
+               <h2 className={`text-3xl lg:text-5xl font-bold ${sSectionTitle} tracking-tight leading-none`}>Preço justo para <span className="text-[#2563EB] italic">vender mais</span></h2>
+               <p className={`${sSectionDesc} text-lg font-medium`}>Sem taxas ocultas. Escolha o plano ideal para o tamanho do seu negócio. Teste 7 dias grátis.</p>
             </div>
             
             <div className={`grid grid-cols-1 ${visiblePlans.length === 2 ? 'md:grid-cols-2' : visiblePlans.length >= 3 ? 'md:grid-cols-3' : 'md:grid-cols-1'} gap-10 max-w-5xl mx-auto items-end pt-8`}>
@@ -531,9 +531,23 @@ export default function LandingPage() {
                </div>
 
                <div className={`p-6 border rounded-2xl space-y-2 ${sFaqItem}`}>
+                  <h4 className={`font-bold ${sFaqTitle} text-base`}>Em quais canais o agente atende?</h4>
+                  <p className={`${sFaqDesc} text-sm leading-relaxed`}>
+                     WhatsApp oficial (Meta), Instagram Direct e um chat que você instala no seu site com uma linha de código. O mesmo agente atende os três, e todas as conversas chegam numa caixa de entrada só.
+                  </p>
+               </div>
+
+               <div className={`p-6 border rounded-2xl space-y-2 ${sFaqItem}`}>
                   <h4 className={`font-bold ${sFaqTitle} text-base`}>Serve para qualquer tipo de negócio?</h4>
                   <p className={`${sFaqDesc} text-sm leading-relaxed`}>
-                     Sim. Clínicas, salões, academias, restaurantes, escritórios profissionais — qualquer negócio que agenda clientes pelo WhatsApp. Templates prontos por vertical aceleram sua configuração, e você personaliza o agente com a sua base de conhecimento.
+                     Sim. Clínicas, salões, academias, restaurantes, lojas, escritórios profissionais — qualquer negócio que atende e vende por mensagem. Templates prontos por segmento aceleram a configuração, e você personaliza a função do agente (vendedor, atendimento, agendador, consultor) e a base de conhecimento.
+                  </p>
+               </div>
+
+               <div className={`p-6 border rounded-2xl space-y-2 ${sFaqItem}`}>
+                  <h4 className={`font-bold ${sFaqTitle} text-base`}>O agente consegue apresentar meus produtos?</h4>
+                  <p className={`${sFaqDesc} text-sm leading-relaxed`}>
+                     Sim. Você cadastra produtos e serviços com foto, áudio e vídeo no catálogo, e na conversa o agente apresenta o item certo e envia a mídia automaticamente — como um vendedor mostrando a vitrine.
                   </p>
                </div>
 
@@ -558,9 +572,9 @@ export default function LandingPage() {
       <section className={`py-28 text-center relative overflow-hidden ${sCTA} transition-colors duration-300`}>
          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#2563EB]/10 rounded-full blur-[180px] pointer-events-none" />
          <div className="max-w-4xl mx-auto space-y-8 relative z-10">
-            <h2 className="text-4xl lg:text-6xl font-bold tracking-tight">Chegou a hora de encher a agenda do seu negócio.</h2>
+            <h2 className="text-4xl lg:text-6xl font-bold tracking-tight">Chegou a hora de ter um time de IA trabalhando por você.</h2>
             <p className={`font-medium text-lg lg:text-xl max-w-2xl mx-auto leading-relaxed ${sCTADesc}`}>
-               Pare de perder pacientes por demora no WhatsApp. Ative seu atendente de IA e veja as consultas sendo marcadas sozinhas — de dia, de noite e no fim de semana.
+               Pare de perder cliente por demora. Crie seu agente de IA e veja ele atendendo, apresentando produtos, agendando e vendendo — no WhatsApp, no Instagram e no seu site, de dia, de noite e no fim de semana.
             </p>
             <div className="pt-4">
                <Link to="/register">
@@ -581,7 +595,7 @@ export default function LandingPage() {
                   {settings?.logoUrl ? <img src={settings.logoUrl} className="h-8 grayscale opacity-60" /> : <img src="/logo.png" className="h-8 w-auto grayscale opacity-60" />}
                   <span className={`text-xl font-bold ${sFooterTitle} tracking-tight uppercase italic`}>Agentes <span className="text-[#2563EB]">Virtuais</span></span>
                </div>
-               <p className={`text-xs font-bold ${sFooterDesc}`}>IA de agendamento no WhatsApp — para qualquer negócio.</p>
+               <p className={`text-xs font-bold ${sFooterDesc}`}>Agentes de IA multicanal — atendimento, vendas e agendamento no WhatsApp, Instagram e site.</p>
             </div>
             <div className="text-xs font-bold text-center md:text-right space-y-2">
                <div>E-mail oficial: contato@agentesvirtuais.com</div>
