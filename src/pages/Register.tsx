@@ -3,8 +3,12 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CheckCircle2, ArrowRight, Loader2, Sparkles } from "lucide-react";
+import { CheckCircle2, ArrowRight, Loader2, Sparkles, MessageSquare, Instagram, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { AuthShell, glass } from "@/components/auth/AuthShell";
+
+const field =
+  "h-13 rounded-2xl bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 font-medium h-14 focus-visible:ring-2 focus-visible:ring-[#2563EB]/30 transition";
 
 export default function Register() {
   const [loading, setLoading] = useState(false);
@@ -17,7 +21,6 @@ export default function Register() {
     planId: params.get("plan") || "",
   });
 
-  // Plano escolhido (para exibir no topo do form).
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
 
   useEffect(() => {
@@ -47,7 +50,7 @@ export default function Register() {
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData),
       });
       const data = await res.json();
       if (res.ok) {
@@ -59,7 +62,7 @@ export default function Register() {
         localStorage.setItem("userRole", data.user?.role || "OWNER");
         localStorage.setItem("tenantId", data.tenant.id);
         localStorage.setItem("userId", data.user.id);
-        navigate("/dashboard");
+        navigate("/onboarding");
       } else if (res.status === 409) {
         toast({
           title: "E-mail já cadastrado",
@@ -77,95 +80,108 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 lg:p-12 font-sans overflow-hidden relative">
-      <div className="absolute top-0 right-0 w-1/3 h-full bg-[#2563EB]/5 blur-3xl rounded-full translate-x-1/2" />
-      <div className="absolute bottom-0 left-0 w-1/4 h-1/2 bg-[#2563EB]/5 blur-3xl rounded-full -translate-x-1/2" />
+    <AuthShell wide>
+      <div className={`grid grid-cols-1 lg:grid-cols-2 ${glass} rounded-3xl overflow-hidden shadow-xl shadow-slate-200/40 dark:shadow-black/30`}>
+        {/* LADO ESQUERDO — CONTEXTO */}
+        <div className="relative hidden lg:flex flex-col justify-between p-11 text-white bg-gradient-to-br from-[#0B1120] via-[#0F1B3D] to-[#1E1B4B] overflow-hidden">
+          <div aria-hidden className="pointer-events-none absolute inset-0">
+            <div className="absolute -top-20 -left-16 w-72 h-72 rounded-full blur-[90px] bg-[#3b6cff]/30" />
+            <div className="absolute bottom-0 -right-10 w-72 h-72 rounded-full blur-[90px] bg-[#a855f7]/25" />
+          </div>
 
-      <div className="max-w-4xl w-full grid grid-cols-1 lg:grid-cols-2 bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden relative z-10">
+          <div className="relative z-10">
+            <h2 className="text-4xl font-bold leading-[1.05] tracking-[-0.03em] text-balance">
+              Seu melhor vendedor <span className="bg-gradient-to-r from-[#7ca0ff] via-[#c084fc] to-[#5eead4] bg-clip-text text-transparent">nunca dorme.</span>
+            </h2>
+            <p className="text-white/60 font-medium leading-relaxed mt-5 max-w-sm">
+              Um agente de IA que atende, vende e agenda pelo seu negócio — no WhatsApp, Instagram e no seu site, 24 horas por dia.
+            </p>
 
-        {/* LADO ESQUERDO - CONTEXTO */}
-        <div className="bg-slate-900 p-12 text-white flex flex-col justify-between relative overflow-hidden hidden lg:flex">
-           <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-              <div className="absolute top-10 left-10 w-40 h-40 border border-white rounded-full" />
-              <div className="absolute bottom-20 right-10 w-64 h-64 border border-white rounded-full translate-x-1/2" />
-           </div>
-           <div className="flex items-center gap-3 relative z-10">
-              <img src="/logo.png" alt="Agentes Virtuais" className="h-8 w-auto" />
-              <span className="text-2xl font-bold tracking-tight text-white">Agentes <span className="text-[#2563EB] italic">Virtuais</span></span>
-           </div>
-           <div className="space-y-6 relative z-10">
-              <h2 className="text-4xl font-bold leading-none tracking-tight">Sua recepção que nunca dorme.</h2>
-              <p className="text-white/40 font-bold leading-relaxed">Um agente de IA no WhatsApp que responde, qualifica e agenda pacientes automaticamente — 24 horas por dia.</p>
-              <div className="space-y-4 pt-10">
-                 {["Período de teste grátis", "Cobrança só depois do teste", "Cancele em um clique no painel", "Agenda integrada ao Google Calendar"].map(t => (
-                   <div key={t} className="flex items-center gap-3 text-xs font-bold text-white/50">
-                      <CheckCircle2 className="w-4 h-4 text-[#2DD4BF] shrink-0" /> {t}
-                   </div>
-                 ))}
+            <div className="flex items-center gap-3 mt-7">
+              {[MessageSquare, Instagram, Globe].map((Icon, i) => (
+                <div key={i} className="h-10 w-10 rounded-xl bg-white/10 border border-white/15 grid place-items-center backdrop-blur-sm">
+                  <Icon className="w-4.5 h-4.5 text-white/80" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="relative z-10 space-y-3 pt-10">
+            {["7 dias grátis para testar", "Sem cartão de crédito agora", "Cancele em um clique no painel", "Templates prontos para o seu segmento"].map((t) => (
+              <div key={t} className="flex items-center gap-3 text-[13px] font-medium text-white/70">
+                <CheckCircle2 className="w-4 h-4 text-[#5eead4] shrink-0" /> {t}
               </div>
-           </div>
-           <div className="relative z-10 opacity-30 text-xs font-bold pt-10">Atendimento inteligente para clínicas</div>
+            ))}
+          </div>
         </div>
 
-        {/* LADO DIREITO - FORMULÁRIO */}
-        <div className="p-8 lg:p-12 flex flex-col justify-center">
-            <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
-               <div className="space-y-2">
-                  <h3 className="text-2xl font-bold text-slate-900 tracking-tight">Criar conta</h3>
-                  <p className="text-slate-400 font-bold text-xs">7 dias grátis para testar. Sem cartão agora.</p>
-               </div>
-
-               {selectedPlan && (
-                 <div className="rounded-2xl border border-[#2563EB]/30 bg-[#2563EB]/5 p-4 flex items-center gap-3">
-                   <div className="h-10 w-10 rounded-xl bg-[#2563EB] text-white grid place-items-center shrink-0">
-                     <Sparkles className="w-5 h-5" />
-                   </div>
-                   <div className="flex-1 min-w-0">
-                     <p className="text-xs font-bold text-[#2563EB] uppercase tracking-wide">Plano escolhido</p>
-                     <p className="text-sm font-semibold text-slate-900 truncate">
-                       {selectedPlan.name} — 7 dias grátis, depois R$ {selectedPlan.priceMonthly}/mês
-                     </p>
-                   </div>
-                 </div>
-               )}
-               <div className="space-y-3">
-                  <div className="space-y-1">
-                     <Label className="text-xs font-bold text-slate-400 pl-1">Nome completo</Label>
-                     <Input placeholder="Seu nome" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="h-14 border-slate-100 rounded-2xl bg-slate-50 shadow-none font-bold" />
-                  </div>
-                  <div className="space-y-1">
-                     <Label className="text-xs font-bold text-slate-400 pl-1">Nome da clínica</Label>
-                     <Input placeholder="Ex: Clínica Bem Estar" value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})} className="h-14 border-slate-100 rounded-2xl bg-slate-50 shadow-none font-bold" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                     <div className="space-y-1">
-                        <Label className="text-xs font-bold text-slate-400 pl-1">WhatsApp</Label>
-                        <Input placeholder="11 99999-9999" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="h-14 border-slate-100 rounded-2xl bg-slate-50 shadow-none font-bold" />
-                     </div>
-                     <div className="space-y-1">
-                        <Label className="text-xs font-bold text-slate-400 pl-1">Senha</Label>
-                        <Input type="password" placeholder="mín. 8 caracteres" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="h-14 border-slate-100 rounded-2xl bg-slate-50 shadow-none font-bold" />
-                     </div>
-                  </div>
-                  <div className="space-y-1">
-                     <Label className="text-xs font-bold text-slate-400 pl-1">E-mail</Label>
-                     <Input placeholder="seu@email.com" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="h-14 border-slate-100 rounded-2xl bg-slate-50 shadow-none font-bold" />
-                  </div>
-               </div>
-               <Button onClick={handleRegister} disabled={loading} className="w-full h-14 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-2xl font-bold text-base gap-3 shadow-xl ">
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Começar teste grátis <ArrowRight className="w-4 h-4" /></>}
-               </Button>
-               <p className="text-xs text-center text-slate-400 font-bold leading-relaxed">
-                 Ao criar a conta você concorda com os Termos de Uso e a Política de Privacidade.
-               </p>
+        {/* LADO DIREITO — FORMULÁRIO */}
+        <div className="p-8 lg:p-11 flex flex-col justify-center">
+          <div className="space-y-6">
+            <div className="space-y-1.5">
+              <h3 className="text-2xl font-bold tracking-[-0.02em]">Criar conta</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">7 dias grátis para testar. Sem cartão agora.</p>
             </div>
 
-            <div className="mt-8 text-center pb-4">
-               <p className="text-xs font-bold text-slate-400">Já tem conta? <Link to="/login" className="text-[#2563EB] hover:underline">Fazer Login</Link></p>
+            {selectedPlan && (
+              <div className={`rounded-2xl ${glass} p-4 flex items-center gap-3`}>
+                <div className="h-10 w-10 rounded-xl bg-[#2563EB] text-white grid place-items-center shrink-0">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-semibold text-[#2563EB] uppercase tracking-wide">Plano escolhido</p>
+                  <p className="text-sm font-semibold truncate">
+                    {selectedPlan.name} — 7 dias grátis, depois R$ {selectedPlan.priceMonthly}/mês
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 pl-1">Nome completo</Label>
+                <Input placeholder="Seu nome" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className={field} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 pl-1">Nome do seu negócio</Label>
+                <Input placeholder="Ex.: Studio Bem-Estar" value={formData.companyName} onChange={(e) => setFormData({ ...formData, companyName: e.target.value })} className={field} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 pl-1">WhatsApp</Label>
+                  <Input placeholder="11 99999-9999" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className={field} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 pl-1">Senha</Label>
+                  <Input type="password" placeholder="mín. 8 caracteres" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} className={field} />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 pl-1">E-mail</Label>
+                <Input placeholder="seu@email.com" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className={field} />
+              </div>
             </div>
+
+            <Button
+              onClick={handleRegister}
+              disabled={loading}
+              className="w-full h-14 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-2xl font-semibold text-base gap-2 shadow-[0_14px_34px_-8px_rgba(37,99,235,0.5)] border-none"
+            >
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Começar teste grátis <ArrowRight className="w-4 h-4" /></>}
+            </Button>
+
+            <p className="text-xs text-center text-slate-400 dark:text-slate-500 font-medium leading-relaxed">
+              Ao criar a conta você concorda com os Termos de Uso e a Política de Privacidade.
+            </p>
+
+            <div className="text-center pt-1">
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                Já tem conta? <Link to="/login" className="text-[#2563EB] font-semibold hover:underline">Fazer login</Link>
+              </p>
+            </div>
+          </div>
         </div>
-
       </div>
-    </div>
+    </AuthShell>
   );
 }
