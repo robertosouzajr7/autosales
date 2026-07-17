@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Sun, Moon } from "lucide-react";
 import { useTheme } from "@/lib/useTheme";
+import { Logo } from "@/components/Logo";
 
 const glass =
   "bg-white/70 dark:bg-white/[0.05] backdrop-blur-xl border border-slate-200/70 dark:border-white/10";
@@ -32,9 +33,8 @@ export function AuthShell({ children, wide = false }: { children: React.ReactNod
 
       {/* Barra superior: logo + toggle */}
       <div className="absolute top-0 inset-x-0 flex items-center justify-between px-5 lg:px-10 h-16 z-20">
-        <Link to="/" className="flex items-center gap-2.5">
-          <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#2563EB] to-[#7c5cff] shadow-lg shadow-[#2563EB]/30" />
-          <span className="text-base font-bold tracking-tight">Agentes <span className="text-[#2563EB]">Virtuais</span></span>
+        <Link to="/">
+          <Logo wordmarkClassName="text-base" />
         </Link>
         <button
           onClick={toggle}

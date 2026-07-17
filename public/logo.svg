@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Agentes Virtuais">
+  <defs>
+    <linearGradient id="apex" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#7C5CFF"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="url(#apex)"/>
+  <path fill="#fff" fill-rule="evenodd" clip-rule="evenodd"
+    d="M32 12 L52 54 L43 54 L38.4 44 L25.6 44 L21 54 L12 54 Z M32 26.5 L27.6 37 L36.4 37 Z"/>
+</svg>

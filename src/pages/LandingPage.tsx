@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { ChatMockup } from "@/components/landing/ChatMockup";
 import { DashboardMockup } from "@/components/landing/DashboardMockup";
+import { Logo } from "@/components/Logo";
 
 const CHANNELS = ["no WhatsApp", "no Instagram", "no seu site"];
 
@@ -134,10 +135,7 @@ export default function LandingPage() {
           {settings?.logoUrl ? (
             <img src={settings.logoUrl} alt="Logo" className="h-8 w-auto" />
           ) : (
-            <>
-              <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#2563EB] to-[#7c5cff] shadow-lg shadow-[#2563EB]/30" />
-              <span className="text-lg font-bold tracking-tight">Agentes <span className="text-[#2563EB]">Virtuais</span></span>
-            </>
+            <Logo />
           )}
         </Link>
 
@@ -527,10 +525,7 @@ export default function LandingPage() {
       <footer className="py-14 px-5 lg:px-16 border-t border-slate-200/70 dark:border-white/10">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex flex-col gap-3 text-center md:text-left">
-            <div className="flex items-center gap-2.5 justify-center md:justify-start">
-              <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#2563EB] to-[#7c5cff]" />
-              <span className="text-lg font-bold tracking-tight">Agentes <span className="text-[#2563EB]">Virtuais</span></span>
-            </div>
+            <Logo className="justify-center md:justify-start" />
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs">Agentes de IA multicanal — atendimento, vendas e agendamento no WhatsApp, Instagram e site.</p>
           </div>
           <div className="text-xs font-medium text-slate-500 dark:text-slate-400 text-center md:text-right space-y-1.5">

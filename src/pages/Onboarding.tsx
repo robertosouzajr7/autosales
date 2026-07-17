@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/lib/useTheme";
+import { LogoMark } from "@/components/Logo";
 import {
   Stethoscope, Sparkles, Dumbbell, Briefcase, UtensilsCrossed, HelpCircle,
   ArrowRight, ArrowLeft, Check, Loader2, Smartphone, Bot, MessageCircleQuestion, Sun, Moon,
@@ -102,7 +103,7 @@ export default function Onboarding() {
       <header className={`sticky top-0 z-30 ${glass} border-b`}>
         <div className="mx-auto max-w-4xl px-6 py-3.5 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5">
-            <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#2563EB] to-[#7c5cff] shadow-lg shadow-[#2563EB]/30" />
+            <LogoMark className="w-7 h-7 text-[#2563EB]" />
             <span className="text-sm font-bold tracking-tight">Configurar o seu negócio</span>
           </Link>
           <div className="flex items-center gap-3">

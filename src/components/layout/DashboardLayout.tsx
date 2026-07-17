@@ -56,6 +56,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import { LogoIcon } from "@/components/Logo";
 
 interface NavItem {
   label: string;
@@ -174,7 +175,7 @@ function SidebarContent({
         )}
       >
         <div className="flex items-center gap-2.5 w-full">
-          <img src="/logo.png" alt="Logo" className="h-8 w-auto" />
+          <LogoIcon className="w-8 h-8 shrink-0" />
           {!collapsed && (
             <span className="text-lg font-bold tracking-tight text-white">
               Agentes <span className="text-primary">Virtuais</span>
