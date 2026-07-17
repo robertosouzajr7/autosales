@@ -109,10 +109,10 @@ function SidebarNav({ collapsed, onNavClick, features }: SidebarNavProps & { fea
             to={item.href}
             onClick={onNavClick}
             className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+              "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
               "hover:bg-white/10 hover:text-white",
               isActive
-                ? "bg-white/15 text-white shadow-sm"
+                ? "bg-gradient-to-r from-[#2563EB]/35 via-[#2563EB]/15 to-transparent text-white ring-1 ring-inset ring-white/10"
                 : "text-slate-400",
               collapsed && "justify-center px-2"
             )}
@@ -120,7 +120,7 @@ function SidebarNav({ collapsed, onNavClick, features }: SidebarNavProps & { fea
             <Icon
               className={cn(
                 "shrink-0 transition-colors duration-200",
-                isActive ? "text-[#2563EB]" : "text-slate-400 group-hover:text-white",
+                isActive ? "text-[#93b4ff]" : "text-slate-400 group-hover:text-white",
                 collapsed ? "h-5 w-5" : "h-4 w-4"
               )}
             />
@@ -166,7 +166,7 @@ function SidebarContent({
   navigate
 }: SidebarContentProps & { features: any, planName: string, planData: any, navigate: any }) {
   return (
-    <div className="flex h-full flex-col bg-slate-900 font-sans">
+    <div className="flex h-full flex-col font-sans bg-slate-900 bg-[radial-gradient(130%_55%_at_0%_0%,rgba(37,99,235,0.24),transparent_58%)]">
       {/* Logo e Info da Conta */}
       <div
         className={cn(
@@ -291,6 +291,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [notifications, setNotifications] = useState<any[]>([]);
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  // O painel é sempre claro (algumas telas têm cores fixas que quebrariam no
+  // escuro). O tema escuro fica restrito à landing/login/onboarding.
+  useEffect(() => {
+    document.documentElement.classList.remove("dark");
+  }, []);
+
   useEffect(() => {
     const token = localStorage.getItem("token");
 
@@ -404,7 +410,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="flex h-11 shrink-0 items-center gap-4 border-b border-slate-200 dark:border-slate-900/40 bg-white dark:bg-[#1E293B] px-4 md:px-6">
+        <header className="flex h-14 shrink-0 items-center gap-4 border-b border-slate-200 bg-white/80 backdrop-blur-xl px-4 md:px-6">
           {/* Mobile hamburger */}
           <Button
             variant="ghost"
