@@ -6,8 +6,9 @@ import { cn } from "@/lib/utils";
  * Path único com contra-forma vazada (fill-rule evenodd): funciona em qualquer
  * fundo, em cor sólida (herda currentColor) ou em gradiente.
  */
-const APEX_PATH =
-  "M32 6 L58 58 L46.5 58 L40.8 44 L23.2 44 L17.5 58 L6 58 Z M32 24.5 L26.4 38 L37.6 38 Z";
+// Triângulo/pico externo com um entalhe em V profundo (vazado por evenodd) —
+// lê como um A/seta com abertura marcada, não como um "A" com travessão.
+const APEX_PATH = "M32 6 L58 56 L6 56 Z M32 30 L45.5 56 L18.5 56 Z";
 
 export function LogoMark({ className, gradient = false }: { className?: string; gradient?: boolean }) {
   const id = useId();

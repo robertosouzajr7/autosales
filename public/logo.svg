@@ -7,5 +7,5 @@
   </defs>
   <rect width="64" height="64" rx="15" fill="url(#apex)"/>
   <path fill="#fff" fill-rule="evenodd" clip-rule="evenodd"
-    d="M32 12 L52 54 L43 54 L38.4 44 L25.6 44 L21 54 L12 54 Z M32 26.5 L27.6 37 L36.4 37 Z"/>
+    d="M32 12 L54 52 L10 52 Z M32 32 L43 52 L21 52 Z"/>
 </svg>

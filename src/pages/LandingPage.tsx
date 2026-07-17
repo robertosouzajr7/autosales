@@ -123,10 +123,14 @@ export default function LandingPage() {
         @keyframes drift{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(50px,40px) scale(1.1)}66%{transform:translate(-40px,25px) scale(.94)}}
         @keyframes floaty{50%{transform:translateY(-14px)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes slideInRight{from{transform:translateX(100%)}to{transform:translateX(0)}}
+        @keyframes scrimIn{from{opacity:0}to{opacity:1}}
         .an-drift{animation:drift 24s ease-in-out infinite}
         .an-float{animation:floaty 7s ease-in-out infinite}
         .an-up{animation:fadeUp .6s cubic-bezier(.22,1,.36,1) both}
-        @media (prefers-reduced-motion: reduce){.an-drift,.an-float,.an-up{animation:none!important}}
+        .an-drawer{animation:slideInRight .24s cubic-bezier(.22,1,.36,1) both}
+        .an-scrim{animation:scrimIn .18s ease-out both}
+        @media (prefers-reduced-motion: reduce){.an-drift,.an-float,.an-up,.an-drawer,.an-scrim{animation:none!important}}
       `}</style>
 
       {/* ===================== HEADER ===================== */}
@@ -175,8 +179,8 @@ export default function LandingPage() {
       {/* ===================== DRAWER MOBILE ===================== */}
       {menuOpen && (
         <div className="fixed inset-0 z-[100] lg:hidden">
-          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setMenuOpen(false)} />
-          <div className="absolute right-0 top-0 h-full w-[82%] max-w-sm bg-white dark:bg-[#0A0F1F] border-l border-slate-200 dark:border-white/10 p-6 flex flex-col an-up">
+          <div className="an-scrim absolute inset-0 bg-slate-950/60" onClick={() => setMenuOpen(false)} />
+          <div className="an-drawer absolute right-0 top-0 h-full w-[82%] max-w-sm bg-white dark:bg-[#0A0F1F] border-l border-slate-200 dark:border-white/10 p-6 flex flex-col will-change-transform">
             <div className="flex items-center justify-between mb-8">
               <span className="text-lg font-bold tracking-tight">Agentes <span className="text-[#2563EB]">Virtuais</span></span>
               <button onClick={() => setMenuOpen(false)} className={`p-2 rounded-xl ${glass}`} aria-label="Fechar menu">
