@@ -464,7 +464,7 @@ export default function LandingPage() {
                       ))}
                     </div>
 
-                    <Link to={`/register?plan=${plan.id}`} className="block w-full">
+                    <Link to={`${localStorage.getItem("token") ? "/checkout" : "/register"}?plan=${plan.id}`} className="block w-full">
                       <Button className={`w-full h-14 font-semibold rounded-2xl text-base border-none transition-transform active:scale-95 ${isRecommended ? "bg-white text-[#2563EB] hover:bg-slate-50 shadow-xl" : "bg-[#2563EB] text-white hover:bg-[#1D4ED8]"}`}>
                         Testar 7 dias grátis
                       </Button>

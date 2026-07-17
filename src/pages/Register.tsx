@@ -62,7 +62,9 @@ export default function Register() {
         localStorage.setItem("userRole", data.user?.role || "OWNER");
         localStorage.setItem("tenantId", data.tenant.id);
         localStorage.setItem("userId", data.user.id);
-        navigate("/onboarding");
+        // Com plano escolhido → checkout (cartão + 7 dias grátis). Senão, onboarding.
+        const plan = formData.planId || params.get("plan");
+        navigate(plan ? `/checkout?plan=${plan}` : "/onboarding");
       } else if (res.status === 409) {
         toast({
           title: "E-mail já cadastrado",

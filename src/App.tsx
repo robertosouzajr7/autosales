@@ -11,6 +11,8 @@ import SdrManagement from "@/pages/SdrManagement"; // Módulo Multi-SDR
 import MeuNegocio from "@/pages/MeuNegocio";
 import Catalogo from "@/pages/Catalogo";
 import Onboarding from "@/pages/Onboarding";
+import Checkout from "@/pages/Checkout";
+import CheckoutReturn from "@/pages/CheckoutReturn";
 import Dashboard from "@/pages/Dashboard";
 import Conversations from "@/pages/Conversations";
 import Contacts from "@/pages/Contacts";
@@ -46,6 +48,8 @@ function App() {
         <Route path="/contacts" element={<Contacts />} />
         <Route path="/appointments" element={<Appointments />} />
         <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/checkout/return" element={<CheckoutReturn />} />
         <Route path="/negocio" element={<MeuNegocio />} />
         <Route path="/clinica" element={<MeuNegocio />} />
         <Route path="/catalogo" element={<Catalogo />} />

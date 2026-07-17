@@ -224,6 +224,7 @@ router.delete("/compliance/leads/:id", ComplianceController.deleteLeadData);
 router.get("/billing/portal", BillingController.getBillingPortalData);
 router.get("/billing/plans", BillingController.getActivePlans);
 router.post("/billing/checkout/:invoiceId", BillingController.createCheckoutSession);
+router.post("/billing/subscribe", BillingController.createSubscriptionCheckout);
 router.post("/billing/upgrade", BillingController.upgradePlan);
 
 export default router;

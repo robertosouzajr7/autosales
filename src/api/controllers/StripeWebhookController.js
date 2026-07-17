@@ -43,34 +43,71 @@ export const receiveStripeWebhook = async (req, res) => {
     return res.sendStatus(403);
   }
 
-  // Só o evento de checkout concluído interessa.
-  if (event.type !== "checkout.session.completed") {
-    return res.status(200).json({ received: true, ignored: event.type });
-  }
-
-  const session = event.data.object;
-  // Só considera pago se o payment_status confirmar.
-  if (session.payment_status && session.payment_status !== "paid") {
-    return res.status(200).json({ received: true, unpaid: session.payment_status });
-  }
-
   try {
-    const invoiceId = session.client_reference_id || session.metadata?.invoiceId;
-    let resolvedId = invoiceId;
-    if (!resolvedId && session.id) {
-      const inv = await prisma.invoice.findFirst({ where: { gatewayId: session.id } });
-      resolvedId = inv?.id;
-    }
-    if (!resolvedId) {
-      console.warn("[Stripe Webhook] checkout.session.completed sem fatura resolvível:", session.id);
-      return res.status(200).json({ received: true, resolved: false });
-    }
+    switch (event.type) {
+      // ── Checkout concluído ───────────────────────────────────────
+      case "checkout.session.completed": {
+        const session = event.data.object;
 
-    const result = await PaymentService.markInvoicePaid(resolvedId, session.id);
-    console.log(`[Stripe Webhook] Fatura ${resolvedId} ${result.alreadyPaid ? "já estava paga" : "confirmada"}.`);
-    return res.status(200).json({ received: true, alreadyPaid: result.alreadyPaid });
+        // (A) Assinatura recorrente com trial (checkout embutido).
+        if (session.mode === "subscription" && session.subscription) {
+          const subscription = await stripe.subscriptions.retrieve(session.subscription);
+          const tenantId = await PaymentService.syncSubscription(subscription);
+          console.log(`[Stripe Webhook] Assinatura ${subscription.id} vinculada ao tenant ${tenantId}.`);
+          return res.status(200).json({ received: true, subscription: subscription.id });
+        }
+
+        // (B) Fatura avulsa (fluxo legado, mode: payment).
+        if (session.payment_status && session.payment_status !== "paid") {
+          return res.status(200).json({ received: true, unpaid: session.payment_status });
+        }
+        const invoiceId = session.client_reference_id || session.metadata?.invoiceId;
+        let resolvedId = invoiceId;
+        if (!resolvedId && session.id) {
+          const inv = await prisma.invoice.findFirst({ where: { gatewayId: session.id } });
+          resolvedId = inv?.id;
+        }
+        if (!resolvedId) {
+          return res.status(200).json({ received: true, resolved: false });
+        }
+        const result = await PaymentService.markInvoicePaid(resolvedId, session.id);
+        return res.status(200).json({ received: true, alreadyPaid: result.alreadyPaid });
+      }
+
+      // ── Ciclo de vida da assinatura ──────────────────────────────
+      case "customer.subscription.created":
+      case "customer.subscription.updated":
+      case "customer.subscription.deleted": {
+        const subscription = event.data.object;
+        const tenantId = await PaymentService.syncSubscription(subscription);
+        return res.status(200).json({ received: true, tenant: tenantId, status: subscription.status });
+      }
+
+      // ── Cobrança recorrente paga (após o trial) ──────────────────
+      case "invoice.paid": {
+        const invoice = event.data.object;
+        if (invoice.subscription) {
+          await PaymentService.recordSubscriptionInvoicePaid(invoice);
+        }
+        return res.status(200).json({ received: true });
+      }
+
+      case "invoice.payment_failed": {
+        const invoice = event.data.object;
+        if (invoice.customer) {
+          const tenant = await prisma.tenant.findFirst({ where: { stripeCustomerId: invoice.customer } });
+          if (tenant) {
+            await prisma.tenant.update({ where: { id: tenant.id }, data: { subscriptionStatus: "PAST_DUE" } });
+          }
+        }
+        return res.status(200).json({ received: true });
+      }
+
+      default:
+        return res.status(200).json({ received: true, ignored: event.type });
+    }
   } catch (err) {
-    console.error("[Stripe Webhook] Erro ao processar pagamento:", err.message);
+    console.error("[Stripe Webhook] Erro ao processar evento:", err.message);
     return res.status(500).json({ error: "internal" });
   }
 };

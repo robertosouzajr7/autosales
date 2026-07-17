@@ -19,6 +19,7 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
   const [webhookSecret, setWebhookSecret] = useState("");
   const [stripeKey, setStripeKey] = useState("");
   const [stripeWebhook, setStripeWebhook] = useState("");
+  const [stripePublishable, setStripePublishable] = useState("");
   const [trialDays, setTrialDays] = useState<number | string>(7);
   const [savingGw, setSavingGw] = useState(false);
 
@@ -51,6 +52,7 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
       paymentWebhookSecret: webhookSecret || undefined,
       stripeSecretKey: stripeKey || undefined,
       stripeWebhookSecret: stripeWebhook || undefined,
+      stripePublishableKey: stripePublishable || undefined,
       defaultTrialDays: trialDays,
     });
     setSavingGw(false);
@@ -60,6 +62,7 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
       setWebhookSecret("");
       setStripeKey("");
       setStripeWebhook("");
+      setStripePublishable("");
       load();
     } else {
       toast({ title: "Erro ao salvar", description: res.data?.error, variant: "destructive" });
@@ -154,6 +157,13 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
                 Webhook Signing Secret {gw?.stripeWebhookMasked && <span className="font-mono">({gw.stripeWebhookMasked})</span>}
               </Label>
               <Input type="password" placeholder="whsec_…" value={stripeWebhook} onChange={(e) => setStripeWebhook(e.target.value)} />
+            </div>
+            <div className="space-y-1 sm:col-span-2">
+              <Label className="text-xs text-muted-foreground">
+                Publishable Key {gw?.stripePublishableMasked && <span className="font-mono">({gw.stripePublishableMasked})</span>}
+              </Label>
+              <Input placeholder="pk_live_… ou pk_test_…" value={stripePublishable} onChange={(e) => setStripePublishable(e.target.value)} />
+              <p className="text-[11px] text-muted-foreground">Usada no checkout embutido (exposta ao navegador — pode ser pública).</p>
             </div>
           </div>
         )}
