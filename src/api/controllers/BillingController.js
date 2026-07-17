@@ -81,6 +81,36 @@ export const createCheckoutSession = async (req, res) => {
   }
 };
 
+// POST /api/billing/subscribe
+// Cria uma sessão de checkout EMBUTIDO (assinatura + trial). Devolve o
+// clientSecret e a publishable key para o Stripe montar o formulário na
+// própria página (checkout transparente). Autenticado.
+export const createSubscriptionCheckout = async (req, res) => {
+  const tenantId = req.tenantId;
+  const { planId } = req.body;
+  if (!tenantId) return res.status(401).json({ error: "Tenant ID ausente" });
+  if (!planId) return res.status(400).json({ error: "ID do plano é obrigatório" });
+
+  try {
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    if (!tenant) return res.status(404).json({ error: "Tenant não localizado" });
+
+    const plan = await prisma.plan.findFirst({ where: { id: planId, active: true } });
+    if (!plan) return res.status(404).json({ error: "Plano não localizado" });
+
+    const frontend = process.env.FRONTEND_URL || "http://localhost:8080";
+    const { clientSecret, publishableKey } = await PaymentService.createSubscriptionCheckout(
+      tenant,
+      plan,
+      frontend
+    );
+    res.json({ clientSecret, publishableKey });
+  } catch (error) {
+    console.error("[Billing] Erro ao criar assinatura:", error.message);
+    res.status(500).json({ error: error.message || "Não foi possível iniciar o checkout." });
+  }
+};
+
 // POST /api/billing/upgrade
 export const upgradePlan = async (req, res) => {
   const tenantId = req.tenantId;

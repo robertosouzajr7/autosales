@@ -26,6 +26,10 @@ model Tenant {
   cardLast4          String?
   nextBillingDate    DateTime?
 
+  // Stripe (assinatura recorrente com trial)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+
   financialRecords   FinancialRecord[]
   invoices           Invoice[]
 
@@ -228,6 +232,9 @@ model Plan {
 
   features String? // JSON — extras futuros (RAG, integrações específicas, etc.)
   active   Boolean @default(true)
+
+  // Stripe: Price recorrente (criado sob demanda a partir de name/priceMonthly)
+  stripePriceId String?
 
   tenants   Tenant[]
   createdAt DateTime @default(now())
@@ -498,8 +505,9 @@ model PlatformSettings {
   paymentWebhookSecret String? // segredo HMAC do webhook MP
 
   // Stripe
-  stripeSecretKey     String? // sk_live_… / sk_test_…
-  stripeWebhookSecret String? // whsec_… (assinatura do webhook Stripe)
+  stripeSecretKey      String? // sk_live_… / sk_test_…
+  stripeWebhookSecret  String? // whsec_… (assinatura do webhook Stripe)
+  stripePublishableKey String? // pk_live_… / pk_test_… (exposta ao checkout)
 
   defaultTrialDays Int      @default(7)
   updatedAt        DateTime @updatedAt

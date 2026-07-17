@@ -40,6 +40,188 @@ class PaymentService {
     return s?.stripeSecretKey || process.env.STRIPE_SECRET_KEY || null;
   }
 
+  async getStripePublishableKey() {
+    const s = await this.getSettings();
+    return s?.stripePublishableKey || process.env.STRIPE_PUBLISHABLE_KEY || null;
+  }
+
+  /** Instância do Stripe com a secret key resolvida, ou null se não configurada. */
+  async getStripe() {
+    const key = await this.getStripeSecretKey();
+    return key ? new Stripe(key) : null;
+  }
+
+  async getTrialDays() {
+    const s = await this.getSettings();
+    return Number(s?.defaultTrialDays ?? process.env.TRIAL_DAYS ?? 7) || 7;
+  }
+
+  /** Garante um Customer do Stripe para o tenant, persistindo o id. */
+  async ensureStripeCustomer(stripe, tenant) {
+    if (tenant.stripeCustomerId) return tenant.stripeCustomerId;
+    const customer = await stripe.customers.create({
+      email: tenant.email || undefined,
+      name: tenant.name || undefined,
+      metadata: { tenantId: tenant.id },
+    });
+    await prisma.tenant.update({ where: { id: tenant.id }, data: { stripeCustomerId: customer.id } });
+    return customer.id;
+  }
+
+  /**
+   * Garante um Price recorrente (mensal, BRL) no Stripe para o plano,
+   * criado sob demanda a partir de name/priceMonthly e cacheado em stripePriceId.
+   */
+  async ensureStripePrice(stripe, plan) {
+    if (plan.stripePriceId) return plan.stripePriceId;
+    const price = await stripe.prices.create({
+      currency: "brl",
+      unit_amount: Math.round(Number(plan.priceMonthly) * 100),
+      recurring: { interval: "month" },
+      product_data: { name: `Plano ${plan.name}` },
+      metadata: { planId: plan.id },
+    });
+    await prisma.plan.update({ where: { id: plan.id }, data: { stripePriceId: price.id } });
+    return price.id;
+  }
+
+  /**
+   * Cria uma sessão de Checkout EMBUTIDO (ui_mode: embedded) em modo
+   * assinatura, com trial de N dias e cartão exigido no ato. Após o trial,
+   * o Stripe cobra automaticamente. Devolve { clientSecret, publishableKey }.
+   * O cartão nunca toca o nosso backend (PCI fora de escopo).
+   */
+  async createSubscriptionCheckout(tenant, plan, frontend) {
+    const stripe = await this.getStripe();
+    if (!stripe) throw new Error("Stripe não está configurado (secret key ausente).");
+    const publishableKey = await this.getStripePublishableKey();
+    if (!publishableKey) throw new Error("Stripe publishable key ausente.");
+
+    const customerId = await this.ensureStripeCustomer(stripe, tenant);
+    const priceId = await this.ensureStripePrice(stripe, plan);
+    const trialDays = await this.getTrialDays();
+
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      ui_mode: "embedded",
+      customer: customerId,
+      line_items: [{ price: priceId, quantity: 1 }],
+      subscription_data: {
+        trial_period_days: trialDays,
+        metadata: { tenantId: tenant.id, planId: plan.id },
+      },
+      // Exige cartão já no trial → cobrança automática ao fim dos 7 dias.
+      payment_method_collection: "always",
+      metadata: { tenantId: tenant.id, planId: plan.id },
+      return_url: `${frontend}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+    });
+
+    return { clientSecret: session.client_secret, publishableKey };
+  }
+
+  /**
+   * Sincroniza o tenant a partir de uma assinatura do Stripe. Idempotente;
+   * chamado pelos webhooks (checkout concluído, subscription updated, etc.).
+   */
+  async syncSubscription(subscription) {
+    const tenantId = subscription.metadata?.tenantId;
+    const planId = subscription.metadata?.planId;
+    let tenant = null;
+    if (tenantId) tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    if (!tenant && subscription.customer) {
+      tenant = await prisma.tenant.findFirst({ where: { stripeCustomerId: subscription.customer } });
+    }
+    if (!tenant) return null;
+
+    // Stripe status → nosso vocabulário
+    const map = {
+      trialing: "TRIAL",
+      active: "ACTIVE",
+      past_due: "PAST_DUE",
+      unpaid: "PAST_DUE",
+      canceled: "CANCELED",
+      incomplete: "TRIAL",
+      incomplete_expired: "CANCELED",
+    };
+    const status = map[subscription.status] || tenant.subscriptionStatus;
+    const periodEnd = subscription.current_period_end
+      ? new Date(subscription.current_period_end * 1000)
+      : tenant.nextBillingDate;
+    const trialEnd = subscription.trial_end ? new Date(subscription.trial_end * 1000) : tenant.trialEnd;
+
+    await prisma.tenant.update({
+      where: { id: tenant.id },
+      data: {
+        stripeSubscriptionId: subscription.id,
+        stripeCustomerId: subscription.customer || tenant.stripeCustomerId,
+        subscriptionStatus: status,
+        trialEnd,
+        nextBillingDate: periodEnd,
+        ...(planId ? { planId } : {}),
+      },
+    });
+    return tenant.id;
+  }
+
+  /**
+   * Registra o pagamento de uma cobrança recorrente do Stripe (fatura da
+   * assinatura, após o trial). Reativa o tenant, reinicia o consumo do ciclo
+   * e lança receita no fluxo de caixa. Idempotente pelo id da fatura Stripe.
+   */
+  async recordSubscriptionInvoicePaid(stripeInvoice) {
+    const tenant = await prisma.tenant.findFirst({
+      where: { stripeCustomerId: stripeInvoice.customer },
+      include: { plan: true },
+    });
+    if (!tenant) return null;
+
+    const amount = Number(stripeInvoice.amount_paid || 0) / 100;
+    const periodEnd = stripeInvoice.period_end
+      ? new Date(stripeInvoice.period_end * 1000)
+      : tenant.nextBillingDate;
+
+    await prisma.tenant.update({
+      where: { id: tenant.id },
+      data: {
+        subscriptionStatus: "ACTIVE",
+        nextBillingDate: periodEnd,
+        usedTokens: 0,
+        usedMessages: 0,
+        lastUsageReset: new Date(),
+      },
+    });
+
+    // Só lança receita para cobranças reais (> 0) e evita duplicar em retries.
+    if (amount > 0 && stripeInvoice.id) {
+      const marker = `[stripe:${stripeInvoice.id}]`;
+      const dup = await prisma.financialRecord.findFirst({
+        where: { description: { contains: marker } },
+      });
+      if (!dup) {
+        await prisma.financialRecord.create({
+          data: {
+            description: `Mensalidade Plano ${tenant.plan?.name || "SaaS"} ${marker}`,
+            amount,
+            type: "REVENUE",
+            category: "Plano SaaS",
+            paidAt: new Date(),
+            tenantId: tenant.id,
+          },
+        });
+      }
+    }
+
+    await audit({
+      tenantId: tenant.id,
+      action: "SUBSCRIPTION_INVOICE_PAID",
+      entity: "StripeInvoice",
+      entityId: stripeInvoice.id,
+      metadata: { amount, subscription: stripeInvoice.subscription },
+    });
+
+    return tenant.id;
+  }
+
   /**
    * Cria um checkout hospedado para a fatura e devolve a URL. Despacha
    * para o adaptador do provider ativo. Sem credenciais, cai no sandbox

@@ -213,6 +213,8 @@ export const getPlatformSettings = async (_req, res) => {
       stripeConfigured: !!(s.stripeSecretKey || process.env.STRIPE_SECRET_KEY),
       stripeWebhookMasked: maskSecret(s.stripeWebhookSecret || process.env.STRIPE_WEBHOOK_SECRET),
       stripeWebhookConfigured: !!(s.stripeWebhookSecret || process.env.STRIPE_WEBHOOK_SECRET),
+      stripePublishableMasked: maskSecret(s.stripePublishableKey || process.env.STRIPE_PUBLISHABLE_KEY),
+      stripePublishableConfigured: !!(s.stripePublishableKey || process.env.STRIPE_PUBLISHABLE_KEY),
       updatedAt: s.updatedAt,
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -223,7 +225,7 @@ export const updatePlatformSettings = async (req, res) => {
     const {
       paymentProvider, defaultTrialDays,
       mpAccessToken, paymentWebhookSecret,
-      stripeSecretKey, stripeWebhookSecret,
+      stripeSecretKey, stripeWebhookSecret, stripePublishableKey,
     } = req.body;
     const data = {};
 
@@ -235,6 +237,7 @@ export const updatePlatformSettings = async (req, res) => {
     if (typeof paymentWebhookSecret === "string" && paymentWebhookSecret.trim()) data.paymentWebhookSecret = paymentWebhookSecret.trim();
     if (typeof stripeSecretKey === "string" && stripeSecretKey.trim()) data.stripeSecretKey = stripeSecretKey.trim();
     if (typeof stripeWebhookSecret === "string" && stripeWebhookSecret.trim()) data.stripeWebhookSecret = stripeWebhookSecret.trim();
+    if (typeof stripePublishableKey === "string" && stripePublishableKey.trim()) data.stripePublishableKey = stripePublishableKey.trim();
     if (Number.isFinite(parseInt(defaultTrialDays))) data.defaultTrialDays = parseInt(defaultTrialDays);
 
     await prisma.platformSettings.upsert({
