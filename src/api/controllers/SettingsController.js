@@ -30,6 +30,8 @@ export const getSettings = async (req, res) => {
       openAiKey: tenant?.openAiKey,
       subscriptionStatus: tenant?.subscriptionStatus,
       trialEnd: tenant?.trialEnd,
+      stripeSubscriptionId: tenant?.stripeSubscriptionId,
+      planId: tenant?.planId,
       systemPrompt: tenant?.systemPrompt,
       webChatUrl: tenant?.webChatUrl,
       usedTokens: tenant?.usedTokens || 0,
