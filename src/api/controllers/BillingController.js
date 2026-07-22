@@ -30,8 +30,6 @@ export const getBillingPortalData = async (req, res) => {
         subscriptionStatus: tenant.subscriptionStatus,
         nextBillingDate: tenant.nextBillingDate,
         usedTokens: tenant.usedTokens,
-        usedProspects: tenant.usedProspects,
-        usedResearch: tenant.usedResearch,
         usedMessages: tenant.usedMessages,
         activeSdrs
       },
@@ -149,8 +147,6 @@ export const upgradePlan = async (req, res) => {
         nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
         // Reset usage stats for the new billing cycle
         usedTokens: 0,
-        usedProspects: 0,
-        usedResearch: 0,
         usedMessages: 0,
         lastUsageReset: new Date()
       }
