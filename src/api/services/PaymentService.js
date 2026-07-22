@@ -103,7 +103,7 @@ class PaymentService {
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      ui_mode: "embedded",
+      ui_mode: "embedded_page",
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
       subscription_data: {
