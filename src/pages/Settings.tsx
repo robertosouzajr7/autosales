@@ -837,8 +837,8 @@ export default function Settings() {
                              Plano Ativo
                            </Button>
                          ) : (
-                           <Button 
-                             onClick={() => handleUpgradePlan(p.id, p.name)}
+                           <Button
+                             onClick={() => navigate(`/checkout?plan=${p.id}`)}
                              disabled={isUpgrading}
                              className={`w-full h-10 rounded-2xl font-semibold uppercase text-xs transition-all ${
  isCurrent 
