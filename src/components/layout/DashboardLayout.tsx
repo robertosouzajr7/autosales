@@ -57,6 +57,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { LogoIcon } from "@/components/Logo";
+import { TrialBanner } from "@/components/billing/TrialBanner";
 
 interface NavItem {
   label: string;
@@ -532,6 +533,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </DropdownMenuContent>
           </DropdownMenu>
         </header>
+
+        {/* Aviso de trial / pagamento pendente */}
+        <TrialBanner />
 
         {/* Main content */}
         <main className="flex-1 overflow-y-auto">
