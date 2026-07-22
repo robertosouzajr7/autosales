@@ -126,29 +126,7 @@ export default function Dashboard() {
           }
         />
 
-        {/* Banner de trial — some quando plano está ATIVO */}
-        {!loading && trial.active && (
-          <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-lg bg-amber-500 text-white grid place-items-center shrink-0">
-                <Timer className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-amber-900">
-                  {trial.daysLeft > 0
-                    ? `${trial.daysLeft} ${trial.daysLeft === 1 ? "dia restante" : "dias restantes"} no seu trial${trial.planName ? ` do plano ${trial.planName}` : ""}`
-                    : "Seu período de teste acabou hoje"}
-                </p>
-                <p className="text-xs text-amber-800/80">
-                  Assine para não interromper o atendimento do seu agente.
-                </p>
-              </div>
-            </div>
-            <Button size="sm" onClick={() => navigate("/settings#billing")} className="bg-amber-500 hover:bg-amber-600 text-white">
-              Assinar agora
-            </Button>
-          </div>
-        )}
+        {/* O aviso de trial fica no topo do painel (TrialBanner no shell). */}
 
         {/* Checklist de setup — some quando concluído */}
         {!loading && !setupDone && (
