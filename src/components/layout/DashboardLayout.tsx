@@ -27,7 +27,8 @@ import {
   MessageCircle,
   Clock,
   Sparkles,
-  Package
+  Package,
+  CreditCard
 } from "lucide-react";
 import { notificationStore } from "@/lib/notifications";
 
@@ -78,6 +79,7 @@ const navItems: NavItem[] = [
   { label: "Agente de IA", icon: Bot, href: "/sdrs" },
   { label: "Lembretes", icon: Zap, href: "/automations" },
   { label: "Conexões", icon: Smartphone, href: "/connections" },
+  { label: "Assinatura", icon: CreditCard, href: "/assinatura" },
   { label: "Configurações", icon: Settings, href: "/settings" },
   { label: "Admin SaaS", icon: ShieldCheck, href: "/admin", adminOnly: true },
 ];

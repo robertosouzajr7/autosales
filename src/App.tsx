@@ -13,6 +13,7 @@ import Catalogo from "@/pages/Catalogo";
 import Onboarding from "@/pages/Onboarding";
 import Checkout from "@/pages/Checkout";
 import CheckoutReturn from "@/pages/CheckoutReturn";
+import Assinatura from "@/pages/Assinatura";
 import Dashboard from "@/pages/Dashboard";
 import Conversations from "@/pages/Conversations";
 import Contacts from "@/pages/Contacts";
@@ -62,6 +63,7 @@ function App() {
         <Route path="/docs" element={<Docs />} />
         <Route path="/connections" element={<Connections />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/assinatura" element={<Assinatura />} />
         <Route path="/analytics" element={<Analytics />} />
 
         {/* PROPRIETÁRIO DO SaaS (Admin) */}

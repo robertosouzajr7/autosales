@@ -225,6 +225,8 @@ router.get("/billing/portal", BillingController.getBillingPortalData);
 router.get("/billing/plans", BillingController.getActivePlans);
 router.post("/billing/checkout/:invoiceId", BillingController.createCheckoutSession);
 router.post("/billing/subscribe", BillingController.createSubscriptionCheckout);
+router.post("/billing/cancel", BillingController.cancelSubscription);
+router.post("/billing/resume", BillingController.resumeSubscription);
 router.post("/billing/upgrade", BillingController.upgradePlan);
 
 export default router;

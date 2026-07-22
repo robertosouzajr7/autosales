@@ -22,15 +22,32 @@ export const getBillingPortalData = async (req, res) => {
       where: { tenantId, active: true }
     });
 
+    // Estado da assinatura no Stripe (cancelamento agendado, fim do período).
+    let cancelAtPeriodEnd = false;
+    if (tenant.stripeSubscriptionId) {
+      try {
+        const stripe = await PaymentService.getStripe();
+        if (stripe) {
+          const sub = await stripe.subscriptions.retrieve(tenant.stripeSubscriptionId);
+          cancelAtPeriodEnd = !!sub.cancel_at_period_end;
+        }
+      } catch (e) {
+        /* segue sem info de cancelamento se o Stripe falhar */
+      }
+    }
+
     res.json({
       tenant: {
         id: tenant.id,
         name: tenant.name,
         email: tenant.email,
         subscriptionStatus: tenant.subscriptionStatus,
+        trialEnd: tenant.trialEnd,
         nextBillingDate: tenant.nextBillingDate,
         usedTokens: tenant.usedTokens,
         usedMessages: tenant.usedMessages,
+        stripeSubscriptionId: tenant.stripeSubscriptionId,
+        cancelAtPeriodEnd,
         activeSdrs
       },
       plan: tenant.plan,
@@ -170,5 +187,48 @@ export const upgradePlan = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+// POST /api/billing/cancel
+// Agenda o cancelamento para o fim do período atual (o cliente mantém acesso
+// até lá). O status local é sincronizado pelo webhook subscription.updated.
+export const cancelSubscription = async (req, res) => {
+  const tenantId = req.tenantId;
+  try {
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    if (!tenant?.stripeSubscriptionId) {
+      return res.status(400).json({ error: "Nenhuma assinatura ativa para cancelar." });
+    }
+    const stripe = await PaymentService.getStripe();
+    if (!stripe) return res.status(400).json({ error: "Stripe não configurado." });
+
+    const sub = await stripe.subscriptions.update(tenant.stripeSubscriptionId, {
+      cancel_at_period_end: true,
+    });
+    res.json({ success: true, cancelAtPeriodEnd: true, currentPeriodEnd: sub.current_period_end });
+  } catch (error) {
+    console.error("[Billing] Erro ao cancelar:", error.message);
+    res.status(500).json({ error: "Não foi possível cancelar a assinatura." });
+  }
+};
+
+// POST /api/billing/resume
+// Desfaz o cancelamento agendado (reativa a renovação automática).
+export const resumeSubscription = async (req, res) => {
+  const tenantId = req.tenantId;
+  try {
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    if (!tenant?.stripeSubscriptionId) {
+      return res.status(400).json({ error: "Nenhuma assinatura para reativar." });
+    }
+    const stripe = await PaymentService.getStripe();
+    if (!stripe) return res.status(400).json({ error: "Stripe não configurado." });
+
+    await stripe.subscriptions.update(tenant.stripeSubscriptionId, { cancel_at_period_end: false });
+    res.json({ success: true, cancelAtPeriodEnd: false });
+  } catch (error) {
+    console.error("[Billing] Erro ao reativar:", error.message);
+    res.status(500).json({ error: "Não foi possível reativar a assinatura." });
   }
 };
