@@ -10,14 +10,14 @@ import JWT_SECRET from "../config/jwt.js";
  *  1. Painel chama GET /google/auth-url → devolve a URL de consentimento do
  *     Google. O tenant é embutido num "state" assinado (JWT curto), porque o
  *     callback do Google volta sem o header Authorization.
- *  2. Usuário autoriza no Google → Google redireciona para GET /google/callback
- *     (rota pública) com ?code&state. Trocamos o code por tokens e salvamos o
- *     refresh_token em tenant.googleRefreshToken.
+ *  2. Usuário autoriza no Google → Google redireciona para
+ *     GET /api/auth/google/callback (rota pública) com ?code&state. Trocamos o
+ *     code por tokens e salvamos o refresh_token em tenant.googleRefreshToken.
  *  3. calendar_service.js usa esse refresh_token para ler/gravar eventos.
  *
  * Requer no ambiente: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET e
- * GOOGLE_REDIRECT_URI (= {URL_DA_API}/api/google/callback), configurados num
- * projeto do Google Cloud com a Google Calendar API habilitada.
+ * GOOGLE_REDIRECT_URI (= {URL_DA_API}/api/auth/google/callback), configurados
+ * num projeto do Google Cloud com a Google Calendar API habilitada.
  */
 
 const SCOPES = ["https://www.googleapis.com/auth/calendar.events"];
@@ -73,7 +73,7 @@ export const getAuthUrl = async (req, res) => {
   }
 };
 
-// GET /google/callback — ROTA PÚBLICA (Google redireciona para cá).
+// GET /api/auth/google/callback — ROTA PÚBLICA (Google redireciona para cá).
 export const handleCallback = async (req, res) => {
   const frontend = process.env.FRONTEND_URL || "http://localhost:8080";
   const back = (status) => res.redirect(`${frontend}/connections?google=${status}`);
