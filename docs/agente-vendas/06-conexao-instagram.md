@@ -69,18 +69,29 @@ O token do Explorer expira em ~1 hora. Para não cair a conexão:
 2. Para gerar um **token de longa duração** (60 dias) ou permanente, o caminho mais simples é: no Graph API Explorer, troque o token de usuário por um de longa duração e refaça o `me/accounts` — o `access_token` da Página herdado de um user token de longa duração **não expira** enquanto as permissões forem mantidas.
    - Referência oficial: [Tokens de longa duração](https://developers.facebook.com/docs/facebook-login/guides/access-tokens/get-long-lived/).
 
-## Passo 6 — Configurar o Webhook (para o agente RECEBER as mensagens)
+## Passo 6 — Configurar variáveis do servidor (OBRIGATÓRIO)
+
+Antes do webhook funcionar, o **servidor da plataforma** (EasyPanel → serviço `autosales-api` → variáveis de ambiente) precisa de DUAS variáveis do seu app da Meta:
+
+| Variável | Onde pegar | Para quê |
+|---|---|---|
+| `META_VERIFY_TOKEN` | Você inventa um texto qualquer (ex.: uma senha) e repete igual no webhook da Meta | Handshake inicial do webhook (GET) |
+| `META_APP_SECRET` | Meta → app → **Configurações → Básico → "Chave Secreta do App"** (clique em *Mostrar*) — [link direto](https://developers.facebook.com/apps/SEU_APP_ID/settings/basic/) | Validar a assinatura de CADA mensagem recebida |
+
+⚠️ **Sem o `META_APP_SECRET`, o servidor rejeita todas as mensagens com 403** (`[Meta Webhook] META_APP_SECRET não configurado — rejeitando`). Depois de definir as duas, **reinicie/redeploy a API**.
+
+## Passo 7 — Configurar o Webhook na Meta (para o agente RECEBER as mensagens)
 
 1. No app, menu lateral **Webhooks** (ou dentro de Instagram → **Configurar webhooks**).
    - Link direto: `https://developers.facebook.com/apps/SEU_APP_ID/webhooks/`
 2. No seletor, escolha **"Instagram"** e clique em **"Assinar este objeto" / Subscribe**.
 3. Preencha:
    - **URL de callback (Callback URL):** `{SUA_API}/api/webhook/meta`
-   - **Token de verificação (Verify Token):** o valor definido na variável de ambiente **`META_VERIFY_TOKEN`** do servidor. (Se você não sabe qual é, defina-o no EasyPanel e use o mesmo texto aqui — precisa ser idêntico.)
-4. Clique em **"Verificar e salvar"**. Se der certo, o campo fica verde. (Se der erro, a API precisa estar no ar e o `META_VERIFY_TOKEN` precisa bater exatamente.)
+   - **Token de verificação (Verify Token):** o mesmo valor de `META_VERIFY_TOKEN` do servidor.
+4. Clique em **"Verificar e salvar"**. Se der certo, o campo fica verde.
 5. Ainda nos campos do webhook do Instagram, **assine o campo `messages`** (marque a caixa e salve).
 
-## Passo 7 — Colar no painel
+## Passo 8 — Colar no painel
 
 No painel **Conexões → aba Instagram**, preencha:
 | Campo do painel | Valor (dos passos acima) |
@@ -98,6 +109,7 @@ Clique em **Conectar Instagram**. Pronto — mande uma DM de teste de outra cont
 
 | Sintoma | Causa provável | Solução |
 |---|---|---|
+| Mensagem chega mas o log diz `META_APP_SECRET não configurado — rejeitando` (403) | Falta a variável `META_APP_SECRET` no servidor | Defina `META_APP_SECRET` (Configurações → Básico do app) no EasyPanel e reinicie a API |
 | Webhook não verifica (erro ao salvar) | `META_VERIFY_TOKEN` diferente, ou API fora do ar | Confirme que o token no Meta é idêntico ao do servidor e que `{SUA_API}/api/webhook/meta` responde |
 | Conecta, mas agente não responde DMs | Campo `messages` não assinado, ou permissão faltando | Reveja Passo 6.5 (assinar `messages`) e as permissões do Passo 3 |
 | Some depois de 1 hora | Token de curta duração | Gere token de longa duração (Passo 5) |
