@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { QRCodeCanvas } from "qrcode.react";
 import {
   Plus, Smartphone, CheckCircle2, RefreshCw, Trash2, Code2,
-  Globe, Instagram, Copy, ExternalLink, ShieldCheck,
+  Globe, Instagram, Copy, ExternalLink, ShieldCheck, CalendarClock,
 } from "lucide-react";
 
 interface Connection {
@@ -70,6 +70,50 @@ export default function Connections() {
   const [igForm, setIgForm] = useState({ name: "", igId: "", pageId: "", accessToken: "" });
   const [igLoading, setIgLoading] = useState(false);
 
+  // Google Calendar
+  const [gcal, setGcal] = useState<{ configured: boolean; connected: boolean }>({ configured: false, connected: false });
+  const [gcalLoading, setGcalLoading] = useState(false);
+
+  const fetchGcal = async () => {
+    try {
+      const res = await fetch("/api/google/status", { headers: authHeaders() });
+      const data = await res.json();
+      if (res.ok) setGcal({ configured: !!data.configured, connected: !!data.connected });
+    } catch {
+      /* silent */
+    }
+  };
+
+  const connectGoogle = async () => {
+    setGcalLoading(true);
+    try {
+      const res = await fetch("/api/google/auth-url", { headers: authHeaders() });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        window.location.href = data.url; // redireciona para o consentimento do Google
+      } else {
+        toast({ title: "Não foi possível iniciar", description: data.error, variant: "destructive" });
+        setGcalLoading(false);
+      }
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message, variant: "destructive" });
+      setGcalLoading(false);
+    }
+  };
+
+  const disconnectGoogle = async () => {
+    setGcalLoading(true);
+    try {
+      const res = await fetch("/api/google/disconnect", { method: "POST", headers: authHeaders() });
+      if (res.ok) {
+        toast({ title: "Google Calendar desconectado" });
+        setGcal((g) => ({ ...g, connected: false }));
+      }
+    } finally {
+      setGcalLoading(false);
+    }
+  };
+
   const fetchInstagram = async () => {
     try {
       const res = await fetch("/api/whatsapp/accounts?channel=INSTAGRAM", { headers: authHeaders() });
@@ -114,7 +158,25 @@ export default function Connections() {
   useEffect(() => {
     fetchConnections();
     fetchInstagram();
+    fetchGcal();
     setTenantId(localStorage.getItem("tenantId") || "");
+
+    // Retorno do OAuth do Google (?google=connected|denied|expired|error|notoken)
+    const params = new URLSearchParams(window.location.search);
+    const g = params.get("google");
+    if (g) {
+      const map: Record<string, { title: string; variant?: "destructive" }> = {
+        connected: { title: "Google Calendar conectado com sucesso" },
+        denied: { title: "Você cancelou a autorização no Google", variant: "destructive" },
+        expired: { title: "A sessão de conexão expirou, tente de novo", variant: "destructive" },
+        notoken: { title: "Google não retornou o token — remova o acesso em myaccount.google.com e reconecte", variant: "destructive" },
+        error: { title: "Falha ao conectar com o Google", variant: "destructive" },
+      };
+      const m = map[g] || map.error;
+      toast({ title: m.title, variant: m.variant });
+      window.history.replaceState({}, "", "/connections");
+      fetchGcal();
+    }
   }, []);
 
   const handleAddConnection = async () => {
@@ -222,6 +284,12 @@ export default function Connections() {
               <Instagram className="w-4 h-4 mr-2" /> Instagram
               {igAccounts.length > 0 && (
                 <Badge className="ml-2 bg-emerald-100 text-emerald-700 border-none text-[10px] px-1.5 py-0">{igAccounts.length}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="agenda" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm">
+              <CalendarClock className="w-4 h-4 mr-2" /> Agenda
+              {gcal.connected && (
+                <Badge className="ml-2 bg-emerald-100 text-emerald-700 border-none text-[10px] px-1.5 py-0">on</Badge>
               )}
             </TabsTrigger>
           </TabsList>
@@ -412,6 +480,64 @@ export default function Connections() {
                   Conectar Instagram
                 </Button>
               </div>
+            </Card>
+          </TabsContent>
+
+          {/* AGENDA / GOOGLE CALENDAR ─────────────────────────── */}
+          <TabsContent value="agenda" className="space-y-6">
+            <Card className="rounded-2xl border-border p-6 space-y-5">
+              <div className="flex items-start gap-4">
+                <div className="h-11 w-11 rounded-xl bg-blue-100 text-blue-600 grid place-items-center shrink-0">
+                  <CalendarClock className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-base font-semibold text-foreground">Google Calendar</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Conecte sua agenda para o agente consultar horários livres e marcar compromissos direto no seu calendário — sem conflito de horário.
+                  </p>
+                </div>
+                {gcal.connected && <Badge className="bg-emerald-100 text-emerald-700 border-none">Conectado</Badge>}
+              </div>
+
+              {!gcal.configured ? (
+                <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800">
+                  A integração com o Google ainda não foi habilitada no servidor. É preciso configurar as credenciais OAuth
+                  (<code>GOOGLE_CLIENT_ID</code>, <code>GOOGLE_CLIENT_SECRET</code> e <code>GOOGLE_REDIRECT_URI</code>) no ambiente da plataforma.
+                </div>
+              ) : gcal.connected ? (
+                <div className="space-y-4">
+                  <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 flex items-start gap-3 text-sm text-emerald-800">
+                    <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
+                    <span>Sua agenda está conectada. Novos agendamentos feitos pelo agente aparecem no seu Google Calendar, e horários já ocupados no calendário não são oferecidos aos clientes.</span>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button variant="outline" onClick={disconnectGoogle} disabled={gcalLoading} className="gap-2 text-rose-600 border-rose-200 hover:bg-rose-50">
+                      {gcalLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                      Desconectar
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="rounded-xl bg-muted p-4 space-y-2 text-xs text-muted-foreground">
+                    <p className="font-semibold text-foreground uppercase tracking-wide">Como funciona</p>
+                    <ol className="space-y-1 list-decimal list-inside">
+                      <li>Clique em <b>Conectar Google Calendar</b> — você vai para a tela de permissão do Google.</li>
+                      <li>Escolha a conta e autorize o acesso à agenda.</li>
+                      <li>Você volta para cá já conectado. Pronto.</li>
+                    </ol>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <ShieldCheck className="w-4 h-4" /> Acesso apenas à agenda (eventos). Você pode desconectar quando quiser.
+                    </div>
+                    <Button onClick={connectGoogle} disabled={gcalLoading} className="gap-2">
+                      {gcalLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CalendarClock className="w-4 h-4" />}
+                      Conectar Google Calendar
+                    </Button>
+                  </div>
+                </div>
+              )}
             </Card>
           </TabsContent>
         </Tabs>

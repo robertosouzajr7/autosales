@@ -73,7 +73,15 @@ class PaymentService {
    * criado sob demanda a partir de name/priceMonthly e cacheado em stripePriceId.
    */
   async ensureStripePrice(stripe, plan) {
-    if (plan.stripePriceId) return plan.stripePriceId;
+    const cents = Math.round(Number(plan.priceMonthly) * 100);
+    if (plan.stripePriceId) {
+      // Preços no Stripe são imutáveis: se o valor do plano mudou (ou o price
+      // foi desativado/apagado lá), cria um novo em vez de reutilizar o antigo.
+      try {
+        const existing = await stripe.prices.retrieve(plan.stripePriceId);
+        if (existing?.active && existing?.unit_amount === cents) return plan.stripePriceId;
+      } catch { /* price não existe mais no Stripe → recria abaixo */ }
+    }
     const price = await stripe.prices.create({
       currency: "brl",
       unit_amount: Math.round(Number(plan.priceMonthly) * 100),
