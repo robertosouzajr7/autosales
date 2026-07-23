@@ -51,7 +51,8 @@ router.post("/auth/verify-code", AuthController.verifyCode);
 
 // Google Calendar OAuth callback — PÚBLICO (o Google redireciona sem header
 // Authorization; a identidade do tenant vem no "state" assinado).
-router.get("/google/callback", GoogleCalendarController.handleCallback);
+// Caminho casa com GOOGLE_REDIRECT_URI (…/api/auth/google/callback).
+router.get("/auth/google/callback", GoogleCalendarController.handleCallback);
 
 // Protected Routes (Tenant context)
 router.use(authMiddleware);
