@@ -1,6 +1,7 @@
 import cron from "node-cron";
 import prisma from "../config/prisma.js";
 import { EmailService } from "../../../email_service.js";
+import { sendTrialReminder } from "./EmailService.js";
 
 class BillingService {
   constructor() {
@@ -17,7 +18,59 @@ class BillingService {
       } catch (error) {
         console.error("[BillingService] ❌ Erro ao executar rotina diária de faturamento:", error);
       }
+      try {
+        await this.runTrialReminders();
+      } catch (error) {
+        console.error("[BillingService] ❌ Erro ao enviar lembretes de trial:", error);
+      }
     });
+  }
+
+  /**
+   * Lembretes de fim de teste por e-mail (D-3, D-1 e D-0) para tenants em
+   * TRIAL sem assinatura ativa. Idempotente por dia via AuditLog, então roda
+   * uma vez por marco mesmo se o cron disparar mais de uma vez.
+   */
+  async runTrialReminders() {
+    const now = new Date();
+    const startOfToday = new Date(now); startOfToday.setHours(0, 0, 0, 0);
+    const dayMs = 86_400_000;
+
+    const tenants = await prisma.tenant.findMany({
+      where: {
+        active: true,
+        subscriptionStatus: "TRIAL",
+        stripeSubscriptionId: null,
+        trialEnd: { not: null },
+      },
+      include: { plan: true },
+    });
+
+    for (const t of tenants) {
+      const end = new Date(t.trialEnd); end.setHours(0, 0, 0, 0);
+      const daysLeft = Math.round((end.getTime() - startOfToday.getTime()) / dayMs);
+      if (![3, 1, 0].includes(daysLeft)) continue;
+      if (!t.email) continue;
+
+      // Já enviou um lembrete hoje? (evita duplicar em reinícios/re-execuções)
+      const already = await prisma.auditLog.findFirst({
+        where: { tenantId: t.id, action: "TRIAL_REMINDER", createdAt: { gte: startOfToday } },
+      });
+      if (already) continue;
+
+      try {
+        await sendTrialReminder({ to: t.email, name: t.name, daysLeft, planName: t.plan?.name });
+        await prisma.auditLog.create({
+          data: {
+            tenantId: t.id, action: "TRIAL_REMINDER", entity: "Tenant", entityId: t.id,
+            metadata: JSON.stringify({ daysLeft }),
+          },
+        });
+        console.log(`[BillingService] ✉️ Lembrete de trial (D-${daysLeft}) enviado para ${t.email}`);
+      } catch (e) {
+        console.error(`[BillingService] Falha ao enviar lembrete para ${t.email}:`, e.message);
+      }
+    }
   }
 
   async runBillingCheck() {

@@ -187,7 +187,8 @@ router.delete("/admin/financial/transactions/:id", adminMiddleware, FinancialCon
 router.post("/admin/financial/trigger-billing", adminMiddleware, async (req, res) => {
   try {
     await BillingService.runBillingCheck();
-    res.json({ success: true, message: "Faturamento mensal processado com sucesso de forma manual." });
+    await BillingService.runTrialReminders();
+    res.json({ success: true, message: "Faturamento e lembretes de trial processados manualmente." });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
