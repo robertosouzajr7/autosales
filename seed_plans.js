@@ -2,43 +2,79 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 /**
- * Planos alinhados ao produto real: IA de agendamento no WhatsApp.
- * Quotas calibradas pelo custo operacional (tokens Gemini, mensagens Meta).
- * Custos unitários informativos (usados no cálculo de margem no admin).
+ * Grade de planos v2 — entrada acessível para pequenos negócios.
+ * Degraus de ~2x (97 → 197 → 497 → 997) + Enterprise sob consulta (inativo
+ * na vitrine; vendido pelo comercial). Ver docs/precificacao-v2-acessivel.md.
+ *
+ * Custos unitários informativos (cálculo de margem no admin) calibrados para
+ * Gemini 2.5 Flash: ~R$ 3,50 por 1M tokens ⇒ R$ 0,0035/1k. Mensagens via
+ * Baileys não têm custo por envio.
  */
 async function main() {
-  console.log('🌱 Semeando planos alinhados ao produto atual…');
+  console.log('🌱 Semeando grade de planos v2 (acessível)…');
 
   const plans = [
     {
-      id: 'starter-plan',
-      name: 'Starter',
-      priceMonthly: 297.0,
-      priceYearly: 2970.0,
+      id: 'essencial-plan',
+      name: 'Essencial',
+      priceMonthly: 97.0,
+      priceYearly: 970.0,
 
-      // Hard limits
-      maxLeads: 500,
+      // Hard limits — plano de entrada: negócio com 1–3 contatos novos/dia
+      maxLeads: 300,
       maxSdrs: 1,
-      maxUsers: 2,
+      maxUsers: 1,
       maxWhatsAppNumbers: 1,
-      maxKnowledgeBaseChars: 50_000, // ~35 páginas de texto
+      maxKnowledgeBaseChars: 20_000,
 
       // Créditos mensais
-      maxTokens: 100_000,             // ~50 conversas AI médias
-      maxMessages: 2_000,             // envios WhatsApp / mês
+      maxTokens: 50_000,              // ~25-30 conversas AI completas
+      maxMessages: 1_000,
 
-      // Toggles de módulo
+      // Toggles de módulo — agenda/automações desde o 1º plano (valor imediato)
       enableSdr: true,
       enableTokens: true,
       enableMessages: true,
-      enableCalendar: true,          // Google Calendar já no Starter
-      enableAutomations: true,       // lembretes básicos
-      enableWebhooks: false,         // API pública só a partir do Pro
+      enableCalendar: true,
+      enableAutomations: true,
+      enableWebhooks: false,
 
-      // Custos operacionais (para admin ver margem)
-      sdrUnitCost: 15.0,
-      tokenUnitCost: 0.08,
-      messageUnitCost: 0.05,
+      sdrUnitCost: 1.0,
+      tokenUnitCost: 0.0035,
+      messageUnitCost: 0.0,
+
+      features: JSON.stringify({
+        support: 'Email',
+        rag: false,
+        priority: false,
+      }),
+      active: true,
+    },
+    {
+      id: 'starter-plan',
+      name: 'Starter',
+      priceMonthly: 197.0,
+      priceYearly: 1970.0,
+
+      maxLeads: 1_000,
+      maxSdrs: 1,
+      maxUsers: 2,
+      maxWhatsAppNumbers: 1,
+      maxKnowledgeBaseChars: 50_000,
+
+      maxTokens: 150_000,             // ~75-90 conversas AI
+      maxMessages: 3_000,
+
+      enableSdr: true,
+      enableTokens: true,
+      enableMessages: true,
+      enableCalendar: true,
+      enableAutomations: true,
+      enableWebhooks: false,
+
+      sdrUnitCost: 1.0,
+      tokenUnitCost: 0.0035,
+      messageUnitCost: 0.0,
 
       features: JSON.stringify({
         support: 'Email',
@@ -50,8 +86,8 @@ async function main() {
     {
       id: 'pro-plan',
       name: 'Pro',
-      priceMonthly: 797.0,
-      priceYearly: 7970.0,
+      priceMonthly: 497.0,
+      priceYearly: 4970.0,
 
       maxLeads: 3_000,
       maxSdrs: 3,
@@ -59,7 +95,7 @@ async function main() {
       maxWhatsAppNumbers: 2,
       maxKnowledgeBaseChars: 150_000,
 
-      maxTokens: 500_000,
+      maxTokens: 600_000,
       maxMessages: 10_000,
 
       enableSdr: true,
@@ -69,9 +105,9 @@ async function main() {
       enableAutomations: true,
       enableWebhooks: true,
 
-      sdrUnitCost: 15.0,
-      tokenUnitCost: 0.08,
-      messageUnitCost: 0.05,
+      sdrUnitCost: 1.0,
+      tokenUnitCost: 0.0035,
+      messageUnitCost: 0.0,
 
       features: JSON.stringify({
         support: 'Prioritário',
@@ -81,6 +117,41 @@ async function main() {
       active: true,
     },
     {
+      id: 'escala-plan',
+      name: 'Escala',
+      priceMonthly: 997.0,
+      priceYearly: 9970.0,
+
+      maxLeads: 10_000,
+      maxSdrs: 10,
+      maxUsers: 15,
+      maxWhatsAppNumbers: 5,
+      maxKnowledgeBaseChars: 500_000,
+
+      maxTokens: 2_000_000,
+      maxMessages: 30_000,
+
+      enableSdr: true,
+      enableTokens: true,
+      enableMessages: true,
+      enableCalendar: true,
+      enableAutomations: true,
+      enableWebhooks: true,
+
+      sdrUnitCost: 1.0,
+      tokenUnitCost: 0.0035,
+      messageUnitCost: 0.0,
+
+      features: JSON.stringify({
+        support: 'Implantação assistida',
+        rag: true,
+        priority: true,
+      }),
+      active: true,
+    },
+    {
+      // Fora da vitrine: vendido sob consulta pelo comercial (redes/franquias).
+      // Fica inativo para não aparecer na landing/checkout self-service.
       id: 'enterprise-plan',
       name: 'Enterprise',
       priceMonthly: 1997.0,
@@ -102,9 +173,9 @@ async function main() {
       enableAutomations: true,
       enableWebhooks: true,
 
-      sdrUnitCost: 15.0,
-      tokenUnitCost: 0.08,
-      messageUnitCost: 0.05,
+      sdrUnitCost: 1.0,
+      tokenUnitCost: 0.0035,
+      messageUnitCost: 0.0,
 
       features: JSON.stringify({
         support: 'Gerente dedicado',
@@ -112,7 +183,7 @@ async function main() {
         priority: true,
         sla: '4h',
       }),
-      active: true,
+      active: false,
     },
   ];
 
@@ -124,7 +195,7 @@ async function main() {
     });
   }
 
-  console.log('✅ Planos configurados: Starter, Pro, Enterprise');
+  console.log('✅ Planos configurados: Essencial, Starter, Pro, Escala (+ Enterprise sob consulta)');
 }
 
 main()

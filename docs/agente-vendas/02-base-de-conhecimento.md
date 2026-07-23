@@ -43,37 +43,52 @@ Segmentos que mais usam: clínicas e consultórios, salões de beleza e estétic
 
 === PLANOS E PREÇOS (valores mensais) ===
 
-STARTER — R$ 297/mês (ou R$ 2.970/ano = 2 meses grátis)
-Para quem está começando a automatizar o atendimento.
+ESSENCIAL — R$ 97/mês (ou R$ 970/ano = 2 meses grátis)
+Para o pequeno negócio que recebe até 2-3 contatos novos por dia.
 - 1 agente de IA
 - 1 número de WhatsApp conectado
+- 1 usuário no painel
+- Até 300 contatos/leads no CRM
+- 1.000 mensagens enviadas por mês
+- 50 mil tokens de IA por mês (aprox. 25-30 conversas completas com IA)
+- Agenda com Google Calendar e automações de lembrete JÁ INCLUÍDAS
+- Suporte por e-mail
+- Custa cerca de R$ 3 por dia — menos que um café.
+
+STARTER — R$ 197/mês (ou R$ 1.970/ano = 2 meses grátis)
+Para quem já tem movimento constante de clientes.
+- 1 agente de IA
+- 1 número de WhatsApp
 - 2 usuários no painel
-- Até 500 contatos/leads no CRM
-- 2.000 mensagens enviadas por mês
-- 100 mil tokens de IA por mês (aprox. 50 conversas completas com IA)
-- Agenda com Google Calendar e automações de lembrete incluídas
+- Até 1.000 contatos/leads
+- 3.000 mensagens por mês
+- 150 mil tokens de IA por mês (aprox. 75-90 conversas)
+- Agenda + automações incluídas
 - Suporte por e-mail
 
-PRO — R$ 797/mês (ou R$ 7.970/ano = 2 meses grátis) — O MAIS ESCOLHIDO
+PRO — R$ 497/mês (ou R$ 4.970/ano = 2 meses grátis) — O MAIS ESCOLHIDO
 Para negócios com fluxo alto de conversas ou mais de um canal.
 - 3 agentes de IA (ex.: um para vendas, um para suporte, um para agendamento)
 - 2 números de WhatsApp
 - 5 usuários no painel
 - Até 3.000 contatos/leads
 - 10.000 mensagens por mês
-- 500 mil tokens de IA por mês
+- 600 mil tokens de IA por mês
 - Tudo do Starter + API e webhooks para integrações
 - Suporte prioritário
 
-ENTERPRISE — R$ 1.997/mês (ou R$ 19.970/ano = 2 meses grátis)
-Para operações grandes, redes e franquias.
+ESCALA — R$ 997/mês (ou R$ 9.970/ano = 2 meses grátis)
+Para operações grandes, com equipe e vários canais.
 - 10 agentes de IA
-- 10 números de WhatsApp
-- 20 usuários
-- Até 20.000 contatos/leads
-- 50.000 mensagens por mês
-- 2,5 milhões de tokens de IA por mês
-- API e webhooks + gerente de conta dedicado
+- 5 números de WhatsApp
+- 15 usuários
+- Até 10.000 contatos/leads
+- 30.000 mensagens por mês
+- 2 milhões de tokens de IA por mês
+- API e webhooks + implantação assistida (configuramos junto)
+
+ENTERPRISE — SOB CONSULTA
+Para redes, franquias e operações com necessidades específicas (10+ números, SLA, gerente dedicado). Nesse caso, agende uma conversa com o time — a Sofia agenda na hora.
 
 Observações sobre planos:
 - Todos os planos têm 7 dias de teste grátis sem cartão.
@@ -81,11 +96,12 @@ Observações sobre planos:
 - Pode mudar de plano ou cancelar a qualquer momento dentro do painel, sem multa e sem fidelidade.
 - No plano anual, paga 10 mensalidades e usa 12 meses.
 - "Tokens de IA" são a medida de uso do cérebro do agente; se acabarem, o agente pausa até o próximo ciclo (ou o cliente pode fazer upgrade). Mensagens simples de aviso/lembrete não gastam tokens de IA.
+- Comparativo honesto com o mercado: soluções equivalentes no Brasil partem de R$ 149 a R$ 379/mês só na entrada — o Essencial custa R$ 97 com agenda inclusa.
 
 === RESPOSTAS PARA OBJEÇÕES COMUNS ===
 
 "É caro."
-Um atendente humano custa salário + encargos e trabalha 8h por dia. O Starter custa R$ 297/mês — menos de R$ 10 por dia — e responde em segundos, 24h por dia, sem folga. Uma única venda recuperada de madrugada costuma pagar o mês. E dá para comprovar isso no teste grátis antes de pagar qualquer coisa.
+Um atendente humano custa salário + encargos e trabalha 8h por dia. O Essencial custa R$ 97/mês — cerca de R$ 3 por dia — e responde em segundos, 24h por dia, sem folga. Uma única venda recuperada de madrugada costuma pagar o mês inteiro. E dá para comprovar isso no teste grátis antes de pagar qualquer coisa. Para comparar: soluções parecidas no mercado partem de R$ 149 a R$ 379/mês.
 
 "IA vai atender mal / meus clientes vão odiar."
 O agente só responde com as informações que o próprio dono cadastra (serviços, preços, regras), no tom que o dono escolhe. Se o assunto foge do script ou o cliente pede uma pessoa, ele transfere para a equipe na hora, com todo o histórico. E o dono pode assumir qualquer conversa a qualquer momento pela caixa de entrada.
