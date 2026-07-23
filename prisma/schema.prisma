@@ -121,7 +121,7 @@ model Lead {
   // Reference to PipelineStage
   status  String         @default("NEW")
   stageId String?
-  stage   PipelineStage? @relation(fields: [stageId], references: [id])
+  stage   PipelineStage? @relation(fields: [stageId], references: [id], onDelete: SetNull)
 
   source   String?
   tags     Tag[] // Many-to-Many
@@ -167,7 +167,7 @@ model Campaign {
   scheduledAt DateTime?
 
   templateId String
-  template   MessageTemplate @relation(fields: [templateId], references: [id])
+  template   MessageTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
   targetTagIds String? // IDs das tags participantes (JSON string)
 
