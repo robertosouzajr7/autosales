@@ -59,6 +59,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { LogoIcon } from "@/components/Logo";
 import { TrialBanner } from "@/components/billing/TrialBanner";
+import { SubscriptionGate } from "@/components/billing/SubscriptionGate";
 
 interface NavItem {
   label: string;
@@ -538,6 +539,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Aviso de trial / pagamento pendente */}
         <TrialBanner />
+
+        {/* Trava total quando o acesso expira */}
+        <SubscriptionGate />
 
         {/* Main content */}
         <main className="flex-1 overflow-y-auto">
