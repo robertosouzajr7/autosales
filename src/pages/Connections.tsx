@@ -142,7 +142,9 @@ export default function Connections() {
     setShowQrModal(true);
     setQrCode(null);
     setQrStatus("Solicitando QR…");
-    const eventSource = new EventSource(`/api/whatsapp/qr/${id}`);
+    // EventSource não envia headers → token vai na query (o authMiddleware aceita).
+    const token = localStorage.getItem("token");
+    const eventSource = new EventSource(`/api/whatsapp/qr/${id}?token=${encodeURIComponent(token || "")}`);
     eventSource.onmessage = (ev) => {
       try {
         const data = JSON.parse(ev.data);
