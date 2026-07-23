@@ -106,7 +106,7 @@ function card(p) {
   .mut { color:${dark ? "rgba(226,232,255,.62)" : "#64748b"}; }
   .top { display:flex; align-items:center; justify-content:space-between; }
   .brand { display:flex; align-items:center; gap:16px; }
-  .wm { font-size:34px; font-weight:700; letter-spacing:-.02em; color:${dark ? "#fff" : "#0f172a"}; }
+  .wm { font-size:29px; font-weight:700; letter-spacing:-.02em; color:${dark ? "#fff" : "#0f172a"}; white-space:nowrap; }
   .badge { font-size:22px; font-weight:700; letter-spacing:.02em; color:#fff;
     background:linear-gradient(90deg,#2563EB,#7c5cff); padding:12px 22px; border-radius:999px;
     box-shadow:0 12px 30px -8px rgba(37,99,235,.6); }
@@ -140,8 +140,8 @@ function card(p) {
   </style></head><body>
     <div class="frame">
       <div class="top">
-        <div class="brand">${LOGO}<span class="wm">Ápice</span></div>
-        ${p.highlight ? `<span class="badge">★ Mais escolhido</span>` : `<span class="accent mut">agentes de IA</span>`}
+        <div class="brand">${LOGO}<span class="wm">Agentes Virtuais</span></div>
+        ${p.highlight ? `<span class="badge">★ Mais escolhido</span>` : `<span class="accent mut">atende · vende · agenda</span>`}
       </div>
 
       <div class="name ink">Plano <em>${p.name}</em></div>

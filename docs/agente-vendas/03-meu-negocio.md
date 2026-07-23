@@ -1,6 +1,6 @@
 # Meu Negócio — campos do perfil da conta principal
 
-Conteúdo para a tela **Meu Negócio** da conta principal (a "empresa" aqui é a própria Ápice). O agente usa esses dados como contexto em toda conversa.
+Conteúdo para a tela **Meu Negócio** da conta principal (a "empresa" aqui é a própria Agentes Virtuais). O agente usa esses dados como contexto em toda conversa.
 
 > Troque `{SEU_DOMINIO}`, `{EMAIL_COMERCIAL}` e endereço pelos dados reais.
 
@@ -12,7 +12,7 @@ Conteúdo para a tela **Meu Negócio** da conta principal (a "empresa" aqui é a
 
 **Sobre o negócio (businessAbout):**
 ```
-A Ápice é uma plataforma brasileira de agentes de inteligência artificial para atendimento, vendas e agendamento. Nossos agentes respondem clientes pelo WhatsApp, Instagram e site em segundos, 24 horas por dia — treinados com as informações de cada negócio. A plataforma inclui CRM com funil visual, caixa de entrada unificada, agenda integrada ao Google Calendar, campanhas em massa, automações e relatórios. Atendemos clínicas, salões, academias, restaurantes, prestadores de serviço e e-commerces. Teste grátis de 7 dias, sem cartão de crédito.
+A Agentes Virtuais é uma plataforma brasileira de agentes de inteligência artificial para atendimento, vendas e agendamento. Nossos agentes respondem clientes pelo WhatsApp, Instagram e site em segundos, 24 horas por dia — treinados com as informações de cada negócio. A plataforma inclui CRM com funil visual, caixa de entrada unificada, agenda integrada ao Google Calendar, campanhas em massa, automações e relatórios. Atendemos clínicas, salões, academias, restaurantes, prestadores de serviço e e-commerces. Teste grátis de 7 dias, sem cartão de crédito.
 ```
 
 **Endereço (businessAddress):**

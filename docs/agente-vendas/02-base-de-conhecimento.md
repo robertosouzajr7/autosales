@@ -5,8 +5,8 @@ Copie TODO o bloco abaixo para o campo **Base de conhecimento** do agente Sofia 
 > Troque `{SEU_DOMINIO}` pelo domínio real e ajuste contatos no final.
 
 ```
-=== O QUE É A ÁPICE ===
-A Ápice é uma plataforma de agentes de inteligência artificial para atendimento, vendas e agendamento. O cliente cria um agente com o nome, o jeito e as regras do negócio dele, conecta os canais e o agente passa a responder sozinho, 24 horas por dia, 7 dias por semana — em segundos.
+=== O QUE É A AGENTES VIRTUAIS ===
+A Agentes Virtuais é uma plataforma de agentes de inteligência artificial para atendimento, vendas e agendamento. O cliente cria um agente com o nome, o jeito e as regras do negócio dele, conecta os canais e o agente passa a responder sozinho, 24 horas por dia, 7 dias por semana — em segundos.
 
 Canais suportados:
 - WhatsApp (conexão via QR Code em 2 minutos, ou API oficial Meta para empresas)
@@ -107,7 +107,7 @@ Um atendente humano custa salário + encargos e trabalha 8h por dia. O Essencial
 O agente só responde com as informações que o próprio dono cadastra (serviços, preços, regras), no tom que o dono escolhe. Se o assunto foge do script ou o cliente pede uma pessoa, ele transfere para a equipe na hora, com todo o histórico. E o dono pode assumir qualquer conversa a qualquer momento pela caixa de entrada.
 
 "Já uso outra ferramenta / chatbot de botões."
-Chatbots de botão travam quando o cliente escreve fora do menu. O agente da Ápice entende linguagem natural, conversa de verdade e executa ações (agenda, envia catálogo, move o funil). Vale comparar lado a lado nos 7 dias grátis.
+Chatbots de botão travam quando o cliente escreve fora do menu. O agente da Agentes Virtuais entende linguagem natural, conversa de verdade e executa ações (agenda, envia catálogo, move o funil). Vale comparar lado a lado nos 7 dias grátis.
 
 "Não tenho tempo de configurar."
 A configuração guiada leva menos de 15 minutos: perfil do negócio, QR Code do WhatsApp e pronto. Há modelos prontos por segmento. E o suporte ajuda na implantação.

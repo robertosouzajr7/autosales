@@ -26,12 +26,12 @@ Crie as etapas nesta ordem:
 Crie o agente **Sofia** com os campos do arquivo `01-configuracao-agente.md` (função Vendedor, skills, tom, delay, palavras de escalonamento e o prompt completo). Em seguida cole o texto do arquivo `02-base-de-conhecimento.md` no campo de treinamento.
 
 **Antes de colar, troque em todos os textos:**
-- `{SEU_DOMINIO}` → domínio real (ex.: `app.apice.com.br`)
+- `{SEU_DOMINIO}` → domínio real (ex.: `app.agentesvirtuais.com.br`)
 - `{EMAIL_COMERCIAL}` → e-mail comercial real
 - IDs dos planos no `?plan=` se diferirem do seed
 
 ## Passo 5 — Conexões
-- Conecte o número de WhatsApp comercial da Ápice (QR Code).
+- Conecte o número de WhatsApp comercial da Agentes Virtuais (QR Code).
 - Conecte o Instagram da marca, se houver.
 - Gere o widget web e instale na landing page.
 
@@ -52,9 +52,9 @@ Conecte o Google Calendar da conta principal para as demonstrações. Os horári
 
 Converse com a Sofia de outro número e verifique:
 
-- [ ] Ela se apresenta como consultora da Ápice e pergunta sobre o negócio (não despeja os planos de cara)
+- [ ] Ela se apresenta como consultora da Agentes Virtuais e pergunta sobre o negócio (não despeja os planos de cara)
 - [ ] Pergunta uma coisa por vez (SPIN), sem parágrafos gigantes
-- [ ] Ao pedir preço: apresenta os planos do catálogo com valores corretos (R$ 297 / 797 / 1.997)
+- [ ] Ao pedir preço: apresenta os planos do catálogo com valores corretos (R$ 97 / 197 / 497 / 997)
 - [ ] Ao dizer "quero testar": envia o link de cadastro correto na hora
 - [ ] Ao pedir "quero falar com um humano": escala e para de responder
 - [ ] Ao perguntar "você é um robô?": confirma com naturalidade e usa isso como prova do produto
