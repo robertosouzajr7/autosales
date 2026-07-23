@@ -126,4 +126,36 @@ export async function sendPasswordResetEmail({ to, name, token }) {
   });
 }
 
-export default { sendVerificationEmail, sendPasswordResetEmail };
+export async function sendTrialReminder({ to, name, daysLeft, planName }) {
+  const link = `${publicUrl()}/assinatura`;
+  const last = daysLeft <= 0;
+  const heading = last
+    ? "Seu teste grátis termina hoje ⏰"
+    : `Faltam ${daysLeft} ${daysLeft === 1 ? "dia" : "dias"} do seu teste grátis`;
+  const lead = last
+    ? "Este é o último dia do seu período de teste. Para o seu agente continuar atendendo, vendendo e agendando sem interrupção, ative sua assinatura agora."
+    : `Seu período de teste${planName ? ` do plano ${planName}` : ""} está chegando ao fim. Ative sua assinatura para não perder o acesso ao seu agente de IA.`;
+
+  const html = wrap(`
+    <h2 style="margin:0 0 12px;font-size:20px;">${heading}</h2>
+    <p style="margin:0 0 20px;font-size:15px;line-height:1.5;">
+      ${name ? `Oi, ${name.split(" ")[0]}. ` : ""}${lead}
+    </p>
+    <p style="margin:0 0 24px;">
+      <a href="${link}" style="display:inline-block;padding:12px 24px;background:#2563EB;color:#fff;text-decoration:none;border-radius:12px;font-weight:600;">
+        Ativar assinatura
+      </a>
+    </p>
+    <p style="margin:0;font-size:13px;color:#64748b;">
+      Você mantém tudo o que já configurou. Sem fidelidade — cancele quando quiser.
+    </p>
+  `);
+  return send({
+    to,
+    subject: heading,
+    html,
+    text: `${heading}. Ative sua assinatura: ${link}`,
+  });
+}
+
+export default { sendVerificationEmail, sendPasswordResetEmail, sendTrialReminder };
