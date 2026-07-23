@@ -440,17 +440,73 @@ export default function Connections() {
                 </div>
               </div>
 
-              <div className="rounded-xl bg-muted p-4 space-y-2 text-xs text-muted-foreground">
-                <p className="font-semibold text-foreground uppercase tracking-wide">Pré-requisitos</p>
-                <ol className="space-y-1 list-decimal list-inside">
-                  <li>Conta <b>comercial/criador</b> no Instagram (não pessoal), vinculada a uma Página do Facebook.</li>
-                  <li>No <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noreferrer" className="text-primary underline">Graph API Explorer</a>, gere um <b>Page Access Token</b> com as permissões <code>instagram_manage_messages</code> e <code>pages_messaging</code>.</li>
-                  <li>Configure o webhook do seu app Meta apontando para a URL abaixo, no campo <code>messages</code> do produto Instagram.</li>
+              <details className="group rounded-xl bg-muted p-4 text-sm text-muted-foreground" open>
+                <summary className="cursor-pointer font-semibold text-foreground uppercase tracking-wide text-xs list-none flex items-center justify-between">
+                  <span>📋 Passo a passo para conectar (~15 min, configuração única)</span>
+                  <span className="text-muted-foreground group-open:rotate-180 transition-transform">▾</span>
+                </summary>
+
+                <ol className="mt-4 space-y-4">
+                  <li className="flex gap-3">
+                    <span className="flex-none w-6 h-6 rounded-full bg-primary/10 text-primary grid place-items-center text-xs font-bold">1</span>
+                    <div>
+                      <p className="font-medium text-foreground">Conta profissional + Página</p>
+                      <p className="text-xs mt-0.5">No app do Instagram, use uma conta <b>Comercial ou Criador</b> (não pessoal) e vincule-a a uma <b>Página do Facebook</b> (Página → Configurações → Contas vinculadas → Instagram).</p>
+                    </div>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex-none w-6 h-6 rounded-full bg-primary/10 text-primary grid place-items-center text-xs font-bold">2</span>
+                    <div>
+                      <p className="font-medium text-foreground">Criar um app na Meta</p>
+                      <p className="text-xs mt-0.5">
+                        Acesse <a href="https://developers.facebook.com/apps/create/" target="_blank" rel="noreferrer" className="text-primary underline inline-flex items-center gap-0.5">criar app <ExternalLink className="w-3 h-3" /></a>, escolha tipo <b>Empresa</b> e, dentro do app, adicione o produto <b>Instagram</b> (API com mensagens).
+                      </p>
+                    </div>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex-none w-6 h-6 rounded-full bg-primary/10 text-primary grid place-items-center text-xs font-bold">3</span>
+                    <div>
+                      <p className="font-medium text-foreground">Gerar token e pegar os IDs</p>
+                      <p className="text-xs mt-0.5">
+                        No <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noreferrer" className="text-primary underline inline-flex items-center gap-0.5">Graph API Explorer <ExternalLink className="w-3 h-3" /></a>, selecione seu app e gere um token com as permissões <code className="text-[11px] bg-background px-1 rounded">instagram_basic</code>, <code className="text-[11px] bg-background px-1 rounded">instagram_manage_messages</code>, <code className="text-[11px] bg-background px-1 rounded">pages_show_list</code>, <code className="text-[11px] bg-background px-1 rounded">pages_manage_metadata</code> e <code className="text-[11px] bg-background px-1 rounded">pages_messaging</code>. Depois consulte:
+                      </p>
+                      <div className="mt-1.5 space-y-1 text-[11px] font-mono">
+                        <div className="bg-background rounded px-2 py-1"><b>me/accounts</b> → pega <b>Page ID</b> (id) e <b>Page Access Token</b> (access_token)</div>
+                        <div className="bg-background rounded px-2 py-1"><b>PAGE_ID?fields=instagram_business_account</b> → pega o <b>IG Account ID</b></div>
+                      </div>
+                    </div>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex-none w-6 h-6 rounded-full bg-primary/10 text-primary grid place-items-center text-xs font-bold">4</span>
+                    <div>
+                      <p className="font-medium text-foreground">Configurar o webhook</p>
+                      <p className="text-xs mt-0.5">No app, em <b>Webhooks → Instagram</b>, use a URL abaixo como <b>Callback URL</b>, o <b>Verify Token</b> definido no servidor (variável <code className="text-[11px] bg-background px-1 rounded">META_VERIFY_TOKEN</code>) e assine o campo <code className="text-[11px] bg-background px-1 rounded">messages</code>.</p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <div className="flex-1 rounded-lg bg-slate-950 text-slate-100 p-2 font-mono break-all text-xs">{origin}/api/webhook/meta</div>
+                        <button
+                          type="button"
+                          onClick={() => { navigator.clipboard.writeText(`${origin}/api/webhook/meta`); toast({ title: "URL copiada" }); }}
+                          className="p-2 rounded-lg bg-background hover:bg-primary/10 text-primary shrink-0"
+                          title="Copiar URL"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex-none w-6 h-6 rounded-full bg-primary/10 text-primary grid place-items-center text-xs font-bold">5</span>
+                    <div>
+                      <p className="font-medium text-foreground">Preencher os campos abaixo</p>
+                      <p className="text-xs mt-0.5">Cole o <b>IG Account ID</b>, o <b>Page ID</b> e o <b>Page Access Token</b> nos campos abaixo e clique em <b>Conectar Instagram</b>.</p>
+                    </div>
+                  </li>
                 </ol>
-                <div className="rounded-lg bg-slate-950 text-slate-100 p-2 font-mono break-all mt-2">
-                  {origin}/api/webhook/meta
-                </div>
-              </div>
+
+                <p className="mt-4 text-[11px] italic border-t border-border pt-3">
+                  Precisa de mais detalhes (tokens que não expiram, revisão do app, erros comuns)? Peça ao suporte o guia completo de conexão do Instagram.
+                </p>
+              </details>
 
               <div className="grid sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
