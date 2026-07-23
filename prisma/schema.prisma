@@ -509,6 +509,16 @@ model PlatformSettings {
   stripeWebhookSecret  String? // whsec_… (assinatura do webhook Stripe)
   stripePublishableKey String? // pk_live_… / pk_test_… (exposta ao checkout)
 
+  // ─── Motor de IA (configurável no painel admin) ───
+  // Provedor ativo do agente: "GEMINI" | "OPENAI" | "ANTHROPIC"
+  aiProvider    String? @default("GEMINI")
+  // Modelo escolhido (ex.: "gemini-2.5-flash", "gpt-4o", "claude-opus-4-8")
+  aiModel       String?
+  // Chaves por provedor (uma para cada família de modelos)
+  geminiApiKey    String?
+  openaiApiKey    String?
+  anthropicApiKey String?
+
   defaultTrialDays Int      @default(7)
   updatedAt        DateTime @updatedAt
 }

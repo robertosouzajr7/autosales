@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { adminApi } from "@/lib/adminApi";
-import { CreditCard, Globe, Loader2, ShieldCheck, Save } from "lucide-react";
+import { Bot, CreditCard, Globe, Loader2, ShieldCheck, Save } from "lucide-react";
 
 export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
   const { toast } = useToast();
@@ -22,6 +22,14 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
   const [stripePublishable, setStripePublishable] = useState("");
   const [trialDays, setTrialDays] = useState<number | string>(7);
   const [savingGw, setSavingGw] = useState(false);
+
+  // Motor de IA (multi-provedor)
+  const [aiProvider, setAiProvider] = useState("GEMINI");
+  const [aiModel, setAiModel] = useState("");
+  const [geminiKey, setGeminiKey] = useState("");
+  const [openaiKey, setOpenaiKey] = useState("");
+  const [anthropicKey, setAnthropicKey] = useState("");
+  const [savingAi, setSavingAi] = useState(false);
 
   // Landing CMS
   const [lp, setLp] = useState<any>({
@@ -39,6 +47,8 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
       setGw(gwRes.data);
       setProvider(gwRes.data.paymentProvider || "MERCADO_PAGO");
       setTrialDays(gwRes.data.defaultTrialDays ?? 7);
+      setAiProvider(gwRes.data.aiProvider || "GEMINI");
+      setAiModel(gwRes.data.aiModel || "");
     }
     if (lpRes.ok && lpRes.data) setLp((prev: any) => ({ ...prev, ...lpRes.data }));
   };
@@ -67,6 +77,33 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
     } else {
       toast({ title: "Erro ao salvar", description: res.data?.error, variant: "destructive" });
     }
+  };
+
+  const saveAI = async () => {
+    setSavingAi(true);
+    const res = await adminApi.put("/api/admin/platform-settings", {
+      aiProvider,
+      aiModel,
+      geminiApiKey: geminiKey || undefined,
+      openaiApiKey: openaiKey || undefined,
+      anthropicApiKey: anthropicKey || undefined,
+    });
+    setSavingAi(false);
+    if (res.ok) {
+      toast({ title: "Motor de IA atualizado" });
+      setGeminiKey("");
+      setOpenaiKey("");
+      setAnthropicKey("");
+      load();
+    } else {
+      toast({ title: "Erro ao salvar", description: res.data?.error, variant: "destructive" });
+    }
+  };
+
+  const modelCatalog: Record<string, string[]> = gw?.aiModelCatalog || {
+    GEMINI: ["gemini-2.5-flash"],
+    OPENAI: ["gpt-4o-mini"],
+    ANTHROPIC: ["claude-opus-4-8"],
   };
 
   const webhookUrl = typeof window !== "undefined" ? `${window.location.origin}/api/webhook/${provider === "STRIPE" ? "stripe" : "payment"}` : "";
@@ -190,6 +227,93 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
         <div className="rounded-xl bg-muted p-3 flex items-start gap-2 text-xs text-muted-foreground">
           <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5" />
           <span>Segredos nunca são exibidos em claro — apenas a máscara. Deixe o campo vazio para manter o valor atual.</span>
+        </div>
+      </Card>
+
+      {/* MOTOR DE IA (multi-provedor) */}
+      <Card className="rounded-2xl border-border p-6 space-y-5">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary grid place-items-center">
+            <Bot className="w-5 h-5" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold text-foreground">Motor de IA</h3>
+            <p className="text-xs text-muted-foreground">Provedor e modelo usados pelos agentes em toda a plataforma. O valor salvo aqui tem precedência sobre chaves dos clientes e variáveis de ambiente.</p>
+          </div>
+        </div>
+
+        {/* Seletor de provedor */}
+        <div className="grid sm:grid-cols-3 gap-3">
+          {[
+            { id: "GEMINI", label: "Google Gemini", hint: "Família Gemini 2.x", ok: gw?.geminiKeyConfigured },
+            { id: "OPENAI", label: "OpenAI (GPT)", hint: "GPT-4o, GPT-4.1, o4", ok: gw?.openaiKeyConfigured },
+            { id: "ANTHROPIC", label: "Anthropic (Claude)", hint: "Claude Opus, Sonnet, Haiku", ok: gw?.anthropicKeyConfigured },
+          ].map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => { setAiProvider(p.id); setAiModel(""); }}
+              className={`text-left rounded-2xl border p-4 transition-all ${
+                aiProvider === p.id ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/40"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-foreground">{p.label}</span>
+                {p.ok
+                  ? <Badge className="bg-emerald-100 text-emerald-700 border-none text-xs">Chave OK</Badge>
+                  : <Badge className="bg-amber-100 text-amber-800 border-none text-xs">Sem chave</Badge>}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">{p.hint}</p>
+              {aiProvider === p.id && <p className="text-xs text-primary mt-2 font-medium">✓ Provedor ativo</p>}
+            </button>
+          ))}
+        </div>
+
+        {/* Modelo */}
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Modelo</Label>
+            <Select value={aiModel || "__default__"} onValueChange={(v) => setAiModel(v === "__default__" ? "" : v)}>
+              <SelectTrigger><SelectValue placeholder="Padrão do provedor" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__default__">Padrão do provedor (recomendado)</SelectItem>
+                {(modelCatalog[aiProvider] || []).map((m) => (
+                  <SelectItem key={m} value={m}>{m}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground">Vale para respostas do agente, ferramentas (agendamento, catálogo), classificação e e-mails.</p>
+          </div>
+        </div>
+
+        {/* Chaves por provedor */}
+        <div className="grid sm:grid-cols-3 gap-3">
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">
+              Chave Gemini {gw?.geminiKeyMasked && <span className="font-mono">({gw.geminiKeyMasked})</span>}
+            </Label>
+            <Input type="password" placeholder="AIza…" value={geminiKey} onChange={(e) => setGeminiKey(e.target.value)} />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">
+              Chave OpenAI {gw?.openaiKeyMasked && <span className="font-mono">({gw.openaiKeyMasked})</span>}
+            </Label>
+            <Input type="password" placeholder="sk-…" value={openaiKey} onChange={(e) => setOpenaiKey(e.target.value)} />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">
+              Chave Anthropic {gw?.anthropicKeyMasked && <span className="font-mono">({gw.anthropicKeyMasked})</span>}
+            </Label>
+            <Input type="password" placeholder="sk-ant-…" value={anthropicKey} onChange={(e) => setAnthropicKey(e.target.value)} />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[11px] text-muted-foreground">Deixe a chave vazia para manter a atual. O provedor ativo precisa de uma chave configurada.</p>
+          <Button onClick={saveAI} disabled={savingAi} className="gap-2">
+            {savingAi ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            Salvar IA
+          </Button>
         </div>
       </Card>
 
