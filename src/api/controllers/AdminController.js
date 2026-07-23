@@ -1,6 +1,7 @@
 import prisma from "../config/prisma.js";
 import bcrypt from "bcryptjs";
 import { audit } from "../services/AuditService.js";
+import { MODEL_CATALOG } from "../services/AIProviderService.js";
 
 export const getTenants = async (req, res) => {
   try {
@@ -223,6 +224,16 @@ export const getPlatformSettings = async (_req, res) => {
       stripeWebhookConfigured: !!(s.stripeWebhookSecret || process.env.STRIPE_WEBHOOK_SECRET),
       stripePublishableMasked: maskSecret(s.stripePublishableKey || process.env.STRIPE_PUBLISHABLE_KEY),
       stripePublishableConfigured: !!(s.stripePublishableKey || process.env.STRIPE_PUBLISHABLE_KEY),
+      // Motor de IA (multi-provedor)
+      aiProvider: s.aiProvider || "GEMINI",
+      aiModel: s.aiModel || null,
+      aiModelCatalog: MODEL_CATALOG,
+      geminiKeyMasked: maskSecret(s.geminiApiKey || process.env.GEMINI_API_KEY),
+      geminiKeyConfigured: !!(s.geminiApiKey || process.env.GEMINI_API_KEY),
+      openaiKeyMasked: maskSecret(s.openaiApiKey || process.env.OPENAI_API_KEY),
+      openaiKeyConfigured: !!(s.openaiApiKey || process.env.OPENAI_API_KEY),
+      anthropicKeyMasked: maskSecret(s.anthropicApiKey || process.env.ANTHROPIC_API_KEY),
+      anthropicKeyConfigured: !!(s.anthropicApiKey || process.env.ANTHROPIC_API_KEY),
       updatedAt: s.updatedAt,
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -234,12 +245,28 @@ export const updatePlatformSettings = async (req, res) => {
       paymentProvider, defaultTrialDays,
       mpAccessToken, paymentWebhookSecret,
       stripeSecretKey, stripeWebhookSecret, stripePublishableKey,
+      aiProvider, aiModel, geminiApiKey, openaiApiKey, anthropicApiKey,
     } = req.body;
     const data = {};
 
     if (paymentProvider === "STRIPE" || paymentProvider === "MERCADO_PAGO") {
       data.paymentProvider = paymentProvider;
     }
+
+    // Motor de IA: provedor precisa ser um dos suportados; modelo precisa
+    // pertencer ao catálogo do provedor escolhido (ou vazio = default).
+    if (["GEMINI", "OPENAI", "ANTHROPIC"].includes(aiProvider)) {
+      data.aiProvider = aiProvider;
+    }
+    if (typeof aiModel === "string") {
+      const prov = data.aiProvider || undefined;
+      const catalog = prov ? MODEL_CATALOG[prov] : Object.values(MODEL_CATALOG).flat();
+      if (aiModel.trim() === "") data.aiModel = null; // volta ao default
+      else if (catalog.includes(aiModel.trim())) data.aiModel = aiModel.trim();
+    }
+    if (typeof geminiApiKey === "string" && geminiApiKey.trim()) data.geminiApiKey = geminiApiKey.trim();
+    if (typeof openaiApiKey === "string" && openaiApiKey.trim()) data.openaiApiKey = openaiApiKey.trim();
+    if (typeof anthropicApiKey === "string" && anthropicApiKey.trim()) data.anthropicApiKey = anthropicApiKey.trim();
     // Só sobrescreve segredo se veio valor novo (string não vazia).
     if (typeof mpAccessToken === "string" && mpAccessToken.trim()) data.mpAccessToken = mpAccessToken.trim();
     if (typeof paymentWebhookSecret === "string" && paymentWebhookSecret.trim()) data.paymentWebhookSecret = paymentWebhookSecret.trim();

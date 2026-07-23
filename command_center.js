@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import AIProviderService from './src/api/services/AIProviderService.js';
 
 const prisma = new PrismaClient();
 
@@ -149,27 +149,18 @@ REGRAS:
 - Não invente dados, use apenas os fornecidos acima
       `;
 
-      // Usar a IA configurada do tenant
-      const apiKey = tenant.aiApiKey || process.env.GEMINI_API_KEY;
-      if (!apiKey) {
+      // Usar a IA configurada no painel admin (com fallback tenant → env)
+      const cfg = await AIProviderService.resolveAIConfig(tenantId);
+      if (!cfg.apiKey) {
         return '⚠️ Chave de IA não configurada. Acesse Configurações > Integrações no painel.';
       }
 
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-      
-      const chat = model.startChat({
-        history: [{
-          role: 'user',
-          parts: [{ text: systemContext }]
-        }, {
-          role: 'model', 
-          parts: [{ text: 'Entendido! Estou pronto para ajudar o dono a gerenciar o negócio pelo WhatsApp. Tenho acesso a todas as métricas em tempo real.' }]
-        }]
+      const { text } = await AIProviderService.generateText({
+        ...cfg,
+        system: systemContext,
+        prompt: content,
       });
-
-      const result = await chat.sendMessage(content);
-      return result.response.text();
+      return text;
 
     } catch (error) {
       console.error('[CommandCenter] Erro:', error);

@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 import { PrismaClient } from "@prisma/client";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import AIProviderService from "./src/api/services/AIProviderService.js";
 
 const prisma = new PrismaClient();
 
@@ -58,13 +58,6 @@ export class EmailService {
         return null;
       }
 
-      const apiKey = tenant?.aiApiKey || process.env.GEMINI_API_KEY;
-      if (!apiKey) throw new Error("Chave de IA não configurada para prospecção.");
-
-      // Redigir e-mail personalizado com Gemini
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
       const prompt = `
         Você é um SDR de elite da empresa "${tenant.name}".
         Seu objetivo é redigir um e-mail de abordagem inicial (Cold Mail) para o lead abaixo.
@@ -84,8 +77,10 @@ export class EmailService {
         { "subject": "Assunto aqui", "body": "Corpo do e-mail em HTML (use <p>, <br>, etc)" }
       `;
 
-      const result = await model.generateContent(prompt);
-      const response = result.response.text();
+      // Redigido pelo provedor de IA configurado no painel admin
+      const cfg = await AIProviderService.resolveAIConfig(tenantId);
+      if (!cfg.apiKey) throw new Error("Chave de IA não configurada para prospecção.");
+      const { text: response } = await AIProviderService.generateText({ ...cfg, prompt });
       const cleaned = response.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       const { subject, body } = JSON.parse(cleaned);
 
