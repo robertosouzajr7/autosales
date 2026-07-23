@@ -299,7 +299,7 @@ model AutomationConfig {
   postServiceMsgTemplate String? @default("Oi {name}! Esperamos que tenha gostado do atendimento! ✨ Como foi sua experiência?")
 
   tenantId String @unique
-  tenant   Tenant @relation(fields: [tenantId], references: [id])
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

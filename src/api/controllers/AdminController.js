@@ -100,7 +100,15 @@ export const deleteTenant = async (req, res) => {
     await prisma.tenant.delete({ where: { id: req.params.id } });
     await audit({ actorId: req.userId, action: "TENANT_DELETED", entity: "Tenant", entityId: req.params.id });
     res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    if (e.code === "P2003" || e.code === "P2014") {
+      return res.status(409).json({ error: "Não foi possível excluir: há dados vinculados a este cliente." });
+    }
+    if (e.code === "P2025") {
+      return res.status(404).json({ error: "Cliente não encontrado." });
+    }
+    res.status(500).json({ error: e.message });
+  }
 };
 
 export const createTenantUser = async (req, res) => {
