@@ -10,6 +10,7 @@ import * as AuthController from "../controllers/AuthController.js";
 import { authMiddleware, adminMiddleware } from "../middlewares/auth.js";
 import { requireActiveSubscription } from "../middlewares/subscription.js";
 import * as AdminController from "../controllers/AdminController.js";
+import * as GoogleCalendarController from "../controllers/GoogleCalendarController.js";
 import * as AppointmentController from "../controllers/AppointmentController.js";
 import multer from "multer";
 import * as WhatsAppController from "../controllers/WhatsAppController.js";
@@ -48,8 +49,17 @@ router.post("/auth/reset-password", AuthController.resetPassword);
 router.post("/auth/send-code", AuthController.sendCode);
 router.post("/auth/verify-code", AuthController.verifyCode);
 
+// Google Calendar OAuth callback — PÚBLICO (o Google redireciona sem header
+// Authorization; a identidade do tenant vem no "state" assinado).
+router.get("/google/callback", GoogleCalendarController.handleCallback);
+
 // Protected Routes (Tenant context)
 router.use(authMiddleware);
+
+// Google Calendar (conexão da agenda)
+router.get("/google/status", GoogleCalendarController.getStatus);
+router.get("/google/auth-url", GoogleCalendarController.getAuthUrl);
+router.post("/google/disconnect", GoogleCalendarController.disconnect);
 
 // Leads
 router.get("/leads", LeadController.getLeads);

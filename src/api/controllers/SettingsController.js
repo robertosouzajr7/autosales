@@ -66,6 +66,10 @@ export const updateSettings = async (req, res) => {
         systemPrompt,
         webChatUrl,
         elevenLabsKey,
+        // Só grava se veio um valor (o fluxo normal é via OAuth em /google/*).
+        ...(typeof googleRefreshToken === "string" && googleRefreshToken.trim()
+          ? { googleRefreshToken: googleRefreshToken.trim() }
+          : {}),
       },
     });
     res.json(tenant);
