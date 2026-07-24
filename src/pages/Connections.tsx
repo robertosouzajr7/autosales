@@ -274,7 +274,8 @@ export default function Connections() {
         error: { title: "Falha ao conectar com a Meta", description: "Tente novamente; se persistir, use a conexão manual.", variant: "destructive" },
       };
       const im = igMap[ig] || igMap.error;
-      toast({ title: im.title, description: im.description, variant: im.variant });
+      const reason = params.get("reason");
+      toast({ title: im.title, description: reason ? `Meta: ${reason}` : im.description, variant: im.variant });
       window.history.replaceState({}, "", "/connections");
       fetchInstagram();
     }

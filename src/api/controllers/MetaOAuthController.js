@@ -188,7 +188,8 @@ export const handleCallback = async (req, res) => {
     if (!connected) return back("error");
     return back("connected", `&n=${connected}`);
   } catch (e) {
-    console.error("[Meta OAuth] callback falhou:", e.response?.data?.error?.message || e.message);
-    return back("error");
+    const metaMsg = e.response?.data?.error?.message || e.message;
+    console.error("[Meta OAuth] callback falhou:", metaMsg);
+    return back("error", `&reason=${encodeURIComponent(metaMsg.slice(0, 160))}`);
   }
 };

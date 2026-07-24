@@ -1,8 +1,27 @@
 # Guia completo — conectar o Instagram Direct ao agente
 
-O Instagram não conecta por QR Code como o WhatsApp. A Meta exige um **app de desenvolvedor** que faz a ponte entre o Instagram e a plataforma. Parece muito, mas é uma configuração única de ~15–20 minutos. Siga na ordem.
+O jeito recomendado é o botão **"Conectar com a Meta"** (1 clique, OAuth). O passo a passo manual abaixo é o modo avançado / de fallback.
 
 > Onde aparecer `{SUA_API}`, use o domínio da sua API — ex.: `https://agentesvirtuais.com`.
+
+---
+
+## Setup do "Conectar com a Meta" (OAuth) — configuração única no app
+
+Para o botão de 1 clique funcionar, o app da Meta precisa de:
+
+1. **Variáveis no servidor** (EasyPanel → `autosales-api`): `META_APP_ID`, `META_APP_SECRET` e (opcional) `META_REDIRECT_URI`.
+2. **Produto "Login do Facebook"** adicionado ao app.
+3. **Domínio autorizado** — Configurações → Básico → campo **"Domínios do app"** → adicione `agentesvirtuais.com` (sem `https://`). **Salvar.**
+4. **URI de redirecionamento** — Login do Facebook → Configurações → **"URIs de redirecionamento do OAuth válidos"** → adicione `https://agentesvirtuais.com/api/auth/meta/callback`. **Salvar.**
+
+⚠️ Erro **"O domínio dessa URL não está incluído nos domínios do app"** = falta o passo 3 (e/ou 4). Adicione o domínio em "Domínios do app" e a URL nos redirects válidos.
+
+---
+
+## (Avançado) Conexão manual
+
+Se preferir informar os IDs e o token à mão (ou o OAuth não estiver disponível), siga na ordem.
 
 ---
 
