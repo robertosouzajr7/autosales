@@ -111,7 +111,7 @@ Clique em **Conectar Instagram**. Pronto — mande uma DM de teste de outra cont
 |---|---|---|
 | Mensagem chega mas o log diz `META_APP_SECRET não configurado — rejeitando` (403) | Falta a variável `META_APP_SECRET` no servidor | Defina `META_APP_SECRET` (Configurações → Básico do app) no EasyPanel e reinicie a API |
 | Webhook não verifica (erro ao salvar) | `META_VERIFY_TOKEN` diferente, ou API fora do ar | Confirme que o token no Meta é idêntico ao do servidor e que `{SUA_API}/api/webhook/meta` responde |
-| Conecta, mas agente não responde DMs | Campo `messages` não assinado, ou permissão faltando | Reveja Passo 6.5 (assinar `messages`) e as permissões do Passo 3 |
+| Conecta, webhook responde 200, mas log mostra só `message_edit` (sem `sender`/texto) e agente não responde | O campo **`messages`** não está assinado no webhook, ou o toggle "Permitir acesso a mensagens" está desligado no app do Instagram | (1) Webhooks → Instagram: marque o campo **`messages`** (não só `message_edits`). (2) No app do Instagram: Configurações → Ferramentas empresariais → **Permitir acesso a mensagens** = ON. (3) Confirme a permissão `instagram_manage_messages` |
 | Some depois de 1 hora | Token de curta duração | Gere token de longa duração (Passo 5) |
 | "Conta profissional exigida" | Instagram ainda é pessoal | Converta para Comercial/Criador (Pré-requisito 1) |
 | Não acha `instagram_business_account` | Instagram não vinculado à Página | Refaça o Pré-requisito 2 |
