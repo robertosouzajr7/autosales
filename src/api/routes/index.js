@@ -11,6 +11,7 @@ import { authMiddleware, adminMiddleware } from "../middlewares/auth.js";
 import { requireActiveSubscription } from "../middlewares/subscription.js";
 import * as AdminController from "../controllers/AdminController.js";
 import * as GoogleCalendarController from "../controllers/GoogleCalendarController.js";
+import * as MetaOAuthController from "../controllers/MetaOAuthController.js";
 import * as AppointmentController from "../controllers/AppointmentController.js";
 import multer from "multer";
 import * as WhatsAppController from "../controllers/WhatsAppController.js";
@@ -54,6 +55,9 @@ router.post("/auth/verify-code", AuthController.verifyCode);
 // Caminho casa com GOOGLE_REDIRECT_URI (…/api/auth/google/callback).
 router.get("/auth/google/callback", GoogleCalendarController.handleCallback);
 
+// Meta (Instagram) OAuth callback — PÚBLICO, mesma lógica do Google.
+router.get("/auth/meta/callback", MetaOAuthController.handleCallback);
+
 // Protected Routes (Tenant context)
 router.use(authMiddleware);
 
@@ -95,7 +99,8 @@ router.delete("/whatsapp/accounts/:id", WhatsAppController.deleteAccount);
 router.post("/whatsapp/accounts/meta", requireWhatsAppSlot, WhatsAppController.createMetaAccount);
 router.get("/whatsapp/qr/:id", WhatsAppController.qrCodeStream);
 
-// Instagram Direct — conexão manual (reaproveita o modelo de contas)
+// Instagram Direct — conexão em 1 clique (OAuth Meta) e manual
+router.get("/channels/instagram/oauth-url", MetaOAuthController.getOAuthUrl);
 router.post("/channels/instagram", WhatsAppController.createInstagramAccount);
 router.put("/channels/instagram/:id", WhatsAppController.updateInstagramAccount);
 router.post("/channels/instagram/:id/test", WhatsAppController.testInstagramConnection);
