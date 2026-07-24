@@ -149,25 +149,43 @@ export const receiveMetaWebhook = async (req, res) => {
 
         // Mensagem normal (com conteúdo).
         if (msg && !msg.is_echo && msg.text) {
+          if (msg.mid && wasProcessed(msg.mid)) {
+            console.log(`[Meta Webhook] mid já processado — ignorando duplicata (${msg.mid.slice(0, 12)}…)`);
+            continue;
+          }
           console.log(`[Meta Webhook] IG(messaging) igId=${igId} sender=${senderId} text=sim`);
-          if (igId && senderId) await MetaManager.handleIncomingInstagram(igId, senderId, null, msg.text);
+          if (igId && senderId) {
+            if (msg.mid) markProcessed(msg.mid);
+            await MetaManager.handleIncomingInstagram(igId, senderId, null, msg.text);
+          }
           continue;
         }
 
         // Fallback: alguns apps entregam a DM como "message_edit" (sem texto e
         // sem sender no payload). Buscamos o conteúdo pela Graph API via mid.
+        // Obs.: quando o remetente TAMBÉM autorizou o app, o mesmo mid chega
+        // duas vezes (um evento por conta) — o dedupe evita resposta dupla.
         const mid = event.message_edit?.mid;
         if (mid && igId) {
+          if (wasProcessed(mid)) {
+            console.log(`[Meta Webhook] mid já processado — ignorando duplicata (${mid.slice(0, 12)}…)`);
+            continue;
+          }
           console.log(`[Meta Webhook] IG(message_edit) igId=${igId} mid=${mid.slice(0, 12)}… — buscando conteúdo pela API`);
           const fetched = await fetchInstagramMessageByMid(igId, mid).catch((e) => {
             console.warn(`[Meta Webhook] ❌ Falha ao buscar mensagem: ${e.response?.status || ""} ${JSON.stringify(e.response?.data || e.message)}`);
             return null;
           });
           if (fetched) {
-            console.log(`[Meta Webhook] Resposta da API para o mid: ${JSON.stringify(fetched.raw).slice(0, 500)}`);
+            console.log(`[Meta Webhook] Conteúdo resolvido (${fetched.via}): ${JSON.stringify(fetched.raw).slice(0, 400)}`);
             if (fetched.senderId && fetched.text) {
-              console.log(`[Meta Webhook] ✅ IG(message_edit) resolvido: sender=${fetched.senderId} text=sim`);
-              await MetaManager.handleIncomingInstagram(igId, fetched.senderId, null, fetched.text);
+              if (fetched.senderId === igId) {
+                console.log(`[Meta Webhook] Mensagem é da própria conta (${igId}) — eco, ignorando.`);
+              } else {
+                console.log(`[Meta Webhook] ✅ IG(message_edit) resolvido: sender=${fetched.senderId} text=sim`);
+                markProcessed(mid);
+                await MetaManager.handleIncomingInstagram(igId, fetched.senderId, null, fetched.text);
+              }
             } else {
               console.warn(`[Meta Webhook] ⚠️ mid buscado, mas sem sender/text utilizáveis (from=${fetched.senderId}, text=${fetched.text ? "sim" : "não"}).`);
             }
@@ -183,31 +201,87 @@ export const receiveMetaWebhook = async (req, res) => {
   }
 };
 
+// ── Dedupe de mensagens por mid ─────────────────────────────────────
+// Quando remetente e destinatário autorizaram o app, a Meta entrega o MESMO
+// mid uma vez por conta assinada — sem dedupe o agente responderia em dobro.
+const processedMids = new Map(); // mid -> timestamp
+const MID_TTL_MS = 10 * 60 * 1000;
+
+function wasProcessed(mid) {
+  const ts = processedMids.get(mid);
+  return !!ts && Date.now() - ts < MID_TTL_MS;
+}
+
+function markProcessed(mid) {
+  processedMids.set(mid, Date.now());
+  if (processedMids.size > 500) {
+    const cutoff = Date.now() - MID_TTL_MS;
+    for (const [k, v] of processedMids) if (v < cutoff) processedMids.delete(k);
+  }
+}
+
 /**
- * Busca o conteúdo e o remetente de uma mensagem do Instagram pelo message id
- * (mid). Usado quando a Meta entrega só um evento "message_edit" sem texto.
- * Usa o token da própria conta conectada (igId).
+ * Busca o conteúdo e o remetente de uma mensagem do Instagram pelo mid.
+ * 1º tenta GET /{mid} direto; se falhar/vier vazio (comum no pipeline do
+ * Instagram Login), varre as conversas recentes via Conversations API e
+ * localiza a mensagem pelo mid.
  */
 async function fetchInstagramMessageByMid(igId, mid) {
   const prisma = (await import("../config/prisma.js")).default;
   const axios = (await import("axios")).default;
   const account = await prisma.whatsAppAccount.findFirst({
     where: { igId, channel: "INSTAGRAM" },
-    select: { accessToken: true },
+    select: { accessToken: true, pageId: true, enabled: true },
   });
-  if (!account?.accessToken) return null;
+  if (!account?.accessToken) {
+    console.log(`[Meta Webhook] igId ${igId} não está conectado neste servidor — evento ignorado.`);
+    return null;
+  }
+  if (account.enabled === false) {
+    console.log(`[Meta Webhook] Conexão ${igId} desabilitada — ignorando.`);
+    return null;
+  }
 
   const version = process.env.META_GRAPH_VERSION || "v21.0";
-  // Token IGAA… (Instagram Login) consulta graph.instagram.com; Page token,
-  // graph.facebook.com.
-  const host = account.accessToken.startsWith("IG")
-    ? "graph.instagram.com"
-    : "graph.facebook.com";
-  const r = await axios.get(`https://${host}/${version}/${mid}`, {
-    params: { fields: "id,from,to,message,created_time", access_token: account.accessToken },
+  const isIg = account.accessToken.startsWith("IG");
+  const host = isIg ? "graph.instagram.com" : "graph.facebook.com";
+  const token = account.accessToken;
+
+  // Tentativa 1: objeto da mensagem direto.
+  try {
+    const r = await axios.get(`https://${host}/${version}/${mid}`, {
+      params: { fields: "id,from,message,created_time", access_token: token },
+      timeout: 15000,
+    });
+    const senderId = r.data?.from?.id;
+    const text = typeof r.data?.message === "string" ? r.data.message : r.data?.message?.text;
+    if (senderId && text) return { senderId, text, raw: r.data, via: "mid" };
+  } catch (e) {
+    console.warn(`[Meta Webhook] GET /{mid} falhou (${e.response?.status || e.message}) — tentando Conversations API`);
+  }
+
+  // Tentativa 2: Conversations API — conversas recentes com mensagens.
+  const convUrl = isIg
+    ? `https://graph.instagram.com/${version}/me/conversations`
+    : `https://graph.facebook.com/${version}/${account.pageId}/conversations`;
+  const conv = await axios.get(convUrl, {
+    params: {
+      platform: "instagram",
+      fields: "messages.limit(10){id,from,message,created_time}",
+      limit: 10,
+      access_token: token,
+    },
     timeout: 15000,
   });
-  const senderId = r.data?.from?.id;
-  const text = typeof r.data?.message === "string" ? r.data.message : r.data?.message?.text;
-  return { senderId, text, raw: r.data };
+
+  for (const c of conv.data?.data || []) {
+    for (const m of c.messages?.data || []) {
+      if (m.id === mid) {
+        return { senderId: m.from?.id, text: m.message, raw: m, via: "conversations" };
+      }
+    }
+  }
+
+  console.warn(`[Meta Webhook] mid não encontrado nas conversas recentes (${(conv.data?.data || []).length} conversas varridas).`);
+  return null;
 }
