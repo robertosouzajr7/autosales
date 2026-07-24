@@ -33,14 +33,35 @@ export class MetaManager {
     }
 
     /**
-     * Envio de DM no Instagram via Messenger Platform (Send API).
-     * O endpoint é o da PÁGINA vinculada; o token é o Page Access Token.
+     * Token de usuário Instagram (fluxo "API do Instagram com login do
+     * Instagram") começa com "IG" (IGAA…/IGQV…); Page Access Token com "EAA".
+     */
+    static isIgUserToken(token) {
+        return typeof token === "string" && token.startsWith("IG");
+    }
+
+    /**
+     * Envio de DM no Instagram. Dois pipelines:
+     *  - Instagram Login (token IGAA…): graph.instagram.com/me/messages
+     *  - Página do Facebook (Page token): graph.facebook.com/{pageId}/messages
      */
     static async sendInstagramMessage(pageId, pageToken, recipientId, text) {
-        if (!pageId || !pageToken) {
-            throw new Error("Instagram: pageId/pageToken ausentes");
-        }
+        if (!pageToken) throw new Error("Instagram: token ausente");
         try {
+            if (this.isIgUserToken(pageToken)) {
+                const url = `https://graph.instagram.com/${GRAPH_VERSION}/me/messages`;
+                const response = await axios.post(url, {
+                    recipient: { id: recipientId },
+                    message: { text }
+                }, {
+                    headers: { 'Authorization': `Bearer ${pageToken}` },
+                    timeout: 15000
+                });
+                console.log(`[Instagram API] DM enviada para ${recipientId} (Instagram Login)`);
+                return response.data;
+            }
+
+            if (!pageId) throw new Error("Instagram: pageId ausente (fluxo via Página)");
             const url = `https://graph.facebook.com/${GRAPH_VERSION}/${pageId}/messages`;
             const response = await axios.post(url, {
                 recipient: { id: recipientId },
@@ -63,10 +84,13 @@ export class MetaManager {
      * do Messenger Platform. `type` ∈ {image, audio, video}.
      */
     static async sendInstagramMedia(pageId, pageToken, recipientId, mediaUrl, type = "image") {
-        if (!pageId || !pageToken) throw new Error("Instagram: pageId/pageToken ausentes");
+        if (!pageToken) throw new Error("Instagram: token ausente");
+        if (!this.isIgUserToken(pageToken) && !pageId) throw new Error("Instagram: pageId ausente (fluxo via Página)");
         try {
-            const url = `https://graph.facebook.com/${GRAPH_VERSION}/${pageId}/messages`;
-            const response = await axios.post(url, {
+            const url = this.isIgUserToken(pageToken)
+                ? `https://graph.instagram.com/${GRAPH_VERSION}/me/messages`
+                : `https://graph.facebook.com/${GRAPH_VERSION}/${pageId}/messages`;
+            const payload = {
                 recipient: { id: recipientId },
                 message: {
                     attachment: {
@@ -74,8 +98,10 @@ export class MetaManager {
                         payload: { url: mediaUrl, is_reusable: true }
                     }
                 },
-                messaging_type: "RESPONSE"
-            }, {
+            };
+            // messaging_type é do Messenger Platform (fluxo via Página).
+            if (!this.isIgUserToken(pageToken)) payload.messaging_type = "RESPONSE";
+            const response = await axios.post(url, payload, {
                 headers: { 'Authorization': `Bearer ${pageToken}` },
                 timeout: 20000
             });

@@ -160,12 +160,17 @@ export const receiveMetaWebhook = async (req, res) => {
         if (mid && igId) {
           console.log(`[Meta Webhook] IG(message_edit) igId=${igId} mid=${mid.slice(0, 12)}… — buscando conteúdo pela API`);
           const fetched = await fetchInstagramMessageByMid(igId, mid).catch((e) => {
-            console.warn(`[Meta Webhook] Falha ao buscar mensagem ${mid.slice(0, 12)}…:`, e.response?.data?.error?.message || e.message);
+            console.warn(`[Meta Webhook] ❌ Falha ao buscar mensagem: ${e.response?.status || ""} ${JSON.stringify(e.response?.data || e.message)}`);
             return null;
           });
-          if (fetched?.senderId && fetched?.text) {
-            console.log(`[Meta Webhook] IG(message_edit) resolvido: sender=${fetched.senderId} text=sim`);
-            await MetaManager.handleIncomingInstagram(igId, fetched.senderId, null, fetched.text);
+          if (fetched) {
+            console.log(`[Meta Webhook] Resposta da API para o mid: ${JSON.stringify(fetched.raw).slice(0, 500)}`);
+            if (fetched.senderId && fetched.text) {
+              console.log(`[Meta Webhook] ✅ IG(message_edit) resolvido: sender=${fetched.senderId} text=sim`);
+              await MetaManager.handleIncomingInstagram(igId, fetched.senderId, null, fetched.text);
+            } else {
+              console.warn(`[Meta Webhook] ⚠️ mid buscado, mas sem sender/text utilizáveis (from=${fetched.senderId}, text=${fetched.text ? "sim" : "não"}).`);
+            }
           }
           continue;
         }
@@ -193,11 +198,16 @@ async function fetchInstagramMessageByMid(igId, mid) {
   if (!account?.accessToken) return null;
 
   const version = process.env.META_GRAPH_VERSION || "v21.0";
-  const r = await axios.get(`https://graph.facebook.com/${version}/${mid}`, {
-    params: { fields: "id,from,message", access_token: account.accessToken },
+  // Token IGAA… (Instagram Login) consulta graph.instagram.com; Page token,
+  // graph.facebook.com.
+  const host = account.accessToken.startsWith("IG")
+    ? "graph.instagram.com"
+    : "graph.facebook.com";
+  const r = await axios.get(`https://${host}/${version}/${mid}`, {
+    params: { fields: "id,from,to,message,created_time", access_token: account.accessToken },
     timeout: 15000,
   });
   const senderId = r.data?.from?.id;
   const text = typeof r.data?.message === "string" ? r.data.message : r.data?.message?.text;
-  return { senderId, text };
+  return { senderId, text, raw: r.data };
 }
