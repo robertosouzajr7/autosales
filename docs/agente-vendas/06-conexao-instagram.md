@@ -8,14 +8,20 @@ O jeito recomendado é o botão **"Conectar com a Meta"** (1 clique, OAuth). O p
 
 ## Setup do "Conectar com a Meta" (OAuth) — configuração única no app
 
-Para o botão de 1 clique funcionar, o app da Meta precisa de:
+O botão usa, de preferência, o **fluxo nativo Instagram Login** (produto "API do Instagram com login do Instagram" — o mesmo cujo secret assina os webhooks). Configuração:
 
-1. **Variáveis no servidor** (EasyPanel → `autosales-api`): `META_APP_ID`, `META_APP_SECRET` e (opcional) `META_REDIRECT_URI`.
-2. **Produto "Login do Facebook"** adicionado ao app.
-3. **Domínio autorizado** — Configurações → Básico → campo **"Domínios do app"** → adicione `agentesvirtuais.com` (sem `https://`). **Salvar.**
-4. **URI de redirecionamento** — Login do Facebook → Configurações → **"URIs de redirecionamento do OAuth válidos"** → adicione `https://agentesvirtuais.com/api/auth/meta/callback`. **Salvar.**
+1. **Variáveis no servidor** (EasyPanel → `autosales-api`):
+   - `META_IG_APP_ID` — o **ID do app do Instagram** (Produtos → Instagram → configurações da API)
+   - `META_IG_APP_SECRET` — a **chave secreta do app do Instagram** (mesma tela)
+2. **URI de redirecionamento** — na mesma tela, em **"Login empresarial do Instagram" (Business login) → URIs de redirecionamento OAuth**, adicione:
+   `https://agentesvirtuais.com/api/auth/instagram/callback` → **Salvar**.
+3. No **webhook do Instagram** (mesma tela), o campo **`messages`** deve estar assinado.
 
-⚠️ Erro **"O domínio dessa URL não está incluído nos domínios do app"** = falta o passo 3 (e/ou 4). Adicione o domínio em "Domínios do app" e a URL nos redirects válidos.
+O fluxo alternativo via **Login do Facebook** (páginas) continua disponível como fallback: exige `META_APP_ID`/`META_APP_SECRET`, produto "Login do Facebook", domínio em "Domínios do app" e redirect `https://agentesvirtuais.com/api/auth/meta/callback`.
+
+⚠️ Erro **"O domínio dessa URL não está incluído nos domínios do app"** = domínio faltando em Configurações → Básico → "Domínios do app" (e/ou redirect URI não registrada).
+
+⚠️ **App em modo Desenvolvimento**: a conta que conecta e as contas que ENVIAM DMs de teste precisam de papel no app (Funções do app → Instagram Testers, com convite aceito no Instagram em Configurações → Site e apps). Sem isso a Meta suprime o conteúdo das mensagens. Para uso com clientes, o app precisa estar Live (App Review).
 
 ---
 

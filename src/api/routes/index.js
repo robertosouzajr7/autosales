@@ -55,8 +55,11 @@ router.post("/auth/verify-code", AuthController.verifyCode);
 // Caminho casa com GOOGLE_REDIRECT_URI (…/api/auth/google/callback).
 router.get("/auth/google/callback", GoogleCalendarController.handleCallback);
 
-// Meta (Instagram) OAuth callback — PÚBLICO, mesma lógica do Google.
+// Meta (Instagram) OAuth callbacks — PÚBLICOS, mesma lógica do Google.
+// /auth/meta/callback: Facebook Login (páginas) · /auth/instagram/callback:
+// Instagram Login nativo (produto "API do Instagram com login do Instagram").
 router.get("/auth/meta/callback", MetaOAuthController.handleCallback);
+router.get("/auth/instagram/callback", MetaOAuthController.handleInstagramCallback);
 
 // Protected Routes (Tenant context)
 router.use(authMiddleware);

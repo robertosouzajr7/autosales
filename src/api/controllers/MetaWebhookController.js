@@ -198,7 +198,12 @@ async function fetchInstagramMessageByMid(igId, mid) {
   if (!account?.accessToken) return null;
 
   const version = process.env.META_GRAPH_VERSION || "v21.0";
-  const r = await axios.get(`https://graph.facebook.com/${version}/${mid}`, {
+  // Token IGAA… (Instagram Login) consulta graph.instagram.com; Page token,
+  // graph.facebook.com.
+  const host = account.accessToken.startsWith("IG")
+    ? "graph.instagram.com"
+    : "graph.facebook.com";
+  const r = await axios.get(`https://${host}/${version}/${mid}`, {
     params: { fields: "id,from,to,message,created_time", access_token: account.accessToken },
     timeout: 15000,
   });

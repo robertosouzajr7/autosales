@@ -166,22 +166,28 @@ export const testInstagramConnection = async (req, res) => {
 
     const version = process.env.META_GRAPH_VERSION || "v21.0";
     const axios = (await import("axios")).default;
+    const isIgToken = account.accessToken.startsWith("IG"); // Instagram Login (IGAA…)
     try {
-      const r = await axios.get(
-        `https://graph.facebook.com/${version}/${account.igId}`,
-        { params: { fields: "id,username", access_token: account.accessToken }, timeout: 15000 }
-      );
+      // Valida o token no pipeline correto.
+      const r = isIgToken
+        ? await axios.get(`https://graph.instagram.com/${version}/me`, {
+            params: { fields: "user_id,username", access_token: account.accessToken }, timeout: 15000 })
+        : await axios.get(`https://graph.facebook.com/${version}/${account.igId}`, {
+            params: { fields: "id,username", access_token: account.accessToken }, timeout: 15000 });
 
-      // Garante que a Página está assinada no app (sem isso a Meta não
-      // entrega o conteúdo das DMs — chegam só eventos parciais).
+      // Garante a assinatura no app (sem isso a Meta não entrega o conteúdo
+      // das DMs — chegam só eventos parciais como message_edit).
       let subscribed = false;
-      if (account.pageId) {
-        try {
+      try {
+        if (isIgToken) {
+          const { subscribeInstagramAccount } = await import("./MetaOAuthController.js");
+          subscribed = await subscribeInstagramAccount(account.accessToken);
+        } else if (account.pageId) {
           const { subscribePageToApp } = await import("./MetaOAuthController.js");
           subscribed = await subscribePageToApp(account.pageId, account.accessToken);
-        } catch (subErr) {
-          console.warn(`[Instagram Test] Falha ao assinar página ${account.pageId}:`, subErr.response?.data?.error?.message || subErr.message);
         }
+      } catch (subErr) {
+        console.warn(`[Instagram Test] Falha ao assinar no app:`, subErr.response?.data?.error?.message || subErr.message);
       }
 
       await prisma.whatsAppAccount.update({ where: { id }, data: { status: "CONNECTED" } });
@@ -190,7 +196,7 @@ export const testInstagramConnection = async (req, res) => {
         status: "CONNECTED",
         username: r.data?.username || null,
         subscribed,
-        message: `${r.data?.username ? `Conectado como @${r.data.username}.` : "Token válido — conexão OK."}${subscribed ? " Página assinada para receber mensagens." : ""}`,
+        message: `${r.data?.username ? `Conectado como @${r.data.username}.` : "Token válido — conexão OK."}${subscribed ? " Conta assinada para receber mensagens." : ""}`,
       });
     } catch (e) {
       const metaError = e.response?.data?.error;

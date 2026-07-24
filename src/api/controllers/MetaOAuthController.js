@@ -32,6 +32,12 @@ const SCOPES = [
   "pages_messaging",
 ].join(",");
 
+// Escopos do fluxo nativo "API do Instagram com login do Instagram".
+const IG_LOGIN_SCOPES = [
+  "instagram_business_basic",
+  "instagram_business_manage_messages",
+].join(",");
+
 const version = () => process.env.META_GRAPH_VERSION || "v21.0";
 
 function redirectUri() {
@@ -40,16 +46,43 @@ function redirectUri() {
   return `${base.replace(/\/$/, "")}/api/auth/meta/callback`;
 }
 
+function igRedirectUri() {
+  if (process.env.META_IG_REDIRECT_URI) return process.env.META_IG_REDIRECT_URI;
+  const base = process.env.FRONTEND_URL || "http://localhost:8080";
+  return `${base.replace(/\/$/, "")}/api/auth/instagram/callback`;
+}
+
 function isConfigured() {
   return !!(process.env.META_APP_ID && process.env.META_APP_SECRET);
 }
 
+// Fluxo nativo Instagram Login: usa o ID e a chave do APP INSTAGRAM
+// (Produtos → Instagram → configurações da API), não os do app Facebook.
+function isIgLoginConfigured() {
+  return !!(process.env.META_IG_APP_ID && process.env.META_IG_APP_SECRET);
+}
+
 // GET /channels/instagram/oauth-url (autenticada)
+// Preferência: fluxo nativo Instagram Login (casa com o produto "API do
+// Instagram com login do Instagram" — o mesmo cujo secret assina os webhooks).
+// Fallback: Facebook Login (páginas vinculadas).
 export const getOAuthUrl = async (req, res) => {
   try {
+    if (isIgLoginConfigured()) {
+      const state = jwt.sign({ tenantId: req.tenantId, kind: "ig_login" }, JWT_SECRET, { expiresIn: "15m" });
+      const url =
+        `https://www.instagram.com/oauth/authorize` +
+        `?client_id=${encodeURIComponent(process.env.META_IG_APP_ID)}` +
+        `&redirect_uri=${encodeURIComponent(igRedirectUri())}` +
+        `&response_type=code` +
+        `&scope=${encodeURIComponent(IG_LOGIN_SCOPES)}` +
+        `&state=${encodeURIComponent(state)}`;
+      return res.json({ url, flow: "instagram_login" });
+    }
+
     if (!isConfigured()) {
       return res.status(400).json({
-        error: "Login com a Meta não configurado no servidor (META_APP_ID/META_APP_SECRET).",
+        error: "Login não configurado no servidor (defina META_IG_APP_ID/META_IG_APP_SECRET ou META_APP_ID/META_APP_SECRET).",
       });
     }
     const state = jwt.sign({ tenantId: req.tenantId, kind: "meta_ig" }, JWT_SECRET, { expiresIn: "15m" });
@@ -60,9 +93,119 @@ export const getOAuthUrl = async (req, res) => {
       `&state=${encodeURIComponent(state)}` +
       `&scope=${encodeURIComponent(SCOPES)}` +
       `&response_type=code`;
-    res.json({ url });
+    res.json({ url, flow: "facebook_login" });
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+};
+
+/**
+ * Assina a conta Instagram no app (pipeline Instagram Login) para receber os
+ * webhooks de mensagem com conteúdo. Usa o token de usuário Instagram (IGAA…).
+ */
+export async function subscribeInstagramAccount(igToken) {
+  const r = await axios.post(
+    `https://graph.instagram.com/${version()}/me/subscribed_apps`,
+    null,
+    { params: { subscribed_fields: "messages", access_token: igToken }, timeout: 15000 }
+  );
+  return r.data?.success === true;
+}
+
+// GET /api/auth/instagram/callback — ROTA PÚBLICA (Instagram Login).
+export const handleInstagramCallback = async (req, res) => {
+  const frontend = process.env.FRONTEND_URL || "http://localhost:8080";
+  const back = (status, extra = "") =>
+    res.redirect(`${frontend}/connections?instagram=${status}${extra}`);
+
+  try {
+    const { code, state, error } = req.query;
+    if (error) return back("denied");
+    if (!code || !state) return back("error");
+
+    let tenantId;
+    try {
+      const decoded = jwt.verify(String(state), JWT_SECRET);
+      if (decoded.kind !== "ig_login") return back("error");
+      tenantId = decoded.tenantId;
+    } catch {
+      return back("expired");
+    }
+
+    // 1. code → token de curta duração (form-urlencoded; o Instagram anexa
+    // "#_" ao code no redirect — removemos).
+    const form = new URLSearchParams({
+      client_id: process.env.META_IG_APP_ID,
+      client_secret: process.env.META_IG_APP_SECRET,
+      grant_type: "authorization_code",
+      redirect_uri: igRedirectUri(),
+      code: String(code).replace(/#_$/, ""),
+    });
+    const tok = await axios.post("https://api.instagram.com/oauth/access_token", form, {
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      timeout: 15000,
+    });
+    let igToken = tok.data?.access_token;
+    const shortUserId = tok.data?.user_id;
+    if (!igToken) return back("error", "&reason=sem%20access_token");
+
+    // 2. curta → longa duração (60 dias, renovável)
+    try {
+      const long = await axios.get("https://graph.instagram.com/access_token", {
+        params: {
+          grant_type: "ig_exchange_token",
+          client_secret: process.env.META_IG_APP_SECRET,
+          access_token: igToken,
+        },
+        timeout: 15000,
+      });
+      if (long.data?.access_token) igToken = long.data.access_token;
+    } catch (e) {
+      console.warn("[IG OAuth] Falha ao alongar token (seguindo com o curto):", e.response?.data?.error?.message || e.message);
+    }
+
+    // 3. Perfil — user_id é o ID da conta profissional (mesmo id dos webhooks)
+    const me = await axios.get(`https://graph.instagram.com/${version()}/me`, {
+      params: { fields: "user_id,username", access_token: igToken },
+      timeout: 15000,
+    });
+    const igId = String(me.data?.user_id || shortUserId || "");
+    const username = me.data?.username;
+    if (!igId) return back("error", "&reason=sem%20user_id");
+
+    // 4. Salva a conta (upsert por igId)
+    const data = {
+      name: username ? `@${username}` : `Instagram ${igId.slice(-6)}`,
+      igId,
+      pageId: null, // fluxo Instagram Login não usa Página
+      accessToken: igToken,
+      channel: "INSTAGRAM",
+      status: "CONNECTED",
+      enabled: true,
+      tenantId,
+    };
+    const existing = await prisma.whatsAppAccount.findFirst({ where: { igId, channel: "INSTAGRAM" } });
+    if (existing && existing.tenantId !== tenantId) {
+      console.warn(`[IG OAuth] igId ${igId} já pertence a outro tenant.`);
+      return back("error", "&reason=conta%20j%C3%A1%20conectada%20em%20outro%20cliente");
+    }
+    if (existing) await prisma.whatsAppAccount.update({ where: { id: existing.id }, data });
+    else await prisma.whatsAppAccount.create({ data });
+
+    // 5. Assina a conta no app (é isso que faz os webhooks de mensagem
+    // chegarem COM conteúdo pelo pipeline do Instagram Login)
+    try {
+      const ok = await subscribeInstagramAccount(igToken);
+      console.log(`[IG OAuth] ✅ @${username || igId} conectado; subscribed_apps=${ok}`);
+    } catch (e) {
+      console.warn("[IG OAuth] Falha ao assinar a conta no app:", e.response?.data?.error?.message || e.message);
+    }
+
+    return back("connected", "&n=1");
+  } catch (e) {
+    const metaMsg = e.response?.data?.error_message || e.response?.data?.error?.message || e.message;
+    console.error("[IG OAuth] callback falhou:", metaMsg, JSON.stringify(e.response?.data || {}).slice(0, 300));
+    return back("error", `&reason=${encodeURIComponent(String(metaMsg).slice(0, 160))}`);
   }
 };
 
