@@ -121,6 +121,11 @@ export class MetaManager {
             return;
         }
 
+        if (account.enabled === false) {
+            console.log(`[Instagram Hub] Conexão ${account.name} está desabilitada — ignorando DM.`);
+            return;
+        }
+
         await this._routeToAI(account, senderId, name || 'Lead (Instagram)', content, 'Instagram', async (aiText) => {
             await this.sendInstagramMessage(account.pageId, account.accessToken, senderId, aiText);
         });

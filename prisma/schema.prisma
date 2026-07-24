@@ -476,6 +476,7 @@ model WhatsAppAccount {
   phone   String?
   status  String  @default("DISCONNECTED")
   channel String  @default("WHATSAPP") // WHATSAPP | INSTAGRAM
+  enabled Boolean @default(true) // desligado = agente ignora mensagens deste canal
 
   // Meta Cloud API Fields (WhatsApp)
   phoneId     String?

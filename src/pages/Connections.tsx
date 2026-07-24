@@ -12,9 +12,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { QRCodeCanvas } from "qrcode.react";
+import { Switch } from "@/components/ui/switch";
 import {
   Plus, Smartphone, CheckCircle2, RefreshCw, Trash2, Code2,
   Globe, Instagram, Copy, ExternalLink, ShieldCheck, CalendarClock,
+  Eye, EyeOff, Pencil, X, Wifi,
 } from "lucide-react";
 
 interface Connection {
@@ -69,6 +71,64 @@ export default function Connections() {
   const [igAccounts, setIgAccounts] = useState<any[]>([]);
   const [igForm, setIgForm] = useState({ name: "", igId: "", pageId: "", accessToken: "" });
   const [igLoading, setIgLoading] = useState(false);
+  const [editingIgId, setEditingIgId] = useState<string | null>(null);
+  const [showToken, setShowToken] = useState<Record<string, boolean>>({});
+  const [igTestingId, setIgTestingId] = useState<string | null>(null);
+
+  const startEditIg = (acc: any) => {
+    setEditingIgId(acc.id);
+    setIgForm({
+      name: acc.name || "",
+      igId: acc.igId || "",
+      pageId: acc.pageId || "",
+      accessToken: acc.accessToken || "",
+    });
+    document.getElementById("ig-connect-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const cancelEditIg = () => {
+    setEditingIgId(null);
+    setIgForm({ name: "", igId: "", pageId: "", accessToken: "" });
+  };
+
+  const toggleIgEnabled = async (acc: any) => {
+    try {
+      const res = await fetch(`/api/channels/instagram/${acc.id}`, {
+        method: "PUT",
+        headers: authHeaders(),
+        body: JSON.stringify({ enabled: !acc.enabled }),
+      });
+      const d = await res.json();
+      if (res.ok) {
+        toast({ title: acc.enabled ? "Conexão desabilitada" : "Conexão habilitada", description: acc.enabled ? "O agente vai ignorar DMs desta conta." : "O agente volta a responder DMs desta conta." });
+        fetchInstagram();
+      } else {
+        toast({ title: "Erro", description: d.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Erro de conexão", variant: "destructive" });
+    }
+  };
+
+  const testIgConnection = async (id: string) => {
+    setIgTestingId(id);
+    try {
+      const res = await fetch(`/api/channels/instagram/${id}/test`, {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      const d = await res.json();
+      if (res.ok && d.success) {
+        toast({ title: "Conexão OK ✅", description: d.message });
+      } else {
+        toast({ title: "Falha na conexão", description: `${d.error || ""}${d.hint ? ` — ${d.hint}` : ""}`, variant: "destructive" });
+      }
+      fetchInstagram();
+    } catch {
+      toast({ title: "Erro de conexão", variant: "destructive" });
+    }
+    setIgTestingId(null);
+  };
 
   // Google Calendar
   const [gcal, setGcal] = useState<{ configured: boolean; connected: boolean }>({ configured: false, connected: false });
@@ -125,23 +185,30 @@ export default function Connections() {
   };
 
   const connectInstagram = async () => {
-    if (!igForm.name || !igForm.igId || !igForm.pageId || !igForm.accessToken) {
+    // Em edição o token pode ficar vazio (mantém o atual); no cadastro, tudo é obrigatório.
+    if (!igForm.name || !igForm.igId || !igForm.pageId || (!editingIgId && !igForm.accessToken)) {
       return toast({ title: "Preencha todos os campos", variant: "destructive" });
     }
     setIgLoading(true);
     try {
-      const res = await fetch("/api/channels/instagram", {
-        method: "POST",
-        headers: authHeaders(),
-        body: JSON.stringify(igForm),
-      });
+      const res = await fetch(
+        editingIgId ? `/api/channels/instagram/${editingIgId}` : "/api/channels/instagram",
+        {
+          method: editingIgId ? "PUT" : "POST",
+          headers: authHeaders(),
+          body: JSON.stringify(igForm),
+        }
+      );
       const d = await res.json();
       if (res.ok) {
-        toast({ title: "Instagram conectado", description: "O agente já responde DMs desta conta." });
-        setIgForm({ name: "", igId: "", pageId: "", accessToken: "" });
+        toast({
+          title: editingIgId ? "Conexão atualizada" : "Instagram conectado",
+          description: editingIgId ? "Dados salvos. Use 'Testar conexão' para validar." : "O agente já responde DMs desta conta.",
+        });
+        cancelEditIg();
         fetchInstagram();
       } else {
-        toast({ title: "Erro ao conectar", description: d.error, variant: "destructive" });
+        toast({ title: editingIgId ? "Erro ao salvar" : "Erro ao conectar", description: d.error, variant: "destructive" });
       }
     } catch {
       toast({ title: "Erro de conexão", variant: "destructive" });
@@ -403,41 +470,104 @@ export default function Connections() {
           <TabsContent value="instagram" className="space-y-6">
             {/* Contas conectadas */}
             {igAccounts.length > 0 && (
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-4">
                 {igAccounts.map((acc) => (
-                  <Card key={acc.id} className="rounded-2xl border-border p-5 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-pink-100 text-pink-600 grid place-items-center">
-                        <Instagram className="w-5 h-5" />
+                  <Card key={acc.id} className={`rounded-2xl border-border p-5 space-y-4 ${acc.enabled === false ? "opacity-75" : ""}`}>
+                    {/* Cabeçalho: identidade + status + toggle */}
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="h-10 w-10 rounded-xl bg-pink-100 text-pink-600 grid place-items-center shrink-0">
+                          <Instagram className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-foreground truncate">{acc.name}</p>
+                          <p className="text-xs text-muted-foreground">Instagram Direct</p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-foreground truncate">{acc.name}</p>
-                        <p className="text-xs text-muted-foreground">Instagram Direct</p>
+                      <div className="flex items-center gap-3">
+                        {acc.enabled === false ? (
+                          <Badge className="bg-slate-200 text-slate-600 border-none">Desabilitado</Badge>
+                        ) : acc.status === "CONNECTED" ? (
+                          <Badge className="bg-emerald-100 text-emerald-700 border-none">Conectado</Badge>
+                        ) : (
+                          <Badge className="bg-rose-100 text-rose-700 border-none">Falha na conexão</Badge>
+                        )}
+                        <div className="flex items-center gap-1.5">
+                          <Switch checked={acc.enabled !== false} onCheckedChange={() => toggleIgEnabled(acc)} />
+                          <span className="text-xs text-muted-foreground">{acc.enabled !== false ? "Ativo" : "Inativo"}</span>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge className="bg-emerald-100 text-emerald-700 border-none">Conectado</Badge>
-                      <button onClick={() => disconnectInstagram(acc.id)} className="p-2 rounded-lg text-muted-foreground hover:bg-rose-50 hover:text-rose-600">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+
+                    {/* Dados da conexão */}
+                    <div className="grid sm:grid-cols-3 gap-3 text-xs">
+                      <div className="rounded-xl bg-muted p-3">
+                        <p className="text-muted-foreground mb-1">Instagram Account ID</p>
+                        <p className="font-mono text-foreground break-all">{acc.igId || "—"}</p>
+                      </div>
+                      <div className="rounded-xl bg-muted p-3">
+                        <p className="text-muted-foreground mb-1">Facebook Page ID</p>
+                        <p className="font-mono text-foreground break-all">{acc.pageId || "—"}</p>
+                      </div>
+                      <div className="rounded-xl bg-muted p-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-muted-foreground">Page Access Token</p>
+                          <button
+                            type="button"
+                            onClick={() => setShowToken((s) => ({ ...s, [acc.id]: !s[acc.id] }))}
+                            className="text-muted-foreground hover:text-foreground"
+                            title={showToken[acc.id] ? "Ocultar token" : "Mostrar token"}
+                          >
+                            {showToken[acc.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                        <p className="font-mono text-foreground break-all">
+                          {acc.accessToken
+                            ? (showToken[acc.id] ? acc.accessToken : `${acc.accessToken.slice(0, 6)}••••••••${acc.accessToken.slice(-4)}`)
+                            : "—"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Ações */}
+                    <div className="flex items-center justify-end gap-2 flex-wrap">
+                      <Button size="sm" variant="outline" className="gap-1.5" onClick={() => testIgConnection(acc.id)} disabled={igTestingId === acc.id}>
+                        {igTestingId === acc.id ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Wifi className="w-3.5 h-3.5" />}
+                        Testar conexão
+                      </Button>
+                      <Button size="sm" variant="outline" className="gap-1.5" onClick={() => startEditIg(acc)}>
+                        <Pencil className="w-3.5 h-3.5" /> Editar
+                      </Button>
+                      <Button size="sm" variant="outline" className="gap-1.5 text-rose-600 border-rose-200 hover:bg-rose-50" onClick={() => disconnectInstagram(acc.id)}>
+                        <Trash2 className="w-3.5 h-3.5" /> Excluir
+                      </Button>
                     </div>
                   </Card>
                 ))}
               </div>
             )}
 
-            {/* Conectar nova conta */}
-            <Card className="rounded-2xl border-border p-6 space-y-5">
+            {/* Conectar nova conta / editar existente */}
+            <Card id="ig-connect-form" className={`rounded-2xl p-6 space-y-5 ${editingIgId ? "border-primary ring-2 ring-primary/20" : "border-border"}`}>
               <div className="flex items-start gap-4">
                 <div className="h-11 w-11 rounded-xl bg-pink-100 text-pink-600 grid place-items-center shrink-0">
                   <Instagram className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-base font-semibold text-foreground">Conectar Instagram Direct</h2>
+                  <h2 className="text-base font-semibold text-foreground">
+                    {editingIgId ? "Editar conexão do Instagram" : "Conectar Instagram Direct"}
+                  </h2>
                   <p className="text-sm text-muted-foreground mt-1">
-                    O mesmo agente responde DMs no Instagram, com o contexto do seu negócio.
+                    {editingIgId
+                      ? "Altere os dados e salve. Deixe o token vazio para manter o atual."
+                      : "O mesmo agente responde DMs no Instagram, com o contexto do seu negócio."}
                   </p>
                 </div>
+                {editingIgId && (
+                  <button onClick={cancelEditIg} className="p-2 rounded-lg text-muted-foreground hover:bg-muted" title="Cancelar edição">
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
 
               <details className="group rounded-xl bg-muted p-4 text-sm text-muted-foreground" open>
@@ -523,7 +653,7 @@ export default function Connections() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Page Access Token</Label>
-                  <Input type="password" value={igForm.accessToken} onChange={(e) => setIgForm({ ...igForm, accessToken: e.target.value })} placeholder="EAAG…" />
+                  <Input type="password" value={igForm.accessToken} onChange={(e) => setIgForm({ ...igForm, accessToken: e.target.value })} placeholder={editingIgId ? "Deixe vazio para manter o atual" : "EAAG…"} />
                 </div>
               </div>
 
@@ -531,10 +661,15 @@ export default function Connections() {
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <ShieldCheck className="w-4 h-4" /> Integração oficial via Meta — sem risco de bloqueio.
                 </div>
-                <Button onClick={connectInstagram} disabled={igLoading} className="gap-2">
-                  {igLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Instagram className="w-4 h-4" />}
-                  Conectar Instagram
-                </Button>
+                <div className="flex items-center gap-2">
+                  {editingIgId && (
+                    <Button variant="outline" onClick={cancelEditIg} disabled={igLoading}>Cancelar</Button>
+                  )}
+                  <Button onClick={connectInstagram} disabled={igLoading} className="gap-2">
+                    {igLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : editingIgId ? <Pencil className="w-4 h-4" /> : <Instagram className="w-4 h-4" />}
+                    {editingIgId ? "Salvar alterações" : "Conectar Instagram"}
+                  </Button>
+                </div>
               </div>
             </Card>
           </TabsContent>
