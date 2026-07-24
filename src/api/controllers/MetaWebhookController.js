@@ -39,9 +39,15 @@ export const verifyMetaWebhook = (req, res) => {
  * Retorna true se válida. Usa comparação em tempo constante.
  */
 export function isValidMetaSignature(req) {
-  const appSecret = process.env.META_APP_SECRET;
-  if (!appSecret) {
-    console.error("[Meta Webhook] META_APP_SECRET não configurado — rejeitando.");
+  // Um mesmo app da Meta tem DUAS chaves secretas:
+  //  - META_APP_SECRET     → chave do app Facebook (Configurações → Básico).
+  //    Assina webhooks de WhatsApp (object: "whatsapp_business_account").
+  //  - META_IG_APP_SECRET  → chave do app Instagram (Produtos → Instagram →
+  //    configurações da API). Assina webhooks de Instagram (object: "instagram").
+  // Aceitamos qualquer uma que confira, então não é preciso ramificar por tipo.
+  const secrets = [process.env.META_APP_SECRET, process.env.META_IG_APP_SECRET].filter(Boolean);
+  if (!secrets.length) {
+    console.error("[Meta Webhook] Nenhum secret configurado (META_APP_SECRET / META_IG_APP_SECRET) — rejeitando.");
     return false;
   }
 
@@ -58,21 +64,21 @@ export function isValidMetaSignature(req) {
     return false;
   }
 
-  const expected = "sha256=" + crypto
-    .createHmac("sha256", appSecret)
-    .update(rawBody)
-    .digest("hex");
-
-  const a = Buffer.from(signature);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
-    console.warn(
-      "[Meta Webhook] Assinatura NÃO confere — o META_APP_SECRET não corresponde ao app que enviou o evento. " +
-      "Confirme que o webhook e o OAuth usam o MESMO app da Meta."
-    );
-    return false;
+  const sigBuf = Buffer.from(signature);
+  for (const secret of secrets) {
+    const expected = "sha256=" + crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
+    const expBuf = Buffer.from(expected);
+    if (sigBuf.length === expBuf.length && crypto.timingSafeEqual(sigBuf, expBuf)) {
+      return true;
+    }
   }
-  return true;
+
+  console.warn(
+    `[Meta Webhook] Assinatura NÃO confere com nenhum secret (object=${req.body?.object}). ` +
+    "Webhooks de Instagram são assinados com a CHAVE DO APP INSTAGRAM (Produtos → Instagram → " +
+    "config. da API) — defina META_IG_APP_SECRET com esse valor."
+  );
+  return false;
 }
 
 // POST: eventos de mensagem recebida.
