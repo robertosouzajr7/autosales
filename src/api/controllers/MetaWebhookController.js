@@ -78,10 +78,31 @@ export const receiveMetaWebhook = async (req, res) => {
     const body = req.body || {};
     const entries = body.entry || [];
 
+    // Diagnóstico: mostra o formato cru do payload (o Instagram tem variações
+    // de estrutura conforme o tipo de integração). Ajuda a depurar "recebe mas
+    // não responde". Ative/desative com META_WEBHOOK_DEBUG.
+    if (process.env.META_WEBHOOK_DEBUG !== "false") {
+      console.log(`[Meta Webhook] 📥 payload object=${body.object} entries=${entries.length}: ${JSON.stringify(body).slice(0, 1500)}`);
+    }
+
     for (const entry of entries) {
       // ── WhatsApp: entry.changes[].value.messages ──────────────
       for (const change of entry.changes || []) {
         const value = change.value || {};
+
+        // Instagram novo (Instagram API with Instagram login) também usa
+        // entry.changes[] com field "messages" e value.messages no formato IG.
+        if (change.field === "messages" && Array.isArray(value.messages) && !value.metadata?.phone_number_id) {
+          for (const m of value.messages) {
+            const senderId = m.from?.id || m.from;
+            const text = m.text?.body || m.text;
+            console.log(`[Meta Webhook] IG(changes) igId=${entry.id} sender=${senderId} text=${text ? "sim" : "não"} echo=${!!m.is_echo}`);
+            if (!senderId || !text || m.is_echo) continue;
+            await MetaManager.handleIncomingInstagram(entry.id, senderId, null, text);
+          }
+          continue;
+        }
+
         const phoneId = value.metadata?.phone_number_id;
         const contacts = value.contacts || [];
         const messages = value.messages || [];
@@ -99,12 +120,13 @@ export const receiveMetaWebhook = async (req, res) => {
         }
       }
 
-      // ── Instagram Direct: entry.messaging[] (Messenger format) ─
+      // ── Instagram Direct: entry.messaging[] (Messenger/Facebook Login) ─
       // O igId da conta é o entry.id (Instagram Business Account ID).
       const igId = entry.id;
       for (const event of entry.messaging || []) {
         const senderId = event.sender?.id;
         const msg = event.message;
+        console.log(`[Meta Webhook] IG(messaging) igId=${igId} sender=${senderId} text=${msg?.text ? "sim" : "não"} echo=${!!msg?.is_echo}`);
         // Ignora echoes (mensagens que a própria página enviou) e não-texto.
         if (!msg || msg.is_echo || !msg.text) continue;
         if (!igId || !senderId) continue;
