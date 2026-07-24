@@ -110,6 +110,24 @@ export default function Connections() {
     }
   };
 
+  const [igOauthLoading, setIgOauthLoading] = useState(false);
+  const connectWithMeta = async () => {
+    setIgOauthLoading(true);
+    try {
+      const res = await fetch("/api/channels/instagram/oauth-url", { headers: authHeaders() });
+      const d = await res.json();
+      if (res.ok && d.url) {
+        window.location.href = d.url; // vai para o diálogo de autorização da Meta
+      } else {
+        toast({ title: "Login com a Meta indisponível", description: d.error, variant: "destructive" });
+        setIgOauthLoading(false);
+      }
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message, variant: "destructive" });
+      setIgOauthLoading(false);
+    }
+  };
+
   const testIgConnection = async (id: string) => {
     setIgTestingId(id);
     try {
@@ -243,6 +261,22 @@ export default function Connections() {
       toast({ title: m.title, variant: m.variant });
       window.history.replaceState({}, "", "/connections");
       fetchGcal();
+    }
+
+    // Retorno do OAuth da Meta (?instagram=connected|nopage|denied|expired|error)
+    const ig = params.get("instagram");
+    if (ig) {
+      const igMap: Record<string, { title: string; description?: string; variant?: "destructive" }> = {
+        connected: { title: "Instagram conectado 🎉", description: "O agente já pode responder DMs desta conta." },
+        nopage: { title: "Nenhum Instagram profissional encontrado", description: "Vincule sua conta Instagram (Comercial/Criador) a uma Página do Facebook e tente de novo.", variant: "destructive" },
+        denied: { title: "Você cancelou a autorização na Meta", variant: "destructive" },
+        expired: { title: "A sessão de conexão expirou, tente de novo", variant: "destructive" },
+        error: { title: "Falha ao conectar com a Meta", description: "Tente novamente; se persistir, use a conexão manual.", variant: "destructive" },
+      };
+      const im = igMap[ig] || igMap.error;
+      toast({ title: im.title, description: im.description, variant: im.variant });
+      window.history.replaceState({}, "", "/connections");
+      fetchInstagram();
     }
   }, []);
 
@@ -468,6 +502,28 @@ export default function Connections() {
 
           {/* INSTAGRAM ─────────────────────────────────────────── */}
           <TabsContent value="instagram" className="space-y-6">
+            {/* Conexão rápida (OAuth Meta) */}
+            <Card className="rounded-2xl border-border p-6 bg-gradient-to-br from-pink-50 via-white to-purple-50">
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-pink-500 to-purple-600 text-white grid place-items-center shrink-0 shadow-lg shadow-pink-500/30">
+                  <Instagram className="w-6 h-6" />
+                </div>
+                <div className="flex-1 min-w-[220px]">
+                  <h2 className="text-base font-semibold text-foreground">Conectar Instagram em 1 clique</h2>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    Você autoriza na janela da Meta e pronto: detectamos sua Página, seu Instagram e configuramos tudo automaticamente.
+                  </p>
+                </div>
+                <Button onClick={connectWithMeta} disabled={igOauthLoading} size="lg" className="gap-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white border-0">
+                  {igOauthLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Instagram className="w-4 h-4" />}
+                  Conectar com a Meta
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-3 flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5" /> Requisitos: conta Instagram profissional vinculada a uma Página do Facebook. Você pode revogar o acesso quando quiser.
+              </p>
+            </Card>
+
             {/* Contas conectadas */}
             {igAccounts.length > 0 && (
               <div className="space-y-4">
@@ -555,12 +611,12 @@ export default function Connections() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h2 className="text-base font-semibold text-foreground">
-                    {editingIgId ? "Editar conexão do Instagram" : "Conectar Instagram Direct"}
+                    {editingIgId ? "Editar conexão do Instagram" : "Conexão manual (avançado)"}
                   </h2>
                   <p className="text-sm text-muted-foreground mt-1">
                     {editingIgId
                       ? "Altere os dados e salve. Deixe o token vazio para manter o atual."
-                      : "O mesmo agente responde DMs no Instagram, com o contexto do seu negócio."}
+                      : "Prefira o botão 'Conectar com a Meta' acima. Use este modo apenas se quiser informar os IDs e o token manualmente."}
                   </p>
                 </div>
                 {editingIgId && (
