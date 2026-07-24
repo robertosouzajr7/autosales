@@ -604,32 +604,27 @@ export default function Connections() {
               </div>
             )}
 
-            {/* Conectar nova conta / editar existente */}
-            <Card id="ig-connect-form" className={`rounded-2xl p-6 space-y-5 ${editingIgId ? "border-primary ring-2 ring-primary/20" : "border-border"}`}>
+            {/* Card de edição — aparece só ao clicar em "Editar" numa conexão */}
+            {editingIgId && (
+            <Card id="ig-connect-form" className="rounded-2xl p-6 space-y-5 border-primary ring-2 ring-primary/20">
               <div className="flex items-start gap-4">
                 <div className="h-11 w-11 rounded-xl bg-pink-100 text-pink-600 grid place-items-center shrink-0">
                   <Instagram className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-base font-semibold text-foreground">
-                    {editingIgId ? "Editar conexão do Instagram" : "Conexão manual (avançado)"}
-                  </h2>
+                  <h2 className="text-base font-semibold text-foreground">Editar conexão do Instagram</h2>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {editingIgId
-                      ? "Altere os dados e salve. Deixe o token vazio para manter o atual."
-                      : "Prefira o botão 'Conectar com a Meta' acima. Use este modo apenas se quiser informar os IDs e o token manualmente."}
+                    Altere os dados e salve. Deixe o token vazio para manter o atual.
                   </p>
                 </div>
-                {editingIgId && (
-                  <button onClick={cancelEditIg} className="p-2 rounded-lg text-muted-foreground hover:bg-muted" title="Cancelar edição">
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
+                <button onClick={cancelEditIg} className="p-2 rounded-lg text-muted-foreground hover:bg-muted" title="Cancelar edição">
+                  <X className="w-4 h-4" />
+                </button>
               </div>
 
-              <details className="group rounded-xl bg-muted p-4 text-sm text-muted-foreground" open>
+              <details className="group rounded-xl bg-muted p-4 text-sm text-muted-foreground">
                 <summary className="cursor-pointer font-semibold text-foreground uppercase tracking-wide text-xs list-none flex items-center justify-between">
-                  <span>📋 Passo a passo para conectar (~15 min, configuração única)</span>
+                  <span>📋 Onde encontrar cada valor na Meta</span>
                   <span className="text-muted-foreground group-open:rotate-180 transition-transform">▾</span>
                 </summary>
 
@@ -723,12 +718,13 @@ export default function Connections() {
                     <Button variant="outline" onClick={cancelEditIg} disabled={igLoading}>Cancelar</Button>
                   )}
                   <Button onClick={connectInstagram} disabled={igLoading} className="gap-2">
-                    {igLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : editingIgId ? <Pencil className="w-4 h-4" /> : <Instagram className="w-4 h-4" />}
-                    {editingIgId ? "Salvar alterações" : "Conectar Instagram"}
+                    {igLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Pencil className="w-4 h-4" />}
+                    Salvar alterações
                   </Button>
                 </div>
               </div>
             </Card>
+            )}
           </TabsContent>
 
           {/* AGENDA / GOOGLE CALENDAR ─────────────────────────── */}

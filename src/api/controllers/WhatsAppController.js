@@ -89,16 +89,56 @@ export const createMetaAccount = async (req, res) => {
   }
 };
 
-// Conecta uma conta do Instagram Direct (via Meta). O usuário informa o
-// Instagram Business Account ID, a Page ID vinculada e o Page Access Token.
+// Conecta uma conta do Instagram Direct (via Meta). Dois modos:
+//  A) Instagram Login (token IGAA… gerado no painel da Meta): basta o token;
+//     o igId e o nome são descobertos por graph.instagram.com/me. Sem Page ID.
+//  B) Via Página do Facebook: exige IG Account ID + Page ID + Page Access Token.
 export const createInstagramAccount = async (req, res) => {
   try {
-    const { name, igId, pageId, accessToken } = req.body;
-    if (!name || !igId || !pageId || !accessToken) {
-      return res.status(400).json({ error: "Nome, IG Account ID, Page ID e Page Token são obrigatórios." });
+    let { name, igId, pageId, accessToken } = req.body;
+    if (!accessToken) {
+      return res.status(400).json({ error: "O token de acesso é obrigatório." });
     }
+
+    const isIgToken = accessToken.startsWith("IG"); // Instagram Login
+    const version = process.env.META_GRAPH_VERSION || "v21.0";
+    const axios = (await import("axios")).default;
+
+    if (isIgToken) {
+      // Descobre igId/username pelo próprio token — o usuário só cola o token.
+      try {
+        const me = await axios.get(`https://graph.instagram.com/${version}/me`, {
+          params: { fields: "user_id,username", access_token: accessToken }, timeout: 15000,
+        });
+        igId = String(me.data?.user_id || igId || "");
+        if (!name) name = me.data?.username ? `@${me.data.username}` : `Instagram ${igId.slice(-6)}`;
+      } catch (e) {
+        return res.status(400).json({ error: `Token inválido: ${e.response?.data?.error?.message || e.message}` });
+      }
+      if (!igId) return res.status(400).json({ error: "Não foi possível descobrir o ID da conta a partir do token." });
+      pageId = null;
+    } else {
+      // Fluxo via Página: exige os três campos.
+      if (!name || !igId || !pageId) {
+        return res.status(400).json({ error: "Para token de Página, informe Nome, IG Account ID e Page ID." });
+      }
+    }
+
     const dup = await prisma.whatsAppAccount.findFirst({ where: { igId, channel: "INSTAGRAM" } });
     if (dup) return res.status(409).json({ error: "Esta conta do Instagram já está conectada." });
+
+    // Assina a conta no app para receber webhooks de mensagem com conteúdo.
+    try {
+      if (isIgToken) {
+        const { subscribeInstagramAccount } = await import("./MetaOAuthController.js");
+        await subscribeInstagramAccount(accessToken);
+      } else {
+        const { subscribePageToApp } = await import("./MetaOAuthController.js");
+        await subscribePageToApp(pageId, accessToken);
+      }
+    } catch (e) {
+      console.warn("[Instagram] Falha ao assinar no app:", e.response?.data?.error?.message || e.message);
+    }
 
     const account = await prisma.whatsAppAccount.create({
       data: {
