@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Plus, Smartphone, CheckCircle2, RefreshCw, Trash2, Code2,
   Globe, Instagram, Copy, ExternalLink, ShieldCheck, CalendarClock,
-  Eye, EyeOff, Pencil, X, Wifi,
+  Eye, EyeOff, Wifi, Pencil, X,
 } from "lucide-react";
 
 interface Connection {
@@ -69,26 +69,46 @@ export default function Connections() {
 
   // Instagram
   const [igAccounts, setIgAccounts] = useState<any[]>([]);
-  const [igForm, setIgForm] = useState({ name: "", igId: "", pageId: "", accessToken: "" });
-  const [igLoading, setIgLoading] = useState(false);
-  const [editingIgId, setEditingIgId] = useState<string | null>(null);
   const [showToken, setShowToken] = useState<Record<string, boolean>>({});
   const [igTestingId, setIgTestingId] = useState<string | null>(null);
 
+  // Edição de uma conexão existente
+  const [editingIgId, setEditingIgId] = useState<string | null>(null);
+  const [igForm, setIgForm] = useState({ name: "", igId: "", accessToken: "" });
+  const [igLoading, setIgLoading] = useState(false);
+
   const startEditIg = (acc: any) => {
     setEditingIgId(acc.id);
-    setIgForm({
-      name: acc.name || "",
-      igId: acc.igId || "",
-      pageId: acc.pageId || "",
-      accessToken: acc.accessToken || "",
-    });
-    document.getElementById("ig-connect-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setIgForm({ name: acc.name || "", igId: acc.igId || "", accessToken: "" });
+    setTimeout(() => document.getElementById("ig-edit-form")?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
   };
 
   const cancelEditIg = () => {
     setEditingIgId(null);
-    setIgForm({ name: "", igId: "", pageId: "", accessToken: "" });
+    setIgForm({ name: "", igId: "", accessToken: "" });
+  };
+
+  const saveEditIg = async () => {
+    if (!editingIgId) return;
+    setIgLoading(true);
+    try {
+      const res = await fetch(`/api/channels/instagram/${editingIgId}`, {
+        method: "PUT",
+        headers: authHeaders(),
+        body: JSON.stringify(igForm), // token vazio = mantém o atual
+      });
+      const d = await res.json();
+      if (res.ok) {
+        toast({ title: "Conexão atualizada", description: "Use 'Testar conexão' para validar." });
+        cancelEditIg();
+        fetchInstagram();
+      } else {
+        toast({ title: "Erro ao salvar", description: d.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Erro de conexão", variant: "destructive" });
+    }
+    setIgLoading(false);
   };
 
   const toggleIgEnabled = async (acc: any) => {
@@ -200,38 +220,6 @@ export default function Connections() {
     } catch {
       /* silent */
     }
-  };
-
-  const connectInstagram = async () => {
-    // Em edição o token pode ficar vazio (mantém o atual); no cadastro, tudo é obrigatório.
-    if (!igForm.name || !igForm.igId || !igForm.pageId || (!editingIgId && !igForm.accessToken)) {
-      return toast({ title: "Preencha todos os campos", variant: "destructive" });
-    }
-    setIgLoading(true);
-    try {
-      const res = await fetch(
-        editingIgId ? `/api/channels/instagram/${editingIgId}` : "/api/channels/instagram",
-        {
-          method: editingIgId ? "PUT" : "POST",
-          headers: authHeaders(),
-          body: JSON.stringify(igForm),
-        }
-      );
-      const d = await res.json();
-      if (res.ok) {
-        toast({
-          title: editingIgId ? "Conexão atualizada" : "Instagram conectado",
-          description: editingIgId ? "Dados salvos. Use 'Testar conexão' para validar." : "O agente já responde DMs desta conta.",
-        });
-        cancelEditIg();
-        fetchInstagram();
-      } else {
-        toast({ title: editingIgId ? "Erro ao salvar" : "Erro ao conectar", description: d.error, variant: "destructive" });
-      }
-    } catch {
-      toast({ title: "Erro de conexão", variant: "destructive" });
-    }
-    setIgLoading(false);
   };
 
   const disconnectInstagram = async (id: string) => {
@@ -604,126 +592,107 @@ export default function Connections() {
               </div>
             )}
 
-            {/* Card de edição — aparece só ao clicar em "Editar" numa conexão */}
-            {editingIgId && (
-            <Card id="ig-connect-form" className="rounded-2xl p-6 space-y-5 border-primary ring-2 ring-primary/20">
+            {/* Requisitos e passo a passo (o que precisa estar pronto na Meta) */}
+            <Card className="rounded-2xl border-border p-6 space-y-4">
               <div className="flex items-start gap-4">
-                <div className="h-11 w-11 rounded-xl bg-pink-100 text-pink-600 grid place-items-center shrink-0">
-                  <Instagram className="w-5 h-5" />
+                <div className="h-11 w-11 rounded-xl bg-slate-100 text-slate-600 grid place-items-center shrink-0">
+                  <ShieldCheck className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-base font-semibold text-foreground">Editar conexão do Instagram</h2>
+                  <h2 className="text-base font-semibold text-foreground">Requisitos para conectar o Instagram</h2>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Altere os dados e salve. Deixe o token vazio para manter o atual.
+                    Antes de clicar em "Conectar com a Meta", garanta que estes itens estão prontos. É uma configuração única.
                   </p>
                 </div>
-                <button onClick={cancelEditIg} className="p-2 rounded-lg text-muted-foreground hover:bg-muted" title="Cancelar edição">
-                  <X className="w-4 h-4" />
-                </button>
               </div>
 
-              <details className="group rounded-xl bg-muted p-4 text-sm text-muted-foreground">
-                <summary className="cursor-pointer font-semibold text-foreground uppercase tracking-wide text-xs list-none flex items-center justify-between">
-                  <span>📋 Onde encontrar cada valor na Meta</span>
-                  <span className="text-muted-foreground group-open:rotate-180 transition-transform">▾</span>
-                </summary>
+              <ol className="space-y-4">
+                <li className="flex gap-3">
+                  <span className="flex-none w-6 h-6 rounded-full bg-primary/10 text-primary grid place-items-center text-xs font-bold">1</span>
+                  <div>
+                    <p className="font-medium text-foreground">Conta Instagram profissional</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">No app do Instagram, use uma conta <b>Comercial</b> ou <b>Criador de conteúdo</b> (não pode ser conta pessoal): Configurações → Conta → Mudar para conta profissional.</p>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <span className="flex-none w-6 h-6 rounded-full bg-primary/10 text-primary grid place-items-center text-xs font-bold">2</span>
+                  <div>
+                    <p className="font-medium text-foreground">Permitir acesso a mensagens</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Ainda no app do Instagram: Configurações → <b>Ferramentas e controles empresariais</b> → ative <b>"Permitir acesso a mensagens"</b>. Sem isso o agente não recebe as DMs.</p>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <span className="flex-none w-6 h-6 rounded-full bg-primary/10 text-primary grid place-items-center text-xs font-bold">3</span>
+                  <div>
+                    <p className="font-medium text-foreground">Criar um app no Facebook Developers</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Acesse o <a href="https://developers.facebook.com/apps/" target="_blank" rel="noreferrer" className="text-primary underline inline-flex items-center gap-0.5">Facebook Developers <ExternalLink className="w-3 h-3" /></a>, crie um app e adicione o produto <b>Instagram</b> (API com login do Instagram). É nesse app que a conexão acontece.
+                    </p>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <span className="flex-none w-6 h-6 rounded-full bg-primary/10 text-primary grid place-items-center text-xs font-bold">4</span>
+                  <div>
+                    <p className="font-medium text-foreground">Assinar o webhook de mensagens</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">No app → Instagram → Webhooks, assine o campo <code className="text-[11px] bg-muted px-1 rounded">messages</code> usando a URL abaixo.</p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <div className="flex-1 rounded-lg bg-slate-950 text-slate-100 p-2 font-mono break-all text-xs">{origin}/api/webhook/meta</div>
+                      <button
+                        type="button"
+                        onClick={() => { navigator.clipboard.writeText(`${origin}/api/webhook/meta`); toast({ title: "URL copiada" }); }}
+                        className="p-2 rounded-lg bg-muted hover:bg-primary/10 text-primary shrink-0"
+                        title="Copiar URL"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              </ol>
 
-                <ol className="mt-4 space-y-4">
-                  <li className="flex gap-3">
-                    <span className="flex-none w-6 h-6 rounded-full bg-primary/10 text-primary grid place-items-center text-xs font-bold">1</span>
-                    <div>
-                      <p className="font-medium text-foreground">Conta profissional + Página</p>
-                      <p className="text-xs mt-0.5">No app do Instagram, use uma conta <b>Comercial ou Criador</b> (não pessoal) e vincule-a a uma <b>Página do Facebook</b> (Página → Configurações → Contas vinculadas → Instagram).</p>
-                    </div>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="flex-none w-6 h-6 rounded-full bg-primary/10 text-primary grid place-items-center text-xs font-bold">2</span>
-                    <div>
-                      <p className="font-medium text-foreground">Criar um app na Meta</p>
-                      <p className="text-xs mt-0.5">
-                        Acesse <a href="https://developers.facebook.com/apps/create/" target="_blank" rel="noreferrer" className="text-primary underline inline-flex items-center gap-0.5">criar app <ExternalLink className="w-3 h-3" /></a>, escolha tipo <b>Empresa</b> e, dentro do app, adicione o produto <b>Instagram</b> (API com mensagens).
-                      </p>
-                    </div>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="flex-none w-6 h-6 rounded-full bg-primary/10 text-primary grid place-items-center text-xs font-bold">3</span>
-                    <div>
-                      <p className="font-medium text-foreground">Gerar token e pegar os IDs</p>
-                      <p className="text-xs mt-0.5">
-                        No <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noreferrer" className="text-primary underline inline-flex items-center gap-0.5">Graph API Explorer <ExternalLink className="w-3 h-3" /></a>, selecione seu app e gere um token com as permissões <code className="text-[11px] bg-background px-1 rounded">instagram_basic</code>, <code className="text-[11px] bg-background px-1 rounded">instagram_manage_messages</code>, <code className="text-[11px] bg-background px-1 rounded">pages_show_list</code>, <code className="text-[11px] bg-background px-1 rounded">pages_manage_metadata</code> e <code className="text-[11px] bg-background px-1 rounded">pages_messaging</code>. Depois consulte:
-                      </p>
-                      <div className="mt-1.5 space-y-1 text-[11px] font-mono">
-                        <div className="bg-background rounded px-2 py-1"><b>me/accounts</b> → pega <b>Page ID</b> (id) e <b>Page Access Token</b> (access_token)</div>
-                        <div className="bg-background rounded px-2 py-1"><b>PAGE_ID?fields=instagram_business_account</b> → pega o <b>IG Account ID</b></div>
-                      </div>
-                    </div>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="flex-none w-6 h-6 rounded-full bg-primary/10 text-primary grid place-items-center text-xs font-bold">4</span>
-                    <div>
-                      <p className="font-medium text-foreground">Configurar o webhook</p>
-                      <p className="text-xs mt-0.5">No app, em <b>Webhooks → Instagram</b>, use a URL abaixo como <b>Callback URL</b>, o <b>Verify Token</b> definido no servidor (variável <code className="text-[11px] bg-background px-1 rounded">META_VERIFY_TOKEN</code>) e assine o campo <code className="text-[11px] bg-background px-1 rounded">messages</code>.</p>
-                      <div className="mt-2 flex items-center gap-2">
-                        <div className="flex-1 rounded-lg bg-slate-950 text-slate-100 p-2 font-mono break-all text-xs">{origin}/api/webhook/meta</div>
-                        <button
-                          type="button"
-                          onClick={() => { navigator.clipboard.writeText(`${origin}/api/webhook/meta`); toast({ title: "URL copiada" }); }}
-                          className="p-2 rounded-lg bg-background hover:bg-primary/10 text-primary shrink-0"
-                          title="Copiar URL"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="flex-none w-6 h-6 rounded-full bg-primary/10 text-primary grid place-items-center text-xs font-bold">5</span>
-                    <div>
-                      <p className="font-medium text-foreground">Preencher os campos abaixo</p>
-                      <p className="text-xs mt-0.5">Cole o <b>IG Account ID</b>, o <b>Page ID</b> e o <b>Page Access Token</b> nos campos abaixo e clique em <b>Conectar Instagram</b>.</p>
-                    </div>
-                  </li>
-                </ol>
-
-                <p className="mt-4 text-[11px] italic border-t border-border pt-3">
-                  Precisa de mais detalhes (tokens que não expiram, revisão do app, erros comuns)? Peça ao suporte o guia completo de conexão do Instagram.
-                </p>
-              </details>
-
-              <div className="grid sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Nome (identifica no painel)</Label>
-                  <Input value={igForm.name} onChange={(e) => setIgForm({ ...igForm, name: e.target.value })} placeholder="Ex.: @clinicasorrisovivo" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Instagram Business Account ID</Label>
-                  <Input value={igForm.igId} onChange={(e) => setIgForm({ ...igForm, igId: e.target.value })} placeholder="1784xxxxxxxxxxx" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Facebook Page ID</Label>
-                  <Input value={igForm.pageId} onChange={(e) => setIgForm({ ...igForm, pageId: e.target.value })} placeholder="1029xxxxxxxxxxx" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Page Access Token</Label>
-                  <Input type="password" value={igForm.accessToken} onChange={(e) => setIgForm({ ...igForm, accessToken: e.target.value })} placeholder={editingIgId ? "Deixe vazio para manter o atual" : "EAAG…"} />
-                </div>
+              <div className="rounded-xl bg-muted p-3 flex items-start gap-2 text-xs text-muted-foreground">
+                <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>Com os requisitos prontos, use o botão <b>"Conectar com a Meta"</b> acima — o resto é automático (detectamos a conta, o token e configuramos tudo).</span>
               </div>
+            </Card>
 
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <ShieldCheck className="w-4 h-4" /> Integração oficial via Meta — sem risco de bloqueio.
+            {/* Editar conexão — aparece ao clicar em "Editar" numa conta */}
+            {editingIgId && (
+              <Card id="ig-edit-form" className="rounded-2xl p-6 space-y-5 border-primary ring-2 ring-primary/20">
+                <div className="flex items-start gap-4">
+                  <div className="h-11 w-11 rounded-xl bg-pink-100 text-pink-600 grid place-items-center shrink-0">
+                    <Pencil className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-base font-semibold text-foreground">Editar conexão do Instagram</h2>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Ajuste o nome ou cole um novo token de acesso. Deixe o token vazio para manter o atual.
+                    </p>
+                  </div>
+                  <button onClick={cancelEditIg} className="p-2 rounded-lg text-muted-foreground hover:bg-muted" title="Cancelar">
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
-                <div className="flex items-center gap-2">
-                  {editingIgId && (
-                    <Button variant="outline" onClick={cancelEditIg} disabled={igLoading}>Cancelar</Button>
-                  )}
-                  <Button onClick={connectInstagram} disabled={igLoading} className="gap-2">
+
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Nome (identifica no painel)</Label>
+                    <Input value={igForm.name} onChange={(e) => setIgForm({ ...igForm, name: e.target.value })} placeholder="Ex.: @sua_conta" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Novo token de acesso (opcional)</Label>
+                    <Input type="password" value={igForm.accessToken} onChange={(e) => setIgForm({ ...igForm, accessToken: e.target.value })} placeholder="Deixe vazio para manter o atual" />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2">
+                  <Button variant="outline" onClick={cancelEditIg} disabled={igLoading}>Cancelar</Button>
+                  <Button onClick={saveEditIg} disabled={igLoading} className="gap-2">
                     {igLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Pencil className="w-4 h-4" />}
                     Salvar alterações
                   </Button>
                 </div>
-              </div>
-            </Card>
+              </Card>
             )}
           </TabsContent>
 
