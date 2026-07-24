@@ -110,6 +110,32 @@ export default function Connections() {
     }
   };
 
+  // Conexão por token colado (o mais simples: token gerado no painel da Meta)
+  const [igToken, setIgToken] = useState("");
+  const [igTokenLoading, setIgTokenLoading] = useState(false);
+  const connectWithToken = async () => {
+    if (!igToken.trim()) return toast({ title: "Cole o token de acesso", variant: "destructive" });
+    setIgTokenLoading(true);
+    try {
+      const res = await fetch("/api/channels/instagram", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ accessToken: igToken.trim() }),
+      });
+      const d = await res.json();
+      if (res.ok) {
+        toast({ title: "Instagram conectado 🎉", description: "Descobrimos a conta pelo token. O agente já responde DMs." });
+        setIgToken("");
+        fetchInstagram();
+      } else {
+        toast({ title: "Erro ao conectar", description: d.error, variant: "destructive" });
+      }
+    } catch (e: any) {
+      toast({ title: "Erro de conexão", description: e.message, variant: "destructive" });
+    }
+    setIgTokenLoading(false);
+  };
+
   const [igOauthLoading, setIgOauthLoading] = useState(false);
   const connectWithMeta = async () => {
     setIgOauthLoading(true);
@@ -523,6 +549,31 @@ export default function Connections() {
               <p className="text-[11px] text-muted-foreground mt-3 flex items-center gap-1.5">
                 <ShieldCheck className="w-3.5 h-3.5" /> Requisitos: conta Instagram profissional vinculada a uma Página do Facebook. Você pode revogar o acesso quando quiser.
               </p>
+            </Card>
+
+            {/* Conexão por token (mais simples) */}
+            <Card className="rounded-2xl border-border p-6 space-y-4">
+              <div className="flex items-start gap-4">
+                <div className="h-11 w-11 rounded-xl bg-emerald-100 text-emerald-600 grid place-items-center shrink-0">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-base font-semibold text-foreground">Conectar com token de acesso</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    No app da Meta → <b>Produtos → Instagram → configurações da API</b>, em <b>"Gerar tokens de acesso"</b>, gere o token da sua conta e cole abaixo. Descobrimos o resto automaticamente.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-end gap-2 flex-wrap">
+                <div className="flex-1 min-w-[240px] space-y-1">
+                  <Label className="text-xs text-muted-foreground">Token de acesso do Instagram (IGAA…)</Label>
+                  <Input type="password" value={igToken} onChange={(e) => setIgToken(e.target.value)} placeholder="IGAA…" />
+                </div>
+                <Button onClick={connectWithToken} disabled={igTokenLoading} className="gap-2">
+                  {igTokenLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                  Conectar
+                </Button>
+              </div>
             </Card>
 
             {/* Contas conectadas */}
