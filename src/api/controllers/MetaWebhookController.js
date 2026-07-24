@@ -274,14 +274,34 @@ async function fetchInstagramMessageByMid(igId, mid) {
     timeout: 15000,
   });
 
-  for (const c of conv.data?.data || []) {
+  const convs = conv.data?.data || [];
+
+  // 2a. Match exato pelo mid.
+  for (const c of convs) {
     for (const m of c.messages?.data || []) {
-      if (m.id === mid) {
-        return { senderId: m.from?.id, text: m.message, raw: m, via: "conversations" };
+      if (m.id === mid && m.from?.id && m.from.id !== igId) {
+        return { senderId: m.from.id, text: m.message, raw: m, via: "conversations(mid)" };
       }
     }
   }
 
-  console.warn(`[Meta Webhook] mid não encontrado nas conversas recentes (${(conv.data?.data || []).length} conversas varridas).`);
+  // 2b. Fallback: o webhook acabou de disparar por uma mensagem nova; se o mid
+  // não casou (codificações diferentes), pega a mensagem RECEBIDA mais recente
+  // (from ≠ conta) dentre as conversas, desde que seja bem recente (~2 min).
+  let newest = null;
+  const cutoff = Date.now() - 2 * 60 * 1000;
+  for (const c of convs) {
+    for (const m of c.messages?.data || []) {
+      if (!m.from?.id || m.from.id === igId || !m.message) continue;
+      const t = m.created_time ? new Date(m.created_time).getTime() : Date.now();
+      if (t < cutoff) continue;
+      if (!newest || t > newest.t) newest = { t, senderId: m.from.id, text: m.message, raw: m };
+    }
+  }
+  if (newest) {
+    return { senderId: newest.senderId, text: newest.text, raw: newest.raw, via: "conversations(recente)" };
+  }
+
+  console.warn(`[Meta Webhook] mensagem não encontrada nas conversas recentes (${convs.length} conversas varridas).`);
   return null;
 }
