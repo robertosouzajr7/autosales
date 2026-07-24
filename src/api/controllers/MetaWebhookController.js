@@ -46,11 +46,17 @@ export function isValidMetaSignature(req) {
   }
 
   const signature = req.get("x-hub-signature-256");
-  if (!signature || !signature.startsWith("sha256=")) return false;
+  if (!signature || !signature.startsWith("sha256=")) {
+    console.warn("[Meta Webhook] Requisição sem cabeçalho X-Hub-Signature-256 — rejeitando.");
+    return false;
+  }
 
   // req.rawBody é preenchido pelo verify callback do express.json (ver app.js).
   const rawBody = req.rawBody;
-  if (!rawBody) return false;
+  if (!rawBody) {
+    console.warn("[Meta Webhook] rawBody ausente — não é possível validar a assinatura.");
+    return false;
+  }
 
   const expected = "sha256=" + crypto
     .createHmac("sha256", appSecret)
@@ -59,8 +65,14 @@ export function isValidMetaSignature(req) {
 
   const a = Buffer.from(signature);
   const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  return crypto.timingSafeEqual(a, b);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+    console.warn(
+      "[Meta Webhook] Assinatura NÃO confere — o META_APP_SECRET não corresponde ao app que enviou o evento. " +
+      "Confirme que o webhook e o OAuth usam o MESMO app da Meta."
+    );
+    return false;
+  }
+  return true;
 }
 
 // POST: eventos de mensagem recebida.
