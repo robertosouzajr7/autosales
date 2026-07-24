@@ -97,6 +97,8 @@ router.get("/whatsapp/qr/:id", WhatsAppController.qrCodeStream);
 
 // Instagram Direct — conexão manual (reaproveita o modelo de contas)
 router.post("/channels/instagram", WhatsAppController.createInstagramAccount);
+router.put("/channels/instagram/:id", WhatsAppController.updateInstagramAccount);
+router.post("/channels/instagram/:id/test", WhatsAppController.testInstagramConnection);
 
 // Automations — gate por enableAutomations
 router.get("/automations", AutomationController.getAutomations);

@@ -19,9 +19,15 @@ export const getAccounts = async (req, res) => {
       phone: acc.phone || "",
       status: acc.status,
       channel: acc.channel || "WHATSAPP",
+      enabled: acc.enabled !== false,
       handle: acc.igId ? `@${acc.name}` : (acc.phone || ""),
       instance: acc.id.substring(0, 8),
-      lastActive: acc.updatedAt.toLocaleString()
+      lastActive: acc.updatedAt.toLocaleString(),
+      // Dados da conexão Instagram — visíveis para o dono da conta (a UI
+      // mostra o token oculto por padrão, com opção de revelar).
+      igId: acc.igId || null,
+      pageId: acc.pageId || null,
+      accessToken: acc.channel === "INSTAGRAM" ? (acc.accessToken || null) : undefined,
     }));
 
     res.json(formatted);
@@ -106,6 +112,88 @@ export const createInstagramAccount = async (req, res) => {
       }
     });
     res.json({ id: account.id, name: account.name });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Edita uma conexão Instagram (dados e/ou toggle habilitado).
+// Campos ausentes/vazios são mantidos como estão.
+export const updateInstagramAccount = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, igId, pageId, accessToken, enabled } = req.body;
+
+    const account = await prisma.whatsAppAccount.findFirst({
+      where: { id, tenantId: req.tenantId, channel: "INSTAGRAM" }
+    });
+    if (!account) return res.status(404).json({ error: "Conexão não encontrada." });
+
+    const data = {};
+    if (typeof name === "string" && name.trim()) data.name = name.trim();
+    if (typeof igId === "string" && igId.trim()) data.igId = igId.trim();
+    if (typeof pageId === "string" && pageId.trim()) data.pageId = pageId.trim();
+    if (typeof accessToken === "string" && accessToken.trim()) data.accessToken = accessToken.trim();
+    if (typeof enabled === "boolean") data.enabled = enabled;
+
+    // igId é a chave de roteamento do webhook — não pode colidir com outra conta.
+    if (data.igId && data.igId !== account.igId) {
+      const dup = await prisma.whatsAppAccount.findFirst({
+        where: { igId: data.igId, channel: "INSTAGRAM", NOT: { id } }
+      });
+      if (dup) return res.status(409).json({ error: "Este Instagram já está conectado em outra conta." });
+    }
+
+    const updated = await prisma.whatsAppAccount.update({ where: { id }, data });
+    res.json({ success: true, id: updated.id, enabled: updated.enabled });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Testa a conexão Instagram contra a Graph API e atualiza o status.
+// Valida o token consultando o próprio IG Business Account.
+export const testInstagramConnection = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const account = await prisma.whatsAppAccount.findFirst({
+      where: { id, tenantId: req.tenantId, channel: "INSTAGRAM" }
+    });
+    if (!account) return res.status(404).json({ error: "Conexão não encontrada." });
+    if (!account.igId || !account.accessToken) {
+      return res.status(400).json({ error: "Conexão incompleta: IG Account ID e Access Token são obrigatórios." });
+    }
+
+    const version = process.env.META_GRAPH_VERSION || "v21.0";
+    const axios = (await import("axios")).default;
+    try {
+      const r = await axios.get(
+        `https://graph.facebook.com/${version}/${account.igId}`,
+        { params: { fields: "id,username", access_token: account.accessToken }, timeout: 15000 }
+      );
+      await prisma.whatsAppAccount.update({ where: { id }, data: { status: "CONNECTED" } });
+      return res.json({
+        success: true,
+        status: "CONNECTED",
+        username: r.data?.username || null,
+        message: r.data?.username
+          ? `Conectado como @${r.data.username}.`
+          : "Token válido — conexão OK.",
+      });
+    } catch (e) {
+      const metaError = e.response?.data?.error;
+      await prisma.whatsAppAccount.update({ where: { id }, data: { status: "DISCONNECTED" } });
+      return res.status(400).json({
+        success: false,
+        status: "DISCONNECTED",
+        error: metaError
+          ? `Meta: ${metaError.message} (código ${metaError.code})`
+          : `Falha ao contatar a Graph API: ${e.message}`,
+        hint: metaError?.code === 190
+          ? "Token inválido ou expirado — gere um novo Page Access Token e salve na conexão."
+          : "Confira o IG Account ID e o token. Veja o guia de conexão do Instagram.",
+      });
+    }
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
