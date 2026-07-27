@@ -308,6 +308,8 @@ export class WhatsAppManager {
                         content,
                         messageType,
                         source: 'WhatsApp',
+                        channel: 'WHATSAPP',
+                        accountId, // conexão (WhatsAppAccount.id) que recebeu a mensagem
                         skipNewLeadTrigger: true // ⚡ FASE 2/4: Evitar disparo duplo de prospecção em chat direto
                     })
                 });

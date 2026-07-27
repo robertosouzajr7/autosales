@@ -171,7 +171,9 @@ export class MetaManager {
                     phone: contactId,
                     name,
                     content,
-                    source
+                    source,
+                    channel: account.channel || "INSTAGRAM",
+                    accountId: account.id
                 },
                 { timeout: 60000 }
             );

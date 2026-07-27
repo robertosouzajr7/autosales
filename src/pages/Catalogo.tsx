@@ -249,6 +249,7 @@ function MediaUpload({ label, icon, accept, url, uploading, onUpload, onClear }:
   onUpload: (f: File) => void; onClear: () => void;
 }) {
   const ref = useRef<HTMLInputElement>(null);
+  const isImage = accept.includes("image");
   return (
     <div className={`rounded-xl border p-3 text-center ${url ? "border-primary bg-primary/5" : "border-dashed border-border"}`}>
       <input
@@ -259,13 +260,24 @@ function MediaUpload({ label, icon, accept, url, uploading, onUpload, onClear }:
         onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f); e.currentTarget.value = ""; }}
       />
       <div className="flex flex-col items-center gap-1.5">
-        <div className={`h-8 w-8 rounded-lg grid place-items-center ${url ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : icon}
-        </div>
+        {/* Prévia da imagem enviada (some com o ícone se a imagem falhar) */}
+        {url && isImage ? (
+          <img
+            src={url}
+            alt={label}
+            className="h-16 w-16 rounded-lg object-cover border border-border"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+          />
+        ) : (
+          <div className={`h-8 w-8 rounded-lg grid place-items-center ${url ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : icon}
+          </div>
+        )}
         <span className="text-xs font-medium text-foreground">{label}</span>
         {url ? (
           <div className="flex items-center gap-1">
             <span className="text-[10px] text-emerald-600">✓ enviado</span>
+            <button onClick={() => ref.current?.click()} className="text-[10px] text-primary hover:underline">trocar</button>
             <button onClick={onClear} className="text-muted-foreground hover:text-rose-600"><X className="w-3 h-3" /></button>
           </div>
         ) : (

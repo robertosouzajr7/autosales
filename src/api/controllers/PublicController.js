@@ -78,6 +78,7 @@ export const submitChat = async (req, res) => {
           email,
           phone,
           source: "WEBCHAT",
+          channel: "SITE",
           status: "NEW"
         }
       });

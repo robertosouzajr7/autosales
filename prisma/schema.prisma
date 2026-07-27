@@ -129,6 +129,11 @@ model Lead {
   notes    String?
   tenantId String
 
+  // Canal de origem da conversa e a conexão (WhatsAppAccount.id) que a recebeu.
+  // Permite agrupar/filtrar o inbox por canal e por número/conta conectada.
+  channel     String  @default("WHATSAPP") // WHATSAPP | INSTAGRAM | SITE
+  waAccountId String?
+
   // Contatos e canais adicionais (preenchidos pelo BDR)
   website     String?
   socialLinks String? // JSON: { linkedin, instagram, facebook, ... }

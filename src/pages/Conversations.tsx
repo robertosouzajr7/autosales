@@ -2,12 +2,23 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { 
+import {
   MessageSquare, Send, Search,
-  Circle, MoreVertical, Smartphone, Bot, 
+  Circle, MoreVertical, Smartphone, Bot,
   Phone, Mail, User,
-  ChevronRight, Calendar, Mic, MicOff, Play, Pause, Volume2
+  ChevronRight, Calendar, Mic, MicOff, Play, Pause, Volume2,
+  Instagram, Globe
 } from "lucide-react";
+
+// Metadados de canal para o inbox multicanal (ícone, rótulo e cor).
+const CHANNEL_META: Record<string, { label: string; cls: string; Icon: any }> = {
+  WHATSAPP: { label: "WhatsApp", cls: "text-emerald-600 bg-emerald-50", Icon: MessageSquare },
+  INSTAGRAM: { label: "Instagram", cls: "text-pink-600 bg-pink-50", Icon: Instagram },
+  SITE: { label: "Site", cls: "text-blue-600 bg-blue-50", Icon: Globe },
+};
+function channelMeta(ch?: string) {
+  return CHANNEL_META[(ch || "WHATSAPP").toUpperCase()] || CHANNEL_META.WHATSAPP;
+}
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -128,6 +139,9 @@ function AudioPlayer({ url, isOut }: { url: string, isOut: boolean }) {
 
 export default function Conversations() {
   const [chats, setChats] = useState<any[]>([]);
+  const [connections, setConnections] = useState<any[]>([]);
+  const [channelFilter, setChannelFilter] = useState<string>("ALL"); // ALL | conexão(id) | SITE
+  const [search, setSearch] = useState("");
   const [selectedChat, setSelectedChat] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [message, setMessage] = useState("");
@@ -161,15 +175,18 @@ export default function Conversations() {
   const fetchData = async () => {
     try {
       const token = localStorage.getItem("token");
-      const [leadsRes, settingsRes] = await Promise.all([
+      const [leadsRes, settingsRes, connRes] = await Promise.all([
         fetch("/api/leads", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch("/api/settings", { headers: { "Authorization": `Bearer ${token}` } })
+        fetch("/api/settings", { headers: { "Authorization": `Bearer ${token}` } }),
+        fetch("/api/whatsapp/accounts", { headers: { "Authorization": `Bearer ${token}` } })
       ]);
-      
+
       const leadsData = await leadsRes.json();
       const settingsData = await settingsRes.json();
-      
+      const connData = connRes.ok ? await connRes.json() : [];
+
       setChats(Array.isArray(leadsData) ? leadsData : []);
+      setConnections(Array.isArray(connData) ? connData : []);
       setHasWhatsApp(!!settingsData.hasWhatsAppConnection);
     } catch (e) {}
     setLoading(false);
@@ -384,10 +401,22 @@ export default function Conversations() {
     return () => eventSource.close();
   }, []);
 
+  // Filtra as conversas pelo canal/conexão selecionado e pela busca por nome.
+  const visibleChats = chats.filter((c: any) => {
+    if (channelFilter === "SITE") { if ((c.channel || "").toUpperCase() !== "SITE") return false; }
+    else if (channelFilter !== "ALL") { if (c.waAccountId !== channelFilter) return false; }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      const hay = `${c.name || ""} ${c.phone || ""}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
   return (
     <DashboardLayout>
       <div className="h-[calc(100vh-140px)] flex gap-6 p-2 animate-in fade-in duration-500">
-        
+
         {/* LISTA DE CONVERSAS */}
         <Card className="w-96 border-none shadow-sm rounded-2xl bg-white overflow-hidden flex flex-col">
           <div className="p-8 border-b border-slate-50 bg-slate-50/30 space-y-6">
@@ -416,13 +445,50 @@ export default function Conversations() {
              )}
              <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                <Input placeholder="Buscar chat..." className="h-11 pl-10 border-slate-200 rounded-2xl bg-white text-xs font-bold" />
+                <Input
+                  placeholder="Buscar chat..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="h-11 pl-10 border-slate-200 rounded-2xl bg-white text-xs font-bold"
+                />
              </div>
+
+             {/* Filtro por canal / conexão (só aparece se houver >1 origem) */}
+             {(connections.length > 0) && (
+               <div className="flex flex-wrap gap-1.5 mt-3">
+                 <button
+                   onClick={() => setChannelFilter("ALL")}
+                   className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${channelFilter === "ALL" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}
+                 >
+                   Todos
+                 </button>
+                 {connections.map((c: any) => {
+                   const m = channelMeta(c.channel);
+                   const active = channelFilter === c.id;
+                   return (
+                     <button
+                       key={c.id}
+                       onClick={() => setChannelFilter(c.id)}
+                       className={`px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1 transition-colors ${active ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}
+                       title={c.channel}
+                     >
+                       <m.Icon className="w-3 h-3" /> {c.name || c.phoneNumber || m.label}
+                     </button>
+                   );
+                 })}
+                 <button
+                   onClick={() => setChannelFilter("SITE")}
+                   className={`px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1 transition-colors ${channelFilter === "SITE" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}
+                 >
+                   <Globe className="w-3 h-3" /> Site
+                 </button>
+               </div>
+             )}
           </div>
-          
+
           <ScrollArea className="flex-1">
              <div className="p-3 space-y-2">
-                {chats.map(chat => (
+                {visibleChats.map(chat => (
                   <div 
                     key={chat.id} 
                     onClick={() => setSelectedChat(chat)}
@@ -435,8 +501,18 @@ export default function Conversations() {
                     </Avatar>
                     <div className="flex-1 min-w-0">
                        <div className="flex justify-between items-center mb-0.5">
-                          <p className="font-semibold text-sm truncate">{chat.name}</p>
-                          <span className={`text-xs font-bold uppercase ${selectedChat?.id === chat.id ? 'text-white/40' : 'text-slate-300'}`}>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            {(() => { const m = channelMeta(chat.channel); return (
+                              <span
+                                className={`shrink-0 inline-flex items-center justify-center h-4 w-4 rounded ${selectedChat?.id === chat.id ? 'bg-white/15 text-white' : m.cls}`}
+                                title={m.label}
+                              >
+                                <m.Icon className="w-2.5 h-2.5" />
+                              </span>
+                            ); })()}
+                            <p className="font-semibold text-sm truncate">{chat.name}</p>
+                          </div>
+                          <span className={`text-xs font-bold uppercase shrink-0 ${selectedChat?.id === chat.id ? 'text-white/40' : 'text-slate-300'}`}>
                             {chat.conversations?.[0]?.messages?.slice(-1)[0]?.createdAt ? new Date(chat.conversations[0].messages.slice(-1)[0].createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
                           </span>
                        </div>
@@ -479,7 +555,14 @@ export default function Conversations() {
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                       <p className="font-semibold text-slate-800 leading-none">{selectedChat.name}</p>
+                       <div className="flex items-center gap-2">
+                         <p className="font-semibold text-slate-800 leading-none">{selectedChat.name}</p>
+                         {(() => { const m = channelMeta(selectedChat.channel); const conn = connections.find((c: any) => c.id === selectedChat.waAccountId); return (
+                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${m.cls}`}>
+                             <m.Icon className="w-2.5 h-2.5" /> {conn?.name || m.label}
+                           </span>
+                         ); })()}
+                       </div>
                        <p className="text-xs font-bold text-[#2563EB] mt-1.5 flex items-center gap-1.5">
                          {selectedChat.conversations?.[0]?.botActive !== false ? (
                             <><Circle className="w-2 h-2 fill-emerald-500" /> Atendimento via IA</>

@@ -203,7 +203,7 @@ export const bulkDeleteLeads = async (req, res) => {
  * Rota: POST /api/webhook/whatsapp (pública, autenticada por tenantId no body)
  */
 export const receiveWhatsappWebhook = async (req, res) => {
-  const { tenantId, phone, name, content, source = 'WhatsApp', skipNewLeadTrigger, messageType = 'TEXT' } = req.body;
+  const { tenantId, phone, name, content, source = 'WhatsApp', skipNewLeadTrigger, messageType = 'TEXT', channel = 'WHATSAPP', accountId } = req.body;
 
   if (!tenantId || !phone || !content) {
     return res.status(400).json({ success: false, error: "Parâmetros obrigatórios: tenantId, phone, content" });
@@ -224,13 +224,17 @@ export const receiveWhatsappWebhook = async (req, res) => {
       },
       update: {
         name: name || undefined,
-        source: source || undefined
+        source: source || undefined,
+        channel: channel || undefined,
+        waAccountId: accountId || undefined
       },
       create: {
         name: name || phone,
         phone,
         tenantId,
         source,
+        channel: channel || "WHATSAPP",
+        waAccountId: accountId || null,
         status: "NEW",
         stageId: firstStage?.id,
         consentAt: new Date()
