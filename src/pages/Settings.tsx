@@ -20,26 +20,11 @@ import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-interface IcpProfile {
-  id: string;
-  name: string;
-  niche: string;
-  role: string;
-  location: string;
-  isAutoHunterEnabled: boolean;
-  dailyLimit: number;
-}
-
 export default function Settings() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("general");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [icpProfiles, setIcpProfiles] = useState<IcpProfile[]>([]);
-  const [newIcp, setNewIcp] = useState<Partial<IcpProfile>>({
-      name: "", niche: "", role: "", location: "Brasil", isAutoHunterEnabled: false, dailyLimit: 200
-  });
-  
+
   const [users, setUsers] = useState<any[]>([]);
   const [isNewUserModalOpen, setIsNewUserModalOpen] = useState(false);
   const [newUser, setNewUser] = useState({ name: "", email: "", password: "", role: "AGENT" });
@@ -61,13 +46,6 @@ export default function Settings() {
     language: "pt-BR",
   });
 
-  const [metaConfig, setMetaConfig] = useState({
-    phoneId: "",
-    wabaId: "",
-    accessToken: "",
-    verifyToken: "agentesvirtuais_webhook_token"
-  });
-
   const { toast } = useToast();
 
   const fetchData = async () => {
@@ -77,9 +55,8 @@ export default function Settings() {
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
     try {
-      const [resSettings, resIcp, resUsers] = await Promise.all([
+      const [resSettings, resUsers] = await Promise.all([
         fetch("/api/settings", { headers }),
-        fetch("/api/icp-profiles", { headers }),
         fetch("/api/users", { headers })
       ]);
 
@@ -89,9 +66,8 @@ export default function Settings() {
         navigate("/login");
         return;
       }
-      
+
       const dataSettings = await resSettings.json();
-      const dataIcp = await resIcp.json();
       const dataUsers = await resUsers.json();
       
       setAiConfig({
@@ -104,7 +80,6 @@ export default function Settings() {
         language: dataSettings.language || "pt-BR",
       });
 
-      setIcpProfiles(Array.isArray(dataIcp) ? dataIcp : []);
       setUsers(Array.isArray(dataUsers) ? dataUsers : []);
 
       // Fetch SaaS Billing details dynamically
@@ -203,10 +178,7 @@ export default function Settings() {
       const res = await fetch("/api/settings", {
         method: "PUT",
         headers,
-        body: JSON.stringify({
-          ...aiConfig,
-          metaConfig,
-        }),
+        body: JSON.stringify({ ...aiConfig }),
       });
       if (res.ok) toast({ title: "Configurações salvas!", description: "Tudo atualizado!" });
     } catch (e) {
@@ -214,56 +186,6 @@ export default function Settings() {
     }
     setSaving(false);
   };
-
-  const handleAddIcp = async () => {
-    const token = localStorage.getItem("token");
-    const headers: any = { "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-
-    try {
-      const res = await fetch("/api/icp-profiles", {
-        method: "POST",
-        headers,
-        body: JSON.stringify(newIcp)
-      });
-      const data = await res.json();
-      setIcpProfiles([...icpProfiles, data]);
-      setNewIcp({ name: "", niche: "", role: "", location: "Brasil", isAutoHunterEnabled: false, dailyLimit: 200 });
-      toast({ title: "Perfil ICP Criado!" });
-    } catch (e) {}
-  };
-
-  const handleDeleteIcp = async (id: string) => {
-    const token = localStorage.getItem("token");
-    const headers: any = { "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-
-    try {
-      await fetch(`/api/icp-profiles/${id}`, { method: "DELETE", headers });
-      setIcpProfiles(icpProfiles.filter(p => p.id !== id));
-      toast({ title: "Perfil Removido" });
-    } catch (e) {}
-  };
-
-  const toggleAutoHunter = async (id: string, active: boolean) => {
-      try {
-          const profile = icpProfiles.find(p => p.id === id);
-          if (!profile) return;
-          const token = localStorage.getItem("token");
-          const headers: any = { "Content-Type": "application/json" };
-          if (token) headers["Authorization"] = `Bearer ${token}`;
-
-          const res = await fetch(`/api/icp-profiles/${id}`, {
-              method: "PUT",
-              headers,
-              body: JSON.stringify({ ...profile, isAutoHunterEnabled: active })
-          });
-          if (res.ok) {
-              setIcpProfiles(icpProfiles.map(p => p.id === id ? { ...p, isAutoHunterEnabled: active } : p));
-              toast({ title: active ? "Hunter Mode ATIVADO 🦁" : "Hunter Mode Desativado" });
-          }
-      } catch (e) {}
-  }
 
   if (loading) return <div className="flex h-screen items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-[#2563EB]" /></div>;
 
@@ -301,107 +223,46 @@ export default function Settings() {
             </TabsTrigger>
           </TabsList>
 
-          {/* ABA GERAL */}
+          {/* ABA GERAL — link público de agendamento do agente */}
           <TabsContent value="general">
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <Card className="border-none shadow-sm rounded-2xl overflow-hidden bg-white p-12 space-y-8">
-                    <h3 className="text-xl font-semibold text-slate-900 uppercase">Personalização SDR</h3>
-                    <div className="space-y-4">
-                       <Label className="text-xs font-semibold text-slate-400 pl-2">System Prompt Master</Label>
-                       <textarea 
-                        className="w-full min-h-[250px] bg-slate-50 border-none rounded-2xl p-10 font-bold text-slate-600 outline-none"
-                        value={aiConfig.systemPrompt}
-                        onChange={(e) => setAiConfig({...aiConfig, systemPrompt: e.target.value})}
-                       />
-                    </div>
-                </Card>
-                <Card className="border-none shadow-sm rounded-2xl overflow-hidden bg-white p-12 space-y-8 relative">
-                    <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-xl font-semibold text-slate-900 uppercase">Seu Hub Digital</h3>
-                        <Badge className="bg-[#2563EB] text-white border-none font-semibold text-xs px-4">Gerado Automaticamente</Badge>
-                    </div>
-                    <div className="space-y-6">
-                       <div className="space-y-4">
-                          <Label className="text-xs font-semibold text-slate-400 pl-2">Hub de Agendamento do SDR (IA)</Label>
-                          <div className="flex gap-4">
-                             <div className="flex-1 h-11 bg-slate-50 border-2 border-slate-100 rounded-2xl px-8 flex items-center font-bold text-slate-600 truncate border-dashed select-all">
-                                {window.location.origin}/b/{localStorage.getItem("tenantId")}
-                             </div>
-                             <Button 
-                                onClick={() => {
-                                    navigator.clipboard.writeText(`${window.location.origin}/b/${localStorage.getItem("tenantId")}`);
-                                    toast({ title: "Link Copiado!", description: "Envie este link para os seus leads pelo WhatsApp." });
-                                }}
-                                className="h-11 px-10 bg-slate-900 text-white rounded-2xl font-semibold uppercase text-xs flex items-center gap-3 shadow-sm hover:scale-105 active:scale-95 transition-all outline-none"
-                             >
-                                <ExternalLink className="w-5 h-5 text-[#2DD4BF]" /> Copiar Link
-                             </Button>
-                          </div>
-                          <p className="text-xs text-slate-400 pl-2">Este é o seu link único de SDR que a IA enviará para qualificar e agendar com novos leads.</p>
-                       </div>
-                       
-                       <Separator className="opacity-50" />
-
-                       <div className="space-y-4">
-                          <Label className="text-xs font-semibold text-slate-400 pl-2">Redirecionar para Site Personalizado (Opcional)</Label>
-                          <Input value={aiConfig.webChatUrl} onChange={(e) => setAiConfig({...aiConfig, webChatUrl: e.target.value})} placeholder="https://www.seusite.com.br" className="h-11 bg-slate-50 border-none rounded-2xl px-8 font-bold" />
-                       </div>
-                    </div>
-                </Card>
-             </div>
-          </TabsContent>
-
-          {/* ABA HUNTER SYSTEM */}
-          <TabsContent value="hunter">
-             <div className="space-y-8">
-                <div className="flex justify-between items-center bg-slate-900 p-10 rounded-2xl text-white">
-                   <div>
-                      <h3 className="text-2xl font-semibold tracking-tight">Prospecção Hunter</h3>
-                      <p className="text-xs font-bold text-[#2DD4BF] mt-1">Busca automática de leads baseada no ICP</p>
-                   </div>
-                   <Dialog>
-                      <DialogTrigger asChild>
-                         <Button className="bg-white text-slate-900 hover:bg-[#2563EB] hover:text-white rounded-2xl h-10 px-8 font-semibold uppercase text-xs transition-all">
-                            <Plus className="w-5 h-5 mr-2" /> Novo ICP
-                         </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-xl p-0 border-none shadow-sm rounded-2xl overflow-hidden">
-                         <div className="bg-slate-900 p-12 text-white"><h2 className="text-3xl font-semibold tracking-tight">Mapeamento ICP</h2></div>
-                         <div className="p-12 space-y-8 bg-white">
-                            <div className="space-y-3">
-                               <Label className="text-xs font-semibold text-slate-400">Nome do Segmento</Label>
-                               <Input placeholder="Ex: CEOs de TI" value={newIcp.name} onChange={(e) => setNewIcp({...newIcp, name: e.target.value})} className="h-10 bg-slate-50 rounded-2xl px-6 font-bold" />
-                            </div>
-                            <div className="grid grid-cols-2 gap-6">
-                               <Input placeholder="Nicho" value={newIcp.niche} onChange={(e) => setNewIcp({...newIcp, niche: e.target.value})} className="h-10" />
-                               <Input placeholder="Cargo" value={newIcp.role} onChange={(e) => setNewIcp({...newIcp, role: e.target.value})} className="h-10" />
-                            </div>
-                            <Input placeholder="Localização (Ex: São Paulo, Brasil)" value={newIcp.location} onChange={(e) => setNewIcp({...newIcp, location: e.target.value})} className="h-10" />
-                            <Button onClick={handleAddIcp} className="w-full h-11 bg-slate-900 text-white rounded-2xl font-semibold ">Ativar Caçador</Button>
+             <Card className="border-none shadow-sm rounded-2xl overflow-hidden bg-white p-12 space-y-8">
+                <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-xl font-semibold text-slate-900 uppercase">Link de Agendamento</h3>
+                    <Badge className="bg-[#2563EB] text-white border-none font-semibold text-xs px-4">Gerado Automaticamente</Badge>
+                </div>
+                <div className="space-y-6">
+                   <div className="space-y-4">
+                      <Label className="text-xs font-semibold text-slate-400 pl-2">Página pública de agendamento</Label>
+                      <div className="flex gap-4">
+                         <div className="flex-1 h-11 bg-slate-50 border-2 border-slate-100 rounded-2xl px-8 flex items-center font-bold text-slate-600 truncate border-dashed select-all">
+                            {window.location.origin}/b/{localStorage.getItem("tenantId")}
                          </div>
-                      </DialogContent>
-                   </Dialog>
-                </div>
+                         <Button
+                            onClick={() => {
+                                navigator.clipboard.writeText(`${window.location.origin}/b/${localStorage.getItem("tenantId")}`);
+                                toast({ title: "Link Copiado!", description: "O agente envia este link para agendar com os clientes." });
+                            }}
+                            className="h-11 px-10 bg-slate-900 text-white rounded-2xl font-semibold uppercase text-xs flex items-center gap-3 shadow-sm hover:scale-105 active:scale-95 transition-all outline-none"
+                         >
+                            <ExternalLink className="w-5 h-5 text-[#2DD4BF]" /> Copiar Link
+                         </Button>
+                      </div>
+                      <p className="text-xs text-slate-400 pl-2">Link público onde o cliente escolhe um horário. O agente envia automaticamente durante a conversa.</p>
+                   </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                   {icpProfiles.map(profile => (
-                     <Card key={profile.id} className="border-none shadow-lg rounded-2xl bg-white p-10 hover:shadow-sm transition-all">
-                        <div className="flex justify-between items-start mb-6">
-                           <h4 className="text-xl font-semibold text-slate-900 uppercase leading-none">{profile.name}</h4>
-                           <Button size="icon" variant="ghost" onClick={() => handleDeleteIcp(profile.id)} className="text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></Button>
-                        </div>
-                        <div className="flex flex-wrap gap-2 mb-8">
-                           <Badge className="bg-blue-50 text-[#2563EB] px-4 py-1.5 rounded-full text-xs uppercase font-semibold ">{profile.location}</Badge>
-                           <Badge className="bg-slate-100 text-slate-600 px-4 py-1.5 rounded-full text-xs uppercase font-semibold ">{profile.role}</Badge>
-                        </div>
-                        <div className="flex items-center justify-between border-t border-slate-50 pt-8">
-                           <Label className="text-xs font-semibold text-slate-400">Hunter Mode (200/dia)</Label>
-                           <Switch checked={profile.isAutoHunterEnabled} onCheckedChange={(c) => toggleAutoHunter(profile.id, c)} />
-                        </div>
-                     </Card>
-                   ))}
+                   <Separator className="opacity-50" />
+
+                   <div className="space-y-4">
+                      <Label className="text-xs font-semibold text-slate-400 pl-2">Redirecionar para site personalizado (opcional)</Label>
+                      <Input value={aiConfig.webChatUrl} onChange={(e) => setAiConfig({...aiConfig, webChatUrl: e.target.value})} placeholder="https://www.seusite.com.br" className="h-11 bg-slate-50 border-none rounded-2xl px-8 font-bold" />
+                   </div>
+
+                   <div className="rounded-2xl bg-blue-50 p-5 flex items-start gap-3 text-sm text-slate-600">
+                      <Bot className="w-5 h-5 text-[#2563EB] shrink-0 mt-0.5" />
+                      <span>A personalidade, o tom e as instruções do agente são configurados na página <b>Agentes</b> — junto com as informações do seu negócio em <b>Meu Negócio</b>.</span>
+                   </div>
                 </div>
-             </div>
+             </Card>
           </TabsContent>
 
           {/* ABA AVANÇADO — configurações de IA (LLM + voz opcional) */}
@@ -424,52 +285,6 @@ export default function Settings() {
                        </div>
                     </div>
                  </Card>
-             </div>
-          </TabsContent>
-
-          {/* ABA CONEXÕES (Google Calendar & Meta Webhook) */}
-          <TabsContent value="connections">
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                <Card className="border-none shadow-sm rounded-2xl bg-white p-12 space-y-8 relative overflow-hidden">
-                   <div className="absolute top-0 right-0 p-8 opacity-5"><Calendar className="w-48 h-48" /></div>
-                   <div className="flex items-center gap-4 text-amber-500 mb-4"><Calendar className="w-8 h-8" /><h3 className="text-xl font-semibold text-slate-900 uppercase underline decoration-amber-500 decoration-4">Google Calendar</h3></div>
-                   <div className="space-y-6">
-                      <div className="space-y-2">
-                         <Label className="text-xs font-semibold text-slate-400 pl-1">Google Refresh Token (Offline Access)</Label>
-                         <Input value={aiConfig.googleRefreshToken} onChange={(e) => setAiConfig({...aiConfig, googleRefreshToken: e.target.value})} className="h-11 bg-slate-50 rounded-2xl px-8 font-bold" />
-                      </div>
-                      <Button className="w-full bg-slate-900 text-white h-10 rounded-2xl flex items-center justify-center gap-2 font-semibold uppercase text-xs ">
-                         <ExternalLink className="w-4 h-4" /> Autorizar Nova Conta Google
-                      </Button>
-                   </div>
-                </Card>
-
-                <Card className="border-none shadow-sm rounded-2xl bg-white p-12 space-y-8 relative overflow-hidden">
-                   <div className="absolute top-0 right-0 p-8 opacity-5"><Smartphone className="w-48 h-48" /></div>
-                   <div className="flex items-center gap-4 text-[#2563EB] mb-4"><Smartphone className="w-8 h-8" /><h3 className="text-xl font-semibold text-slate-900 uppercase underline decoration-[#1D4ED8] decoration-4">WhatsApp Cloud API (Meta)</h3></div>
-                   <div className="space-y-6">
-                      <div className="grid grid-cols-2 gap-6">
-                         <div className="space-y-2"><Label className="text-xs font-semibold text-slate-400 pl-1">Phone Number ID</Label><Input value={metaConfig.phoneId} onChange={(e) => setMetaConfig({...metaConfig, phoneId: e.target.value})} className="h-10 bg-slate-50 rounded-2xl px-6 font-bold" /></div>
-                         <div className="space-y-2"><Label className="text-xs font-semibold text-slate-400 pl-1">WABA Account ID</Label><Input value={metaConfig.wabaId} onChange={(e) => setMetaConfig({...metaConfig, wabaId: e.target.value})} className="h-10 bg-slate-50 rounded-2xl px-6 font-bold" /></div>
-                      </div>
-                      <div className="space-y-2">
-                         <Label className="text-xs font-semibold text-slate-400 pl-1">Permanent Access Token</Label>
-                         <Input type="password" value={metaConfig.accessToken} onChange={(e) => setMetaConfig({...metaConfig, accessToken: e.target.value})} className="h-10 bg-slate-50 rounded-2xl px-6 font-bold" />
-                      </div>
-                      <Separator />
-                      <div className="p-6 bg-slate-900 rounded-2xl space-y-4">
-                         <div className="flex items-center gap-2 text-[#2DD4BF]"><Code2 className="w-4 h-4" /><p className="text-xs font-semibold ">Webhook URL Configuration</p></div>
-                         <div className="space-y-2">
-                             <p className="text-xs text-slate-400 font-bold">Callback URL:</p>
-                             <div className="bg-black/50 p-3 rounded-xl text-[#2563EB] font-mono text-xs break-all border border-[#2563EB]/20">https://{window.location.hostname}/api/webhooks/meta</div>
-                         </div>
-                         <div className="space-y-2">
-                             <p className="text-xs text-slate-400 font-bold">Verify Token:</p>
-                             <div className="bg-black/50 p-3 rounded-xl text-yellow-500 font-mono text-xs border border-yellow-500/20">{metaConfig.verifyToken}</div>
-                         </div>
-                      </div>
-                   </div>
-                </Card>
              </div>
           </TabsContent>
 
