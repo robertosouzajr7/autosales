@@ -89,9 +89,11 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
       enableCalendar: !!form.enableCalendar,
       enableAutomations: !!form.enableAutomations,
       enableWebhooks: !!form.enableWebhooks,
-      sdrUnitCost: Number(form.sdrUnitCost),
-      tokenUnitCost: Number(form.tokenUnitCost),
-      messageUnitCost: Number(form.messageUnitCost),
+      // Custo real do plano hoje = só tokens (auto, do modelo ativo). Agente e
+      // mensagem não têm custo, então gravamos 0 nesses campos legados.
+      sdrUnitCost: 0,
+      tokenUnitCost: pricing ? Number((pricing.activeModelCostBRLPer1M / 1000).toFixed(4)) : Number(form.tokenUnitCost),
+      messageUnitCost: 0,
       active: form.active !== false,
     };
     const res = form.id
@@ -114,14 +116,15 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
     else toast({ title: "Erro ao excluir", description: res.data?.error, variant: "destructive" });
   };
 
-  // Simulador de margem
-  const simCost =
-    (form.enableSdr ? (Number(form.maxSdrs) || 0) * (Number(form.sdrUnitCost) || 0) : 0) +
-    (form.enableTokens ? ((Number(form.maxTokens) || 0) / 1000) * (Number(form.tokenUnitCost) || 0) : 0) +
-    (form.enableMessages ? (Number(form.maxMessages) || 0) * (Number(form.messageUnitCost) || 0) : 0);
+  // Simulador de margem. O ÚNICO custo variável do plano hoje é o consumo de
+  // tokens de IA (WhatsApp/agentes não têm custo por mensagem/agente). O custo
+  // é o da franquia de tokens no modelo global ativo, calculado automaticamente.
+  const simCost = realTokenCost;
   const simPrice = Number(form.priceMonthly) || 0;
   const simProfit = simPrice - simCost;
   const simMargin = simPrice > 0 ? (simProfit / simPrice) * 100 : 0;
+  // Preço mínimo sugerido para o plano com base no markup padrão da plataforma.
+  const suggestedPlanPrice = pricing ? Number((realTokenCost * (pricing.tokenMarkup || 5)).toFixed(2)) : 0;
 
   return (
     <div className="space-y-4">
@@ -228,52 +231,54 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
                 </div>
               </div>
 
+              {/* Custo & margem — baseado no custo REAL dos tokens (auto) */}
               <div className="rounded-xl bg-muted p-4 space-y-3">
-                <p className="text-xs font-semibold text-foreground uppercase">Custos unitários (margem)</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    ["sdrUnitCost", "R$/agente"],
-                    ["tokenUnitCost", "R$/1k tok"],
-                    ["messageUnitCost", "R$/msg"],
-                  ].map(([key, label]) => (
-                    <div key={key} className="space-y-1">
-                      <Label className="text-[10px] text-muted-foreground">{label}</Label>
-                      <Input type="number" step="0.01" value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} className="h-8 text-xs" />
-                    </div>
-                  ))}
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-foreground uppercase">Custo & margem</p>
+                  {pricing && (
+                    <span className="text-[11px] text-muted-foreground">modelo: {pricing.activeModel}</span>
+                  )}
                 </div>
+
+                {pricing ? (
+                  <>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        Custo real dos tokens ({((Number(form.maxTokens) || 0) / 1000).toLocaleString("pt-BR")}k/mês)
+                      </span>
+                      <span className="font-semibold text-foreground tabular-nums">{brl(realTokenCost)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Preço sugerido (markup {pricing.tokenMarkup || 5}x)</span>
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, priceMonthly: suggestedPlanPrice })}
+                        className="font-semibold text-primary hover:underline tabular-nums"
+                      >
+                        {brl(suggestedPlanPrice)} <span className="text-[11px] font-normal">· usar</span>
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Só os tokens de IA têm custo variável — WhatsApp/agentes não são cobrados por mensagem nem por agente.
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-xs text-amber-600">
+                    Não foi possível carregar a tabela de custos. Verifique o modelo ativo em Configurações.
+                  </p>
+                )}
               </div>
 
-              {/* Custo REAL da franquia de tokens no modelo global ativo */}
-              {pricing && (
-                <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">
-                      Custo real de {((Number(form.maxTokens) || 0) / 1000).toLocaleString("pt-BR")}k tokens
-                      <span className="ml-1 text-[11px]">({pricing.activeModel})</span>
-                    </span>
-                    <span className="text-sm font-bold text-foreground tabular-nums">{brl(realTokenCost)}/mês</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, tokenUnitCost: Number((pricing.activeModelCostBRLPer1M / 1000).toFixed(4)) })}
-                    className="text-[11px] text-primary hover:underline"
-                  >
-                    Usar este custo real no simulador (R$ {(pricing.activeModelCostBRLPer1M / 1000).toFixed(4)}/1k)
-                  </button>
-                </div>
-              )}
-
               <div className="rounded-xl bg-slate-900 text-white p-4">
-                <p className="text-[10px] uppercase text-slate-400 font-semibold mb-2">Simulador de margem (uso máximo)</p>
+                <p className="text-[10px] uppercase text-slate-400 font-semibold mb-2">Margem do plano (uso máximo da franquia)</p>
                 <div className="grid grid-cols-3 text-center gap-2">
                   <div>
-                    <p className="text-[10px] text-slate-400 uppercase">Custo</p>
-                    <p className="text-sm font-bold text-rose-300">R$ {simCost.toFixed(0)}</p>
+                    <p className="text-[10px] text-slate-400 uppercase">Custo IA</p>
+                    <p className="text-sm font-bold text-rose-300">{brl(simCost)}</p>
                   </div>
                   <div>
                     <p className="text-[10px] text-slate-400 uppercase">Lucro</p>
-                    <p className={`text-sm font-bold ${simProfit >= 0 ? "text-emerald-300" : "text-rose-400"}`}>R$ {simProfit.toFixed(0)}</p>
+                    <p className={`text-sm font-bold ${simProfit >= 0 ? "text-emerald-300" : "text-rose-400"}`}>{brl(simProfit)}</p>
                   </div>
                   <div>
                     <p className="text-[10px] text-slate-400 uppercase">Margem</p>
