@@ -27,6 +27,17 @@ export const createAppointment = async (req, res) => {
         status: "PENDING"
       }
     });
+
+    // Dispara automações com gatilho "Novo Agendamento" (ex.: confirmação,
+    // lembrete). Só quando há lead associado — a automação roda sobre o lead.
+    if (leadId) {
+      const lead = await prisma.lead.findUnique({ where: { id: leadId } });
+      if (lead) {
+        AutomationEngine.dispatchTrigger("APPOINTMENT_CREATED", { lead, tenantId: req.tenantId, appointment: appt })
+          .catch((e) => console.error("[Appointment] dispatchTrigger falhou:", e));
+      }
+    }
+
     res.json(appt);
   } catch (error) {
     res.status(500).json({ error: "Erro ao criar agendamento" });

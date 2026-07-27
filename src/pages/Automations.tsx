@@ -40,11 +40,11 @@ import "@xyflow/react/dist/style.css";
 
 // =================== CONSTANTS ===================
 
+// Gatilhos disponíveis. NEW_MSG/KEYWORD/PIPELINE_MOVE ficam ocultos por
+// enquanto (podem conflitar com o auto-responder de IA / precisam de mais
+// validação). Ativos: Novo Lead, Inatividade, Novo Agendamento e Cron.
 const TRIGGERS = [
   { id: "NEW_LEAD", label: "Novo Lead", icon: <UserPlus className="w-4 h-4" />, color: "#3b82f6" },
-  { id: "NEW_MSG", label: "Nova Mensagem", icon: <MessageSquare className="w-4 h-4" />, color: "#10b981" },
-  { id: "KEYWORD", label: "Palavra-chave", icon: <Search className="w-4 h-4" />, color: "#f59e0b" },
-  { id: "PIPELINE_MOVE", label: "Mudança de Etapa", icon: <Target className="w-4 h-4" />, color: "#8b5cf6" },
   { id: "INACTIVITY", label: "Inatividade", icon: <Clock className="w-4 h-4" />, color: "#ef4444" },
   { id: "APPOINTMENT_CREATED", label: "Novo Agendamento", icon: <Calendar className="w-4 h-4" />, color: "#6366f1" },
   { id: "SCHEDULE", label: "Agendador Recorrente (Cron)", icon: <Timer className="w-4 h-4" />, color: "#ec4899" },

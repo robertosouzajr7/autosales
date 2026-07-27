@@ -2507,26 +2507,11 @@ ${scrapeContext}
   }
 
   /**
-   * Aciona automações baseadas em eventos (NEW_LEAD, PIPELINE_MOVE, etc.)
-   */
-  async dispatchTrigger(trigger, payload) {
-    try {
-      const { lead, tenantId } = payload;
-      const auts = await prisma.automation.findMany({
-        where: { tenantId: tenantId || lead?.tenantId, trigger, active: true }
-      });
-      for (const aut of auts) {
-        console.log(`[AutoEngine] ⚡ Disparando automação '${aut.name}' (trigger: ${trigger})`);
-        this.enqueueExecution(aut, lead);
-      }
-    } catch (err) {
-      console.error(`[AutoEngine] Erro ao disparar trigger ${trigger}:`, err);
-    }
-  }
-
-  /**
    * Processa mensagem recebida de um lead e retorna resposta da IA (SDR).
    * Usado pelo webhook /api/webhook/whatsapp.
+   *
+   * (O dispatchTrigger de eventos fica definido acima — com filtro de
+   * palavra-chave e proteção contra execução duplicada por lead.)
    */
   async handleIncomingMessage(lead, content, tenantId) {
     try {
