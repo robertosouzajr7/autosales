@@ -493,6 +493,16 @@ export class WhatsAppManager {
                 if (typeof mediaUrl === 'string' && mediaUrl.startsWith('data:')) {
                     const [meta, base64Data] = mediaUrl.split(',');
                     source = Buffer.from(base64Data, 'base64');
+                } else if (typeof mediaUrl === 'string') {
+                    // Upload local (/api/uploads/...): lê o arquivo do disco. Evita
+                    // depender de URL pública/DNS para reenviar a mídia ao cliente.
+                    const { localPathFor } = await import('./src/api/services/StorageService.js');
+                    const localPath = localPathFor(mediaUrl);
+                    if (localPath && fs.existsSync(localPath)) {
+                        source = fs.readFileSync(localPath);
+                    } else if (/^https?:\/\//i.test(mediaUrl)) {
+                        source = { url: mediaUrl };
+                    }
                 }
 
                 switch (mediaType) {

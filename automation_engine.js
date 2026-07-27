@@ -1257,7 +1257,9 @@ class AutomationEngine {
               });
               if (acc?.pageId && acc?.accessToken) {
                 const { MetaManager } = await import("./meta.js");
-                await MetaManager.sendInstagramMedia(acc.pageId, acc.accessToken, lead.phone, media.url, media.type);
+                // Meta busca a mídia remotamente → precisa de URL pública absoluta.
+                const { toPublicUrl } = await import("./src/api/services/StorageService.js");
+                await MetaManager.sendInstagramMedia(acc.pageId, acc.accessToken, lead.phone, toPublicUrl(media.url), media.type);
                 if (media.type !== "audio") {
                   await MetaManager.sendInstagramMessage(acc.pageId, acc.accessToken, lead.phone, caption);
                 }

@@ -67,15 +67,39 @@ export async function saveMedia(buffer, ext, contentType, scope, publicBase) {
   }
 
   // Disco local. Servimos sob /api/uploads (encaminhado para a API mesmo com
-  // front separado). Sem PUBLIC_URL/base explícita, devolve caminho RELATIVO
-  // (resolve na origem da página, herdando https automaticamente).
+  // front separado). Por padrão devolvemos um caminho RELATIVO — o navegador
+  // resolve na origem da página (o domínio público), evitando embutir o host
+  // interno do container (que não resolve via DNS). Só usamos base absoluta se
+  // PUBLIC_URL estiver explicitamente definido (necessário p/ mídia enviada à
+  // Meta, que precisa de URL pública). Nunca usamos req.host aqui.
   const dir = path.join(UPLOAD_DIR, scope);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, path.basename(key)), buffer);
-  const base = (process.env.PUBLIC_URL || publicBase || "").replace(/\/$/, "");
+  const base = (process.env.PUBLIC_URL || "").replace(/\/$/, "");
   return `${base}/api/uploads/${key}`;
 }
 
 export function storageMode() {
   return useS3() ? "s3" : "local";
+}
+
+// Mapeia uma URL de upload local (/api/uploads/... ou /uploads/...) para o
+// caminho no disco. Devolve null se não for um upload local servido por nós.
+export function localPathFor(url) {
+  if (typeof url !== "string") return null;
+  const m = url.match(/\/(?:api\/)?uploads\/(.+)$/);
+  if (!m) return null;
+  const rel = m[1].split("?")[0].replace(/\.\.+/g, ""); // sem path traversal
+  return path.join(UPLOAD_DIR, rel);
+}
+
+// Absolutiza uma URL relativa de upload usando PUBLIC_URL (necessário quando a
+// mídia precisa ser buscada remotamente, ex.: pela Meta). URLs já absolutas
+// (http/https/data) passam intactas.
+export function toPublicUrl(url) {
+  if (typeof url !== "string" || !url) return url;
+  if (/^(https?:|data:)/i.test(url)) return url;
+  const base = (process.env.PUBLIC_URL || "").replace(/\/$/, "");
+  if (!base) return url; // sem base pública configurada — devolve como está
+  return `${base}${url.startsWith("/") ? "" : "/"}${url}`;
 }
