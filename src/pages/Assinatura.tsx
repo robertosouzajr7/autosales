@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import {
   CreditCard, Check, Loader2, Sparkles, CalendarClock, AlertTriangle,
-  Bot, MessageSquare, Cpu, RefreshCw, Receipt,
+  Bot, MessageSquare, Cpu, RefreshCw, Receipt, Coins, Zap,
 } from "lucide-react";
 
 function authHeaders() {
@@ -42,24 +42,60 @@ export default function Assinatura() {
   const { toast } = useToast();
   const [data, setData] = useState<any>(null);
   const [plans, setPlans] = useState<any[]>([]);
+  const [tokenPacks, setTokenPacks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [buyingId, setBuyingId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [p, pl] = await Promise.all([
+      const [p, pl, tp] = await Promise.all([
         fetch("/api/billing/portal", { headers: authHeaders() }).then((r) => r.json()),
         fetch("/api/billing/plans", { headers: authHeaders() }).then((r) => r.json()),
+        fetch("/api/billing/token-packages", { headers: authHeaders() }).then((r) => r.json()),
       ]);
       setData(p);
       setPlans(Array.isArray(pl) ? pl : []);
+      setTokenPacks(Array.isArray(tp) ? tp : []);
     } catch {
       toast({ title: "Erro ao carregar assinatura", variant: "destructive" });
     }
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
+
+  // Retorno do checkout de recarga (?recarga=sucesso|cancelada).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const recarga = params.get("recarga");
+    if (recarga === "sucesso") {
+      toast({ title: "Recarga concluída!", description: "Seus tokens extras serão creditados em instantes." });
+    } else if (recarga === "cancelada") {
+      toast({ title: "Recarga cancelada", description: "Nenhuma cobrança foi feita." });
+    }
+    if (recarga) {
+      params.delete("recarga");
+      const qs = params.toString();
+      window.history.replaceState({}, "", window.location.pathname + (qs ? `?${qs}` : ""));
+    }
+  }, []);
+
+  const buyTokens = async (packId: string) => {
+    setBuyingId(packId);
+    try {
+      const res = await fetch(`/api/billing/token-packages/${packId}/checkout`, {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      const d = await res.json();
+      if (res.ok && d.checkoutUrl) window.location.href = d.checkoutUrl;
+      else toast({ title: "Erro ao iniciar recarga", description: d.error, variant: "destructive" });
+    } catch {
+      toast({ title: "Erro ao iniciar recarga", variant: "destructive" });
+    }
+    setBuyingId(null);
+  };
 
   const t = data?.tenant;
   const plan = data?.plan;
@@ -184,6 +220,55 @@ export default function Assinatura() {
                   );
                 })}
               </div>
+            </Card>
+
+            {/* Recarga de tokens */}
+            <Card className="p-6 rounded-2xl">
+              <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
+                <div>
+                  <h3 className="text-sm font-semibold flex items-center gap-2"><Coins className="w-4 h-4 text-primary" /> Recarga de tokens</h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Estourou a franquia do plano? Compre pacotes avulsos — o saldo extra não expira e é consumido só depois da franquia mensal.
+                  </p>
+                </div>
+                <div className="flex gap-6">
+                  <div className="text-right">
+                    <p className="text-[11px] uppercase text-muted-foreground">Custo de IA no ciclo</p>
+                    <p className="text-lg font-bold tabular-nums">{brl(t?.tokenCostBRL || 0)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[11px] uppercase text-muted-foreground">Saldo de recarga</p>
+                    <p className="text-lg font-bold tabular-nums text-emerald-600">{(t?.extraTokens || 0).toLocaleString("pt-BR")} <span className="text-xs font-medium text-muted-foreground">tokens</span></p>
+                  </div>
+                </div>
+              </div>
+
+              {tokenPacks.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhum pacote de recarga disponível no momento.</p>
+              ) : (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {tokenPacks.map((pk) => (
+                    <Card key={pk.id} className="p-5 rounded-2xl flex flex-col border-border">
+                      <div className="flex items-center gap-2 text-primary">
+                        <Zap className="w-4 h-4" />
+                        <span className="font-semibold text-foreground">{pk.name}</span>
+                      </div>
+                      <p className="text-2xl font-bold tracking-tight mt-2">{brl(pk.price)}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {Number(pk.tokens).toLocaleString("pt-BR")} tokens
+                      </p>
+                      <Button
+                        onClick={() => buyTokens(pk.id)}
+                        disabled={buyingId === pk.id}
+                        className="mt-4 w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white gap-2"
+                      >
+                        {buyingId === pk.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Coins className="w-4 h-4" />}
+                        Comprar tokens
+                      </Button>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </Card>
 
             {/* Trocar de plano */}

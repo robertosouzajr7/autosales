@@ -36,6 +36,12 @@ export const getBillingPortalData = async (req, res) => {
       }
     }
 
+    // Custo estimado do consumo de IA no modelo global ativo.
+    const { estimateCostBRL, DEFAULT_MODEL } = await import("../services/AIProviderService.js");
+    const settings = await prisma.platformSettings.findUnique({ where: { id: "singleton" } }).catch(() => null);
+    const activeProvider = (settings?.aiProvider || "GEMINI").toUpperCase();
+    const activeModel = settings?.aiModel || DEFAULT_MODEL[activeProvider] || DEFAULT_MODEL.GEMINI;
+
     res.json({
       tenant: {
         id: tenant.id,
@@ -45,10 +51,13 @@ export const getBillingPortalData = async (req, res) => {
         trialEnd: tenant.trialEnd,
         nextBillingDate: tenant.nextBillingDate,
         usedTokens: tenant.usedTokens,
+        extraTokens: tenant.extraTokens || 0,
         usedMessages: tenant.usedMessages,
         stripeSubscriptionId: tenant.stripeSubscriptionId,
         cancelAtPeriodEnd,
-        activeSdrs
+        activeSdrs,
+        // Custo estimado do que já foi consumido no ciclo (informativo).
+        tokenCostBRL: Number(estimateCostBRL(tenant.usedTokens || 0, activeModel).toFixed(2)),
       },
       plan: tenant.plan,
       invoices: tenant.invoices
@@ -68,6 +77,48 @@ export const getActivePlans = async (req, res) => {
     res.json(plans);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+// GET /api/billing/token-packages
+// Lista os pacotes de recarga de tokens que o admin do SaaS deixou ativos.
+export const getTokenPackages = async (req, res) => {
+  try {
+    const packages = await prisma.tokenPackage.findMany({
+      where: { active: true },
+      orderBy: { price: "asc" },
+    });
+    res.json(packages);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// POST /api/billing/token-packages/:id/checkout
+// Inicia o checkout (pagamento único) de um pacote de tokens. O saldo só é
+// creditado pelo webhook do Stripe (checkout.session.completed / token_pack).
+export const buyTokenPackage = async (req, res) => {
+  const tenantId = req.tenantId;
+  const { id } = req.params;
+  if (!tenantId) return res.status(401).json({ error: "Tenant ID ausente" });
+
+  try {
+    const pack = await prisma.tokenPackage.findFirst({ where: { id, active: true } });
+    if (!pack) return res.status(404).json({ error: "Pacote de tokens não encontrado" });
+
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    if (!tenant) return res.status(404).json({ error: "Tenant não localizado" });
+
+    const frontend = process.env.FRONTEND_URL || "http://localhost:8080";
+    const { checkoutUrl, gatewayId } = await PaymentService.createTokenPackageCheckout(
+      tenant,
+      pack,
+      frontend
+    );
+    res.json({ success: true, checkoutUrl, gatewayId });
+  } catch (error) {
+    console.error("[Billing] Erro ao comprar pacote de tokens:", error.message);
+    res.status(500).json({ error: error.message || "Não foi possível iniciar a recarga." });
   }
 };
 

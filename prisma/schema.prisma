@@ -52,6 +52,7 @@ model Tenant {
 
   // Consumption Tracking (Real-time)
   usedTokens           Int      @default(0)
+  extraTokens          Int      @default(0) // saldo de tokens comprados (recarga), consumido após a franquia do plano
   usedMessages         Int      @default(0)
   qualifiedLeadsCount  Int      @default(0)
   lastUsageReset       DateTime @default(now())
@@ -522,6 +523,17 @@ model PlatformSettings {
 
   defaultTrialDays Int      @default(7)
   updatedAt        DateTime @updatedAt
+}
+
+// Pacotes de tokens avulsos (recarga) — definidos pelo admin do SaaS.
+model TokenPackage {
+  id        String   @id @default(uuid())
+  name      String
+  tokens    Int      // quantos tokens de IA o pacote concede
+  price     Float    // preço em BRL
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model LandingPageSettings {

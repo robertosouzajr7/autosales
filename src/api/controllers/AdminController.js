@@ -1,7 +1,7 @@
 import prisma from "../config/prisma.js";
 import bcrypt from "bcryptjs";
 import { audit } from "../services/AuditService.js";
-import { MODEL_CATALOG } from "../services/AIProviderService.js";
+import { MODEL_CATALOG, DEFAULT_MODEL, estimateCostBRL } from "../services/AIProviderService.js";
 
 export const getTenants = async (req, res) => {
   try {
@@ -285,26 +285,80 @@ export const updatePlatformSettings = async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 };
 
+// ─── Pacotes de tokens (recarga) ────────────────────────────────
+
+export const getTokenPackages = async (_req, res) => {
+  try {
+    const packages = await prisma.tokenPackage.findMany({ orderBy: { price: "asc" } });
+    res.json(packages);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
+export const createTokenPackage = async (req, res) => {
+  try {
+    const { name, tokens, price, active } = req.body;
+    if (!name || !Number.isFinite(parseInt(tokens)) || !Number.isFinite(parseFloat(price))) {
+      return res.status(400).json({ error: "Nome, tokens e preço são obrigatórios." });
+    }
+    const pack = await prisma.tokenPackage.create({
+      data: {
+        name: String(name).trim(),
+        tokens: parseInt(tokens),
+        price: parseFloat(price),
+        active: active !== false,
+      },
+    });
+    res.json(pack);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
+export const updateTokenPackage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, tokens, price, active } = req.body;
+    const data = {};
+    if (typeof name === "string" && name.trim()) data.name = name.trim();
+    if (Number.isFinite(parseInt(tokens))) data.tokens = parseInt(tokens);
+    if (Number.isFinite(parseFloat(price))) data.price = parseFloat(price);
+    if (typeof active === "boolean") data.active = active;
+    const pack = await prisma.tokenPackage.update({ where: { id }, data });
+    res.json(pack);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
+export const deleteTokenPackage = async (req, res) => {
+  try {
+    await prisma.tokenPackage.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
 // ─── Relatórios do SaaS ─────────────────────────────────────────
 
 export const getReports = async (_req, res) => {
   try {
     const now = new Date();
 
-    const [tenants, invoices] = await Promise.all([
+    const [tenants, invoices, settings] = await Promise.all([
       prisma.tenant.findMany({
         select: {
-          id: true, name: true, createdAt: true, active: true,
+          id: true, name: true, email: true, createdAt: true, active: true,
           subscriptionStatus: true, trialEnd: true,
-          usedTokens: true, usedMessages: true,
-          plan: { select: { name: true, priceMonthly: true } },
+          usedTokens: true, extraTokens: true, usedMessages: true,
+          plan: { select: { name: true, priceMonthly: true, maxTokens: true } },
         },
       }),
       prisma.invoice.findMany({
         where: { status: "PAID" },
         select: { amount: true, paidAt: true },
       }),
+      prisma.platformSettings.findUnique({ where: { id: "singleton" } }).catch(() => null),
     ]);
+
+    // Modelo de IA ativo (global) → base do custo estimado por conta.
+    const activeProvider = (settings?.aiProvider || "GEMINI").toUpperCase();
+    const activeModel = settings?.aiModel || DEFAULT_MODEL[activeProvider] || DEFAULT_MODEL.GEMINI;
+    const tokenCost = (tokens) => estimateCostBRL(tokens || 0, activeModel);
 
     // MRR: soma dos planos de tenants ATIVOS.
     const mrr = tenants
@@ -345,14 +399,34 @@ export const getReports = async (_req, res) => {
       .filter((t) => t.subscriptionStatus === "TRIAL" && t.trialEnd && new Date(t.trialEnd) > now && new Date(t.trialEnd) <= in7days)
       .map((t) => ({ id: t.id, name: t.name, trialEnd: t.trialEnd, plan: t.plan?.name }));
 
-    // Top consumidores (tokens) — sinal de engajamento ou de custo.
-    const topUsage = [...tenants]
-      .sort((a, b) => (b.usedTokens || 0) - (a.usedTokens || 0))
-      .slice(0, 5)
-      .map((t) => ({ id: t.id, name: t.name, usedTokens: t.usedTokens || 0, usedMessages: t.usedMessages || 0, plan: t.plan?.name }));
+    // Consumo de IA por conta (tokens usados no ciclo + custo estimado em BRL).
+    const accountsUsage = [...tenants]
+      .map((t) => ({
+        id: t.id,
+        name: t.name,
+        email: t.email,
+        plan: t.plan?.name || "—",
+        status: t.active === false ? "SUSPENDED" : (t.subscriptionStatus || "TRIAL"),
+        usedTokens: t.usedTokens || 0,
+        planTokens: t.plan?.maxTokens || 0,
+        extraTokens: t.extraTokens || 0,
+        usedMessages: t.usedMessages || 0,
+        costBRL: Number(tokenCost(t.usedTokens).toFixed(2)),
+      }))
+      .sort((a, b) => b.usedTokens - a.usedTokens);
+
+    const topUsage = accountsUsage.slice(0, 5);
+    const totalTokenCostBRL = Number(
+      accountsUsage.reduce((acc, a) => acc + a.costBRL, 0).toFixed(2)
+    );
 
     const totalPaidRevenue = invoices.reduce((acc, inv) => acc + inv.amount, 0);
 
-    res.json({ mrr, byStatus, months, expiringTrials, topUsage, totalPaidRevenue, totalTenants: tenants.length });
+    res.json({
+      mrr, byStatus, months, expiringTrials, topUsage, totalPaidRevenue,
+      totalTenants: tenants.length,
+      aiModel: activeModel, aiProvider: activeProvider,
+      totalTokenCostBRL, accountsUsage,
+    });
   } catch (e) { res.status(500).json({ error: e.message }); }
 };
