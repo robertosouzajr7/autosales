@@ -129,16 +129,26 @@ export const getResults = async (req, res) => {
       take: 500
     });
 
-    let totalMs = 0, counted = 0;
+    // Coleta o tempo (s) da 1ª resposta em cada conversa. Usamos a MEDIANA (e
+    // ignoramos intervalos > 6h, que são atendimento humano/handoff, não a
+    // resposta automática) para não distorcer com outliers.
+    const MAX_REASONABLE_S = 6 * 60 * 60;
+    const diffs = [];
     for (const conv of conversations) {
       const firstUser = conv.messages.find(m => m.role === "USER");
       if (!firstUser) continue;
       const firstReply = conv.messages.find(m => m.role === "ASSISTANT" && m.createdAt > firstUser.createdAt);
       if (!firstReply) continue;
-      totalMs += new Date(firstReply.createdAt) - new Date(firstUser.createdAt);
-      counted++;
+      const sec = (new Date(firstReply.createdAt) - new Date(firstUser.createdAt)) / 1000;
+      if (sec >= 0 && sec <= MAX_REASONABLE_S) diffs.push(sec);
     }
-    const avgResponseSeconds = counted > 0 ? Math.round(totalMs / counted / 1000) : null;
+    let avgResponseSeconds = null;
+    if (diffs.length) {
+      diffs.sort((a, b) => a - b);
+      const mid = Math.floor(diffs.length / 2);
+      const median = diffs.length % 2 ? diffs[mid] : (diffs[mid - 1] + diffs[mid]) / 2;
+      avgResponseSeconds = Math.round(median);
+    }
 
     res.json({
       periodDays: days,

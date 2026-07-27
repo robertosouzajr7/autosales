@@ -136,7 +136,17 @@ export default function Catalogo() {
               <Card key={it.id} className="rounded-2xl border-border overflow-hidden flex flex-col">
                 <div className="aspect-video bg-muted grid place-items-center overflow-hidden">
                   {it.imageUrl ? (
-                    <img src={it.imageUrl} alt={it.name} className="w-full h-full object-cover" />
+                    <img
+                      src={it.imageUrl}
+                      alt={it.name}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      onError={(e) => {
+                        // Evita o ícone de imagem quebrada — some com o <img> e
+                        // deixa o placeholder do container aparecer.
+                        (e.currentTarget as HTMLImageElement).style.display = "none";
+                      }}
+                    />
                   ) : it.videoUrl ? (
                     <Video className="w-8 h-8 text-muted-foreground" />
                   ) : it.audioUrl ? (

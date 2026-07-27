@@ -66,12 +66,14 @@ export async function saveMedia(buffer, ext, contentType, scope, publicBase) {
     return `${base}/${key}`;
   }
 
-  // Disco local
+  // Disco local. Servimos sob /api/uploads (encaminhado para a API mesmo com
+  // front separado). Sem PUBLIC_URL/base explícita, devolve caminho RELATIVO
+  // (resolve na origem da página, herdando https automaticamente).
   const dir = path.join(UPLOAD_DIR, scope);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, path.basename(key)), buffer);
   const base = (process.env.PUBLIC_URL || publicBase || "").replace(/\/$/, "");
-  return `${base}/uploads/${key}`;
+  return `${base}/api/uploads/${key}`;
 }
 
 export function storageMode() {

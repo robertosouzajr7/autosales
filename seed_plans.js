@@ -6,9 +6,13 @@ const prisma = new PrismaClient();
  * Degraus de ~2x (97 → 197 → 497 → 997) + Enterprise sob consulta (inativo
  * na vitrine; vendido pelo comercial). Ver docs/precificacao-v2-acessivel.md.
  *
- * Custos unitários informativos (cálculo de margem no admin) calibrados para
- * Gemini 2.5 Flash: ~R$ 3,50 por 1M tokens ⇒ R$ 0,0035/1k. Mensagens via
- * Baileys não têm custo por envio.
+ * Franquias de tokens dimensionadas para uso REAL: cada conversa completa do
+ * agente consome ~40k tokens (o contexto do negócio + base de conhecimento é
+ * reenviado a cada turno). Ver docs/precificacao-v2-acessivel.md.
+ *
+ * Custo calibrado para Gemini 2.5 Flash (~R$ 3,50/1M ⇒ R$ 0,0035/1k). Não há
+ * custo por agente nem por mensagem (WhatsApp via Baileys é gratuito), então
+ * sdrUnitCost e messageUnitCost são 0 — o único custo variável é o token.
  */
 async function main() {
   console.log('🌱 Semeando grade de planos v2 (acessível)…');
@@ -28,8 +32,8 @@ async function main() {
       maxKnowledgeBaseChars: 20_000,
 
       // Créditos mensais
-      maxTokens: 50_000,              // ~25-30 conversas AI completas
-      maxMessages: 1_000,
+      maxTokens: 10_000_000,          // ~250 conversas completas (~8/dia)
+      maxMessages: 3_000,
 
       // Toggles de módulo — agenda/automações desde o 1º plano (valor imediato)
       enableSdr: true,
@@ -39,7 +43,7 @@ async function main() {
       enableAutomations: true,
       enableWebhooks: false,
 
-      sdrUnitCost: 1.0,
+      sdrUnitCost: 0.0,
       tokenUnitCost: 0.0035,
       messageUnitCost: 0.0,
 
@@ -62,8 +66,8 @@ async function main() {
       maxWhatsAppNumbers: 1,
       maxKnowledgeBaseChars: 50_000,
 
-      maxTokens: 150_000,             // ~75-90 conversas AI
-      maxMessages: 3_000,
+      maxTokens: 25_000_000,          // ~625 conversas completas (~20/dia)
+      maxMessages: 8_000,
 
       enableSdr: true,
       enableTokens: true,
@@ -72,7 +76,7 @@ async function main() {
       enableAutomations: true,
       enableWebhooks: false,
 
-      sdrUnitCost: 1.0,
+      sdrUnitCost: 0.0,
       tokenUnitCost: 0.0035,
       messageUnitCost: 0.0,
 
@@ -95,8 +99,8 @@ async function main() {
       maxWhatsAppNumbers: 2,
       maxKnowledgeBaseChars: 150_000,
 
-      maxTokens: 600_000,
-      maxMessages: 10_000,
+      maxTokens: 60_000_000,          // ~1.500 conversas completas (~50/dia)
+      maxMessages: 20_000,
 
       enableSdr: true,
       enableTokens: true,
@@ -105,7 +109,7 @@ async function main() {
       enableAutomations: true,
       enableWebhooks: true,
 
-      sdrUnitCost: 1.0,
+      sdrUnitCost: 0.0,
       tokenUnitCost: 0.0035,
       messageUnitCost: 0.0,
 
@@ -128,8 +132,8 @@ async function main() {
       maxWhatsAppNumbers: 5,
       maxKnowledgeBaseChars: 500_000,
 
-      maxTokens: 2_000_000,
-      maxMessages: 30_000,
+      maxTokens: 150_000_000,         // ~3.750 conversas completas (~125/dia)
+      maxMessages: 50_000,
 
       enableSdr: true,
       enableTokens: true,
@@ -138,7 +142,7 @@ async function main() {
       enableAutomations: true,
       enableWebhooks: true,
 
-      sdrUnitCost: 1.0,
+      sdrUnitCost: 0.0,
       tokenUnitCost: 0.0035,
       messageUnitCost: 0.0,
 
@@ -163,8 +167,8 @@ async function main() {
       maxWhatsAppNumbers: 10,
       maxKnowledgeBaseChars: 500_000,
 
-      maxTokens: 2_500_000,
-      maxMessages: 50_000,
+      maxTokens: 300_000_000,         // sob consulta
+      maxMessages: 100_000,
 
       enableSdr: true,
       enableTokens: true,
@@ -173,7 +177,7 @@ async function main() {
       enableAutomations: true,
       enableWebhooks: true,
 
-      sdrUnitCost: 1.0,
+      sdrUnitCost: 0.0,
       tokenUnitCost: 0.0035,
       messageUnitCost: 0.0,
 

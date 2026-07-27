@@ -159,6 +159,14 @@ interface SidebarContentProps {
   showCollapseButton?: boolean;
 }
 
+// Formata tokens em unidades legíveis: 12.600.000 → "12,6M", 25.000 → "25k".
+function fmtTokens(n: number): string {
+  const v = Number(n) || 0;
+  if (v >= 1_000_000) return `${(v / 1_000_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}M`;
+  if (v >= 1_000) return `${Math.round(v / 1_000)}k`;
+  return String(v);
+}
+
 function SidebarContent({
   collapsed,
   onToggleCollapse,
@@ -214,29 +222,43 @@ function SidebarContent({
       </div>
 
       {/* PLAN STATUS IN SIDEBAR */}
-      {!collapsed && (
-        <div className="px-4 py-4 border-t border-slate-800">
-          <div className="p-3.5 bg-slate-800/50 rounded-xl space-y-2.5">
-            <div className="flex justify-between items-center">
-              <p className="text-xs font-medium text-slate-400">Créditos de IA</p>
-              <Badge className="bg-primary/15 text-primary border-none text-xs font-medium px-2">
-                {planName || "Básico"}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-2">
-               <div className="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary transition-all duration-700"
-                    style={{ width: `${Math.min(100, (localStorage.getItem("usedTokens") ? parseInt(localStorage.getItem("usedTokens") || "0") : 0) / (planData.maxTokens || 1) * 100)}%` }}
-                  />
-               </div>
-               <p className="text-xs font-medium text-slate-400 tabular-nums">
-                 {Math.round((localStorage.getItem("usedTokens") ? parseInt(localStorage.getItem("usedTokens") || "0") : 0) / (planData.maxTokens || 1) * 100)}%
-               </p>
+      {!collapsed && (() => {
+        const used = Number(planData?.usedTokens) || 0;
+        const franchise = Number(planData?.maxTokens) || 0;
+        const extra = Number(planData?.extraTokens) || 0;
+        const total = franchise + extra;                 // franquia + recarga
+        const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
+        const near = pct >= 90;
+        return (
+          <div className="px-4 py-4 border-t border-slate-800">
+            <div className="p-3.5 bg-slate-800/50 rounded-xl space-y-2.5">
+              <div className="flex justify-between items-center">
+                <p className="text-xs font-medium text-slate-400">Créditos de IA</p>
+                <Badge className="bg-primary/15 text-primary border-none text-xs font-medium px-2">
+                  {planName || "Básico"}
+                </Badge>
+              </div>
+              <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                <div
+                  className={cn("h-full rounded-full transition-all duration-700", near ? "bg-amber-400" : "bg-primary")}
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              <div className="flex justify-between items-center">
+                <p className="text-xs font-medium text-slate-300 tabular-nums">
+                  {fmtTokens(used)} <span className="text-slate-500">/ {total > 0 ? fmtTokens(total) : "—"}</span>
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  {total > 0 ? `${pct}% usado` : "sem franquia"}
+                </p>
+              </div>
+              {extra > 0 && (
+                <p className="text-[11px] text-emerald-400">+ {fmtTokens(extra)} de recarga</p>
+              )}
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Bottom user section */}
       <div className="border-t border-slate-700/60 p-3">
@@ -289,7 +311,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [planData, setPlanData] = useState<any>({ features: {}, name: "Básico", maxTokens: 1 });
+  const [planData, setPlanData] = useState<any>({ features: {}, name: "Básico", maxTokens: 0, usedTokens: 0, extraTokens: 0 });
   const location = useLocation();
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -350,7 +372,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       .then(res => res.json())
       .then(data => {
         if (data.planFeatures) {
-          setPlanData({ features: data.planFeatures, name: data.plan?.name || "Básico", maxTokens: data.plan?.maxTokens || 1 });
+          setPlanData({
+            features: data.planFeatures,
+            name: data.plan?.name || "Básico",
+            maxTokens: data.plan?.maxTokens || 0,
+            usedTokens: Number(data.usedTokens) || 0,
+            extraTokens: Number(data.extraTokens) || 0,
+          });
           localStorage.setItem("usedTokens", data.usedTokens || "0");
           localStorage.setItem("companyName", data.name || "Minha Empresa");
         }

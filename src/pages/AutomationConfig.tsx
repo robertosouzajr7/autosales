@@ -265,7 +265,7 @@ export default function AutomationConfig() {
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Lembretes e follow-ups</h1>
             <p className="text-sm text-slate-500 mt-0.5">
-              Confirmações, lembretes e mensagens automáticas para reduzir faltas na sua clínica.
+              Confirmações, lembretes e mensagens automáticas para reduzir faltas e fidelizar seus clientes.
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">

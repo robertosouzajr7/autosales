@@ -28,8 +28,13 @@ function fmtTime(iso: string) {
 }
 function fmtResponse(sec: number | null) {
   if (sec == null) return "—";
-  if (sec < 60) return `${sec}s`;
-  return `${Math.round(sec / 60)}min`;
+  const s = Math.round(sec);
+  if (s < 60) return `${s}s`;
+  const min = Math.round(s / 60);
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60);
+  const rest = min % 60;
+  return rest ? `${h}h ${rest}min` : `${h}h`;
 }
 
 export default function Dashboard() {

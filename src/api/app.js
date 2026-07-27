@@ -75,6 +75,20 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
+// Atrás de proxy (EasyPanel/Nginx que termina o TLS): confia no
+// X-Forwarded-Proto para que req.protocol seja "https". Sem isso, as URLs de
+// mídia saem como http:// e o navegador bloqueia (mixed content) → imagem
+// quebrada no painel servido em https.
+app.set("trust proxy", true);
+
+// Mídia de upload (catálogo etc.). Servida em /uploads E em /api/uploads: a
+// segunda garante que a imagem seja alcançável mesmo quando o front é um
+// serviço separado e só o caminho /api é encaminhado para a API. Fica ANTES
+// do rate limiter e do authMiddleware do router para não ser barrada.
+const uploadStatic = express.static(process.env.UPLOAD_DIR || path.join(process.cwd(), "public", "uploads"));
+app.use("/uploads", uploadStatic);
+app.use("/api/uploads", uploadStatic);
+
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 600, // uso normal do painel (polling de conversas/stats)
@@ -121,7 +135,6 @@ app.get("/widget.js", serveWidget);
 app.use("/api/public", publicApiRouter);
 app.use("/api", apiRouter);
 app.use("/api/v2", apiRouter);
-app.use("/uploads", express.static(process.env.UPLOAD_DIR || path.join(process.cwd(), "public", "uploads")));
 app.use("/", publicRouter);
 
 // Error-handling middleware final: qualquer erro não tratado nas rotas é
