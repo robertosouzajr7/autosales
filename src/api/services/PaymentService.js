@@ -358,6 +358,62 @@ class PaymentService {
 
     return { alreadyPaid: false, invoice: paidInvoice, tenant };
   }
+
+  /**
+   * Checkout hospedado (pagamento único) para COMPRAR um pacote de tokens.
+   * Os metadados carregam tenantId, packageId e a quantidade de tokens, que
+   * o webhook usa para creditar o saldo (extraTokens). Requer Stripe.
+   */
+  async createTokenPackageCheckout(tenant, pack, frontend) {
+    const stripe = await this.getStripe();
+    if (!stripe) throw new Error("Stripe não está configurado (secret key ausente).");
+    const customerId = await this.ensureStripeCustomer(stripe, tenant);
+
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      customer: customerId,
+      line_items: [{
+        price_data: {
+          currency: "brl",
+          product_data: { name: `Recarga de tokens — ${pack.name} (${pack.tokens.toLocaleString("pt-BR")} tokens)` },
+          unit_amount: Math.round(Number(pack.price) * 100),
+        },
+        quantity: 1,
+      }],
+      metadata: { kind: "token_pack", tenantId: tenant.id, packageId: pack.id, tokens: String(pack.tokens) },
+      success_url: `${frontend}/assinatura?recarga=sucesso`,
+      cancel_url: `${frontend}/assinatura?recarga=cancelada`,
+    });
+    return { checkoutUrl: session.url, gatewayId: session.id };
+  }
+
+  /**
+   * Credita tokens comprados no saldo do tenant (extraTokens). Idempotente
+   * por sessão de checkout via AuditLog (kind TOKEN_RECHARGE + gatewayId).
+   */
+  async creditTokens(tenantId, tokens, gatewayId = null) {
+    const amount = parseInt(tokens, 10);
+    if (!tenantId || !Number.isFinite(amount) || amount <= 0) return { credited: false };
+
+    if (gatewayId) {
+      const already = await prisma.auditLog.findFirst({
+        where: { tenantId, action: "TOKEN_RECHARGE", entityId: gatewayId },
+      });
+      if (already) return { credited: false, alreadyCredited: true };
+    }
+
+    await prisma.tenant.update({
+      where: { id: tenantId },
+      data: { extraTokens: { increment: amount } },
+    });
+    await prisma.auditLog.create({
+      data: {
+        tenantId, action: "TOKEN_RECHARGE", entity: "Tenant", entityId: gatewayId || "manual",
+        metadata: JSON.stringify({ tokens: amount }),
+      },
+    }).catch(() => {});
+    return { credited: true, tokens: amount };
+  }
 }
 
 export default new PaymentService();

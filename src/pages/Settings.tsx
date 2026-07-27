@@ -37,14 +37,14 @@ export default function Settings() {
   const [isUpgrading, setIsUpgrading] = useState(false);
 
   const [aiConfig, setAiConfig] = useState({
-    openAiKey: "",
-    aiApiKey: "",
-    elevenLabsKey: "",
     googleRefreshToken: "",
     webChatUrl: "",
     systemPrompt: "Você é um agente de atendimento inbound. Qualifica e agenda no WhatsApp.",
     language: "pt-BR",
   });
+
+  // Modelo de IA global (somente leitura) — a chave é gerida pelo admin do SaaS.
+  const [aiModel, setAiModel] = useState<{ provider: string; model: string }>({ provider: "", model: "" });
 
   const { toast } = useToast();
 
@@ -71,13 +71,14 @@ export default function Settings() {
       const dataUsers = await resUsers.json();
       
       setAiConfig({
-        openAiKey: dataSettings.openAiKey || "",
-        aiApiKey: dataSettings.aiApiKey || "",
-        elevenLabsKey: dataSettings.elevenLabsKey || "",
         googleRefreshToken: dataSettings.googleRefreshToken || "",
         webChatUrl: dataSettings.webChatUrl || "",
         systemPrompt: dataSettings.systemPrompt || "Você é um agente de atendimento inbound. Qualifica e agenda no WhatsApp.",
         language: dataSettings.language || "pt-BR",
+      });
+      setAiModel({
+        provider: dataSettings.aiProvider || "",
+        model: dataSettings.aiModel || "",
       });
 
       setUsers(Array.isArray(dataUsers) ? dataUsers : []);
@@ -265,23 +266,31 @@ export default function Settings() {
              </Card>
           </TabsContent>
 
-          {/* ABA AVANÇADO — configurações de IA (LLM + voz opcional) */}
+          {/* ABA AVANÇADO — motor de IA (gerido globalmente pelo SaaS) */}
           <TabsContent value="integrations">
              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                 <Card className="border-none shadow-sm rounded-2xl bg-white p-12 space-y-8">
-                    <div className="flex items-center gap-4 text-[#2563EB] mb-4"><Bot className="w-8 h-8" /><h3 className="text-xl font-semibold text-slate-900 uppercase">Modelos de IA (LLMs)</h3></div>
+                    <div className="flex items-center gap-4 text-[#2563EB] mb-4"><Bot className="w-8 h-8" /><h3 className="text-xl font-semibold text-slate-900 uppercase">Motor de Inteligência Artificial</h3></div>
                     <div className="space-y-6">
-                       <div className="space-y-2"><Label className="text-xs font-semibold text-slate-400 pl-1">Google Gemini API Key</Label><Input type="password" value={aiConfig.aiApiKey} onChange={(e) => setAiConfig({...aiConfig, aiApiKey: e.target.value})} className="h-11 bg-slate-50 rounded-2xl px-8 font-bold" /></div>
-                       <div className="space-y-2"><Label className="text-xs font-semibold text-slate-400 pl-1">OpenAI API Key (Opcional)</Label><Input type="password" value={aiConfig.openAiKey} onChange={(e) => setAiConfig({...aiConfig, openAiKey: e.target.value})} className="h-11 bg-slate-50 rounded-2xl px-8 font-bold" /></div>
-                       
-                       <Separator />
-                       
                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <Label className="text-xs font-semibold text-slate-400 pl-1">ElevenLabs API Key (Voz Natural)</Label>
-                            <Badge className="bg-blue-50 text-[#2563EB] border-none text-xs">Novo</Badge>
+                          <Label className="text-xs font-semibold text-slate-400 pl-1">Modelo ativo</Label>
+                          <div className="h-11 bg-slate-50 rounded-2xl px-8 flex items-center font-bold text-slate-700">
+                             {aiModel.model
+                               ? <span className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-[#2563EB]" /> {aiModel.model}</span>
+                               : <span className="text-slate-400">Carregando…</span>}
                           </div>
-                          <Input type="password" value={aiConfig.elevenLabsKey} onChange={(e) => setAiConfig({...aiConfig, elevenLabsKey: e.target.value})} className="h-11 bg-slate-50 rounded-2xl px-8 font-bold" placeholder="Sua chave da ElevenLabs" />
+                       </div>
+                       {aiModel.provider && (
+                         <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-slate-400 pl-1">Provedor</Label>
+                            <div className="h-11 bg-slate-50 rounded-2xl px-8 flex items-center font-bold text-slate-700 capitalize">
+                               {aiModel.provider.toLowerCase()}
+                            </div>
+                         </div>
+                       )}
+                       <div className="rounded-2xl bg-blue-50 p-5 flex items-start gap-3 text-sm text-slate-600">
+                          <ShieldCheck className="w-5 h-5 text-[#2563EB] shrink-0 mt-0.5" />
+                          <span>O modelo e a conexão de IA são gerenciados pela plataforma. Você não precisa configurar chaves — tudo já vem pronto para usar. O consumo é medido em tokens e mostrado na página <b>Assinatura</b>.</span>
                        </div>
                     </div>
                  </Card>

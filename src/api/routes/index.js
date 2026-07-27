@@ -191,6 +191,12 @@ router.get("/admin/reports", adminMiddleware, AdminController.getReports);
 router.post("/admin/tenants/:id/users", adminMiddleware, AdminController.createTenantUser);
 router.delete("/admin/tenants/:id/users/:userId", adminMiddleware, AdminController.deleteTenantUser);
 
+// Pacotes de recarga de tokens — o admin do SaaS define nome, tokens e preço
+router.get("/admin/token-packages", adminMiddleware, AdminController.getTokenPackages);
+router.post("/admin/token-packages", adminMiddleware, AdminController.createTokenPackage);
+router.put("/admin/token-packages/:id", adminMiddleware, AdminController.updateTokenPackage);
+router.delete("/admin/token-packages/:id", adminMiddleware, AdminController.deleteTokenPackage);
+
 router.get("/admin/plans", adminMiddleware, AdminController.getPlans);
 router.post("/admin/plans", adminMiddleware, AdminController.createPlan);
 router.put("/admin/plans/:id", adminMiddleware, AdminController.updatePlan);
@@ -250,5 +256,9 @@ router.post("/billing/subscribe", BillingController.createSubscriptionCheckout);
 router.post("/billing/cancel", BillingController.cancelSubscription);
 router.post("/billing/resume", BillingController.resumeSubscription);
 router.post("/billing/upgrade", BillingController.upgradePlan);
+
+// Recarga de tokens (pacotes definidos pelo admin) — cliente compra saldo extra
+router.get("/billing/token-packages", BillingController.getTokenPackages);
+router.post("/billing/token-packages/:id/checkout", BillingController.buyTokenPackage);
 
 export default router;

@@ -51,6 +51,33 @@ export const DEFAULT_MODEL = {
   ANTHROPIC: "claude-opus-4-8",
 };
 
+// Custo aproximado por modelo em BRL por 1 milhão de tokens (blended ~85%
+// input / 15% output, câmbio ~R$5,50). Usado só para exibir custo estimado
+// por conta no admin — não é cobrança. Ajuste conforme o câmbio/tabela.
+export const MODEL_COST_BRL_PER_1M = {
+  "gemini-2.5-pro": 20.0,
+  "gemini-2.5-flash": 3.5,
+  "gemini-2.5-flash-lite": 1.5,
+  "gemini-2.0-flash": 3.5,
+  "gemini-flash-latest": 3.5,
+  "gpt-4o": 30.0,
+  "gpt-4o-mini": 1.2,
+  "gpt-4.1": 12.0,
+  "gpt-4.1-mini": 2.4,
+  "gpt-4.1-nano": 0.6,
+  "o4-mini": 8.0,
+  "claude-opus-4-8": 44.0,
+  "claude-sonnet-5": 26.4,
+  "claude-haiku-4-5": 8.8,
+  "claude-opus-4-7": 44.0,
+};
+
+// Custo estimado (BRL) de uma quantidade de tokens no modelo informado.
+export function estimateCostBRL(tokens, model) {
+  const rate = MODEL_COST_BRL_PER_1M[model] ?? 5.0; // fallback conservador
+  return (Number(tokens || 0) / 1_000_000) * rate;
+}
+
 // Fallbacks de modelo Gemini (alguns modelos somem de v1beta em certas regiões).
 const GEMINI_FALLBACKS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"];
 
@@ -69,30 +96,19 @@ class AIProviderService {
       settings = await prisma.platformSettings.findUnique({ where: { id: "singleton" } });
     } catch { /* singleton pode não existir ainda */ }
 
-    let tenant = null;
-    if (tenantId) {
-      try {
-        tenant = await prisma.tenant.findUnique({
-          where: { id: tenantId },
-          select: { aiProvider: true, aiApiKey: true, openAiKey: true },
-        });
-      } catch { /* ignore */ }
-    }
-
-    // Provedor: admin manda; senão herda do tenant; senão GEMINI.
-    const provider = (settings?.aiProvider || tenant?.aiProvider || "GEMINI").toUpperCase();
-
-    // Modelo: admin manda; senão default do provedor.
+    // Provedor e modelo são GLOBAIS — definidos pelo admin do SaaS. O tenant
+    // NÃO configura provedor/chave (todos usam a conexão da plataforma).
+    const provider = (settings?.aiProvider || "GEMINI").toUpperCase();
     const model = settings?.aiModel || DEFAULT_MODEL[provider] || DEFAULT_MODEL.GEMINI;
 
-    // Chave: chave específica do provedor no admin → chave do tenant → env.
+    // Chave: SEMPRE do admin (PlatformSettings) → env como fallback. Nunca do tenant.
     let apiKey = null;
     if (provider === "GEMINI") {
-      apiKey = settings?.geminiApiKey || tenant?.aiApiKey || process.env.GEMINI_API_KEY;
+      apiKey = settings?.geminiApiKey || process.env.GEMINI_API_KEY;
     } else if (provider === "OPENAI") {
-      apiKey = settings?.openaiApiKey || tenant?.openAiKey || tenant?.aiApiKey || process.env.OPENAI_API_KEY;
+      apiKey = settings?.openaiApiKey || process.env.OPENAI_API_KEY;
     } else if (provider === "ANTHROPIC") {
-      apiKey = settings?.anthropicApiKey || tenant?.aiApiKey || process.env.ANTHROPIC_API_KEY;
+      apiKey = settings?.anthropicApiKey || process.env.ANTHROPIC_API_KEY;
     }
 
     return { provider, model, apiKey };

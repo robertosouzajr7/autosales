@@ -19,15 +19,25 @@ export const getSettings = async (req, res) => {
         planFeatures = JSON.parse(tenant.plan.features);
       } catch(e) {}
     }
+
+    // Motor de IA é GLOBAL: a chave e o provedor são definidos pelo admin do
+    // SaaS. O cliente só enxerga qual modelo está ativo — nunca a chave.
+    const { DEFAULT_MODEL } = await import("../services/AIProviderService.js");
+    const settings = await prisma.platformSettings
+      .findUnique({ where: { id: "singleton" } })
+      .catch(() => null);
+    const activeProvider = (settings?.aiProvider || "GEMINI").toUpperCase();
+    const activeModel = settings?.aiModel || DEFAULT_MODEL[activeProvider] || DEFAULT_MODEL.GEMINI;
+
     res.json({
       hasWhatsAppConnection,
       hasSdr,
       planFeatures,
       companyName: tenant?.name,
       phone: tenant?.phone,
-      aiProvider: tenant?.aiProvider,
-      aiApiKey: tenant?.aiApiKey,
-      openAiKey: tenant?.openAiKey,
+      // Modelo global ativo (somente leitura para o cliente).
+      aiProvider: activeProvider,
+      aiModel: activeModel,
       subscriptionStatus: tenant?.subscriptionStatus,
       trialEnd: tenant?.trialEnd,
       stripeSubscriptionId: tenant?.stripeSubscriptionId,
@@ -35,9 +45,9 @@ export const getSettings = async (req, res) => {
       systemPrompt: tenant?.systemPrompt,
       webChatUrl: tenant?.webChatUrl,
       usedTokens: tenant?.usedTokens || 0,
+      extraTokens: tenant?.extraTokens || 0,
       qualifiedLeadsCount: tenant?.qualifiedLeadsCount || 0,
       plan: tenant?.plan,
-      elevenLabsKey: tenant?.elevenLabsKey,
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -47,9 +57,10 @@ export const getSettings = async (req, res) => {
 export const updateSettings = async (req, res) => {
   const tenantId = req.tenantId;
   
+  // A chave/provedor de IA são GLOBAIS (definidos pelo admin do SaaS), então
+  // não aceitamos mais aiProvider/aiApiKey/openAiKey/elevenLabsKey do tenant.
   const {
-    name, phone, aiProvider, aiApiKey, openAiKey,
-    systemPrompt, googleRefreshToken, webChatUrl, elevenLabsKey,
+    name, phone, systemPrompt, googleRefreshToken, webChatUrl,
   } = req.body;
 
   if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
@@ -60,12 +71,8 @@ export const updateSettings = async (req, res) => {
       data: {
         name,
         phone,
-        aiProvider,
-        aiApiKey,
-        openAiKey,
         systemPrompt,
         webChatUrl,
-        elevenLabsKey,
         // Só grava se veio um valor (o fluxo normal é via OAuth em /google/*).
         ...(typeof googleRefreshToken === "string" && googleRefreshToken.trim()
           ? { googleRefreshToken: googleRefreshToken.trim() }

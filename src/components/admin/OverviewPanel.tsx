@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/shared/StatCard";
 import { adminApi } from "@/lib/adminApi";
-import { DollarSign, Building2, Receipt, TimerReset, Flame } from "lucide-react";
+import { DollarSign, Building2, Receipt, TimerReset, Flame, Cpu, Coins } from "lucide-react";
 
 const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   ACTIVE: { label: "Ativos", cls: "bg-emerald-100 text-emerald-700" },
@@ -56,8 +56,23 @@ export function OverviewPanel() {
         <StatCard label="MRR" value={fmtBRL(data.mrr)} icon={<DollarSign className="w-5 h-5" />} hint="assinaturas ativas" />
         <StatCard label="Clientes" value={data.totalTenants} icon={<Building2 className="w-5 h-5" />} hint="contas na plataforma" />
         <StatCard label="Receita paga (total)" value={fmtBRL(data.totalPaidRevenue)} icon={<Receipt className="w-5 h-5" />} hint="faturas quitadas" />
-        <StatCard label="Trials expirando" value={data.expiringTrials.length} icon={<TimerReset className="w-5 h-5" />} hint="próximos 7 dias" />
+        <StatCard label="Custo de IA (tokens)" value={fmtBRL(data.totalTokenCostBRL || 0)} icon={<Coins className="w-5 h-5" />} hint="consumo no ciclo" />
       </div>
+
+      {/* Modelo global ativo */}
+      {data.aiModel && (
+        <Card className="rounded-2xl border-border p-4 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+            <Cpu className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Motor de IA global (todas as contas)</p>
+            <p className="text-sm font-semibold text-foreground">
+              {data.aiModel} <span className="text-muted-foreground font-normal capitalize">· {String(data.aiProvider || "").toLowerCase()}</span>
+            </p>
+          </div>
+        </Card>
+      )}
 
       {/* Status + gráfico de meses */}
       <div className="grid gap-6 lg:grid-cols-3">
@@ -149,7 +164,7 @@ export function OverviewPanel() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold text-foreground tabular-nums">{(t.usedTokens / 1000).toFixed(0)}k tokens</p>
-                    <p className="text-xs text-muted-foreground">{t.usedMessages} msgs</p>
+                    <p className="text-xs text-muted-foreground">{fmtBRL(t.costBRL || 0)}</p>
                   </div>
                 </li>
               ))}
@@ -157,6 +172,58 @@ export function OverviewPanel() {
           )}
         </Card>
       </div>
+
+      {/* Consumo detalhado por conta */}
+      {Array.isArray(data.accountsUsage) && data.accountsUsage.length > 0 && (
+        <Card className="rounded-2xl border-border">
+          <header className="px-5 py-4 border-b border-border">
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <Coins className="w-4 h-4 text-primary" /> Consumo de tokens por conta
+            </h3>
+          </header>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-border text-xs text-muted-foreground">
+                  <th className="px-5 py-3 font-medium">Conta</th>
+                  <th className="px-5 py-3 font-medium">Plano</th>
+                  <th className="px-5 py-3 font-medium text-right">Tokens usados</th>
+                  <th className="px-5 py-3 font-medium text-right">Franquia</th>
+                  <th className="px-5 py-3 font-medium text-right">Recarga</th>
+                  <th className="px-5 py-3 font-medium text-right">Custo estimado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.accountsUsage.map((t: any) => {
+                  const planTokens = t.planTokens || 0;
+                  const over = planTokens > 0 && t.usedTokens > planTokens;
+                  return (
+                    <tr key={t.id} className="border-b border-border/60 hover:bg-muted/40">
+                      <td className="px-5 py-3">
+                        <p className="font-medium text-foreground">{t.name}</p>
+                        <p className="text-xs text-muted-foreground">{t.email}</p>
+                      </td>
+                      <td className="px-5 py-3 text-muted-foreground">{t.plan || "—"}</td>
+                      <td className={`px-5 py-3 text-right tabular-nums ${over ? "text-rose-600 font-semibold" : "text-foreground"}`}>
+                        {t.usedTokens.toLocaleString("pt-BR")}
+                      </td>
+                      <td className="px-5 py-3 text-right tabular-nums text-muted-foreground">
+                        {planTokens ? planTokens.toLocaleString("pt-BR") : "—"}
+                      </td>
+                      <td className="px-5 py-3 text-right tabular-nums text-muted-foreground">
+                        {t.extraTokens ? t.extraTokens.toLocaleString("pt-BR") : "—"}
+                      </td>
+                      <td className="px-5 py-3 text-right tabular-nums font-semibold text-foreground">
+                        {fmtBRL(t.costBRL || 0)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

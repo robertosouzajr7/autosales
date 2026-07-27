@@ -914,11 +914,32 @@ class AutomationEngine {
   async _aiText(tenantId, prompt, system) {
     const cfg = await AIProviderService.resolveAIConfig(tenantId);
     const { text, tokens } = await AIProviderService.generateText({ ...cfg, system, prompt });
-    await prisma.tenant.update({
-      where: { id: tenantId },
-      data: { usedTokens: { increment: tokens } },
-    }).catch(() => {});
+    await this._chargeTokens(tenantId, tokens);
     return text;
+  }
+
+  /**
+   * Contabiliza tokens consumidos por um tenant. Incrementa usedTokens (uso
+   * do ciclo) e, quando o consumo passa da franquia do plano, debita o saldo
+   * de tokens comprados (extraTokens). Assim a recarga funciona como saldo
+   * pré-pago consumível, que carrega entre ciclos (usedTokens zera no mês,
+   * extraTokens não).
+   */
+  async _chargeTokens(tenantId, tokens) {
+    if (!tokens || tokens <= 0) return;
+    try {
+      const t = await prisma.tenant.findUnique({ where: { id: tenantId }, include: { plan: true } });
+      if (!t) return;
+      const maxTokens = t.plan?.maxTokens ?? 0;
+      const before = t.usedTokens || 0;
+      const after = before + tokens;
+      const overflow = Math.max(0, after - maxTokens) - Math.max(0, before - maxTokens);
+      const data = { usedTokens: { increment: tokens } };
+      if (overflow > 0 && (t.extraTokens || 0) > 0) {
+        data.extraTokens = { decrement: Math.min(overflow, t.extraTokens) };
+      }
+      await prisma.tenant.update({ where: { id: tenantId }, data });
+    } catch { /* silent */ }
   }
 
   async _getLeadFullContext(lead, context) {
@@ -1014,7 +1035,7 @@ class AutomationEngine {
       });
       let aiEnabled = false;
       if (tenantUsage && tenantUsage.plan) {
-        aiEnabled = tenantUsage.plan.enableTokens === true && tenantUsage.usedTokens < tenantUsage.plan.maxTokens;
+        aiEnabled = tenantUsage.plan.enableTokens === true && tenantUsage.usedTokens < (tenantUsage.plan.maxTokens + (tenantUsage.extraTokens || 0));
       }
       if (!aiEnabled) return { text: "IA Desabilitada no Plano (ou Limite de Tokens atingido)", toolCalls: [] };
 
@@ -1104,7 +1125,7 @@ class AutomationEngine {
         if (!tenantUsage.plan.enableTokens) {
           return { text: "IA Desabilitada no Plano.", toolCalls: [] };
         }
-        if (tenantUsage.usedTokens >= tenantUsage.plan.maxTokens) {
+        if (tenantUsage.usedTokens >= (tenantUsage.plan.maxTokens + (tenantUsage.extraTokens || 0))) {
           console.log(`[AutoEngine] 🛑 Limite de tokens atingido para o tenant ${lead.tenantId}.`);
           return { text: "Limite de processamento atingido.", toolCalls: [] };
         }
@@ -1120,11 +1141,8 @@ class AutomationEngine {
         executeTool: (name, args) => this._executeTool(name, args, lead),
       });
 
-      // Track DB usage
-      await prisma.tenant.update({
-        where: { id: lead.tenantId },
-        data: { usedTokens: { increment: tokens } }
-      });
+      // Track DB usage (debita saldo extra no excedente da franquia)
+      await this._chargeTokens(lead.tenantId, tokens);
 
       return { text: finalText, toolCalls };
     } catch (e) {
@@ -1280,7 +1298,7 @@ class AutomationEngine {
       const tenantUsage = await prisma.tenant.findUnique({ where: { id: lead.tenantId }, include: { plan: true } });
       let aiEnabled = false;
       if (tenantUsage && tenantUsage.plan) {
-        aiEnabled = tenantUsage.plan.enableTokens === true && tenantUsage.usedTokens < tenantUsage.plan.maxTokens;
+        aiEnabled = tenantUsage.plan.enableTokens === true && tenantUsage.usedTokens < (tenantUsage.plan.maxTokens + (tenantUsage.extraTokens || 0));
       }
       if (!aiEnabled) return fields.reduce((acc, f) => ({ ...acc, [f]: null }), {});
 
@@ -1314,7 +1332,7 @@ Retorne apenas o JSON, sem markdown, sem explicação.`;
       const tenantUsage = await prisma.tenant.findUnique({ where: { id: lead.tenantId }, include: { plan: true } });
       let aiEnabled = false;
       if (tenantUsage && tenantUsage.plan) {
-        aiEnabled = tenantUsage.plan.enableTokens === true && tenantUsage.usedTokens < tenantUsage.plan.maxTokens;
+        aiEnabled = tenantUsage.plan.enableTokens === true && tenantUsage.usedTokens < (tenantUsage.plan.maxTokens + (tenantUsage.extraTokens || 0));
       }
       if (!aiEnabled) return { intent: intents[intents.length - 1].id, confidence: 0, reasoning: "IA Desabilitada" };
 
@@ -1352,7 +1370,7 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
       const tenantUsage = await prisma.tenant.findUnique({ where: { id: lead.tenantId }, include: { plan: true } });
       let aiEnabled = false;
       if (tenantUsage && tenantUsage.plan) {
-        aiEnabled = tenantUsage.plan.enableTokens === true && tenantUsage.usedTokens < tenantUsage.plan.maxTokens;
+        aiEnabled = tenantUsage.plan.enableTokens === true && tenantUsage.usedTokens < (tenantUsage.plan.maxTokens + (tenantUsage.extraTokens || 0));
       }
       if (!aiEnabled) return { score: 50, reasoning: "IA Desabilitada no Plano", bant: {}, signals: [] };
 
