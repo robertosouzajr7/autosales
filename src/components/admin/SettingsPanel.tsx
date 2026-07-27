@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { adminApi } from "@/lib/adminApi";
-import { Bot, CreditCard, Globe, Loader2, ShieldCheck, Save } from "lucide-react";
+import { Bot, CreditCard, Globe, Loader2, ShieldCheck, Save, Coins } from "lucide-react";
 
 export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
   const { toast } = useToast();
@@ -31,6 +31,12 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
   const [anthropicKey, setAnthropicKey] = useState("");
   const [savingAi, setSavingAi] = useState(false);
 
+  // Precificação de tokens (câmbio + markup padrão) e tabela de custo real
+  const [usdToBrl, setUsdToBrl] = useState<number | string>(5.5);
+  const [tokenMarkup, setTokenMarkup] = useState<number | string>(5);
+  const [pricing, setPricing] = useState<any>(null);
+  const [savingPricing, setSavingPricing] = useState(false);
+
   // Landing CMS
   const [lp, setLp] = useState<any>({
     logoUrl: "", contactWhatsApp: "", contactEmail: "", contactInstagram: "",
@@ -39,9 +45,10 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
   const [savingLp, setSavingLp] = useState(false);
 
   const load = async () => {
-    const [gwRes, lpRes] = await Promise.all([
+    const [gwRes, lpRes, prRes] = await Promise.all([
       adminApi.get("/api/admin/platform-settings"),
       adminApi.get("/api/admin/landing-settings"),
+      adminApi.get("/api/admin/token-pricing"),
     ]);
     if (gwRes.ok) {
       setGw(gwRes.data);
@@ -49,10 +56,24 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
       setTrialDays(gwRes.data.defaultTrialDays ?? 7);
       setAiProvider(gwRes.data.aiProvider || "GEMINI");
       setAiModel(gwRes.data.aiModel || "");
+      setUsdToBrl(gwRes.data.usdToBrl ?? 5.5);
+      setTokenMarkup(gwRes.data.tokenMarkup ?? 5);
     }
     if (lpRes.ok && lpRes.data) setLp((prev: any) => ({ ...prev, ...lpRes.data }));
+    if (prRes.ok) setPricing(prRes.data);
   };
   useEffect(() => { load(); }, []);
+
+  const savePricing = async () => {
+    setSavingPricing(true);
+    const res = await adminApi.put("/api/admin/platform-settings", {
+      usdToBrl: Number(usdToBrl),
+      tokenMarkup: Number(tokenMarkup),
+    });
+    setSavingPricing(false);
+    if (res.ok) { toast({ title: "Precificação atualizada" }); load(); }
+    else toast({ title: "Erro ao salvar", description: res.data?.error, variant: "destructive" });
+  };
 
   const saveGateway = async () => {
     setSavingGw(true);
@@ -313,6 +334,79 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
           <Button onClick={saveAI} disabled={savingAi} className="gap-2">
             {savingAi ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Salvar IA
+          </Button>
+        </div>
+      </Card>
+
+      {/* PRECIFICAÇÃO DE TOKENS */}
+      <Card className="rounded-2xl border-border p-6 space-y-5">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary grid place-items-center">
+            <Coins className="w-5 h-5" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold text-foreground">Precificação de tokens</h3>
+            <p className="text-xs text-muted-foreground">O custo dos tokens é calculado automaticamente a partir do preço real do modelo ativo. Ajuste o câmbio e o markup padrão de venda.</p>
+          </div>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Câmbio USD → BRL</Label>
+            <Input type="number" step="0.01" min={0.1} value={usdToBrl} onChange={(e) => setUsdToBrl(e.target.value)} />
+            <p className="text-[11px] text-muted-foreground">Usado para converter o preço dos provedores (que é em dólar).</p>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Markup padrão de venda (x)</Label>
+            <Input type="number" step="0.1" min={1} value={tokenMarkup} onChange={(e) => setTokenMarkup(e.target.value)} />
+            <p className="text-[11px] text-muted-foreground">Ex.: 5 = preço sugerido de venda é 5x o custo real.</p>
+          </div>
+        </div>
+
+        {/* Tabela de custo real por modelo */}
+        {pricing?.catalog && (
+          <div className="rounded-xl border border-border overflow-hidden">
+            <div className="px-4 py-2.5 bg-muted flex items-center justify-between">
+              <span className="text-xs font-semibold text-foreground">Custo real por modelo (BRL por 1M tokens)</span>
+              <span className="text-[11px] text-muted-foreground">modelo ativo: {pricing.activeModel}</span>
+            </div>
+            <div className="overflow-x-auto max-h-64 overflow-y-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="sticky top-0 bg-card">
+                  <tr className="border-b border-border text-muted-foreground">
+                    <th className="px-4 py-2 font-medium">Modelo</th>
+                    <th className="px-4 py-2 font-medium">Provedor</th>
+                    <th className="px-4 py-2 font-medium text-right">Input $/1M</th>
+                    <th className="px-4 py-2 font-medium text-right">Output $/1M</th>
+                    <th className="px-4 py-2 font-medium text-right">Custo R$/1M</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pricing.catalog.map((m: any) => {
+                    const active = m.model === pricing.activeModel;
+                    return (
+                      <tr key={m.model} className={`border-b border-border/60 ${active ? "bg-primary/5" : ""}`}>
+                        <td className="px-4 py-2 font-medium text-foreground">
+                          {m.model} {active && <Badge className="ml-1 bg-primary/10 text-primary border-none text-[10px]">ativo</Badge>}
+                        </td>
+                        <td className="px-4 py-2 text-muted-foreground capitalize">{String(m.provider).toLowerCase()}</td>
+                        <td className="px-4 py-2 text-right tabular-nums text-muted-foreground">{m.inputUSD != null ? `$${m.inputUSD}` : "—"}</td>
+                        <td className="px-4 py-2 text-right tabular-nums text-muted-foreground">{m.outputUSD != null ? `$${m.outputUSD}` : "—"}</td>
+                        <td className="px-4 py-2 text-right tabular-nums font-semibold text-foreground">R$ {m.costBRLPer1M.toFixed(2)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[11px] text-muted-foreground">Os preços são estimados (proporção input/output de conversa). Confirme a tabela oficial dos provedores periodicamente.</p>
+          <Button onClick={savePricing} disabled={savingPricing} className="gap-2">
+            {savingPricing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            Salvar precificação
           </Button>
         </div>
       </Card>

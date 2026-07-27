@@ -191,6 +191,9 @@ router.get("/admin/reports", adminMiddleware, AdminController.getReports);
 router.post("/admin/tenants/:id/users", adminMiddleware, AdminController.createTenantUser);
 router.delete("/admin/tenants/:id/users/:userId", adminMiddleware, AdminController.deleteTenantUser);
 
+// Precificação de tokens — custo real por modelo (base do cálculo automático)
+router.get("/admin/token-pricing", adminMiddleware, AdminController.getTokenPricing);
+
 // Pacotes de recarga de tokens — o admin do SaaS define nome, tokens e preço
 router.get("/admin/token-packages", adminMiddleware, AdminController.getTokenPackages);
 router.post("/admin/token-packages", adminMiddleware, AdminController.createTokenPackage);

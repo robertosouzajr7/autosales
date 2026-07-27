@@ -51,31 +51,74 @@ export const DEFAULT_MODEL = {
   ANTHROPIC: "claude-opus-4-8",
 };
 
-// Custo aproximado por modelo em BRL por 1 milhão de tokens (blended ~85%
-// input / 15% output, câmbio ~R$5,50). Usado só para exibir custo estimado
-// por conta no admin — não é cobrança. Ajuste conforme o câmbio/tabela.
-export const MODEL_COST_BRL_PER_1M = {
-  "gemini-2.5-pro": 20.0,
-  "gemini-2.5-flash": 3.5,
-  "gemini-2.5-flash-lite": 1.5,
-  "gemini-2.0-flash": 3.5,
-  "gemini-flash-latest": 3.5,
-  "gpt-4o": 30.0,
-  "gpt-4o-mini": 1.2,
-  "gpt-4.1": 12.0,
-  "gpt-4.1-mini": 2.4,
-  "gpt-4.1-nano": 0.6,
-  "o4-mini": 8.0,
-  "claude-opus-4-8": 44.0,
-  "claude-sonnet-5": 26.4,
-  "claude-haiku-4-5": 8.8,
-  "claude-opus-4-7": 44.0,
+// Preços REAIS dos provedores em USD por 1 milhão de tokens (input / output).
+// Fonte: tabelas públicas de preços de Google/OpenAI/Anthropic. Revise
+// periodicamente — os provedores reajustam. O custo em BRL é DERIVADO destes
+// números pelo câmbio + proporção de uso (não é um número chumbado).
+export const MODEL_PRICING_USD = {
+  // ── Google Gemini ──
+  "gemini-2.5-pro":        { input: 1.25, output: 10.0 },
+  "gemini-2.5-flash":      { input: 0.30, output: 2.50 },
+  "gemini-2.5-flash-lite": { input: 0.10, output: 0.40 },
+  "gemini-2.0-flash":      { input: 0.10, output: 0.40 },
+  "gemini-flash-latest":   { input: 0.30, output: 2.50 },
+  // ── OpenAI (GPT) ──
+  "gpt-4o":       { input: 2.50, output: 10.0 },
+  "gpt-4o-mini":  { input: 0.15, output: 0.60 },
+  "gpt-4.1":      { input: 2.00, output: 8.00 },
+  "gpt-4.1-mini": { input: 0.40, output: 1.60 },
+  "gpt-4.1-nano": { input: 0.10, output: 0.40 },
+  "o4-mini":      { input: 1.10, output: 4.40 },
+  // ── Anthropic (Claude) ──
+  "claude-opus-4-8":  { input: 5.00, output: 25.0 },
+  "claude-opus-4-7":  { input: 5.00, output: 25.0 },
+  "claude-sonnet-5":  { input: 3.00, output: 15.0 },
+  "claude-haiku-4-5": { input: 1.00, output: 5.00 },
 };
 
+// Câmbio padrão (fallback) e proporção assumida input/output numa conversa de
+// atendimento. Os agentes reenviam o histórico a cada turno, então o volume de
+// tokens é dominado por INPUT (~85%). Câmbio e markup reais vêm do
+// PlatformSettings; estes são só defaults quando ainda não configurado.
+export const DEFAULT_USD_BRL = 5.5;
+const IO_SPLIT = { input: 0.85, output: 0.15 };
+const FALLBACK_USD_PER_1M = 1.0; // modelo desconhecido: custo conservador
+
+// Custo REAL (USD) de 1M tokens no modelo, misturando input+output.
+export function blendedUSDPer1M(model) {
+  const p = MODEL_PRICING_USD[model];
+  if (!p) return FALLBACK_USD_PER_1M;
+  return p.input * IO_SPLIT.input + p.output * IO_SPLIT.output;
+}
+
+// Custo REAL (BRL) de 1M tokens no modelo, ao câmbio informado.
+export function modelCostBRLPer1M(model, usdToBrl = DEFAULT_USD_BRL) {
+  return blendedUSDPer1M(model) * (Number(usdToBrl) || DEFAULT_USD_BRL);
+}
+
 // Custo estimado (BRL) de uma quantidade de tokens no modelo informado.
-export function estimateCostBRL(tokens, model) {
-  const rate = MODEL_COST_BRL_PER_1M[model] ?? 5.0; // fallback conservador
-  return (Number(tokens || 0) / 1_000_000) * rate;
+// usdToBrl é opcional (retrocompatível) e, quando ausente, usa o default.
+export function estimateCostBRL(tokens, model, usdToBrl = DEFAULT_USD_BRL) {
+  return (Number(tokens || 0) / 1_000_000) * modelCostBRLPer1M(model, usdToBrl);
+}
+
+// Catálogo de custo por modelo (BRL/1M) para exibir no painel admin.
+export function buildPricingCatalog(usdToBrl = DEFAULT_USD_BRL) {
+  const rate = Number(usdToBrl) || DEFAULT_USD_BRL;
+  const rows = [];
+  for (const [provider, models] of Object.entries(MODEL_CATALOG)) {
+    for (const model of models) {
+      const p = MODEL_PRICING_USD[model];
+      rows.push({
+        provider,
+        model,
+        inputUSD: p?.input ?? null,
+        outputUSD: p?.output ?? null,
+        costBRLPer1M: Number(modelCostBRLPer1M(model, rate).toFixed(4)),
+      });
+    }
+  }
+  return rows;
 }
 
 // Fallbacks de modelo Gemini (alguns modelos somem de v1beta em certas regiões).

@@ -23,22 +23,38 @@ const DEFAULT_PACK = {
  * compram esses pacotes na página de Assinatura quando estouram a franquia
  * do plano; o saldo (extraTokens) carrega para os próximos ciclos.
  */
+const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
 export function TokenPackagesPanel() {
   const { toast } = useToast();
   const [packages, setPackages] = useState<any[]>([]);
+  const [pricing, setPricing] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<any>(DEFAULT_PACK);
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
-    const res = await adminApi.get("/api/admin/token-packages");
+    const [res, pr] = await Promise.all([
+      adminApi.get("/api/admin/token-packages"),
+      adminApi.get("/api/admin/token-pricing"),
+    ]);
     if (res.ok && Array.isArray(res.data)) setPackages(res.data);
+    if (pr.ok) setPricing(pr.data);
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
 
-  const openNew = () => { setForm(DEFAULT_PACK); setOpen(true); };
+  // Custo real dos tokens do pacote no modelo global ativo (BRL).
+  const costOf = (tokens: number) =>
+    pricing ? (Number(tokens || 0) / 1_000_000) * pricing.activeModelCostBRLPer1M : 0;
+
+  const openNew = () => {
+    const markup = pricing?.tokenMarkup || 5;
+    const suggested = Number((costOf(DEFAULT_PACK.tokens) * markup).toFixed(2)) || DEFAULT_PACK.price;
+    setForm({ ...DEFAULT_PACK, price: suggested });
+    setOpen(true);
+  };
   const openEdit = (p: any) => { setForm({ ...DEFAULT_PACK, ...p }); setOpen(true); };
 
   const save = async () => {
@@ -73,10 +89,14 @@ export function TokenPackagesPanel() {
     else toast({ title: "Erro ao excluir", description: res.data?.error, variant: "destructive" });
   };
 
-  // Preço efetivo por 1k tokens — ajuda o admin a precificar as recargas.
-  const pricePer1k = Number(form.tokens) > 0
-    ? (Number(form.price) / (Number(form.tokens) / 1000))
-    : 0;
+  // Cálculo automático: custo real, preço sugerido (markup) e margem.
+  const cost = costOf(Number(form.tokens));
+  const markup = pricing?.tokenMarkup || 5;
+  const suggestedPrice = Number((cost * markup).toFixed(2));
+  const salePrice = Number(form.price) || 0;
+  const margin = salePrice - cost;
+  const marginPct = salePrice > 0 ? (margin / salePrice) * 100 : 0;
+  const useSuggested = () => setForm({ ...form, price: suggestedPrice });
 
   return (
     <div className="space-y-4">
@@ -114,9 +134,14 @@ export function TokenPackagesPanel() {
               </div>
               <ul className="text-xs text-muted-foreground space-y-1">
                 <li>{Number(p.tokens).toLocaleString("pt-BR")} tokens</li>
-                <li>
-                  R$ {(Number(p.price) / (Number(p.tokens) / 1000)).toFixed(3)} por 1k tokens
-                </li>
+                {pricing && (
+                  <li>
+                    custo {brl(costOf(Number(p.tokens)))} · margem{" "}
+                    <span className={Number(p.price) - costOf(Number(p.tokens)) >= 0 ? "text-emerald-600 font-medium" : "text-rose-600 font-medium"}>
+                      {brl(Number(p.price) - costOf(Number(p.tokens)))}
+                    </span>
+                  </li>
+                )}
               </ul>
               <div className="flex gap-2 pt-2 border-t border-border">
                 <Button variant="outline" size="sm" className="flex-1 gap-1.5" onClick={() => openEdit(p)}>
@@ -145,13 +170,33 @@ export function TokenPackagesPanel() {
                 <Input type="number" value={form.tokens} onChange={(e) => setForm({ ...form, tokens: e.target.value })} />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Preço (R$)</Label>
+                <Label className="text-xs text-muted-foreground">Preço de venda (R$)</Label>
                 <Input type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
               </div>
             </div>
-            <div className="rounded-xl bg-muted p-4 flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Preço por 1k tokens</span>
-              <span className="text-sm font-semibold text-foreground">R$ {pricePer1k.toFixed(3)}</span>
+
+            {/* Cálculo automático a partir do custo real do modelo ativo */}
+            <div className="rounded-xl bg-muted p-4 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">
+                  Custo real dos tokens
+                  {pricing && <span className="ml-1 text-[11px]">({pricing.activeModel})</span>}
+                </span>
+                <span className="text-sm font-semibold text-foreground tabular-nums">{brl(cost)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Preço sugerido (markup {markup}x)</span>
+                <button type="button" onClick={useSuggested} className="text-sm font-semibold text-primary hover:underline tabular-nums">
+                  {brl(suggestedPrice)} <span className="text-[11px] font-normal">· usar</span>
+                </button>
+              </div>
+              <div className="flex items-center justify-between border-t border-border pt-2.5">
+                <span className="text-xs text-muted-foreground">Sua margem</span>
+                <span className={`text-sm font-bold tabular-nums ${margin >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                  {brl(margin)} <span className="text-[11px] font-medium">({marginPct.toFixed(0)}%)</span>
+                </span>
+              </div>
+              {!pricing && <p className="text-[11px] text-amber-600">Não foi possível carregar a tabela de custos — verifique o modelo ativo em Configurações.</p>}
             </div>
             <div className="flex items-center justify-between border-t border-border pt-3">
               <Label className="text-xs text-foreground">Pacote visível/ativo</Label>

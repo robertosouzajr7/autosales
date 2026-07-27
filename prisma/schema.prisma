@@ -521,6 +521,12 @@ model PlatformSettings {
   openaiApiKey    String?
   anthropicApiKey String?
 
+  // ─── Precificação de tokens (planos e recargas) ───
+  // Câmbio USD→BRL usado para converter o preço real dos provedores.
+  usdToBrl    Float @default(5.5)
+  // Markup padrão de venda sobre o custo (ex.: 5 = vender por 5x o custo).
+  tokenMarkup Float @default(5.0)
+
   defaultTrialDays Int      @default(7)
   updatedAt        DateTime @updatedAt
 }

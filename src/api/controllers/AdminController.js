@@ -1,7 +1,10 @@
 import prisma from "../config/prisma.js";
 import bcrypt from "bcryptjs";
 import { audit } from "../services/AuditService.js";
-import { MODEL_CATALOG, DEFAULT_MODEL, estimateCostBRL } from "../services/AIProviderService.js";
+import {
+  MODEL_CATALOG, DEFAULT_MODEL, estimateCostBRL,
+  modelCostBRLPer1M, buildPricingCatalog, DEFAULT_USD_BRL,
+} from "../services/AIProviderService.js";
 
 export const getTenants = async (req, res) => {
   try {
@@ -234,6 +237,9 @@ export const getPlatformSettings = async (_req, res) => {
       openaiKeyConfigured: !!(s.openaiApiKey || process.env.OPENAI_API_KEY),
       anthropicKeyMasked: maskSecret(s.anthropicApiKey || process.env.ANTHROPIC_API_KEY),
       anthropicKeyConfigured: !!(s.anthropicApiKey || process.env.ANTHROPIC_API_KEY),
+      // Precificação de tokens
+      usdToBrl: s.usdToBrl ?? DEFAULT_USD_BRL,
+      tokenMarkup: s.tokenMarkup ?? 5.0,
       updatedAt: s.updatedAt,
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -246,8 +252,17 @@ export const updatePlatformSettings = async (req, res) => {
       mpAccessToken, paymentWebhookSecret,
       stripeSecretKey, stripeWebhookSecret, stripePublishableKey,
       aiProvider, aiModel, geminiApiKey, openaiApiKey, anthropicApiKey,
+      usdToBrl, tokenMarkup,
     } = req.body;
     const data = {};
+
+    // Precificação: câmbio > 0 e markup >= 1 (não vender abaixo do custo).
+    if (usdToBrl !== undefined && Number.isFinite(parseFloat(usdToBrl)) && parseFloat(usdToBrl) > 0) {
+      data.usdToBrl = parseFloat(usdToBrl);
+    }
+    if (tokenMarkup !== undefined && Number.isFinite(parseFloat(tokenMarkup)) && parseFloat(tokenMarkup) >= 1) {
+      data.tokenMarkup = parseFloat(tokenMarkup);
+    }
 
     if (paymentProvider === "STRIPE" || paymentProvider === "MERCADO_PAGO") {
       data.paymentProvider = paymentProvider;
@@ -282,6 +297,30 @@ export const updatePlatformSettings = async (req, res) => {
     });
     await audit({ actorId: req.userId, action: "PLATFORM_SETTINGS_UPDATED", entity: "PlatformSettings", entityId: "singleton" });
     res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
+// ─── Precificação de tokens (custo real por modelo) ─────────────
+
+// GET /api/admin/token-pricing
+// Base para o cálculo automático de custo em planos e pacotes: modelo ativo,
+// câmbio, markup padrão, custo do modelo ativo (BRL/1M) e catálogo completo.
+export const getTokenPricing = async (_req, res) => {
+  try {
+    const s = await prisma.platformSettings.findUnique({ where: { id: "singleton" } }).catch(() => null);
+    const activeProvider = (s?.aiProvider || "GEMINI").toUpperCase();
+    const activeModel = s?.aiModel || DEFAULT_MODEL[activeProvider] || DEFAULT_MODEL.GEMINI;
+    const usdToBrl = s?.usdToBrl ?? DEFAULT_USD_BRL;
+    const tokenMarkup = s?.tokenMarkup ?? 5.0;
+
+    res.json({
+      activeProvider,
+      activeModel,
+      usdToBrl,
+      tokenMarkup,
+      activeModelCostBRLPer1M: Number(modelCostBRLPer1M(activeModel, usdToBrl).toFixed(4)),
+      catalog: buildPricingCatalog(usdToBrl),
+    });
   } catch (e) { res.status(500).json({ error: e.message }); }
 };
 
@@ -358,7 +397,8 @@ export const getReports = async (_req, res) => {
     // Modelo de IA ativo (global) → base do custo estimado por conta.
     const activeProvider = (settings?.aiProvider || "GEMINI").toUpperCase();
     const activeModel = settings?.aiModel || DEFAULT_MODEL[activeProvider] || DEFAULT_MODEL.GEMINI;
-    const tokenCost = (tokens) => estimateCostBRL(tokens || 0, activeModel);
+    const usdToBrl = settings?.usdToBrl ?? DEFAULT_USD_BRL;
+    const tokenCost = (tokens) => estimateCostBRL(tokens || 0, activeModel, usdToBrl);
 
     // MRR: soma dos planos de tenants ATIVOS.
     const mrr = tenants

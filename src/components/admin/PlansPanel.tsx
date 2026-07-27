@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,6 +39,20 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<any>(DEFAULT_PLAN);
   const [saving, setSaving] = useState(false);
+  const [pricing, setPricing] = useState<any>(null);
+
+  useEffect(() => {
+    (async () => {
+      const pr = await adminApi.get("/api/admin/token-pricing");
+      if (pr.ok) setPricing(pr.data);
+    })();
+  }, []);
+
+  // Custo real (BRL) da franquia de tokens do plano no modelo global ativo.
+  const realTokenCost = pricing
+    ? ((Number(form.maxTokens) || 0) / 1_000_000) * pricing.activeModelCostBRLPer1M
+    : 0;
+  const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   const openNew = () => { setForm(DEFAULT_PLAN); setOpen(true); };
   const openEdit = (p: any) => {
@@ -229,6 +243,26 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
                   ))}
                 </div>
               </div>
+
+              {/* Custo REAL da franquia de tokens no modelo global ativo */}
+              {pricing && (
+                <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">
+                      Custo real de {((Number(form.maxTokens) || 0) / 1000).toLocaleString("pt-BR")}k tokens
+                      <span className="ml-1 text-[11px]">({pricing.activeModel})</span>
+                    </span>
+                    <span className="text-sm font-bold text-foreground tabular-nums">{brl(realTokenCost)}/mês</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, tokenUnitCost: Number((pricing.activeModelCostBRLPer1M / 1000).toFixed(4)) })}
+                    className="text-[11px] text-primary hover:underline"
+                  >
+                    Usar este custo real no simulador (R$ {(pricing.activeModelCostBRLPer1M / 1000).toFixed(4)}/1k)
+                  </button>
+                </div>
+              )}
 
               <div className="rounded-xl bg-slate-900 text-white p-4">
                 <p className="text-[10px] uppercase text-slate-400 font-semibold mb-2">Simulador de margem (uso máximo)</p>
