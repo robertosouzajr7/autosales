@@ -31,6 +31,21 @@ const MAX_STEPS = 100;
 const MAX_CONCURRENT_EXECUTIONS = 10;
 const RATE_LIMIT_PER_MINUTE = 20; // max msgs per tenant per minute
 
+/**
+ * Casa uma palavra-chave como PALAVRA INTEIRA (ignorando acentos e caixa).
+ * Evita falso positivo de substring — ex.: a keyword "dor" não pode disparar
+ * em "adorei"/"dormir" e desativar o bot (handoff) sem querer.
+ */
+function matchesWholeWord(text, keyword) {
+  if (!text || !keyword) return false;
+  const strip = (s) => String(s).normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+  const t = strip(text);
+  const k = strip(keyword).trim();
+  if (!k) return false;
+  const escaped = k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`).test(t);
+}
+
 class AutomationEngine {
   constructor() {
     // Job Queue
@@ -1681,8 +1696,10 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
     // A. TRIAGEM DE CRISE (Handoff Humano)
     const config = await prisma.automationConfig.findUnique({ where: { tenantId } });
     if (config?.humanHandoffTags) {
-      const keywords = config.humanHandoffTags.split(",").map(k => k.trim().toLowerCase());
-      if (keywords.some(k => text.toLowerCase().includes(k))) {
+      const keywords = config.humanHandoffTags.split(",").map(k => k.trim().toLowerCase()).filter(Boolean);
+      // Casa PALAVRA INTEIRA (não substring): "dor" não pode casar com
+      // "adorei"/"dormir", senão o bot é desativado por engano.
+      if (keywords.some((k) => matchesWholeWord(text, k))) {
         console.log(`[AutoEngine] ⚠️ Crise detectada para ${phone}. Handoff humano.`);
         await prisma.conversation.upsert({
           where: { leadId: lead.id },

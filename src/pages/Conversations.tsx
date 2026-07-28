@@ -516,9 +516,20 @@ export default function Conversations() {
                             {chat.conversations?.[0]?.messages?.slice(-1)[0]?.createdAt ? new Date(chat.conversations[0].messages.slice(-1)[0].createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
                           </span>
                        </div>
-                       <p className={`text-xs font-bold truncate ${selectedChat?.id === chat.id ? 'text-white/50' : 'text-slate-400'}`}>
-                         {chat.conversations?.[0]?.messages?.slice(-1)[0]?.content || "Nenhuma mensagem iniciada"}
-                       </p>
+                       <div className="flex items-center gap-1.5">
+                         <p className={`text-xs font-bold truncate flex-1 ${selectedChat?.id === chat.id ? 'text-white/50' : 'text-slate-400'}`}>
+                           {chat.conversations?.[0]?.messages?.slice(-1)[0]?.content || "Nenhuma mensagem iniciada"}
+                         </p>
+                         {/* Sinaliza conversas em que a IA está pausada (atendimento humano) */}
+                         {chat.conversations?.[0]?.botActive === false && (
+                           <span
+                             title="IA pausada — abra a conversa e clique em 'Devolver ao assistente'"
+                             className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${selectedChat?.id === chat.id ? 'bg-white/15 text-amber-200' : 'bg-amber-100 text-amber-700'}`}
+                           >
+                             IA pausada
+                           </span>
+                         )}
+                       </div>
                     </div>
                   </div>
                 ))}
