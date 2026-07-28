@@ -2,7 +2,11 @@ import axios from "axios";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import { execFile } from "child_process";
+import { promisify } from "util";
 import prisma from "../config/prisma.js";
+
+const execFileAsync = promisify(execFile);
 
 /**
  * VoiceService — voz do agente via Google Gemini (chave única global).
@@ -130,10 +134,29 @@ class VoiceService {
       if (!b64) { console.error("[Voice] TTS não retornou áudio."); return null; }
       const wav = pcmToWav(Buffer.from(b64, "base64"));
       if (!fs.existsSync(AUDIO_DIR)) fs.mkdirSync(AUDIO_DIR, { recursive: true });
-      const filename = `tts_${crypto.randomBytes(6).toString("hex")}.wav`;
-      fs.writeFileSync(path.join(AUDIO_DIR, filename), wav);
-      // Caminho canônico servido pela API (proxied em /api mesmo com front separado).
-      return `/api/uploads/${filename}`;
+
+      const base = `tts_${crypto.randomBytes(6).toString("hex")}`;
+      const wavPath = path.join(AUDIO_DIR, `${base}.wav`);
+      fs.writeFileSync(wavPath, wav);
+
+      // O WhatsApp só renderiza nota de voz em OGG/Opus — um WAV é aceito no
+      // envio mas não aparece no app. Convertemos com ffmpeg; se não houver
+      // ffmpeg, mantemos o WAV (que ao menos toca no painel).
+      const oggPath = path.join(AUDIO_DIR, `${base}.ogg`);
+      try {
+        await execFileAsync("ffmpeg", [
+          "-y", "-i", wavPath,
+          "-c:a", "libopus", "-b:a", "32k", "-ar", "48000", "-ac", "1",
+          "-application", "voip",
+          oggPath,
+        ]);
+        try { fs.unlinkSync(wavPath); } catch (_) {}
+        console.log(`[Voice] 🔊 TTS gerado em OGG/Opus: ${base}.ogg`);
+        return `/api/uploads/${base}.ogg`;
+      } catch (e) {
+        console.warn(`[Voice] ⚠️ ffmpeg falhou (${String(e.message).slice(0, 120)}). Mantendo WAV — o WhatsApp pode não exibir a nota de voz.`);
+        return `/api/uploads/${base}.wav`;
+      }
     } catch (e) {
       console.error("[Voice] Erro no TTS:", e.response?.data?.error?.message || e.message);
       return null;

@@ -405,15 +405,22 @@ export class WhatsAppManager {
                             const { localPathFor } = await import('./src/api/services/StorageService.js');
                             const fullAudioPath = localPathFor(ai_audio_url)
                                 || path.join(process.cwd(), "public", ai_audio_url.replace(/^\/+/, ""));
-                            if (fs.existsSync(fullAudioPath)) {
+                            // Nota de voz só aparece no app em OGG/Opus. Um WAV é
+                            // aceito no envio mas fica invisível no WhatsApp —
+                            // nesse caso preferimos cair no texto.
+                            const isOgg = /\.ogg$/i.test(fullAudioPath);
+                            if (fs.existsSync(fullAudioPath) && isOgg) {
                                 await sock.sendMessage(remoteJid, {
                                     audio: fs.readFileSync(fullAudioPath),
-                                    mimetype: 'audio/wav',
-                                    ptt: true // Envia como mensagem de voz gravada
+                                    mimetype: 'audio/ogg; codecs=opus',
+                                    ptt: true, // mensagem de voz gravada
                                 });
                                 audioSent = true;
-                            } else {
+                                console.log(`[WhatsApp] 🔊 Nota de voz enviada para ${remoteJid}`);
+                            } else if (!fs.existsSync(fullAudioPath)) {
                                 console.warn(`[WhatsApp] Áudio TTS não encontrado no disco: ${fullAudioPath}`);
+                            } else {
+                                console.warn(`[WhatsApp] Áudio não está em OGG/Opus (${path.extname(fullAudioPath)}) — enviando texto no lugar. Verifique o ffmpeg no container.`);
                             }
                         } catch (e) {
                             console.error(`[WhatsApp] Falha ao enviar áudio (fallback p/ texto):`, e.message);
