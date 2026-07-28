@@ -232,9 +232,11 @@ export class WhatsAppManager {
             // Quando é @lid, o telefone real vem em msg.key.senderPn
             let phone;
             if (remoteJid?.endsWith('@lid')) {
-                // Extrai o número do senderPn (ex: "557185240084@s.whatsapp.net" -> "557185240084")
-                phone = msg.key.senderPn?.split('@')[0] || msg.pushName;
-                console.log(`[WhatsApp] Mensagem LID de ${phone} (lid: ${remoteJid})`);
+                // Telefone real vem em senderPn quando disponível; senão usamos o
+                // número do @lid como identificador estável (NUNCA o pushName,
+                // que é um nome e muda/colide entre contatos).
+                phone = msg.key.senderPn?.split('@')[0] || remoteJid.split('@')[0];
+                console.log(`[WhatsApp] Mensagem LID de ${msg.pushName || phone} (phone: ${phone}, lid: ${remoteJid})`);
             } else {
                 phone = remoteJid?.split('@')[0];
             }
@@ -325,30 +327,38 @@ export class WhatsAppManager {
                     await new Promise(resolve => setTimeout(resolve, 1000));
                     await sock.sendPresenceUpdate('paused', remoteJid);
 
-                    // 1. Envia Texto se necessário
-                    if (ai_response && (response_mode === "TEXT" || response_mode === "BOTH")) {
-                        await sock.sendMessage(remoteJid, { text: ai_response });
-                    }
-
-                    // 2. Envia Áudio se necessário
+                    // 1. Tenta enviar Áudio (modo AUDIO/BOTH). Marca se conseguiu.
+                    let audioSent = false;
                     if (ai_audio_url && (response_mode === "AUDIO" || response_mode === "BOTH")) {
-                        // Resolve o arquivo no disco (UPLOAD_DIR) a partir da URL
-                        // /api/uploads/… (ou legado /uploads/…, ou caminho antigo).
-                        const { localPathFor } = await import('./src/api/services/StorageService.js');
-                        const fullAudioPath = localPathFor(ai_audio_url)
-                            || path.join(process.cwd(), "public", ai_audio_url.replace(/^\/+/, ""));
-
-                        if (fs.existsSync(fullAudioPath)) {
-                            await sock.sendMessage(remoteJid, {
-                                audio: fs.readFileSync(fullAudioPath),
-                                mimetype: 'audio/wav',
-                                ptt: true // Envia como mensagem de voz gravada
-                            });
-                        } else {
-                            console.warn(`[WhatsApp] Áudio TTS não encontrado no disco: ${fullAudioPath}`);
+                        try {
+                            const { localPathFor } = await import('./src/api/services/StorageService.js');
+                            const fullAudioPath = localPathFor(ai_audio_url)
+                                || path.join(process.cwd(), "public", ai_audio_url.replace(/^\/+/, ""));
+                            if (fs.existsSync(fullAudioPath)) {
+                                await sock.sendMessage(remoteJid, {
+                                    audio: fs.readFileSync(fullAudioPath),
+                                    mimetype: 'audio/wav',
+                                    ptt: true // Envia como mensagem de voz gravada
+                                });
+                                audioSent = true;
+                            } else {
+                                console.warn(`[WhatsApp] Áudio TTS não encontrado no disco: ${fullAudioPath}`);
+                            }
+                        } catch (e) {
+                            console.error(`[WhatsApp] Falha ao enviar áudio (fallback p/ texto):`, e.message);
                         }
                     }
-                    
+
+                    // 2. Envia Texto — SEMPRE que o áudio não foi enviado (nunca
+                    // ficar em silêncio), ou nos modos TEXT/BOTH.
+                    if (ai_response && (response_mode === "TEXT" || response_mode === "BOTH" || !audioSent)) {
+                        try {
+                            await sock.sendMessage(remoteJid, { text: ai_response });
+                        } catch (e) {
+                            console.error(`[WhatsApp] Falha ao enviar texto para ${remoteJid}:`, e.message);
+                        }
+                    }
+
                     // 🔔 ALERTA & QUALIFICAÇÃO (Assíncrono - Não trava a resposta)
                     setImmediate(async () => {
                         try {
