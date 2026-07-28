@@ -2561,12 +2561,18 @@ ${scrapeContext}
       }
       if (!aiResponse) return null;
 
-      // Lógica de Áudio (ElevenLabs)
-      const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
-      
+      // Resposta em áudio (TTS via Gemini) — recurso gated por plano. Só gera
+      // se o agente está em modo AUDIO/BOTH E o plano do tenant tem enableVoice.
       let audioUrl = null;
-      if (sdr && (sdr.responseMode === "AUDIO" || sdr.responseMode === "BOTH") && tenant?.elevenLabsKey) {
-        audioUrl = await TTSService.generateSpeech(aiResponse, sdr.voiceId, tenant.elevenLabsKey);
+      if (sdr && (sdr.responseMode === "AUDIO" || sdr.responseMode === "BOTH")) {
+        const t = await prisma.tenant.findUnique({
+          where: { id: tenantId },
+          select: { plan: { select: { enableVoice: true } } },
+        });
+        if (t?.plan?.enableVoice) {
+          const { default: VoiceService } = await import("./src/api/services/VoiceService.js");
+          audioUrl = await VoiceService.synthesizeSpeech(aiResponse, sdr.voiceId);
+        }
       }
 
       return { 

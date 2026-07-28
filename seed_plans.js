@@ -42,6 +42,7 @@ async function main() {
       enableCalendar: true,
       enableAutomations: true,
       enableWebhooks: false,
+      enableVoice: false,
 
       sdrUnitCost: 0.0,
       tokenUnitCost: 0.0035,
@@ -75,6 +76,7 @@ async function main() {
       enableCalendar: true,
       enableAutomations: true,
       enableWebhooks: false,
+      enableVoice: true,
 
       sdrUnitCost: 0.0,
       tokenUnitCost: 0.0035,
@@ -108,6 +110,7 @@ async function main() {
       enableCalendar: true,
       enableAutomations: true,
       enableWebhooks: true,
+      enableVoice: true,
 
       sdrUnitCost: 0.0,
       tokenUnitCost: 0.0035,
@@ -141,6 +144,7 @@ async function main() {
       enableCalendar: true,
       enableAutomations: true,
       enableWebhooks: true,
+      enableVoice: true,
 
       sdrUnitCost: 0.0,
       tokenUnitCost: 0.0035,
@@ -176,6 +180,7 @@ async function main() {
       enableCalendar: true,
       enableAutomations: true,
       enableWebhooks: true,
+      enableVoice: true,
 
       sdrUnitCost: 0.0,
       tokenUnitCost: 0.0035,

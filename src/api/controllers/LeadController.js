@@ -1,5 +1,8 @@
 import prisma from "../config/prisma.js";
 import AutomationEngine from "../../../automation_engine.js";
+import fs from "fs";
+import path from "path";
+import VoiceService from "../services/VoiceService.js";
 
 // Palavras que sinalizam pedido de descadastro (LGPD opt-out).
 const STOP_KEYWORDS = ["parar", "sair", "cancelar", "descadastrar", "stop", "remover", "pare"];
@@ -254,12 +257,52 @@ export const receiveWhatsappWebhook = async (req, res) => {
       });
     }
 
+    // 2.5 🎙️ Áudio recebido: transcreve (STT) quando o plano tem voz.
+    // content, p/ AUDIO, chega como caminho do arquivo (ex.: /uploads/x.ogg).
+    let effectiveContent = content; // texto usado pela IA / stop-keyword
+    let displayContent = content;   // texto exibido/salvo no histórico
+    let audioMediaUrl = null;       // áudio original (p/ tocar no painel)
+
+    if (messageType === "AUDIO") {
+      audioMediaUrl = content;
+      const planVoice = await prisma.tenant
+        .findUnique({ where: { id: tenantId }, select: { plan: { select: { enableVoice: true } } } })
+        .then((t) => !!t?.plan?.enableVoice)
+        .catch(() => false);
+
+      if (!planVoice) {
+        // Plano sem voz: não transcreve; pede texto e encerra (sem custo de IA).
+        try {
+          const { WhatsAppManager } = await import("../../../whatsapp.js");
+          await WhatsAppManager.sendMessage(tenantId, phone, "Ainda não consigo ouvir áudios por aqui 🙏 Pode me enviar sua mensagem por texto?");
+        } catch (_) {}
+        await prisma.message.create({
+          data: { conversationId: conversation.id, tenantId, content: "🎙️ (áudio recebido)", mediaUrl: audioMediaUrl, role: "USER", messageType: "AUDIO" },
+        }).catch(() => {});
+        return res.json({ success: true, voice_disabled: true, ai_response: null });
+      }
+
+      // Transcreve o arquivo local (content = /uploads/audio_xxx.ogg).
+      try {
+        const abs = path.join(process.cwd(), "public", content.replace(/^\/+/, ""));
+        if (fs.existsSync(abs)) {
+          const buf = fs.readFileSync(abs);
+          const transcript = await VoiceService.transcribeAudio(buf, "audio/ogg");
+          effectiveContent = transcript || "";
+          displayContent = transcript ? `🎙️ ${transcript}` : "🎙️ (áudio sem transcrição)";
+        }
+      } catch (e) {
+        console.error("[Webhook] Falha ao transcrever áudio:", e.message);
+      }
+    }
+
     // 3. Salva a mensagem do LEAD no banco (role: USER)
     const userMessage = await prisma.message.create({
       data: {
         conversationId: conversation.id,
         tenantId,
-        content,
+        content: displayContent,
+        mediaUrl: audioMediaUrl,
         role: "USER",
         messageType: messageType
       }
@@ -273,7 +316,7 @@ export const receiveWhatsappWebhook = async (req, res) => {
 
     // 4.5 🛑 Stop-keyword (LGPD): honra o pedido de descadastro. Marca o lead
     // como optedOut, suprime respostas e futuros envios, e confirma uma vez.
-    if (isStopKeyword(content)) {
+    if (isStopKeyword(effectiveContent)) {
       await prisma.lead.update({
         where: { id: lead.id },
         data: { optedOut: true, optOutAt: new Date() }
@@ -303,8 +346,8 @@ export const receiveWhatsappWebhook = async (req, res) => {
       return res.json({ success: true, ai_response: null });
     }
 
-    // 6. Aciona o SDR para gerar resposta via IA
-    const aiData = await AutomationEngine.handleIncomingMessage(lead, content, tenantId);
+    // 6. Aciona o SDR para gerar resposta via IA (texto transcrito, se áudio)
+    const aiData = await AutomationEngine.handleIncomingMessage(lead, effectiveContent || content, tenantId);
 
     // 7. Se houve resposta da IA, salva no banco também
     if (aiData && aiData.text) {

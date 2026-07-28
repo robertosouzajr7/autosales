@@ -28,6 +28,7 @@ const DEFAULT_PLAN = {
   enableCalendar: true,
   enableAutomations: true,
   enableWebhooks: false,
+  enableVoice: false,
   sdrUnitCost: 15.0,
   tokenUnitCost: 0.08,
   messageUnitCost: 0.05,
@@ -65,6 +66,7 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
       enableCalendar: p.enableCalendar ?? true,
       enableAutomations: p.enableAutomations ?? true,
       enableWebhooks: p.enableWebhooks ?? false,
+      enableVoice: p.enableVoice ?? false,
     });
     setOpen(true);
   };
@@ -89,6 +91,7 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
       enableCalendar: !!form.enableCalendar,
       enableAutomations: !!form.enableAutomations,
       enableWebhooks: !!form.enableWebhooks,
+      enableVoice: !!form.enableVoice,
       // Custo real do plano hoje = só tokens (auto, do modelo ativo). Agente e
       // mensagem não têm custo, então gravamos 0 nesses campos legados.
       sdrUnitCost: 0,
@@ -197,6 +200,7 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
                   ["enableCalendar", "Google Calendar"],
                   ["enableAutomations", "Automações / Lembretes"],
                   ["enableWebhooks", "Webhooks / API pública"],
+                  ["enableVoice", "Voz — ouvir e responder áudio"],
                 ].map(([key, label]) => (
                   <div key={key} className="flex items-center justify-between">
                     <Label className="text-xs text-foreground">{label}</Label>

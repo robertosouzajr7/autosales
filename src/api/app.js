@@ -88,6 +88,13 @@ app.set("trust proxy", true);
 const uploadStatic = express.static(process.env.UPLOAD_DIR || path.join(process.cwd(), "public", "uploads"));
 app.use("/uploads", uploadStatic);
 app.use("/api/uploads", uploadStatic);
+// Fallback: áudios transitórios (TTS/recebidos) vivem em public/uploads mesmo
+// quando UPLOAD_DIR aponta para um volume — servimos os dois.
+if (process.env.UPLOAD_DIR) {
+  const localStatic = express.static(path.join(process.cwd(), "public", "uploads"));
+  app.use("/uploads", localStatic);
+  app.use("/api/uploads", localStatic);
+}
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
