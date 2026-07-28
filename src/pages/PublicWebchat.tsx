@@ -55,8 +55,8 @@ export default function PublicWebchat() {
   }, [chatHistory]);
 
   const handleSend = async () => {
-    if (!message.trim() || !data?.sdr?.id || sending) return;
-    
+    if (!message.trim() || sending || !data) return;
+
     const userMsg = message;
     setMessage("");
     const newHistory = [...chatHistory, { role: "user", content: userMsg }];
@@ -67,8 +67,10 @@ export default function PublicWebchat() {
       const res = await fetch("/api/public/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          sdrId: data.sdr.id, 
+        body: JSON.stringify({
+          // O backend resolve o agente pelo tenant; sdrId é opcional.
+          tenantId,
+          sdrId: data?.sdr?.id,
           message: userMsg,
           history: chatHistory,
           leadId: leadId

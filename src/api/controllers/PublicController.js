@@ -22,22 +22,34 @@ export const getLandingPage = async (req, res) => {
 export const getWebchat = async (req, res) => {
   const { id } = req.params; // tenantId
   try {
+    // OBS: o modelo Tenant não tem logoUrl — o logo (opcional) vem das
+    // configurações da landing. Selecionar um campo inexistente derrubava o
+    // endpoint (500) e o portal aparecia como "não encontrado".
     const tenant = await prisma.tenant.findUnique({
       where: { id },
-      select: { name: true, logoUrl: true }
+      select: { name: true },
     });
-    
+
     if (!tenant) return res.status(404).json({ error: "Tenant not found" });
-    
+
     // Fetch active SDR bot for the tenant to show in the webchat portal
     const sdr = await prisma.sdrBot.findFirst({
-      where: { tenantId: id, active: true }
+      where: { tenantId: id, active: true },
     });
-    
-    res.json({ 
-      tenantName: tenant.name, 
-      logo: tenant.logoUrl, 
-      sdr 
+
+    // Logo opcional (landing settings — singleton). Não bloqueia o portal.
+    let logo = null;
+    try {
+      const lp = await prisma.landingPageSettings.findUnique({ where: { id: "singleton" }, select: { logoUrl: true } });
+      logo = lp?.logoUrl || null;
+    } catch { /* segue sem logo */ }
+
+    res.json({
+      tenantName: tenant.name,
+      logo,
+      sdr,
+      // Sinaliza ao portal quando não há agente ativo configurado.
+      hasAgent: !!sdr,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
