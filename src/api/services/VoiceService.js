@@ -80,6 +80,34 @@ class VoiceService {
     }
   }
 
+  /**
+   * Lê/entende mídia (imagem, PDF, etc.) via Gemini multimodal e devolve um
+   * resumo em texto para o agente usar. Recebe Buffer + mimeType + instrução.
+   */
+  async describeMedia(buffer, mimeType, instruction) {
+    const key = await geminiKey();
+    if (!key) { console.error("[Voice] Sem chave Gemini para leitura de mídia."); return null; }
+    try {
+      const { data } = await axios.post(
+        `${GEMINI_BASE}/${STT_MODEL}:generateContent?key=${key}`,
+        {
+          contents: [{
+            parts: [
+              { inline_data: { mime_type: mimeType, data: buffer.toString("base64") } },
+              { text: instruction },
+            ],
+          }],
+        },
+        { timeout: 60000 }
+      );
+      const text = data?.candidates?.[0]?.content?.parts?.map((p) => p.text).filter(Boolean).join(" ").trim();
+      return text || null;
+    } catch (e) {
+      console.error("[Voice] Erro ao ler mídia:", e.response?.data?.error?.message || e.message);
+      return null;
+    }
+  }
+
   /** Texto → arquivo WAV. Devolve caminho relativo (/uploads/…) ou null. */
   async synthesizeSpeech(text, voiceName) {
     const key = await geminiKey();

@@ -242,11 +242,14 @@ export class WhatsAppManager {
             }
             
             const name = msg.pushName || 'Lead';
-            let content = msg.message?.conversation || 
+            let content = msg.message?.conversation ||
                            msg.message?.extendedTextMessage?.text ||
                            msg.message?.imageMessage?.caption ||
                            msg.message?.videoMessage?.caption;
             let messageType = 'TEXT';
+            let mediaMime = null;   // mimetype da mídia recebida (imagem/documento)
+            let mediaCaption = null; // legenda enviada junto da mídia
+            let fileName = null;
 
             // 🎙️ Suporte a Áudio Recebido
             if (msg.message?.audioMessage) {
@@ -266,6 +269,46 @@ export class WhatsAppManager {
                     console.log(`[WhatsApp] ✅ Áudio salvo: ${content}`);
                 } catch (err) {
                     console.error(`[WhatsApp] ❌ Erro ao baixar áudio:`, err);
+                }
+            }
+
+            // 🖼️ Imagem recebida (o agente "lê" via IA multimodal)
+            if (msg.message?.imageMessage) {
+                try {
+                    const buffer = await downloadMediaMessage(msg, 'buffer', {});
+                    mediaMime = msg.message.imageMessage.mimetype || 'image/jpeg';
+                    mediaCaption = msg.message.imageMessage.caption || null;
+                    const ext = (mediaMime.split('/')[1] || 'jpg').split(';')[0];
+                    const filename = `img_${Date.now()}.${ext}`;
+                    const dir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'public', 'uploads');
+                    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+                    fs.writeFileSync(path.join(dir, filename), buffer);
+                    content = `/api/uploads/${filename}`;
+                    messageType = 'IMAGE';
+                    console.log(`[WhatsApp] 🖼️ Imagem salva: ${content}`);
+                } catch (err) {
+                    console.error(`[WhatsApp] ❌ Erro ao baixar imagem:`, err);
+                }
+            }
+
+            // 📄 Documento recebido (PDF, txt, etc.) — o agente lê o conteúdo
+            if (msg.message?.documentMessage || msg.message?.documentWithCaptionMessage?.message?.documentMessage) {
+                try {
+                    const doc = msg.message.documentMessage || msg.message.documentWithCaptionMessage.message.documentMessage;
+                    const buffer = await downloadMediaMessage(msg, 'buffer', {});
+                    mediaMime = doc.mimetype || 'application/octet-stream';
+                    fileName = doc.fileName || `doc_${Date.now()}`;
+                    mediaCaption = doc.caption || null;
+                    const safe = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+                    const filename = `doc_${Date.now()}_${safe}`;
+                    const dir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'public', 'uploads');
+                    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+                    fs.writeFileSync(path.join(dir, filename), buffer);
+                    content = `/api/uploads/${filename}`;
+                    messageType = 'DOCUMENT';
+                    console.log(`[WhatsApp] 📄 Documento salvo: ${content} (${mediaMime})`);
+                } catch (err) {
+                    console.error(`[WhatsApp] ❌ Erro ao baixar documento:`, err);
                 }
             }
 
@@ -310,6 +353,9 @@ export class WhatsAppManager {
                         name,
                         content,
                         messageType,
+                        mediaMime,   // mimetype (imagem/documento) p/ leitura por IA
+                        mediaCaption,
+                        fileName,
                         source: 'WhatsApp',
                         channel: 'WHATSAPP',
                         accountId, // conexão (WhatsAppAccount.id) que recebeu a mensagem

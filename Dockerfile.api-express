@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y \
     libxss1 \
     libgtk-3-0 \
     openssl \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \

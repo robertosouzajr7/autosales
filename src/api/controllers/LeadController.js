@@ -206,7 +206,7 @@ export const bulkDeleteLeads = async (req, res) => {
  * Rota: POST /api/webhook/whatsapp (pública, autenticada por tenantId no body)
  */
 export const receiveWhatsappWebhook = async (req, res) => {
-  const { tenantId, phone, name, content, source = 'WhatsApp', skipNewLeadTrigger, messageType = 'TEXT', channel = 'WHATSAPP', accountId } = req.body;
+  const { tenantId, phone, name, content, source = 'WhatsApp', skipNewLeadTrigger, messageType = 'TEXT', channel = 'WHATSAPP', accountId, mediaMime, mediaCaption, fileName } = req.body;
 
   if (!tenantId || !phone || !content) {
     return res.status(400).json({ success: false, error: "Parâmetros obrigatórios: tenantId, phone, content" });
@@ -294,6 +294,42 @@ export const receiveWhatsappWebhook = async (req, res) => {
         }
       } catch (e) {
         console.error("[Webhook] Falha ao transcrever áudio:", e.message);
+      }
+    }
+
+    // 2.6 🖼️/📄 Imagem ou documento: o agente "lê" o conteúdo via IA multimodal
+    // (Gemini). PDF/imagem vão inline; arquivos de texto são lidos direto.
+    if (messageType === "IMAGE" || messageType === "DOCUMENT") {
+      audioMediaUrl = content; // guarda a URL do arquivo p/ exibir/baixar no painel
+      const label = messageType === "IMAGE" ? "🖼️ imagem" : `📄 ${fileName || "documento"}`;
+      try {
+        const { localPathFor } = await import("../services/StorageService.js");
+        const abs = localPathFor(content) || path.join(process.cwd(), "public", content.replace(/^\/+/, ""));
+        const mime = mediaMime || (messageType === "IMAGE" ? "image/jpeg" : "application/octet-stream");
+        let extracted = "";
+        if (fs.existsSync(abs)) {
+          const buf = fs.readFileSync(abs);
+          if (mime.startsWith("text/") || /\.(txt|csv|md|json)$/i.test(fileName || "")) {
+            extracted = buf.toString("utf8").slice(0, 8000); // limita p/ não estourar contexto
+          } else if (mime.startsWith("image/")) {
+            extracted = await VoiceService.describeMedia(buf, mime,
+              "Descreva de forma objetiva o que há nesta imagem, focando no que é útil para o atendimento (produto, comprovante, documento, print de tela, etc.). Se houver texto, transcreva-o.") || "";
+          } else if (mime === "application/pdf" || /\.pdf$/i.test(fileName || "")) {
+            extracted = await VoiceService.describeMedia(buf, "application/pdf",
+              "Extraia e resuma de forma objetiva o conteúdo relevante deste documento.") || "";
+          } else {
+            extracted = "";
+          }
+        }
+        const caption = mediaCaption ? `\nLegenda do cliente: ${mediaCaption}` : "";
+        effectiveContent = extracted
+          ? `O cliente enviou ${label}. Conteúdo:\n${extracted}${caption}`
+          : (mediaCaption || `O cliente enviou ${label} (não consegui ler o conteúdo).`);
+        displayContent = mediaCaption ? `${label} — ${mediaCaption}` : label;
+      } catch (e) {
+        console.error("[Webhook] Falha ao ler mídia:", e.message);
+        effectiveContent = mediaCaption || `O cliente enviou ${label}.`;
+        displayContent = label;
       }
     }
 

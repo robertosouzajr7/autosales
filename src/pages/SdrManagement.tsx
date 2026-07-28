@@ -45,7 +45,7 @@ export default function SdrManagement() {
     noShowGraceMinutes: 15,
     postServiceCheckHours: 24,
     enableWaitlist: true,
-    voiceId: "21m00Tcm4TlvDq8ikWAM",
+    voiceId: "Kore",
     responseMode: "TEXT",
     active: true
   });
@@ -98,7 +98,7 @@ export default function SdrManagement() {
         noShowGraceMinutes: sdr.noShowGraceMinutes || 15,
         postServiceCheckHours: sdr.postServiceCheckHours || 24,
         enableWaitlist: sdr.enableWaitlist ?? true,
-        voiceId: sdr.voiceId || "21m00Tcm4TlvDq8ikWAM",
+        voiceId: sdr.voiceId || "Kore",
         responseMode: sdr.responseMode || "TEXT",
         active: sdr.active ?? true
       });
@@ -121,7 +121,7 @@ export default function SdrManagement() {
         noShowGraceMinutes: 15,
         postServiceCheckHours: 24,
         enableWaitlist: true,
-        voiceId: "21m00Tcm4TlvDq8ikWAM",
+        voiceId: "Kore",
         responseMode: "TEXT",
         active: true
       });
@@ -498,9 +498,21 @@ export default function SdrManagement() {
                           </div>
                           
                           <div className="space-y-2">
-                             <Label className="font-semibold text-xs text-white/50 pl-1">ID da Voz (ElevenLabs)</Label>
-                             <Input value={form.voiceId} onChange={e => setForm({...form, voiceId: e.target.value})} className="h-10 rounded-2xl border-none bg-white/5 text-white font-bold px-6 shadow-inner" placeholder="Ex: 21m00Tcm4TlvDq8ikWAM" />
-                             <p className="text-xs font-bold text-white/20 pl-1">Rachel: 21m00Tcm4TlvDq8ikWAM</p>
+                             <Label className="font-semibold text-xs text-white/50 pl-1">Voz</Label>
+                             <Select value={form.voiceId} onValueChange={v => setForm({...form, voiceId: v})}>
+                                <SelectTrigger className="h-10 rounded-2xl border-none bg-white/5 text-white font-bold px-6 shadow-inner">
+                                   <SelectValue placeholder="Escolher voz" />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl border-none shadow-sm">
+                                   <SelectItem value="Kore" className="font-bold">Kore (feminina, neutra)</SelectItem>
+                                   <SelectItem value="Aoede" className="font-bold">Aoede (feminina, suave)</SelectItem>
+                                   <SelectItem value="Leda" className="font-bold">Leda (feminina, jovem)</SelectItem>
+                                   <SelectItem value="Puck" className="font-bold">Puck (masculina, animada)</SelectItem>
+                                   <SelectItem value="Charon" className="font-bold">Charon (masculina, grave)</SelectItem>
+                                   <SelectItem value="Orus" className="font-bold">Orus (masculina, firme)</SelectItem>
+                                </SelectContent>
+                             </Select>
+                             <p className="text-xs font-bold text-white/20 pl-1">Voz do Google Gemini (gerida pela plataforma).</p>
                           </div>
                        </div>
                     </div>
