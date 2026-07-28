@@ -18,6 +18,14 @@ export const BAILEYS_ENABLED = process.env.ENABLE_BAILEYS === "true";
 const connectionCooldowns = new Map();
 const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutos
 
+// Diretório das credenciais do Baileys (auth_info). Em produção aponte
+// WA_AUTH_DIR para um VOLUME PERSISTENTE (ex.: /data/instances) — NUNCA sob a
+// pasta de uploads (que é servida publicamente). Sem persistência, o número
+// pede QR de novo a cada redeploy.
+const WA_AUTH_BASE = process.env.WA_AUTH_DIR || path.join(process.cwd(), 'instances');
+try { fs.mkdirSync(WA_AUTH_BASE, { recursive: true }); } catch (_) {}
+console.log(`[WhatsApp] Credenciais (auth_info) em: ${WA_AUTH_BASE}`);
+
 // Classe responsável por orquestrar múltiplas conexões de empresas (Multi-tenant SaaS)
 export class WhatsAppManager {
     /**
@@ -130,7 +138,7 @@ export class WhatsAppManager {
             return null;
         }
 
-        const authDir = `./instances/${accountId}`;
+        const authDir = path.join(WA_AUTH_BASE, accountId);
         if (!fs.existsSync(authDir)) fs.mkdirSync(authDir, { recursive: true });
 
         const { state, saveCreds } = await useMultiFileAuthState(authDir);
@@ -454,7 +462,7 @@ export class WhatsAppManager {
             console.log("[WhatsApp] Baileys desabilitado (ENABLE_BAILEYS != true). Canal oficial: Meta Cloud API.");
             return;
         }
-        const instancesDir = path.resolve('./instances');
+        const instancesDir = WA_AUTH_BASE;
         if (!fs.existsSync(instancesDir)) return;
         const accounts = fs.readdirSync(instancesDir);
         for (const accountId of accounts) {

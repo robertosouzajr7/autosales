@@ -27,6 +27,25 @@ Pronto. A partir daí:
 - As URLs salvas são **relativas** (`/api/uploads/...`), então o navegador as
   resolve no domínio público automaticamente.
 
+## Credenciais do WhatsApp (auth_info) — persistir também
+
+As credenciais do WhatsApp (Baileys) ficam em `./instances/` por padrão, que
+some no redeploy — por isso o número **pede QR de novo a cada deploy** e as
+quedas viram reconexão manual. Para persistir:
+
+1. **Variável de ambiente** (não pode ser sob a pasta de uploads, que é
+   pública):
+   ```
+   WA_AUTH_DIR=/data/instances
+   ```
+2. **Volume (Mounts)** — monte um volume persistente em `/data/instances`
+   (pode ser o mesmo volume montado em `/data`, se você montar o pai `/data`
+   em vez de `/data/uploads`).
+3. Redeploy. No boot o log mostra `[WhatsApp] Credenciais (auth_info) em:
+   /data/instances`.
+
+Com isso o número **reconecta sozinho após redeploy**, sem novo QR.
+
 ## Observações
 
 - **Imagens antigas** (enviadas antes do volume) foram perdidas com os
