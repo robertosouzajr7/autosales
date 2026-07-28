@@ -63,6 +63,23 @@ export class WhatsAppManager {
         }
     }
 
+    /**
+     * Força uma reconexão manual: limpa o cooldown anti-rate-limit e a sessão
+     * presa em memória, fechando o socket antigo — SEM apagar as credenciais
+     * (auth_info), para reconectar sem novo QR quando possível. Depois disso,
+     * uma chamada a createSession (via stream de QR) recomeça limpo.
+     */
+    static async forceReconnect(accountId) {
+        connectionCooldowns.delete(accountId);
+        if (whatsappSessions.has(accountId)) {
+            const existing = whatsappSessions.get(accountId);
+            try { existing.sock?.end?.(); } catch (_) {}
+            whatsappSessions.delete(accountId);
+        }
+        await this.updateAccountStatus(accountId, 'DISCONNECTED').catch(() => {});
+        console.log(`[WhatsApp] 🔄 Reconexão forçada para ${accountId} (cooldown/sessão limpos).`);
+    }
+
     static async createSession(accountId, emitQr) {
         if (!BAILEYS_ENABLED) {
             const msg = "WhatsApp via Baileys está desabilitado. Use a conexão oficial (Meta Cloud API).";

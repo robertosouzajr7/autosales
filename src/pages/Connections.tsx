@@ -290,6 +290,15 @@ export default function Connections() {
     setLoading(false);
   };
 
+  // Reconecta/atualiza: primeiro limpa cooldown + sessão presa no backend
+  // (senão o QR volta em COOLDOWN e nunca reconecta), depois abre o QR.
+  const handleReconnect = async (id: string) => {
+    try {
+      await fetch(`/api/whatsapp/accounts/${id}/reconnect`, { method: "POST", headers: authHeaders() });
+    } catch { /* segue mesmo se falhar */ }
+    handleOpenQr(id);
+  };
+
   const handleOpenQr = (id: string) => {
     setShowQrModal(true);
     setQrCode(null);
@@ -424,12 +433,21 @@ export default function Connections() {
                     </div>
                     <div className="flex items-center justify-between pt-2 border-t border-border">
                       {conn.status === "CONNECTED" ? (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Pronto pra atender
-                        </span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Pronto pra atender
+                          </span>
+                          <button
+                            onClick={() => handleReconnect(conn.id)}
+                            title="Atualizar / reconectar"
+                            className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" /> Atualizar
+                          </button>
+                        </div>
                       ) : (
-                        <Button variant="outline" size="sm" onClick={() => handleOpenQr(conn.id)}>
-                          Reconectar
+                        <Button variant="outline" size="sm" onClick={() => handleReconnect(conn.id)} className="gap-1.5">
+                          <RefreshCw className="w-3.5 h-3.5" /> Reconectar
                         </Button>
                       )}
                       <button

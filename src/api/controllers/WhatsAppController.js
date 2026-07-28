@@ -55,14 +55,33 @@ export const createAccount = async (req, res) => {
 export const deleteAccount = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Disconnect session if running
     await WhatsAppManager.disconnectSession(id);
-    
+
     await prisma.whatsAppAccount.delete({
       where: { id, tenantId: req.tenantId }
     });
     res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// POST /whatsapp/accounts/:id/reconnect
+// Reconecta/atualiza uma conexão travada: limpa cooldown + sessão presa e
+// deixa pronta para reabrir o QR (ou reconectar direto se as credenciais
+// ainda valem). O front deve, em seguida, abrir o stream de QR.
+export const reconnectAccount = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const account = await prisma.whatsAppAccount.findUnique({
+      where: { id, tenantId: req.tenantId },
+    });
+    if (!account) return res.status(404).json({ error: "Conexão não encontrada." });
+
+    await WhatsAppManager.forceReconnect(id);
+    res.json({ success: true, message: "Reconexão iniciada. Abrindo QR se necessário." });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

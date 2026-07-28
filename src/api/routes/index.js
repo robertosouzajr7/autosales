@@ -99,6 +99,7 @@ router.put("/settings", SettingsController.updateSettings);
 router.get("/whatsapp/accounts", WhatsAppController.getAccounts);
 router.post("/whatsapp/accounts", requireWhatsAppSlot, WhatsAppController.createAccount);
 router.delete("/whatsapp/accounts/:id", WhatsAppController.deleteAccount);
+router.post("/whatsapp/accounts/:id/reconnect", WhatsAppController.reconnectAccount);
 router.post("/whatsapp/accounts/meta", requireWhatsAppSlot, WhatsAppController.createMetaAccount);
 router.get("/whatsapp/qr/:id", WhatsAppController.qrCodeStream);
 
