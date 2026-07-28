@@ -986,7 +986,12 @@ class AutomationEngine {
       const websiteUrl = tenant?.webChatUrl || "Não configurado";
       const businessContext = await this.buildBusinessContext(lead.tenantId);
 
-      const systemPrompt = customPrompt || sdr.prompt || "Você é um SDR profissional.";
+      // Persona DINÂMICA a partir da função escolhida (Vendedor, SDR, Suporte,
+      // Agendador, Consultor) + instruções custom do agente. Antes era fixo em
+      // "SDR profissional", ignorando o tipo de perfil configurado.
+      const preset = getFunctionPreset(sdr.agentFunction);
+      const systemPrompt = customPrompt
+        || `${preset.persona}${sdr.prompt ? `\n\n# INSTRUÇÕES ADICIONAIS DO NEGÓCIO\n${sdr.prompt}` : ""}`;
       const fullPrompt = `${this.buildGuardrails()}
 
         # PERSONA E INSTRUÇÕES DO NEGÓCIO

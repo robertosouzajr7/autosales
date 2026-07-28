@@ -1,6 +1,7 @@
 import prisma from "../config/prisma.js";
 import { WhatsAppManager } from "../../../whatsapp.js";
 import AutomationEngine from "../../../automation_engine.js";
+import { getFunctionPreset } from "../services/AgentFunctions.js";
 
 export const getLandingPage = async (req, res) => {
   try {
@@ -44,10 +45,16 @@ export const getWebchat = async (req, res) => {
       logo = lp?.logoUrl || null;
     } catch { /* segue sem logo */ }
 
+    // Rótulo do cargo do agente vem da FUNÇÃO escolhida (Vendedor, SDR,
+    // Suporte, etc.) — dinâmico, não fixo em "SDR". Usa o role custom se houver.
+    const roleLabel = sdr
+      ? (sdr.role || getFunctionPreset(sdr.agentFunction).label)
+      : null;
+
     res.json({
       tenantName: tenant.name,
       logo,
-      sdr,
+      sdr: sdr ? { ...sdr, roleLabel } : null,
       // Sinaliza ao portal quando não há agente ativo configurado.
       hasAgent: !!sdr,
     });

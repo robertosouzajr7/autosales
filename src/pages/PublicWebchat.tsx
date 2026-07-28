@@ -148,7 +148,7 @@ export default function PublicWebchat() {
                         <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center font-bold text-white">{data.sdr?.name?.[0] || "AI"}</div>
                         <div>
                            <p className="text-sm font-bold text-white">{data.sdr?.name || "Especialista Agentes Virtuais"}</p>
-                           <p className="text-xs text-white/40 font-bold uppercase">{data.sdr?.role || "Inbound SDR"}</p>
+                           <p className="text-xs text-white/40 font-bold uppercase">{data.sdr?.roleLabel || data.sdr?.role || "Atendente Virtual"}</p>
                         </div>
                      </div>
                   </div>

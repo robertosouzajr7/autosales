@@ -129,7 +129,7 @@ export class EmailService {
 
       const html = `
         <div style="font-family: sans-serif; padding: 20px; color: #333; max-width: 600px; border: 1px solid #ddd; border-radius: 8px;">
-          <h2 style="color: #820AD1;">AutoSales AI - Faturamento</h2>
+          <h2 style="color: #2563EB;">Agentes Virtuais — Faturamento</h2>
           <p>Olá, <strong>${tenantName}</strong>!</p>
           <p>Lembramos que a sua fatura recorrente do plano contratado está disponível para pagamento.</p>
           <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
@@ -153,14 +153,14 @@ export class EmailService {
           </table>
           <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
           <p>Para pagar e manter a sua conta ativa, acesse a aba <strong>Assinatura & Faturamento</strong> nas configurações do seu painel e efetue o pagamento simulado.</p>
-          <p style="font-size: 12px; color: #999; margin-top: 30px;">Esta é uma mensagem automática enviada pelo sistema de faturamento da AutoSales.</p>
+          <p style="font-size: 12px; color: #999; margin-top: 30px;">Esta é uma mensagem automática enviada pelo sistema de faturamento da Agentes Virtuais.</p>
         </div>
       `;
 
       await transport.sendMail({
-        from: '"AutoSales AI | Faturamento" <financeiro@autosales.ai>',
+        from: `"Agentes Virtuais | Faturamento" <${process.env.SMTP_FROM || 'financeiro@agentesvirtuais.com'}>`,
         to: email,
-        subject: `AutoSales AI - Fatura #${invoice.id.slice(0, 8)} - ${invoice.status === 'OVERDUE' ? 'Atrasada' : 'Pendente'}`,
+        subject: `Agentes Virtuais - Fatura #${invoice.id.slice(0, 8)} - ${invoice.status === 'OVERDUE' ? 'Atrasada' : 'Pendente'}`,
         html
       });
       console.log(`[EmailService] ✅ Email de cobrança enviado para ${email} (Fatura #${invoice.id.slice(0,8)})`);
