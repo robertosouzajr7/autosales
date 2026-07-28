@@ -75,11 +75,11 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-// Atrás de proxy (EasyPanel/Nginx que termina o TLS): confia no
-// X-Forwarded-Proto para que req.protocol seja "https". Sem isso, as URLs de
-// mídia saem como http:// e o navegador bloqueia (mixed content) → imagem
-// quebrada no painel servido em https.
-app.set("trust proxy", true);
+// Atrás de proxy (EasyPanel/Nginx que termina o TLS): confia em 1 hop para
+// que req.protocol seja "https". Usamos 1 (não `true`) porque `true` confia em
+// qualquer proxy e o express-rate-limit rejeita isso (permitiria burlar o
+// limite por IP falso). Ajuste o número se houver mais camadas de proxy.
+app.set("trust proxy", 1);
 
 // Mídia de upload (catálogo etc.). Servida em /uploads E em /api/uploads: a
 // segunda garante que a imagem seja alcançável mesmo quando o front é um
