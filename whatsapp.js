@@ -252,13 +252,14 @@ export class WhatsAppManager {
                     console.log(`[WhatsApp] 🎙️ Recebendo áudio de ${phone}...`);
                     const buffer = await downloadMediaMessage(msg, 'buffer', {});
                     const filename = `audio_${Date.now()}.ogg`;
-                    const dir = path.join(process.cwd(), 'public', 'uploads');
+                    const dir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'public', 'uploads');
                     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-                    
+
                     const filePath = path.join(dir, filename);
                     fs.writeFileSync(filePath, buffer);
-                    
-                    content = `/uploads/${filename}`;
+
+                    // URL canônica servida pela API (proxied em /api).
+                    content = `/api/uploads/${filename}`;
                     messageType = 'AUDIO';
                     console.log(`[WhatsApp] ✅ Áudio salvo: ${content}`);
                 } catch (err) {
@@ -331,15 +332,20 @@ export class WhatsAppManager {
 
                     // 2. Envia Áudio se necessário
                     if (ai_audio_url && (response_mode === "AUDIO" || response_mode === "BOTH")) {
-                        // O ai_audio_url é relativo (ex: /uploads/audio.mp3)
-                        const fullAudioPath = path.join(process.cwd(), "public", ai_audio_url);
-                        
+                        // Resolve o arquivo no disco (UPLOAD_DIR) a partir da URL
+                        // /api/uploads/… (ou legado /uploads/…, ou caminho antigo).
+                        const { localPathFor } = await import('./src/api/services/StorageService.js');
+                        const fullAudioPath = localPathFor(ai_audio_url)
+                            || path.join(process.cwd(), "public", ai_audio_url.replace(/^\/+/, ""));
+
                         if (fs.existsSync(fullAudioPath)) {
                             await sock.sendMessage(remoteJid, {
-                                audio: { url: fullAudioPath },
-                                mimetype: 'audio/mp4',
+                                audio: fs.readFileSync(fullAudioPath),
+                                mimetype: 'audio/wav',
                                 ptt: true // Envia como mensagem de voz gravada
                             });
+                        } else {
+                            console.warn(`[WhatsApp] Áudio TTS não encontrado no disco: ${fullAudioPath}`);
                         }
                     }
                     

@@ -637,8 +637,14 @@ export default function Conversations() {
                       return (
                         <div key={msg.id} className={`flex ${isOut ? 'justify-end' : 'justify-start'}`}>
                           <div className={`max-w-[70%] p-4 rounded-2xl text-sm font-medium shadow-sm ${isOut ? 'bg-slate-900 text-white rounded-tr-none' : 'bg-white text-slate-700 rounded-tl-none border border-slate-100'}`}>
-                            {msg.messageType === 'AUDIO' ? (
-                              <AudioPlayer url={msg.content} isOut={isOut} />
+                            {msg.messageType === 'AUDIO' && (msg.mediaUrl || (typeof msg.content === 'string' && msg.content.includes('/uploads/'))) ? (
+                              <div className="space-y-1.5">
+                                <AudioPlayer url={msg.mediaUrl || msg.content} isOut={isOut} />
+                                {/* Mostra a transcrição/legenda quando houver texto */}
+                                {msg.content && !String(msg.content).includes('/uploads/') && (
+                                  <p className="text-xs opacity-80">{msg.content}</p>
+                                )}
+                              </div>
                             ) : msg.content}
                             <p className={`text-xs font-bold uppercase mt-2 text-right ${isOut ? 'text-white/30' : 'text-slate-300'}`}>
                               {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

@@ -20,8 +20,10 @@ const STT_MODEL = "gemini-2.5-flash";
 const TTS_MODEL = "gemini-2.5-flash-preview-tts";
 const DEFAULT_VOICE = "Kore"; // voz neutra; boa em PT-BR
 
-// Diretório para os áudios gerados/recebidos (transitório).
-const AUDIO_DIR = path.join(process.cwd(), "public", "uploads");
+// Diretório para os áudios gerados. Usa o MESMO UPLOAD_DIR do StorageService
+// (volume persistente em produção) para que a URL /api/uploads/… encontre o
+// arquivo ao ser tocado no painel/webchat.
+const AUDIO_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), "public", "uploads");
 
 async function geminiKey() {
   try {
@@ -102,7 +104,8 @@ class VoiceService {
       if (!fs.existsSync(AUDIO_DIR)) fs.mkdirSync(AUDIO_DIR, { recursive: true });
       const filename = `tts_${crypto.randomBytes(6).toString("hex")}.wav`;
       fs.writeFileSync(path.join(AUDIO_DIR, filename), wav);
-      return `/uploads/${filename}`;
+      // Caminho canônico servido pela API (proxied em /api mesmo com front separado).
+      return `/api/uploads/${filename}`;
     } catch (e) {
       console.error("[Voice] Erro no TTS:", e.response?.data?.error?.message || e.message);
       return null;

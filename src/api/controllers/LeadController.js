@@ -282,9 +282,10 @@ export const receiveWhatsappWebhook = async (req, res) => {
         return res.json({ success: true, voice_disabled: true, ai_response: null });
       }
 
-      // Transcreve o arquivo local (content = /uploads/audio_xxx.ogg).
+      // Transcreve o arquivo local (content = /api/uploads/audio_xxx.ogg).
       try {
-        const abs = path.join(process.cwd(), "public", content.replace(/^\/+/, ""));
+        const { localPathFor } = await import("../services/StorageService.js");
+        const abs = localPathFor(content) || path.join(process.cwd(), "public", content.replace(/^\/+/, ""));
         if (fs.existsSync(abs)) {
           const buf = fs.readFileSync(abs);
           const transcript = await VoiceService.transcribeAudio(buf, "audio/ogg");
