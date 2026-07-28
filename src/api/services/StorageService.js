@@ -15,7 +15,16 @@ import crypto from "crypto";
  *     um volume persistente nesse caminho.
  */
 
+// Diretório de uploads. Em produção aponte UPLOAD_DIR para um VOLUME
+// PERSISTENTE (ex.: /data/uploads) — o container é efêmero e o disco padrão é
+// apagado a cada redeploy. Garantimos que a pasta exista já no boot.
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), "public", "uploads");
+try {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+  console.log(`[Storage] Diretório de uploads: ${UPLOAD_DIR} (modo: ${process.env.S3_BUCKET ? "s3" : "disco"})`);
+} catch (e) {
+  console.error(`[Storage] Não consegui criar UPLOAD_DIR (${UPLOAD_DIR}):`, e.message);
+}
 
 function useS3() {
   return !!process.env.S3_BUCKET;
