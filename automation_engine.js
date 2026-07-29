@@ -12,6 +12,7 @@ import { getFunctionPreset, resolveSkills } from "./src/api/services/AgentFuncti
 import cron from "node-cron";
 import axios from "axios";
 import { stopwatch } from "./src/api/utils/timing.js";
+import { touchConversation } from "./src/api/services/ConversationService.js";
 
 /**
  * Escolhe qual agente atende uma conexão. Um agente com `accountIds` vazio é
@@ -1892,9 +1893,10 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
                  await this.sendMessage(tenantId, lead.phone, aiMsg);
 
                 // Save in DB
-                await prisma.message.create({
+                const outMsg = await prisma.message.create({
                   data: { conversationId: conv.id, content: aiMsg, role: "ASSISTANT", tenantId }
                 });
+                await touchConversation(outMsg);
              }
            } catch(e) {
               console.error("[Prospecting] Erro na IA para lead " + lead.id, e);

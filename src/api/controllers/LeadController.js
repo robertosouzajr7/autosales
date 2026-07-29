@@ -5,6 +5,7 @@ import path from "path";
 import VoiceService from "../services/VoiceService.js";
 import MessagingService from "../services/MessagingService.js";
 import { stopwatch } from "../utils/timing.js";
+import { touchConversation } from "../services/ConversationService.js";
 
 // Palavras que sinalizam pedido de descadastro (LGPD opt-out).
 const STOP_KEYWORDS = ["parar", "sair", "cancelar", "descadastrar", "stop", "remover", "pare"];
@@ -286,7 +287,7 @@ export const receiveWhatsappWebhook = async (req, res) => {
         }
         await prisma.message.create({
           data: { conversationId: conversation.id, tenantId, content: "🎙️ (áudio recebido)", mediaUrl: audioMediaUrl, role: "USER", messageType: "AUDIO" },
-        }).catch(() => {});
+        }).then(touchConversation).catch(() => {});
         return res.json({
           success: true,
           voice_disabled: true,
@@ -361,6 +362,7 @@ export const receiveWhatsappWebhook = async (req, res) => {
         messageType: messageType
       }
     });
+    await touchConversation(userMessage);
 
     // 4. Emite evento SSE para atualizar a UI em tempo real
     try {
@@ -415,6 +417,7 @@ export const receiveWhatsappWebhook = async (req, res) => {
           messageType: aiData.audioUrl ? "AUDIO" : "TEXT"
         }
       });
+      await touchConversation(assistantMessage);
       try {
         const { messageEvents } = await import("./MessageController.js");
         messageEvents.emit("new_message", { tenantId, message: assistantMessage });

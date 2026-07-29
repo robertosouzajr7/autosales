@@ -131,6 +131,8 @@ router.get("/analytics", AnalyticsController.getAnalytics);
 router.get("/messages/:leadId", MessageController.getMessages);
 router.post("/messages", requireActiveSubscription, MessageController.sendMessage);
 router.post("/messages/call-intent", requireActiveSubscription, MessageController.callIntent);
+router.get("/conversations", MessageController.getConversations);
+router.put("/conversations/:leadId/read", MessageController.markRead);
 router.put("/conversations/:leadId/toggle-bot", MessageController.toggleBot);
 router.get("/events", MessageController.sseEvents);
 

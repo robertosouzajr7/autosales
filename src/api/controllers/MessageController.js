@@ -1,4 +1,5 @@
 import prisma from "../config/prisma.js";
+import { touchConversation, markConversationRead, isWindowOpen, windowMinutesLeft } from "../services/ConversationService.js";
 import MessagingService from "../services/MessagingService.js";
 import { EventEmitter } from "events";
 import { messagesHeadroom } from "../middlewares/planLimits.js";
@@ -79,6 +80,7 @@ export const sendMessage = async (req, res) => {
         messageType
       }
     });
+    await touchConversation(message);
 
     // Notify connected clients
     messageEvents.emit("new_message", { tenantId, message });
@@ -172,6 +174,7 @@ export const callIntent = async (req, res) => {
         messageType: "TEXT"
       }
     });
+    await touchConversation(message);
 
     // Notify SSE clients
     messageEvents.emit("new_message", { tenantId, message });
@@ -181,6 +184,96 @@ export const callIntent = async (req, res) => {
       message,
       waLink: `https://wa.me/${lead.phone.replace(/\D/g, "")}`
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Lista as conversas do inbox, mais recente primeiro — como no WhatsApp Web.
+ * Traz prévia, não-lidas, canal/conexão e o estado da janela de 24h, para a
+ * UI saber se pode digitar livremente ou se precisa de template.
+ */
+export const getConversations = async (req, res) => {
+  const tenantId = req.tenantId;
+  if (!tenantId) return res.json([]);
+
+  try {
+    const { accountId, channel, q } = req.query;
+
+    const conversations = await prisma.conversation.findMany({
+      where: {
+        tenantId,
+        ...(accountId || channel || q
+          ? {
+              lead: {
+                ...(accountId ? { waAccountId: accountId } : {}),
+                ...(channel ? { channel } : {}),
+                ...(q
+                  ? {
+                      OR: [
+                        { name: { contains: q, mode: "insensitive" } },
+                        { phone: { contains: q } },
+                      ],
+                    }
+                  : {}),
+              },
+            }
+          : {}),
+      },
+      include: {
+        lead: {
+          select: { id: true, name: true, phone: true, channel: true, waAccountId: true, optedOut: true },
+        },
+      },
+      // Conversa sem mensagem (lead recém-criado) vai para o fim.
+      orderBy: [{ lastMessageAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
+      take: 200,
+    });
+
+    // Resolve o nome da conexão de uma vez só, em vez de por conversa.
+    const accounts = await prisma.whatsAppAccount.findMany({
+      where: { tenantId },
+      select: { id: true, name: true, channel: true, phone: true },
+    });
+    const accountById = new Map(accounts.map((a) => [a.id, a]));
+
+    res.json(
+      conversations.map((c) => {
+        const acc = c.lead?.waAccountId ? accountById.get(c.lead.waAccountId) : null;
+        return {
+          id: c.id,
+          leadId: c.leadId,
+          name: c.lead?.name || c.lead?.phone || "Sem nome",
+          phone: c.lead?.phone || "",
+          channel: c.lead?.channel || "WHATSAPP",
+          optedOut: !!c.lead?.optedOut,
+          botActive: c.botActive,
+          unreadCount: c.unreadCount || 0,
+          lastMessageAt: c.lastMessageAt,
+          lastMessagePreview: c.lastMessagePreview || "",
+          accountId: c.lead?.waAccountId || null,
+          accountName: acc?.name || null,
+          windowOpen: isWindowOpen(c.lastInboundAt),
+          windowMinutesLeft: windowMinutesLeft(c.lastInboundAt),
+        };
+      })
+    );
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/** Zera as não-lidas quando o atendente abre a conversa. */
+export const markRead = async (req, res) => {
+  try {
+    const conversation = await prisma.conversation.findFirst({
+      where: { leadId: req.params.leadId, tenantId: req.tenantId },
+      select: { id: true },
+    });
+    if (!conversation) return res.status(404).json({ error: "Conversa não encontrada" });
+    await markConversationRead(conversation.id);
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

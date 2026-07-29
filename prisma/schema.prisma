@@ -383,12 +383,26 @@ model Conversation {
   leadId    String   @unique
   tenantId  String
   botActive Boolean  @default(true)
+
+  // Ordenação e não-lidas do inbox. lastMessageAt existe separado de
+  // updatedAt porque updatedAt muda a cada toggle do bot, o que reordenaria
+  // a lista sem mensagem nova.
+  lastMessageAt      DateTime?
+  lastMessagePreview String? // trecho da última mensagem, p/ a lista
+  unreadCount        Int     @default(0)
+
+  // Última mensagem RECEBIDA do cliente: define a janela de 24h da Meta,
+  // fora da qual só é possível iniciar conversa por template aprovado.
+  lastInboundAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   lead     Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
   tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   messages Message[]
+
+  @@index([tenantId, lastMessageAt])
 }
 
 model Message {

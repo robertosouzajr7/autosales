@@ -1,4 +1,5 @@
 import prisma from "../config/prisma.js";
+import { touchConversation } from "../services/ConversationService.js";
 import MessagingService from "../services/MessagingService.js";
 import AutomationEngine from "../../../automation_engine.js";
 import { getFunctionPreset } from "../services/AgentFunctions.js";
@@ -123,13 +124,14 @@ export const submitChat = async (req, res) => {
         role: "USER"
       }
     });
+    await touchConversation(newMessage);
 
     // 4. Generate AI SDR response
     const aiResponse = await AutomationEngine.callAI(null, lead, { tenantId: resolvedTenantId });
     
     // 5. Save assistant message if generated
     if (aiResponse) {
-      await prisma.message.create({
+      const assistantMsg = await prisma.message.create({
         data: {
           conversationId: conversation.id,
           tenantId: resolvedTenantId,
@@ -137,6 +139,7 @@ export const submitChat = async (req, res) => {
           role: "ASSISTANT"
         }
       });
+      await touchConversation(assistantMsg);
     }
 
     res.json({ 
