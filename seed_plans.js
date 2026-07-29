@@ -34,6 +34,7 @@ async function main() {
       // Créditos mensais
       maxTokens: 10_000_000,          // ~250 conversas completas (~8/dia)
       maxMessages: 3_000,
+      maxCampaignMessages: 0, // disparos em massa/mês (0 = recurso desligado)
 
       // Toggles de módulo — agenda/automações desde o 1º plano (valor imediato)
       enableSdr: true,
@@ -69,6 +70,7 @@ async function main() {
 
       maxTokens: 25_000_000,          // ~625 conversas completas (~20/dia)
       maxMessages: 8_000,
+      maxCampaignMessages: 1_000, // disparos em massa/mês (0 = recurso desligado)
 
       enableSdr: true,
       enableTokens: true,
@@ -103,6 +105,7 @@ async function main() {
 
       maxTokens: 60_000_000,          // ~1.500 conversas completas (~50/dia)
       maxMessages: 20_000,
+      maxCampaignMessages: 5_000, // disparos em massa/mês (0 = recurso desligado)
 
       enableSdr: true,
       enableTokens: true,
@@ -137,6 +140,7 @@ async function main() {
 
       maxTokens: 150_000_000,         // ~3.750 conversas completas (~125/dia)
       maxMessages: 50_000,
+      maxCampaignMessages: 20_000, // disparos em massa/mês (0 = recurso desligado)
 
       enableSdr: true,
       enableTokens: true,
@@ -173,6 +177,7 @@ async function main() {
 
       maxTokens: 300_000_000,         // sob consulta
       maxMessages: 100_000,
+      maxCampaignMessages: 50_000, // disparos em massa/mês (0 = recurso desligado)
 
       enableSdr: true,
       enableTokens: true,

@@ -22,6 +22,7 @@ const DEFAULT_PLAN = {
   maxKnowledgeBaseChars: 50000,
   maxTokens: 100000,
   maxMessages: 1000,
+  maxCampaignMessages: 0, // 0 = plano sem disparo em massa
   enableSdr: true,
   enableTokens: true,
   enableMessages: true,
@@ -64,6 +65,7 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
       maxUsers: p.maxUsers ?? 2,
       maxWhatsAppNumbers: p.maxWhatsAppNumbers ?? 1,
       maxKnowledgeBaseChars: p.maxKnowledgeBaseChars ?? 50000,
+      maxCampaignMessages: p.maxCampaignMessages ?? 0,
       enableCalendar: p.enableCalendar ?? true,
       enableAutomations: p.enableAutomations ?? true,
       enableWebhooks: p.enableWebhooks ?? false,
@@ -87,6 +89,7 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
       maxKnowledgeBaseChars: Number(form.maxKnowledgeBaseChars),
       maxTokens: Number(form.maxTokens),
       maxMessages: Number(form.maxMessages),
+      maxCampaignMessages: Number(form.maxCampaignMessages),
       enableSdr: !!form.enableSdr,
       enableTokens: !!form.enableTokens,
       enableMessages: !!form.enableMessages,
@@ -158,6 +161,11 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
               <li>{p.maxMessages?.toLocaleString("pt-BR")} msgs · {p.maxLeads?.toLocaleString("pt-BR")} contatos</li>
               <li>{p.maxWhatsAppNumbers ?? 1} nº WhatsApp · {p.maxUsers ?? 2} usuários</li>
               <li>
+                {(p.maxCampaignMessages ?? 0) > 0
+                  ? `${(p.maxCampaignMessages).toLocaleString("pt-BR")} disparos/mês`
+                  : "sem disparo em massa"}
+              </li>
+              <li>
                 {[p.enableCalendar && "Calendar", p.enableAutomations && "Automações", p.enableWebhooks && "Webhooks"].filter(Boolean).join(" · ") || "Sem extras"}
               </li>
             </ul>
@@ -227,12 +235,16 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
                   ["maxLeads", "Contatos"],
                   ["maxUsers", "Usuários"],
                   ["maxWhatsAppNumbers", "Nºs WhatsApp"],
+                  ["maxCampaignMessages", "Disparos em massa/mês"],
                 ].map(([key, label]) => (
                   <div key={key} className="space-y-1">
                     <Label className="text-xs text-muted-foreground">{label}</Label>
                     <Input type="number" value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
                   </div>
                 ))}
+                <p className="col-span-2 text-[11px] text-muted-foreground -mt-1">
+                  Disparos em massa: <strong>0</strong> desliga o recurso no plano.
+                </p>
                 <div className="space-y-1 col-span-2">
                   <Label className="text-xs text-muted-foreground">Treino do agente (caracteres máx.)</Label>
                   <Input type="number" value={form.maxKnowledgeBaseChars} onChange={(e) => setForm({ ...form, maxKnowledgeBaseChars: e.target.value })} />
