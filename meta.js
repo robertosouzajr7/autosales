@@ -22,6 +22,12 @@ function isOpusOgg(buffer) {
     return buffer.subarray(0, 64).includes('OpusHead');
 }
 
+/** Corta no limite da Meta; passar do tamanho faz a API rejeitar a mensagem. */
+function truncate(text, max) {
+    const t = String(text ?? '');
+    return t.length <= max ? t : t.slice(0, max - 1) + '…';
+}
+
 export class MetaManager {
     /**
      * Baixa uma mídia recebida pela Cloud API. São 2 passos: resolver o
@@ -125,6 +131,85 @@ export class MetaManager {
                 console.error('[Meta API] Erro ao enviar áudio:', e2.response?.data?.error?.message || e2.message);
                 return false;
             }
+        }
+    }
+
+    /**
+     * Envia botões de resposta rápida. Limites da Meta: no máximo 3 botões,
+     * título de 20 caracteres e corpo de 1024 — truncamos em vez de deixar a
+     * API rejeitar a mensagem inteira.
+     *
+     * Só funciona DENTRO da janela de 24h; fora dela, use template com botões.
+     * @param buttons [{ id, title }]
+     */
+    static async sendButtons(phoneId, accessToken, to, { body, buttons, header = null, footer = null }) {
+        const opcoes = (buttons || []).filter(b => b?.title).slice(0, 3);
+        if (!opcoes.length) {
+            console.warn('[Meta API] Nenhum botão válido — nada enviado.');
+            return { ok: false, error: 'Nenhum botão válido.' };
+        }
+        const interactive = {
+            type: 'button',
+            body: { text: truncate(body || '', 1024) },
+            action: {
+                buttons: opcoes.map((b, i) => ({
+                    type: 'reply',
+                    reply: { id: String(b.id || `btn_${i + 1}`).slice(0, 256), title: truncate(b.title, 20) },
+                })),
+            },
+        };
+        if (header) interactive.header = { type: 'text', text: truncate(header, 60) };
+        if (footer) interactive.footer = { text: truncate(footer, 60) };
+        return this._sendInteractive(phoneId, accessToken, to, interactive, `${opcoes.length} botão(ões)`);
+    }
+
+    /**
+     * Envia menu em lista. A Meta aceita até 10 opções no total, distribuídas
+     * em seções — passamos do limite e a mensagem inteira é rejeitada.
+     * @param sections [{ title, rows: [{ id, title, description }] }]
+     */
+    static async sendList(phoneId, accessToken, to, { body, sections, buttonText = 'Ver opções', header = null, footer = null }) {
+        let restantes = 10;
+        const secoes = [];
+        for (const sec of sections || []) {
+            if (restantes <= 0) break;
+            const rows = (sec.rows || []).filter(r => r?.title).slice(0, restantes).map((r, i) => ({
+                id: String(r.id || `op_${i + 1}`).slice(0, 200),
+                title: truncate(r.title, 24),
+                ...(r.description ? { description: truncate(r.description, 72) } : {}),
+            }));
+            if (!rows.length) continue;
+            restantes -= rows.length;
+            secoes.push({ title: truncate(sec.title || 'Opções', 24), rows });
+        }
+        if (!secoes.length) {
+            console.warn('[Meta API] Lista sem opções válidas — nada enviado.');
+            return { ok: false, error: 'Lista sem opções válidas.' };
+        }
+        const interactive = {
+            type: 'list',
+            body: { text: truncate(body || '', 1024) },
+            action: { button: truncate(buttonText, 20), sections: secoes },
+        };
+        if (header) interactive.header = { type: 'text', text: truncate(header, 60) };
+        if (footer) interactive.footer = { text: truncate(footer, 60) };
+        const total = secoes.reduce((n, s) => n + s.rows.length, 0);
+        return this._sendInteractive(phoneId, accessToken, to, interactive, `lista com ${total} opção(ões)`);
+    }
+
+    static async _sendInteractive(phoneId, accessToken, to, interactive, descricao) {
+        try {
+            const { data } = await axios.post(
+                `https://graph.facebook.com/${GRAPH_VERSION}/${phoneId}/messages`,
+                { messaging_product: 'whatsapp', recipient_type: 'individual', to, type: 'interactive', interactive },
+                { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, timeout: 30000 }
+            );
+            console.log(`[Meta API] 🔘 Interativo enviado para ${to} (${descricao}).`);
+            return { ok: true, messageId: data?.messages?.[0]?.id || null };
+        } catch (e) {
+            const error = e.response?.data?.error;
+            console.error('[Meta API] Erro ao enviar interativo:', error?.message || e.message);
+            return { ok: false, error: error?.error_user_msg || error?.message || e.message };
         }
     }
 
@@ -407,7 +492,7 @@ export class MetaManager {
      * interno de processamento — o mesmo pipeline usado pelo Baileys — e
      * devolve a resposta da IA pelo canal oficial.
      */
-    static async handleIncoming(phoneId, from, name, content, media = null) {
+    static async handleIncoming(phoneId, from, name, content, media = null, interactive = null) {
         const account = await prisma.whatsAppAccount.findFirst({
             where: { phoneId, channel: "WHATSAPP" }
         });
@@ -436,6 +521,12 @@ export class MetaManager {
                     console.log(`[Meta Hub] ${media.messageType} recebido de ${from}: ${url}`);
                 }
             }
+        }
+        // Clique em botão/lista: o id segue junto para o fluxo ramificar sem
+        // depender do texto do botão, que o cliente pode ver traduzido.
+        if (interactive?.replyId) {
+            extra = { ...extra, replyId: interactive.replyId, replyTitle: interactive.replyTitle || '' };
+            console.log(`[Meta Hub] 🔘 ${from} escolheu "${interactive.replyTitle}" (${interactive.replyId}).`);
         }
         if (!effectiveContent) return;
 

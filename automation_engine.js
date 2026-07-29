@@ -49,6 +49,7 @@ const SKILL_TO_TOOLS = {
   move_pipeline: ["move_lead_stage"],
   tag_lead: ["add_tag"],
   escalate_human: ["escalate_human"],
+  send_buttons: ["send_buttons", "send_list"],
 };
 
 export function skillsToToolNames(skills) {
@@ -335,11 +336,51 @@ class AutomationEngine {
 
   // ========== DAG NAVIGATION ==========
 
+  /** Conexão oficial (Cloud API) do tenant — botões e templates só existem lá. */
+  async resolveCloudAccount(tenantId, preferredId = null) {
+    const contas = await prisma.whatsAppAccount.findMany({
+      where: { tenantId, channel: { not: "INSTAGRAM" } },
+      orderBy: { createdAt: "asc" },
+    });
+    const uteis = contas.filter((a) => a.phoneId && a.accessToken);
+    if (preferredId) {
+      const escolhida = uteis.find((a) => a.id === preferredId);
+      if (escolhida) return escolhida;
+    }
+    return uteis[0] || null;
+  }
+
+  /**
+   * Envia botões ou lista. Mensagem interativa é exclusiva da API oficial e
+   * só vale DENTRO da janela de 24h — fora dela o caminho é SEND_TEMPLATE.
+   */
+  async sendInteractive(tenantId, phone, { kind, body, buttons, sections, buttonText, header, footer }) {
+    const conta = await this.resolveCloudAccount(tenantId);
+    if (!conta) {
+      const motivo = "Mensagem com botões exige conexão oficial (Cloud API).";
+      console.warn(`[AutoEngine] ${motivo}`);
+      // Não deixa o lead sem nada: manda o texto puro como alternativa.
+      await MessagingService.sendText(tenantId, phone, body).catch(() => {});
+      return { ok: false, error: motivo };
+    }
+    const { MetaManager } = await import("./meta.js");
+    return kind === "list"
+      ? MetaManager.sendList(conta.phoneId, conta.accessToken, phone, { body, sections, buttonText, header, footer })
+      : MetaManager.sendButtons(conta.phoneId, conta.accessToken, phone, { body, buttons, header, footer });
+  }
+
   getNextNodes(currentNodeId, edges, sourceHandle) {
     if (!edges || !currentNodeId) return [];
-    return edges
-      .filter(e => e.source === currentNodeId && (!sourceHandle || e.sourceHandle === sourceHandle))
-      .map(e => e.target);
+    const saindo = edges.filter(e => e.source === currentNodeId);
+    if (!sourceHandle) return saindo.map(e => e.target);
+
+    const especificas = saindo.filter(e => e.sourceHandle === sourceHandle);
+    if (especificas.length) return especificas.map(e => e.target);
+
+    // Botão sem ramo próprio cai na saída padrão (sem handle). Sem isso o
+    // fluxo morreria em silêncio quando alguém clicasse numa opção que o
+    // usuário esqueceu de ligar no builder.
+    return saindo.filter(e => !e.sourceHandle).map(e => e.target);
   }
 
   findStartNode(nodes, edges) {
@@ -448,6 +489,108 @@ class AutomationEngine {
           });
           result.output = { prompt, variable: config.variable };
           result.pause = true;
+          break;
+        }
+
+        // Botões de resposta rápida. Pausa o fluxo esperando o clique, do
+        // mesmo jeito que o COLLECT_INPUT — a diferença é que a retomada
+        // ramifica pelo id do botão.
+        case "SEND_BUTTONS": {
+          const body = this.resolveTemplate(config.body || config.message || "Escolha uma opção:", ctx);
+          const botoes = (config.buttons || []).map((b, i) => ({
+            id: b.id || `btn_${i + 1}`,
+            title: this.resolveTemplate(b.title || b.label || `Opção ${i + 1}`, ctx),
+          }));
+          const enviado = await this.sendInteractive(lead.tenantId, lead.phone, {
+            kind: "buttons",
+            body,
+            buttons: botoes,
+            header: config.header ? this.resolveTemplate(config.header, ctx) : null,
+            footer: config.footer ? this.resolveTemplate(config.footer, ctx) : null,
+          });
+          if (!enviado.ok) { result.output = { error: enviado.error }; break; }
+
+          await prisma.automationExecution.update({
+            where: { id: execution.id },
+            data: {
+              status: "WAITING_INPUT",
+              currentNodeId: node.id,
+              waitingForInput: true,
+              inputVariable: config.variable || "escolha",
+            },
+          });
+          result.output = { body, buttons: botoes };
+          result.pause = true;
+          break;
+        }
+
+        // Menu em lista — mesma mecânica dos botões, para mais de 3 opções.
+        case "SEND_LIST": {
+          const body = this.resolveTemplate(config.body || config.message || "Escolha uma opção:", ctx);
+          const secoes = (config.sections?.length
+            ? config.sections
+            : [{ title: config.sectionTitle || "Opções", rows: config.rows || config.options || [] }]
+          ).map((sec) => ({
+            title: this.resolveTemplate(sec.title || "Opções", ctx),
+            rows: (sec.rows || []).map((r, i) => ({
+              id: r.id || `op_${i + 1}`,
+              title: this.resolveTemplate(r.title || r.label || `Opção ${i + 1}`, ctx),
+              description: r.description ? this.resolveTemplate(r.description, ctx) : undefined,
+            })),
+          }));
+          const enviado = await this.sendInteractive(lead.tenantId, lead.phone, {
+            kind: "list",
+            body,
+            sections: secoes,
+            buttonText: config.buttonText || "Ver opções",
+            header: config.header ? this.resolveTemplate(config.header, ctx) : null,
+            footer: config.footer ? this.resolveTemplate(config.footer, ctx) : null,
+          });
+          if (!enviado.ok) { result.output = { error: enviado.error }; break; }
+
+          await prisma.automationExecution.update({
+            where: { id: execution.id },
+            data: {
+              status: "WAITING_INPUT",
+              currentNodeId: node.id,
+              waitingForInput: true,
+              inputVariable: config.variable || "escolha",
+            },
+          });
+          result.output = { body, sections: secoes };
+          result.pause = true;
+          break;
+        }
+
+        // Template aprovado — o único envio que funciona fora da janela de 24h.
+        case "SEND_TEMPLATE": {
+          const tpl = config.templateId
+            ? await prisma.messageTemplate.findFirst({ where: { id: config.templateId, tenantId: lead.tenantId } })
+            : null;
+          if (!tpl) { result.output = { error: "Template não encontrado." }; break; }
+          if (tpl.status !== "APPROVED") { result.output = { error: `Template "${tpl.name}" não está aprovado.` }; break; }
+
+          const conta = await this.resolveCloudAccount(lead.tenantId, lead.waAccountId);
+          if (!conta) { result.output = { error: "Sem conexão oficial para enviar template." }; break; }
+
+          const vars = (config.variables || ["{{lead.name}}"]).map((v) => this.resolveTemplate(String(v), ctx));
+          const { MetaManager } = await import("./meta.js");
+          const r = await MetaManager.sendTemplate(conta.phoneId, conta.accessToken, lead.phone, {
+            name: tpl.name, language: tpl.language, variables: vars,
+          });
+          result.output = r.ok ? { template: tpl.name, vars } : { error: r.error };
+          break;
+        }
+
+        // Imagem, vídeo, áudio ou documento a partir de uma URL do sistema.
+        case "SEND_MEDIA": {
+          const url = this.resolveTemplate(config.mediaUrl || config.url || "", ctx);
+          if (!url) { result.output = { error: "Sem arquivo definido." }; break; }
+          const legenda = config.caption ? this.resolveTemplate(config.caption, ctx) : "";
+          const ok = await MessagingService.sendMedia(
+            lead.tenantId, lead.phone, url, config.mediaType || "image", legenda
+          );
+          result.output = ok ? { url, mediaType: config.mediaType || "image" } : { error: "Falha ao enviar mídia." };
           break;
         }
 
@@ -1161,6 +1304,46 @@ class AutomationEngine {
           }
         },
         {
+          name: "send_buttons",
+          description: "Envia até 3 botões clicáveis. Use quando a escolha for fechada (confirmar/recusar, escolher entre poucas opções) — evita erro de digitação e acelera a resposta. Não use para perguntas abertas.",
+          parameters: {
+            type: "object",
+            properties: {
+              body: { type: "string", description: "Pergunta ou instrução acima dos botões" },
+              options: {
+                type: "array",
+                description: "Rótulos dos botões, no máximo 3 e até 20 caracteres cada",
+                items: { type: "string" }
+              }
+            },
+            required: ["body", "options"]
+          }
+        },
+        {
+          name: "send_list",
+          description: "Envia um menu em lista com até 10 opções. Use quando houver mais de 3 alternativas (ex.: horários, serviços, unidades).",
+          parameters: {
+            type: "object",
+            properties: {
+              body: { type: "string", description: "Instrução acima do menu" },
+              buttonText: { type: "string", description: "Texto do botão que abre a lista (ex.: 'Ver horários')" },
+              options: {
+                type: "array",
+                description: "Opções do menu, no máximo 10",
+                items: {
+                  type: "object",
+                  properties: {
+                    title: { type: "string", description: "Título da opção (até 24 caracteres)" },
+                    description: { type: "string", description: "Detalhe opcional (até 72 caracteres)" }
+                  },
+                  required: ["title"]
+                }
+              }
+            },
+            required: ["body", "options"]
+          }
+        },
+        {
           name: "escalate_human",
           description: "Transfere a conversa para um atendente humano (desliga o bot nesta conversa) quando o cliente pede ou o assunto exige.",
           parameters: {
@@ -1286,6 +1469,35 @@ class AutomationEngine {
             hasMedia: !!(p.imageUrl || p.audioUrl || p.videoUrl),
           }))
         };
+      }
+      case "send_buttons": {
+        const opcoes = (args.options || []).slice(0, 3).map((t, i) => ({ id: `opt_${i + 1}`, title: String(t) }));
+        if (!opcoes.length) return { success: false, error: "Nenhuma opção informada." };
+        const r = await this.sendInteractive(lead.tenantId, lead.phone, {
+          kind: "buttons", body: args.body || "Escolha uma opção:", buttons: opcoes,
+        });
+        // O texto já foi entregue com os botões: avisamos o modelo para ele
+        // não repetir a mesma pergunta em seguida.
+        return r.ok
+          ? { success: true, sent: true, note: "Botões enviados ao cliente. Não repita a pergunta em texto." }
+          : { success: false, error: r.error };
+      }
+      case "send_list": {
+        const rows = (args.options || []).slice(0, 10).map((o, i) => ({
+          id: `opt_${i + 1}`,
+          title: String(o?.title ?? o),
+          description: o?.description,
+        }));
+        if (!rows.length) return { success: false, error: "Nenhuma opção informada." };
+        const r = await this.sendInteractive(lead.tenantId, lead.phone, {
+          kind: "list",
+          body: args.body || "Escolha uma opção:",
+          buttonText: args.buttonText || "Ver opções",
+          sections: [{ title: "Opções", rows }],
+        });
+        return r.ok
+          ? { success: true, sent: true, note: "Menu enviado ao cliente. Não repita as opções em texto." }
+          : { success: false, error: r.error };
       }
       case "send_catalog_item": {
         const item = await prisma.product.findFirst({
@@ -1727,7 +1939,7 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
 
   // ========== INCOMING MESSAGE HANDLER ==========
 
-  async handleIncoming(phone, text, tenantId) {
+  async handleIncoming(phone, text, tenantId, opts = {}) {
     const lead = await prisma.lead.findFirst({ where: { phone, tenantId } });
     if (!lead) return false;
 
@@ -1760,6 +1972,11 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
     if (waitingExec) {
       const varName = waitingExec.inputVariable || "resposta";
       await this.updateExecutionContext(waitingExec.id, `input.${varName}`, text);
+      // O id da opção fica disponível separado do texto: ramificar pelo id é
+      // estável, o título o cliente pode ver traduzido ou com emoji.
+      if (opts.replyId) {
+        await this.updateExecutionContext(waitingExec.id, `input.${varName}_id`, opts.replyId);
+      }
 
       await prisma.automationExecution.update({
         where: { id: waitingExec.id },
@@ -1768,7 +1985,7 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
 
       const nodes = JSON.parse(waitingExec.automation.nodes || "[]");
       const edges = JSON.parse(waitingExec.automation.edges || "[]");
-      const nextNodeIds = this.getNextNodes(waitingExec.currentNodeId, edges);
+      const nextNodeIds = this.getNextNodes(waitingExec.currentNodeId, edges, opts.replyId);
 
       for (const nextId of nextNodeIds) {
         await this.runNode(nextId, waitingExec.id, nodes, edges, lead, 0);
@@ -2577,7 +2794,7 @@ ${scrapeContext}
    * (O dispatchTrigger de eventos fica definido acima — com filtro de
    * palavra-chave e proteção contra execução duplicada por lead.)
    */
-  async handleIncomingMessage(lead, content, tenantId) {
+  async handleIncomingMessage(lead, content, tenantId, opts = {}) {
     try {
       // 💰 Gate de assinatura: tenant inadimplente/trial expirado não tem o
       // bot respondendo (o "dente" da monetização). A mensagem do lead já foi
@@ -2587,6 +2804,17 @@ ${scrapeContext}
         console.log(`[AutoEngine] 🚫 Bot suspenso p/ tenant ${tenantId} (assinatura inativa).`);
         return null;
       }
+
+      // Fluxo pausado esperando resposta tem prioridade sobre a IA: se o
+      // lead está no meio de um menu, quem responde é o fluxo, não o agente.
+      // (Sem esta chamada o COLLECT_INPUT/SEND_BUTTONS nunca retomava.)
+      const tratadoPeloFluxo = await this.handleIncoming(lead.phone, content, tenantId, {
+        replyId: opts.replyId || null,
+      }).catch((e) => {
+        console.error("[AutoEngine] Erro ao retomar fluxo:", e.message);
+        return false;
+      });
+      if (tratadoPeloFluxo) return null;
 
       // Verifica se há automações INCOMING_MESSAGE ativas
       const auts = await prisma.automation.findMany({

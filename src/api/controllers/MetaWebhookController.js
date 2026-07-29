@@ -140,6 +140,34 @@ export const receiveMetaWebhook = async (req, res) => {
             continue;
           }
 
+          // Clique em botão ou item de lista. Sem tratar isso o fluxo nunca
+          // sabe que o usuário escolheu — e a mensagem caía em "ignorando".
+          if (message.type === "interactive") {
+            const it = message.interactive || {};
+            const escolha = it.button_reply || it.list_reply || null;
+            if (!escolha) {
+              console.log(`[Meta Webhook] Interativo sem resposta reconhecida: ${it.type}`);
+              continue;
+            }
+            // O título vai como conteúdo (é o que o cliente "disse"); o id
+            // segue à parte para o fluxo ramificar sem depender do texto.
+            await MetaManager.handleIncoming(phoneId, from, name, escolha.title || escolha.id, null, {
+              replyId: escolha.id,
+              replyTitle: escolha.title || "",
+            });
+            continue;
+          }
+
+          // Botão de template (quick reply) chega em outro formato.
+          if (message.type === "button") {
+            const b = message.button || {};
+            await MetaManager.handleIncoming(phoneId, from, name, b.text || b.payload || "", null, {
+              replyId: b.payload || b.text || "",
+              replyTitle: b.text || "",
+            });
+            continue;
+          }
+
           // Mídia: áudio (nota de voz), imagem e documento — o agente
           // transcreve/lê o conteúdo, igual ao canal via QR.
           const MEDIA_MAP = {

@@ -30,7 +30,8 @@ import {
   Package,
   CreditCard,
   FileText,
-  Megaphone
+  Megaphone,
+  Workflow
 } from "lucide-react";
 import { notificationStore } from "@/lib/notifications";
 
@@ -83,6 +84,7 @@ const navItems: NavItem[] = [
   { label: "Templates", icon: FileText, href: "/templates" },
   { label: "Disparos", icon: Megaphone, href: "/campanhas" },
   { label: "Lembretes", icon: Zap, href: "/automations" },
+  { label: "Fluxos", icon: Workflow, href: "/automations/builder" },
   { label: "Conexões", icon: Smartphone, href: "/connections" },
   { label: "Assinatura", icon: CreditCard, href: "/assinatura" },
   { label: "Configurações", icon: Settings, href: "/settings" },

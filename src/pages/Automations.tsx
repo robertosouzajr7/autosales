@@ -8,7 +8,7 @@ import {
   Inbox, Clock, Tag, MoveRight, Users, Calendar, FileEdit,
   StopCircle, Copy, Search, Send, ChevronRight, Layers, Map,
   Sparkles, Brain, GitBranch, Shuffle, BarChart3, Wrench, ScanText,
-  Image, Workflow, Lock
+  Image, Workflow, Lock, MousePointerClick, List, FileText
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
@@ -58,6 +58,10 @@ const NODE_TYPES_DEF: NodeTypeDef[] = [
   { id: "SEND_MSG", label: "Enviar Texto", icon: <MessageCircle className="w-4 h-4" />, color: "#10b981", category: "action" },
   { id: "AI_RESPONSE", label: "Chamar IA", icon: <Bot className="w-4 h-4" />, color: "#2563EB", category: "action" },
   { id: "COLLECT_INPUT", label: "Coletar Resposta", icon: <Inbox className="w-4 h-4" />, color: "#06b6d4", category: "action" },
+  { id: "SEND_BUTTONS", label: "Enviar Botões", icon: <MousePointerClick className="w-4 h-4" />, color: "#8b5cf6", category: "action" },
+  { id: "SEND_LIST", label: "Enviar Menu (lista)", icon: <List className="w-4 h-4" />, color: "#7c3aed", category: "action" },
+  { id: "SEND_TEMPLATE", label: "Enviar Template", icon: <FileText className="w-4 h-4" />, color: "#0ea5e9", category: "action" },
+  { id: "SEND_MEDIA", label: "Enviar Mídia", icon: <Image className="w-4 h-4" />, color: "#059669", category: "action" },
   { id: "WAIT", label: "Aguardar Tempo", icon: <Timer className="w-4 h-4" />, color: "#3b82f6", category: "action" },
   { id: "ADD_TAG", label: "Adicionar Tag", icon: <Tag className="w-4 h-4" />, color: "#f59e0b", category: "action" },
   { id: "MOVE_STAGE", label: "Mover Etapa", icon: <MoveRight className="w-4 h-4" />, color: "#6366f1", category: "action" },
@@ -183,9 +187,15 @@ function AutomationNode({ data, selected }: any) {
   const isClassifyIntent = nodeType === "CLASSIFY_INTENT";
   const isAIScore = nodeType === "AI_SCORE";
   const isABTest = nodeType === "AB_TEST";
-  const hasMultipleOutputs = isCondition || isClassifyIntent || isAIScore;
-
+  // Botões/lista abrem uma saída por opção, para ramificar pelo clique.
+  const isInteractive = nodeType === "SEND_BUTTONS" || nodeType === "SEND_LIST";
   const config = data.config || {};
+  const opcoes: any[] = isInteractive
+    ? (nodeType === "SEND_BUTTONS"
+        ? (config.buttons || [])
+        : (config.sections?.[0]?.rows || config.rows || []))
+    : [];
+  const hasMultipleOutputs = isCondition || isClassifyIntent || isAIScore || (isInteractive && opcoes.length > 0);
 
   return (
     <div className={`relative transition-all duration-200 ${selected ? 'scale-105' : ''}`}>
@@ -261,6 +271,20 @@ function AutomationNode({ data, selected }: any) {
         </>
       )}
 
+      {/* Uma saída por opção: o id do handle casa com o id do botão, que é o
+          que o WhatsApp devolve no clique. */}
+      {isInteractive && opcoes.length > 0 && opcoes.map((o: any, i: number) => (
+        <Handle
+          key={o.id || `opt_${i + 1}`}
+          type="source"
+          position={Position.Bottom}
+          id={o.id || `opt_${i + 1}`}
+          title={o.title || o.label || `Opção ${i + 1}`}
+          className="!w-3 !h-3 !bg-violet-500 !border-2 !border-white"
+          style={{ left: `${((i + 1) * 100) / (opcoes.length + 1)}%` }}
+        />
+      ))}
+
       {isClassifyIntent && (
         <>
           {(config.intents || [{id:'comprar'},{id:'duvida'},{id:'suporte'},{id:'cancelar'},{id:'outro'}]).map((intent: any, idx: number, arr: any[]) => (
@@ -304,6 +328,14 @@ export default function Automations() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  // Templates aprovados, para o bloco "Enviar Template".
+  const [approvedTemplates, setApprovedTemplates] = useState<any[]>([]);
+  useEffect(() => {
+    fetch("/api/templates", { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d) => setApprovedTemplates((d || []).filter((t: any) => t.status === "APPROVED")))
+      .catch(() => setApprovedTemplates([]));
+  }, []);
 
   const { toast } = useToast();
 
@@ -964,6 +996,139 @@ export default function Automations() {
                       <Label className="text-xs font-semibold text-slate-400">Mensagem</Label>
                       <Textarea value={selectedNodeData.config?.message || ""} onChange={e => updateNodeConfig(selectedNode.id, "message", e.target.value)} className="min-h-[100px] rounded-xl border-slate-100 text-xs" placeholder="Olá {{lead.name}}! 👋" />
                     </div>
+                  )}
+
+                  {(selectedNodeData.nodeType === "SEND_BUTTONS" || selectedNodeData.nodeType === "SEND_LIST") && (() => {
+                    const ehLista = selectedNodeData.nodeType === "SEND_LIST";
+                    const max = ehLista ? 10 : 3;
+                    const opcoes = ehLista
+                      ? (selectedNodeData.config?.sections?.[0]?.rows || [])
+                      : (selectedNodeData.config?.buttons || []);
+                    const gravar = (novas: any[]) => {
+                      if (ehLista) updateNodeConfig(selectedNode.id, "sections", [{ title: "Opções", rows: novas }]);
+                      else updateNodeConfig(selectedNode.id, "buttons", novas);
+                    };
+                    return (
+                      <>
+                        <div className="space-y-2">
+                          <Label className="text-xs font-semibold text-slate-400">Mensagem</Label>
+                          <Textarea
+                            value={selectedNodeData.config?.body || ""}
+                            onChange={e => updateNodeConfig(selectedNode.id, "body", e.target.value)}
+                            className="min-h-[80px] rounded-xl border-slate-100 text-xs"
+                            placeholder="Oi {{lead.name}}! Como posso ajudar?"
+                          />
+                        </div>
+
+                        {ehLista && (
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-slate-400">Texto do botão que abre a lista</Label>
+                            <Input
+                              value={selectedNodeData.config?.buttonText || ""}
+                              onChange={e => updateNodeConfig(selectedNode.id, "buttonText", e.target.value)}
+                              className="h-10 rounded-lg text-xs" placeholder="Ver opções"
+                            />
+                          </div>
+                        )}
+
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-xs font-semibold text-slate-400">
+                              Opções ({opcoes.length}/{max})
+                            </Label>
+                            {opcoes.length < max && (
+                              <Button
+                                variant="ghost" size="sm" className="h-7 text-[11px] font-bold text-violet-600"
+                                onClick={() => gravar([...opcoes, { id: `opt_${opcoes.length + 1}`, title: "" }])}
+                              >
+                                <Plus className="w-3 h-3 mr-1" /> Adicionar
+                              </Button>
+                            )}
+                          </div>
+                          {opcoes.map((o: any, i: number) => (
+                            <div key={i} className="flex gap-1.5 items-center">
+                              <Input
+                                value={o.title || ""}
+                                maxLength={ehLista ? 24 : 20}
+                                onChange={e => {
+                                  const novas = [...opcoes];
+                                  novas[i] = { ...novas[i], id: novas[i].id || `opt_${i + 1}`, title: e.target.value };
+                                  gravar(novas);
+                                }}
+                                className="h-9 rounded-lg text-xs"
+                                placeholder={`Opção ${i + 1}`}
+                              />
+                              <Button
+                                variant="ghost" size="icon" className="w-8 h-8 shrink-0"
+                                onClick={() => gravar(opcoes.filter((_: any, x: number) => x !== i))}
+                              >
+                                <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                              </Button>
+                            </div>
+                          ))}
+                          <p className="text-[11px] text-slate-400 leading-relaxed">
+                            Cada opção vira uma saída do bloco — ligue cada uma ao próximo passo.
+                            Opção sem ligação segue pela saída padrão.
+                            {ehLista ? " Limite da Meta: 10 opções, 24 caracteres." : " Limite da Meta: 3 botões, 20 caracteres."}
+                          </p>
+                        </div>
+                      </>
+                    );
+                  })()}
+
+                  {selectedNodeData.nodeType === "SEND_TEMPLATE" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-slate-400">Template aprovado</Label>
+                        <select
+                          value={selectedNodeData.config?.templateId || ""}
+                          onChange={e => updateNodeConfig(selectedNode.id, "templateId", e.target.value)}
+                          className="w-full h-10 rounded-lg border border-slate-100 text-xs px-3 bg-white"
+                        >
+                          <option value="">Escolha…</option>
+                          {approvedTemplates.map((t: any) => (
+                            <option key={t.id} value={t.id}>{t.name}</option>
+                          ))}
+                        </select>
+                        <p className="text-[11px] text-slate-400">
+                          Único envio que funciona fora da janela de 24h. Só aparecem templates aprovados pela Meta.
+                        </p>
+                      </div>
+                    </>
+                  )}
+
+                  {selectedNodeData.nodeType === "SEND_MEDIA" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-slate-400">URL do arquivo</Label>
+                        <Input
+                          value={selectedNodeData.config?.mediaUrl || ""}
+                          onChange={e => updateNodeConfig(selectedNode.id, "mediaUrl", e.target.value)}
+                          className="h-10 rounded-lg text-xs" placeholder="/api/uploads/arquivo.jpg"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-slate-400">Tipo</Label>
+                        <select
+                          value={selectedNodeData.config?.mediaType || "image"}
+                          onChange={e => updateNodeConfig(selectedNode.id, "mediaType", e.target.value)}
+                          className="w-full h-10 rounded-lg border border-slate-100 text-xs px-3 bg-white"
+                        >
+                          <option value="image">Imagem</option>
+                          <option value="video">Vídeo</option>
+                          <option value="audio">Áudio</option>
+                          <option value="document">Documento</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-slate-400">Legenda (opcional)</Label>
+                        <Input
+                          value={selectedNodeData.config?.caption || ""}
+                          onChange={e => updateNodeConfig(selectedNode.id, "caption", e.target.value)}
+                          className="h-10 rounded-lg text-xs"
+                        />
+                      </div>
+                    </>
                   )}
 
                   {selectedNodeData.nodeType === "WAIT" && (

@@ -62,7 +62,7 @@ function App() {
         {/* "Automações" no menu agora aponta para os Lembretes (config simples). */}
         <Route path="/automations" element={<AutomationConfig />} />
         <Route path="/automations/config" element={<AutomationConfig />} />
-        {/* Flow builder avançado — fora do menu, acessível por URL/power users. */}
+        {/* Flow builder — construtor visual de fluxos com botões e menus. */}
         <Route path="/automations/builder" element={<Automations />} />
         <Route path="/docs" element={<Docs />} />
         <Route path="/connections" element={<Connections />} />

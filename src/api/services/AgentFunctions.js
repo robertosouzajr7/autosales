@@ -17,6 +17,7 @@ export const SKILLS = [
   { id: "move_pipeline",  label: "Mover no funil",          desc: "Avança o lead de etapa no CRM automaticamente." },
   { id: "tag_lead",       label: "Marcar com tags",         desc: "Etiqueta o lead conforme a conversa (ex.: 'quente')." },
   { id: "escalate_human", label: "Escalar para humano",     desc: "Passa a conversa para a equipe quando necessário." },
+  { id: "send_buttons",   label: "Enviar botões/menu",      desc: "Oferece opções clicáveis quando a escolha é fechada (ex.: confirmar horário)." },
 ];
 
 export const SKILL_IDS = SKILLS.map((s) => s.id);

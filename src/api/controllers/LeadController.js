@@ -209,7 +209,7 @@ export const bulkDeleteLeads = async (req, res) => {
  * Rota: POST /api/webhook/whatsapp (pública, autenticada por tenantId no body)
  */
 export const receiveWhatsappWebhook = async (req, res) => {
-  const { tenantId, phone, name, content, source = 'WhatsApp', skipNewLeadTrigger, messageType = 'TEXT', channel = 'WHATSAPP', accountId, mediaMime, mediaCaption, fileName } = req.body;
+  const { tenantId, phone, name, content, source = 'WhatsApp', skipNewLeadTrigger, messageType = 'TEXT', channel = 'WHATSAPP', accountId, mediaMime, mediaCaption, fileName, replyId, replyTitle } = req.body;
 
   if (!tenantId || !phone || !content) {
     return res.status(400).json({ success: false, error: "Parâmetros obrigatórios: tenantId, phone, content" });
@@ -402,7 +402,7 @@ export const receiveWhatsappWebhook = async (req, res) => {
     }
 
     // 6. Aciona o SDR para gerar resposta via IA (texto transcrito, se áudio)
-    const aiData = await AutomationEngine.handleIncomingMessage(lead, effectiveContent || content, tenantId);
+    const aiData = await AutomationEngine.handleIncomingMessage(lead, effectiveContent || content, tenantId, { replyId });
     sw.lap("engine");
 
     // 7. Se houve resposta da IA, salva no banco também
