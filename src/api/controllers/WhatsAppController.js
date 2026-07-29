@@ -1,3 +1,4 @@
+import axios from "axios";
 import prisma from "../config/prisma.js";
 import { WhatsAppManager } from "../../../whatsapp.js";
 
@@ -13,22 +14,31 @@ export const getAccounts = async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    const formatted = accounts.map(acc => ({
-      id: acc.id,
-      name: acc.name,
-      phone: acc.phone || "",
-      status: acc.status,
-      channel: acc.channel || "WHATSAPP",
-      enabled: acc.enabled !== false,
-      handle: acc.igId ? `@${acc.name}` : (acc.phone || ""),
-      instance: acc.id.substring(0, 8),
-      lastActive: acc.updatedAt.toLocaleString(),
-      // Dados da conexão Instagram — visíveis para o dono da conta (a UI
-      // mostra o token oculto por padrão, com opção de revelar).
-      igId: acc.igId || null,
-      pageId: acc.pageId || null,
-      accessToken: acc.channel === "INSTAGRAM" ? (acc.accessToken || null) : undefined,
-    }));
+    const formatted = accounts.map(acc => {
+      // Conexão oficial (Cloud API) x conexão via QR (Baileys). A oficial NÃO
+      // tem QR — é configurada por credenciais e editada no painel.
+      const isCloud = !!(acc.phoneId && acc.accessToken);
+      return {
+        id: acc.id,
+        name: acc.name,
+        phone: acc.phone || "",
+        status: acc.status,
+        channel: acc.channel || "WHATSAPP",
+        mode: acc.channel === "INSTAGRAM" ? "INSTAGRAM" : (isCloud ? "CLOUD" : "QR"),
+        enabled: acc.enabled !== false,
+        handle: acc.igId ? `@${acc.name}` : (acc.phone || ""),
+        instance: acc.id.substring(0, 8),
+        lastActive: acc.updatedAt.toLocaleString(),
+        // Dados persistentes da conexão oficial (WhatsApp Business / Cloud API).
+        phoneId: acc.phoneId || null,
+        wabaId: acc.wabaId || null,
+        // Dados da conexão Instagram — visíveis para o dono da conta (a UI
+        // mostra o token oculto por padrão, com opção de revelar).
+        igId: acc.igId || null,
+        pageId: acc.pageId || null,
+        accessToken: (acc.channel === "INSTAGRAM" || isCloud) ? (acc.accessToken || null) : undefined,
+      };
+    });
 
     res.json(formatted);
   } catch (error) {
@@ -68,6 +78,77 @@ export const deleteAccount = async (req, res) => {
   }
 };
 
+// PUT /whatsapp/accounts/:id/meta
+// Edita as credenciais da conexão OFICIAL (Cloud API). Não existe QR aqui —
+// a "reconexão" é atualizar/renovar as credenciais.
+export const updateMetaAccount = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, phone, phoneId, wabaId, accessToken } = req.body;
+
+    const account = await prisma.whatsAppAccount.findFirst({
+      where: { id, tenantId: req.tenantId },
+    });
+    if (!account) return res.status(404).json({ error: "Conexão não encontrada." });
+
+    const data = {};
+    if (typeof name === "string" && name.trim()) data.name = name.trim();
+    if (typeof phone === "string") data.phone = phone.trim() || null;
+    if (typeof phoneId === "string" && phoneId.trim()) data.phoneId = phoneId.trim();
+    if (typeof wabaId === "string") data.wabaId = wabaId.trim() || null;
+    // Token só é sobrescrito quando vem um valor novo (campo vazio mantém o atual).
+    if (typeof accessToken === "string" && accessToken.trim()) data.accessToken = accessToken.trim();
+
+    const updated = await prisma.whatsAppAccount.update({ where: { id }, data });
+    res.json({ success: true, id: updated.id, name: updated.name });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// POST /whatsapp/accounts/:id/test
+// Valida as credenciais da conexão oficial contra a Graph API e atualiza o
+// status. É o equivalente ao "reconectar" no canal oficial.
+export const testMetaConnection = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const account = await prisma.whatsAppAccount.findFirst({
+      where: { id, tenantId: req.tenantId },
+    });
+    if (!account) return res.status(404).json({ error: "Conexão não encontrada." });
+    if (!account.phoneId || !account.accessToken) {
+      return res.status(400).json({ error: "Conexão incompleta: Phone Number ID e Token são obrigatórios." });
+    }
+
+    const version = process.env.META_GRAPH_VERSION || "v21.0";
+    try {
+      const { data } = await axios.get(
+        `https://graph.facebook.com/${version}/${account.phoneId}`,
+        { headers: { Authorization: `Bearer ${account.accessToken}` }, timeout: 20000 }
+      );
+      // Sincroniza o número verificado que a Meta devolve.
+      const updateData = { status: "CONNECTED" };
+      if (data?.display_phone_number) updateData.phone = String(data.display_phone_number).replace(/\D/g, "");
+      await prisma.whatsAppAccount.update({ where: { id }, data: updateData });
+      return res.json({
+        success: true,
+        status: "CONNECTED",
+        phone: updateData.phone || account.phone,
+        verifiedName: data?.verified_name || null,
+        qualityRating: data?.quality_rating || null,
+      });
+    } catch (e) {
+      await prisma.whatsAppAccount.update({ where: { id }, data: { status: "DISCONNECTED" } }).catch(() => {});
+      return res.status(400).json({
+        error: e.response?.data?.error?.message || e.message,
+        status: "DISCONNECTED",
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // POST /whatsapp/accounts/:id/reconnect
 // Reconecta/atualiza uma conexão travada: limpa cooldown + sessão presa e
 // deixa pronta para reabrir o QR (ou reconectar direto se as credenciais
@@ -79,6 +160,14 @@ export const reconnectAccount = async (req, res) => {
       where: { id, tenantId: req.tenantId },
     });
     if (!account) return res.status(404).json({ error: "Conexão não encontrada." });
+
+    // Conexão oficial (Cloud API) não tem QR — reconectar aqui não faz sentido.
+    if (account.phoneId && account.accessToken) {
+      return res.status(400).json({
+        error: "Esta é uma conexão oficial (WhatsApp Business API). Não há QR Code — edite as credenciais ou use 'Testar conexão'.",
+        mode: "CLOUD",
+      });
+    }
 
     await WhatsAppManager.forceReconnect(id);
     res.json({ success: true, message: "Reconexão iniciada. Abrindo QR se necessário." });
@@ -299,6 +388,15 @@ export const qrCodeStream = async (req, res) => {
     });
     if (!account) {
       sendEvent(JSON.stringify({ status: "ERROR", message: "Conta não encontrada" }));
+      return res.end();
+    }
+
+    // Conexão oficial não usa QR — avisa a UI em vez de tentar abrir sessão.
+    if (account.phoneId && account.accessToken) {
+      sendEvent(JSON.stringify({
+        status: "CLOUD",
+        message: "Conexão oficial (WhatsApp Business API) não usa QR Code. Edite as credenciais para atualizar.",
+      }));
       return res.end();
     }
 

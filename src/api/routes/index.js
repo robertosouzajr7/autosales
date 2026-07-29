@@ -101,6 +101,9 @@ router.post("/whatsapp/accounts", requireWhatsAppSlot, WhatsAppController.create
 router.delete("/whatsapp/accounts/:id", WhatsAppController.deleteAccount);
 router.post("/whatsapp/accounts/:id/reconnect", WhatsAppController.reconnectAccount);
 router.post("/whatsapp/accounts/meta", requireWhatsAppSlot, WhatsAppController.createMetaAccount);
+// Conexão oficial (Cloud API): editar credenciais e testar — não há QR aqui.
+router.put("/whatsapp/accounts/:id/meta", WhatsAppController.updateMetaAccount);
+router.post("/whatsapp/accounts/:id/test", WhatsAppController.testMetaConnection);
 router.get("/whatsapp/qr/:id", WhatsAppController.qrCodeStream);
 
 // Instagram Direct — conexão em 1 clique (OAuth Meta) e manual
