@@ -30,7 +30,7 @@ export const getMessages = async (req, res) => {
 
 export const sendMessage = async (req, res) => {
   const tenantId = req.tenantId;
-  const { leadId, content, role = "ASSISTANT", messageType = "TEXT" } = req.body;
+  const { leadId, content, role = "ASSISTANT", messageType = "TEXT", mediaUrl } = req.body;
 
   try {
     const lead = await prisma.lead.findUnique({
@@ -49,10 +49,30 @@ export const sendMessage = async (req, res) => {
       });
     }
 
+    // Fora da janela de 24h o WhatsApp recusa texto livre — só template
+    // aprovado inicia conversa. Barramos aqui para o atendente receber uma
+    // orientação clara em vez de um erro genérico da Meta.
+    const conv = await prisma.conversation.findUnique({
+      where: { leadId },
+      select: { lastInboundAt: true },
+    });
+    if (conv && !isWindowOpen(conv.lastInboundAt)) {
+      return res.status(409).json({
+        error: "A janela de 24h fechou. Use um template aprovado para reabrir a conversa.",
+        windowClosed: true,
+      });
+    }
+
     // Try sending via WhatsApp Manager
     let success = false;
-    if (messageType === 'AUDIO') {
-      success = await MessagingService.sendMedia(tenantId, lead.phone, content, 'audio');
+    const MEDIA = { AUDIO: 'audio', IMAGE: 'image', VIDEO: 'video', DOCUMENT: 'document' };
+    if (MEDIA[messageType]) {
+      // Áudio herda o comportamento antigo (URL vinha em content); os demais
+      // trazem o arquivo em mediaUrl e o texto vira legenda.
+      const url = mediaUrl || content;
+      success = await MessagingService.sendMedia(
+        tenantId, lead.phone, url, MEDIA[messageType], mediaUrl ? content : ''
+      );
     } else {
       success = await MessagingService.sendText(tenantId, lead.phone, content);
     }
@@ -77,7 +97,8 @@ export const sendMessage = async (req, res) => {
         tenantId,
         content,
         role,
-        messageType
+        messageType,
+        mediaUrl: mediaUrl || (messageType === "AUDIO" ? content : null)
       }
     });
     await touchConversation(message);
@@ -276,5 +297,112 @@ export const markRead = async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Envia um template aprovado para o lead. É o único caminho para reabrir a
+ * conversa depois que a janela de 24h fechou.
+ */
+export const sendTemplateToLead = async (req, res) => {
+  const tenantId = req.tenantId;
+  const { leadId, templateId, variables = [] } = req.body;
+
+  try {
+    const lead = await prisma.lead.findUnique({ where: { id: leadId, tenantId } });
+    if (!lead?.phone) return res.status(400).json({ error: "Lead inválido ou sem telefone." });
+    if (lead.optedOut) return res.status(403).json({ error: "Este contato pediu para não receber mensagens." });
+
+    const template = await prisma.messageTemplate.findFirst({ where: { id: templateId, tenantId } });
+    if (!template) return res.status(404).json({ error: "Template não encontrado." });
+    if (template.status !== "APPROVED") {
+      return res.status(400).json({ error: "Só é possível enviar template aprovado pela Meta." });
+    }
+
+    // Template exige a conexão oficial: o Baileys não tem esse conceito.
+    const accounts = await prisma.whatsAppAccount.findMany({
+      where: { tenantId, channel: { not: "INSTAGRAM" } },
+      orderBy: { createdAt: "asc" },
+    });
+    const sender =
+      accounts.find((a) => a.id === lead.waAccountId && a.phoneId && a.accessToken) ||
+      accounts.find((a) => a.phoneId && a.accessToken);
+    if (!sender) return res.status(400).json({ error: "Nenhuma conexão oficial disponível para enviar template." });
+
+    const { MetaManager } = await import("../../../meta.js");
+    const result = await MetaManager.sendTemplate(sender.phoneId, sender.accessToken, lead.phone, {
+      name: template.name,
+      language: template.language,
+      variables: variables.length ? variables : [lead.name],
+    });
+    if (!result.ok) return res.status(502).json({ error: result.error || "Falha ao enviar o template." });
+
+    let conversation = await prisma.conversation.findUnique({ where: { leadId } });
+    if (!conversation) {
+      conversation = await prisma.conversation.create({ data: { leadId, tenantId, botActive: false } });
+    }
+
+    // Guarda o texto já com as variáveis aplicadas, para o histórico mostrar
+    // o que o cliente realmente recebeu.
+    const vars = variables.length ? variables : [lead.name];
+    const rendered = String(template.content || "").replace(/\{\{(\d+)\}\}/g, (_, n) => vars[Number(n) - 1] ?? "");
+
+    const message = await prisma.message.create({
+      data: {
+        conversationId: conversation.id,
+        tenantId,
+        content: rendered,
+        role: "ASSISTANT",
+        messageType: "TEXT",
+      },
+    });
+    await touchConversation(message);
+    messageEvents.emit("new_message", { tenantId, message });
+
+    res.json(message);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Upload de anexo do chat. Separado do upload do catálogo porque aqui o
+ * atendente também manda documento (PDF, planilha, contrato), que lá não faz
+ * sentido e por isso não é aceito.
+ */
+export const uploadAttachment = async (req, res) => {
+  const MAX_BYTES = 25 * 1024 * 1024; // limite prático do WhatsApp
+  const PERMITIDOS = [
+    "image/jpeg", "image/png", "image/webp", "image/gif",
+    "video/mp4", "video/3gpp",
+    "audio/ogg", "audio/mpeg", "audio/mp4", "audio/aac",
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "text/plain", "text/csv",
+  ];
+
+  try {
+    if (!req.file) return res.status(400).json({ error: "Nenhum arquivo enviado." });
+    if (req.file.size > MAX_BYTES) return res.status(400).json({ error: "Arquivo maior que 25 MB." });
+
+    const mime = req.file.mimetype;
+    if (!PERMITIDOS.includes(mime)) {
+      return res.status(400).json({ error: `Formato não suportado pelo WhatsApp: ${mime}` });
+    }
+
+    const { saveMedia } = await import("../services/StorageService.js");
+    const ext = (req.file.originalname.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const url = await saveMedia(req.file.buffer, ext, mime, req.tenantId, `${req.protocol}://${req.get("host")}`);
+
+    const kind = mime.startsWith("image/") ? "IMAGE"
+      : mime.startsWith("video/") ? "VIDEO"
+      : mime.startsWith("audio/") ? "AUDIO" : "DOCUMENT";
+
+    res.json({ url, kind, name: req.file.originalname });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 };

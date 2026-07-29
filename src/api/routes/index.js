@@ -150,6 +150,8 @@ router.put("/templates/:id", TemplateController.updateTemplate);
 router.post("/templates/:id/duplicate", TemplateController.duplicateTemplate);
 router.delete("/templates/:id", TemplateController.deleteTemplate);
 
+router.post("/messages/upload", upload.single("file"), MessageController.uploadAttachment);
+router.post("/messages/template", MessageController.sendTemplateToLead);
 router.get("/conversations", MessageController.getConversations);
 router.put("/conversations/:leadId/read", MessageController.markRead);
 router.put("/conversations/:leadId/toggle-bot", MessageController.toggleBot);

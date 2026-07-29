@@ -7,7 +7,7 @@ import {
   Circle, MoreVertical, Smartphone, Bot,
   Phone, Mail, User,
   ChevronRight, Calendar, Mic, MicOff, Play, Pause, Volume2,
-  Instagram, Globe
+  Instagram, Globe, Clock, FileText, Paperclip
 } from "lucide-react";
 
 // Metadados de canal para o inbox multicanal (ícone, rótulo e cor).
@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { notificationStore } from "@/lib/notifications";
 
@@ -137,8 +137,24 @@ function AudioPlayer({ url, isOut }: { url: string, isOut: boolean }) {
   );
 }
 
+/** Hoje mostra a hora; ontem, "Ontem"; antes disso, a data. */
+function fmtWhen(iso: string) {
+  const d = new Date(iso);
+  const hoje = new Date();
+  const mesmoDia = d.toDateString() === hoje.toDateString();
+  if (mesmoDia) return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const ontem = new Date(hoje);
+  ontem.setDate(hoje.getDate() - 1);
+  if (d.toDateString() === ontem.toDateString()) return "Ontem";
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+}
+
 export default function Conversations() {
   const [chats, setChats] = useState<any[]>([]);
+  // Templates aprovados, para reabrir conversa fora da janela de 24h.
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [templateModal, setTemplateModal] = useState(false);
+  const [sendingTemplate, setSendingTemplate] = useState(false);
   const [connections, setConnections] = useState<any[]>([]);
   const [channelFilter, setChannelFilter] = useState<string>("ALL"); // ALL | conexão(id) | SITE
   const [search, setSearch] = useState("");
@@ -175,17 +191,30 @@ export default function Conversations() {
   const fetchData = async () => {
     try {
       const token = localStorage.getItem("token");
-      const [leadsRes, settingsRes, connRes] = await Promise.all([
-        fetch("/api/leads", { headers: { "Authorization": `Bearer ${token}` } }),
+      const [convRes, settingsRes, connRes, tplRes] = await Promise.all([
+        fetch("/api/conversations", { headers: { "Authorization": `Bearer ${token}` } }),
         fetch("/api/settings", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch("/api/whatsapp/accounts", { headers: { "Authorization": `Bearer ${token}` } })
+        fetch("/api/whatsapp/accounts", { headers: { "Authorization": `Bearer ${token}` } }),
+        fetch("/api/templates", { headers: { "Authorization": `Bearer ${token}` } })
       ]);
 
-      const leadsData = await leadsRes.json();
+      const convData = convRes.ok ? await convRes.json() : [];
       const settingsData = await settingsRes.json();
       const connData = connRes.ok ? await connRes.json() : [];
+      const tplData = tplRes.ok ? await tplRes.json() : [];
 
-      setChats(Array.isArray(leadsData) ? leadsData : []);
+      // O endpoint já devolve ordenado por última mensagem. `id` vira o leadId
+      // porque o resto da tela (mensagens, toggle do bot) trabalha com ele.
+      setChats(
+        (Array.isArray(convData) ? convData : []).map((c: any) => ({
+          ...c,
+          id: c.leadId,
+          conversationId: c.id,
+          waAccountId: c.accountId,
+          conversations: [{ botActive: c.botActive }],
+        }))
+      );
+      setTemplates(tplData.filter((t: any) => t.status === "APPROVED"));
       setConnections(Array.isArray(connData) ? connData : []);
       setHasWhatsApp(!!settingsData.hasWhatsAppConnection);
     } catch (e) {}
@@ -268,6 +297,55 @@ export default function Conversations() {
       toast({ title: "Falha na conexão", variant: "destructive" });
     }
     setCallingLoading(false);
+  };
+
+  /** Sobe o arquivo e envia como mídia pelo canal do lead. */
+  const sendFile = async (file: File) => {
+    if (!selectedChat) return;
+    const token = localStorage.getItem("token");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const up = await fetch("/api/messages/upload", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: fd });
+      const upData = await up.json();
+      if (!up.ok || !upData.url) throw new Error(upData.error || "Falha no upload");
+
+      const res = await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          leadId: selectedChat.id, content: file.name, mediaUrl: upData.url,
+          messageType: upData.kind, role: "SDR",
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Falha ao enviar");
+      fetchMessages(selectedChat.id);
+    } catch (e: any) {
+      toast({ title: e.message || "Não foi possível enviar o arquivo", variant: "destructive" });
+    }
+  };
+
+  /** Template aprovado — único jeito de reabrir conversa fora das 24h. */
+  const sendTemplate = async (templateId: string) => {
+    if (!selectedChat) return;
+    setSendingTemplate(true);
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch("/api/messages/template", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ leadId: selectedChat.id, templateId }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Falha ao enviar template");
+      toast({ title: "Template enviado" });
+      setTemplateModal(false);
+      fetchMessages(selectedChat.id);
+      fetchData();
+    } catch (e: any) {
+      toast({ title: e.message, variant: "destructive" });
+    } finally { setSendingTemplate(false); }
   };
 
   const handleSend = async () => {
@@ -358,6 +436,14 @@ export default function Conversations() {
     selectedChatRef.current = selectedChat;
     if (selectedChat) {
       fetchMessages(selectedChat.id);
+      // Abrir a conversa marca como lida, como em qualquer chat.
+      if (selectedChat.unreadCount > 0) {
+        const token = localStorage.getItem("token");
+        fetch(`/api/conversations/${selectedChat.id}/read`, {
+          method: "PUT", headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => {});
+        setChats((prev) => prev.map((c) => (c.id === selectedChat.id ? { ...c, unreadCount: 0 } : c)));
+      }
       setCountOfUnread(0);
     }
   }, [selectedChat]);
@@ -401,7 +487,7 @@ export default function Conversations() {
     return () => eventSource.close();
   }, []);
 
-  // Filtra as conversas pelo canal/conexão selecionado e pela busca por nome.
+  // O backend já entrega ordenado por última mensagem; aqui só filtramos.
   const visibleChats = chats.filter((c: any) => {
     if (channelFilter === "SITE") { if ((c.channel || "").toUpperCase() !== "SITE") return false; }
     else if (channelFilter !== "ALL") { if (c.waAccountId !== channelFilter) return false; }
@@ -513,13 +599,18 @@ export default function Conversations() {
                             <p className="font-semibold text-sm truncate">{chat.name}</p>
                           </div>
                           <span className={`text-xs font-bold uppercase shrink-0 ${selectedChat?.id === chat.id ? 'text-white/40' : 'text-slate-300'}`}>
-                            {chat.conversations?.[0]?.messages?.slice(-1)[0]?.createdAt ? new Date(chat.conversations[0].messages.slice(-1)[0].createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
+                            {chat.lastMessageAt ? fmtWhen(chat.lastMessageAt) : ""}
                           </span>
                        </div>
                        <div className="flex items-center gap-1.5">
-                         <p className={`text-xs font-bold truncate flex-1 ${selectedChat?.id === chat.id ? 'text-white/50' : 'text-slate-400'}`}>
-                           {chat.conversations?.[0]?.messages?.slice(-1)[0]?.content || "Nenhuma mensagem iniciada"}
+                         <p className={`text-xs truncate flex-1 ${chat.unreadCount > 0 && selectedChat?.id !== chat.id ? 'font-bold text-slate-600' : 'font-bold'} ${selectedChat?.id === chat.id ? 'text-white/50' : chat.unreadCount > 0 ? '' : 'text-slate-400'}`}>
+                           {chat.lastMessagePreview || "Nenhuma mensagem iniciada"}
                          </p>
+                         {chat.unreadCount > 0 && selectedChat?.id !== chat.id && (
+                           <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-emerald-500 text-white text-[10px] font-bold flex items-center justify-center">
+                             {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
+                           </span>
+                         )}
                          {/* Sinaliza conversas em que a IA está pausada (atendimento humano) */}
                          {chat.conversations?.[0]?.botActive === false && (
                            <span
@@ -711,6 +802,24 @@ export default function Conversations() {
                     <Button onClick={stopRecording} className="h-10 px-5 bg-red-500 hover:bg-red-600 rounded-2xl text-xs font-semibold text-white"><MicOff className="w-4 h-4 mr-1" /> Parar</Button>
                     <Button onClick={cancelAudio} variant="ghost" size="icon" className="text-slate-400 rounded-xl">✕</Button>
                   </div>
+                ) : selectedChat.windowOpen === false ? (
+                  // Fora da janela de 24h o WhatsApp recusa texto livre: em vez
+                  // de deixar digitar e falhar, oferecemos o caminho válido.
+                  <div className="flex items-center gap-3 bg-amber-50 p-4 pl-5 rounded-2xl border border-amber-100">
+                    <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-amber-900">Janela de 24h encerrada</p>
+                      <p className="text-[11px] text-amber-700">
+                        O cliente precisa responder para reabrir o atendimento — ou envie um template aprovado.
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => setTemplateModal(true)}
+                      className="h-9 px-4 bg-amber-600 hover:bg-amber-700 rounded-2xl text-xs font-bold text-white shrink-0"
+                    >
+                      <FileText className="w-3.5 h-3.5 mr-1.5" /> Enviar template
+                    </Button>
+                  </div>
                 ) : (
                   // Input normal
                   <form onSubmit={(e) => { e.preventDefault(); handleSend(); }}
@@ -718,6 +827,16 @@ export default function Conversations() {
                     <Input placeholder="Responda manualmente ou deixe a IA agir..."
                       className="border-none bg-transparent shadow-none focus-visible:ring-0 font-bold text-xs"
                       value={message} onChange={e => setMessage(e.target.value)} />
+                    <input
+                      type="file" id="chat-file" className="hidden"
+                      accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) sendFile(f); e.target.value = ""; }}
+                    />
+                    <button type="button" onClick={() => document.getElementById("chat-file")?.click()}
+                      title="Enviar imagem, vídeo ou documento"
+                      className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-[#2563EB] hover:bg-blue-50 transition-colors shrink-0">
+                      <Paperclip className="w-5 h-5" />
+                    </button>
                     <button type="button" onClick={startRecording}
                       className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-[#2563EB] hover:bg-blue-50 transition-colors shrink-0">
                       <Mic className="w-5 h-5" />
@@ -768,6 +887,36 @@ export default function Conversations() {
       </div>
 
       {/* MODAL DE CONTATO VIA WHATSAPP */}
+      {/* Templates aprovados para reabrir conversa fora da janela de 24h */}
+      <Dialog open={templateModal} onOpenChange={setTemplateModal}>
+        <DialogContent className="max-w-md rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="font-bold">Enviar template</DialogTitle>
+            <DialogDescription>
+              Fora da janela de 24h o WhatsApp só aceita mensagens aprovadas pela Meta.
+              O envio reabre a conversa por mais 24h.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-80 overflow-y-auto py-2">
+            {templates.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-8">
+                Nenhum template aprovado ainda.{" "}
+                <a href="/templates" className="text-[#2563EB] font-bold underline">Criar um</a>
+              </p>
+            ) : templates.map((t) => (
+              <button
+                key={t.id} disabled={sendingTemplate}
+                onClick={() => sendTemplate(t.id)}
+                className="w-full text-left p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 transition disabled:opacity-50"
+              >
+                <span className="block font-bold text-sm text-slate-700">{t.name}</span>
+                <span className="block text-xs text-slate-500 mt-1 line-clamp-2">{t.content}</span>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={callModalOpen} onOpenChange={setCallModalOpen}>
         <DialogContent className="max-w-lg p-0 border-none shadow-sm rounded-2xl overflow-hidden">
           {/* Header */}
