@@ -63,6 +63,27 @@ export const GEMINI_VOICES = [
   { id: "Orus", name: "Orus (masculina, firme)" },
 ];
 
+/**
+ * Confere se o arquivo é um OGG com stream Opus — o único formato que o
+ * WhatsApp renderiza como nota de voz. A primeira página traz "OggS" seguido
+ * do cabeçalho "OpusHead" (num OGG/Vorbis viria "\x01vorbis").
+ */
+function isOpusOgg(filePath) {
+  let fd;
+  try {
+    fd = fs.openSync(filePath, "r");
+    const head = Buffer.alloc(64);
+    const read = fs.readSync(fd, head, 0, 64, 0);
+    if (read < 36) return false;
+    if (head.subarray(0, 4).toString("latin1") !== "OggS") return false;
+    return head.includes("OpusHead");
+  } catch {
+    return false;
+  } finally {
+    if (fd !== undefined) { try { fs.closeSync(fd); } catch (_) {} }
+  }
+}
+
 // Envolve PCM (16-bit LE, mono) em um cabeçalho WAV para virar arquivo tocável.
 function pcmToWav(pcmBuffer, sampleRate = 24000, channels = 1, bitsPerSample = 16) {
   const byteRate = (sampleRate * channels * bitsPerSample) / 8;
@@ -248,10 +269,20 @@ class VoiceService {
     try {
       await execFileAsync("ffmpeg", [
         "-y", "-i", srcPath,
+        // -vn/-map_metadata descartam capa e tags: um OGG com arte embutida é
+        // tratado como faixa de música, não como nota de voz.
+        "-vn", "-map_metadata", "-1",
         "-c:a", "libopus", "-b:a", "32k", "-ar", "48000", "-ac", "1",
         "-application", "voip",
-        oggPath,
+        "-f", "ogg", oggPath,
       ]);
+      // Se o ffmpeg da imagem não tiver libopus ele pode cair em Vorbis, que o
+      // WhatsApp exibe como arquivo — melhor detectar aqui do que no celular.
+      if (!isOpusOgg(oggPath)) {
+        console.warn(`[Voice] ⚠️ ${base}.ogg não saiu em Opus (libopus ausente?). O WhatsApp não exibiria como nota de voz.`);
+        try { fs.unlinkSync(oggPath); } catch (_) {}
+        return `/api/uploads/${path.basename(srcPath)}`;
+      }
       try { fs.unlinkSync(srcPath); } catch (_) {}
       console.log(`[Voice] 🔊 TTS gerado em OGG/Opus: ${base}.ogg`);
       return `/api/uploads/${base}.ogg`;

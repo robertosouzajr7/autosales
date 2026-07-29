@@ -10,6 +10,17 @@ const INTERNAL_PORT = process.env.PORT || 3000;
 // Mesmo diretório de uploads do StorageService (volume persistente).
 const MEDIA_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), 'public', 'uploads');
 
+/**
+ * Confere se o buffer é mesmo um OGG com stream Opus. A primeira página do
+ * container começa em "OggS" e traz o cabeçalho "OpusHead" logo em seguida
+ * (num OGG/Vorbis viria "\x01vorbis"). Só esse formato vira nota de voz.
+ */
+function isOpusOgg(buffer) {
+    if (!Buffer.isBuffer(buffer) || buffer.length < 36) return false;
+    if (buffer.subarray(0, 4).toString('latin1') !== 'OggS') return false;
+    return buffer.subarray(0, 64).includes('OpusHead');
+}
+
 export class MetaManager {
     /**
      * Baixa uma mídia recebida pela Cloud API. São 2 passos: resolver o
@@ -44,9 +55,14 @@ export class MetaManager {
      */
     static async uploadMedia(phoneId, accessToken, buffer, mimeType, filename) {
         try {
+            // O campo `type` aceita só o mime base; os parâmetros (ex.:
+            // "; codecs=opus") vão no Content-Type da parte do arquivo — é ele
+            // que faz o WhatsApp tratar o OGG como nota de voz e não como
+            // arquivo de música.
+            const baseType = String(mimeType).split(';')[0].trim();
             const form = new FormData();
             form.append('messaging_product', 'whatsapp');
-            form.append('type', mimeType);
+            form.append('type', baseType);
             form.append('file', new Blob([buffer], { type: mimeType }), filename);
             const { data } = await axios.post(
                 `https://graph.facebook.com/${GRAPH_VERSION}/${phoneId}/media`,
@@ -69,12 +85,14 @@ export class MetaManager {
             console.warn(`[Meta API] Áudio não encontrado: ${filePath}`);
             return false;
         }
-        if (!/\.ogg$/i.test(filePath)) {
-            console.warn(`[Meta API] Áudio não está em OGG/Opus (${path.extname(filePath)}) — não enviado.`);
+        const buffer = fs.readFileSync(filePath);
+        if (!isOpusOgg(buffer)) {
+            console.warn(`[Meta API] ${path.basename(filePath)} não é OGG/Opus — o WhatsApp exibiria como arquivo de áudio. Não enviado.`);
             return false;
         }
-        const buffer = fs.readFileSync(filePath);
-        const mediaId = await this.uploadMedia(phoneId, accessToken, buffer, 'audio/ogg', path.basename(filePath));
+        // O ";codecs=opus" é o que diferencia nota de voz de arquivo de música
+        // na Cloud API — ela não tem o flag `ptt` do Baileys.
+        const mediaId = await this.uploadMedia(phoneId, accessToken, buffer, 'audio/ogg; codecs=opus', path.basename(filePath));
         if (!mediaId) return false;
         try {
             await axios.post(
@@ -109,7 +127,8 @@ export class MetaManager {
                 const MIME = {
                     '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
                     '.webp': 'image/webp', '.gif': 'image/gif', '.mp4': 'video/mp4',
-                    '.ogg': 'audio/ogg', '.mp3': 'audio/mpeg', '.pdf': 'application/pdf',
+                    // A Meta não aceita audio/ogg "puro" — só o perfil Opus.
+                    '.ogg': 'audio/ogg; codecs=opus', '.mp3': 'audio/mpeg', '.pdf': 'application/pdf',
                 };
                 const mime = MIME[ext] || 'application/octet-stream';
                 const mediaId = await this.uploadMedia(phoneId, accessToken, buffer, mime, path.basename(localPath));
