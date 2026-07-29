@@ -19,6 +19,7 @@ import * as AutomationController from "../controllers/AutomationController.js";
 import * as SdrController from "../controllers/SdrController.js";
 import * as MessageController from "../controllers/MessageController.js";
 import * as TemplateController from "../controllers/TemplateController.js";
+import * as CampaignController from "../controllers/CampaignController.js";
 import * as AnalyticsController from "../controllers/AnalyticsController.js";
 import * as FinancialController from "../controllers/FinancialController.js";
 import * as BillingController from "../controllers/BillingController.js";
@@ -132,6 +133,15 @@ router.get("/analytics", AnalyticsController.getAnalytics);
 router.get("/messages/:leadId", MessageController.getMessages);
 router.post("/messages", requireActiveSubscription, MessageController.sendMessage);
 router.post("/messages/call-intent", requireActiveSubscription, MessageController.callIntent);
+// Disparo em massa (API oficial da Meta)
+router.get("/campaigns", CampaignController.listCampaigns);
+router.get("/campaigns/quota", CampaignController.getCampaignQuota);
+router.post("/campaigns/preview", CampaignController.previewCampaign);
+router.post("/campaigns", CampaignController.createCampaign);
+router.post("/campaigns/:id/start", CampaignController.startCampaign);
+router.post("/campaigns/:id/pause", CampaignController.pauseCampaign);
+router.delete("/campaigns/:id", CampaignController.deleteCampaign);
+
 // Templates de mensagem (WhatsApp Business / Meta)
 router.get("/templates", TemplateController.listTemplates);
 router.post("/templates", TemplateController.createTemplate);

@@ -177,6 +177,16 @@ model Campaign {
 
   targetTagIds String? // IDs das tags participantes (JSON string)
 
+  // Conexão que dispara e projeção congelada na criação — a tarifa pode
+  // mudar depois, e o histórico precisa refletir o que foi cobrado.
+  accountId      String?
+  recipientCount Int       @default(0)
+  estimatedCost  Float     @default(0) // custo em BRL projetado
+  variables      String? // JSON: valores fixos dos {{n}} do template
+  errorLog       String? // últimos erros do disparo, para diagnóstico
+  startedAt      DateTime?
+  finishedAt     DateTime?
+
   sentCount      Int @default(0)
   deliveredCount Int @default(0)
   readCount      Int @default(0)
@@ -234,6 +244,7 @@ model Plan {
   maxSdrs               Int @default(1)
   maxUsers              Int @default(2) // usuários na equipe
   maxWhatsAppNumbers    Int @default(1) // números conectados
+  maxCampaignMessages   Int @default(0) // disparos em massa/mês; 0 = recurso desligado
   maxKnowledgeBaseChars Int @default(50000) // tamanho do treino do agente
 
   // Usage Credits (renovam por mês)
@@ -568,8 +579,13 @@ model PlatformSettings {
   // Provedor de TTS: "GEMINI" | "ELEVENLABS"
   voiceProvider    String? @default("GEMINI")
   elevenLabsApiKey String?
+  // Tarifas da Meta por mensagem (USD), editáveis pelo admin porque a Meta
+  // reajusta sem aviso. JSON: { marketing, utility, authentication }.
+  waRates          String?
+  waMarkup         Float   @default(2.0) // multiplicador sobre o custo, igual ao dos tokens
+
   // Vozes LIBERADAS para as contas — JSON: [{ id, name }]. Vazio = todas.
-  enabledVoices    String?
+  enabledVoices String?
 
   // ─── Precificação de tokens (planos e recargas) ───
   // Câmbio USD→BRL usado para converter o preço real dos provedores.
