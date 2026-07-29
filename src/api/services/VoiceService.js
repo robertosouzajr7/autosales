@@ -360,7 +360,7 @@ class VoiceService {
       if (isOpusOgg(buf)) {
         const oggPath = path.join(AUDIO_DIR, `${base}.ogg`);
         fs.writeFileSync(oggPath, buf);
-        sw.done(`${voice} · ${text.length} chars · opus direto`);
+        sw.done(`${ELEVEN_MODEL} · ${voice} · ${text.length} chars · opus direto`);
         return `/api/uploads/${base}.ogg`;
       }
 
@@ -369,7 +369,7 @@ class VoiceService {
       fs.writeFileSync(rawPath, buf);
       const out = await this._toOpus(rawPath, base);
       sw.lap("ffmpeg");
-      sw.done(`${voice} · ${text.length} chars`);
+      sw.done(`${ELEVEN_MODEL} · ${voice} · ${text.length} chars`);
       return out;
     } catch (e) {
       // O corpo do erro vem como arraybuffer — converte para texto legível.
@@ -410,7 +410,7 @@ class VoiceService {
       fs.writeFileSync(wavPath, wav);
       const out = await this._toOpus(wavPath, base);
       sw.lap("ffmpeg");
-      sw.done(`${voice} · ${text.length} chars`);
+      sw.done(`${TTS_MODEL} · ${voice} · ${text.length} chars`);
       return out;
     } catch (e) {
       console.error("[Voice] Erro no TTS:", e.response?.data?.error?.message || e.message);
