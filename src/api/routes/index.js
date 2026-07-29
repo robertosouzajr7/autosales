@@ -18,6 +18,7 @@ import * as WhatsAppController from "../controllers/WhatsAppController.js";
 import * as AutomationController from "../controllers/AutomationController.js";
 import * as SdrController from "../controllers/SdrController.js";
 import * as MessageController from "../controllers/MessageController.js";
+import * as TemplateController from "../controllers/TemplateController.js";
 import * as AnalyticsController from "../controllers/AnalyticsController.js";
 import * as FinancialController from "../controllers/FinancialController.js";
 import * as BillingController from "../controllers/BillingController.js";
@@ -131,6 +132,14 @@ router.get("/analytics", AnalyticsController.getAnalytics);
 router.get("/messages/:leadId", MessageController.getMessages);
 router.post("/messages", requireActiveSubscription, MessageController.sendMessage);
 router.post("/messages/call-intent", requireActiveSubscription, MessageController.callIntent);
+// Templates de mensagem (WhatsApp Business / Meta)
+router.get("/templates", TemplateController.listTemplates);
+router.post("/templates", TemplateController.createTemplate);
+router.post("/templates/sync", TemplateController.syncTemplates);
+router.put("/templates/:id", TemplateController.updateTemplate);
+router.post("/templates/:id/duplicate", TemplateController.duplicateTemplate);
+router.delete("/templates/:id", TemplateController.deleteTemplate);
+
 router.get("/conversations", MessageController.getConversations);
 router.put("/conversations/:leadId/read", MessageController.markRead);
 router.put("/conversations/:leadId/toggle-bot", MessageController.toggleBot);

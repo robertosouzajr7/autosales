@@ -30,8 +30,8 @@ model Tenant {
   stripeCustomerId     String?
   stripeSubscriptionId String?
 
-  financialRecords   FinancialRecord[]
-  invoices           Invoice[]
+  financialRecords FinancialRecord[]
+  invoices         Invoice[]
 
   // Customization
   webChatUrl         String?
@@ -43,19 +43,19 @@ model Tenant {
   elevenLabsKey      String?
 
   // Perfil do Negócio (contexto do agente de IA)
-  businessType     String? // CLINIC, BEAUTY, FITNESS, SERVICES, RESTAURANT, OTHER
-  businessAbout    String? // descrição/apresentação do negócio
-  businessAddress  String? // endereço completo
-  businessPayment  String? // formas de pagamento aceitas
+  businessType      String? // CLINIC, BEAUTY, FITNESS, SERVICES, RESTAURANT, OTHER
+  businessAbout     String? // descrição/apresentação do negócio
+  businessAddress   String? // endereço completo
+  businessPayment   String? // formas de pagamento aceitas
   businessExtraInfo String? // estacionamento, acessibilidade, orientações gerais
-  labelOverrides   String? // JSON: rótulos customizados (ex.: {"customer":"Aluno","service":"Aula"})
+  labelOverrides    String? // JSON: rótulos customizados (ex.: {"customer":"Aluno","service":"Aula"})
 
   // Consumption Tracking (Real-time)
-  usedTokens           Int      @default(0)
-  extraTokens          Int      @default(0) // saldo de tokens comprados (recarga), consumido após a franquia do plano
-  usedMessages         Int      @default(0)
-  qualifiedLeadsCount  Int      @default(0)
-  lastUsageReset       DateTime @default(now())
+  usedTokens          Int      @default(0)
+  extraTokens         Int      @default(0) // saldo de tokens comprados (recarga), consumido após a franquia do plano
+  usedMessages        Int      @default(0)
+  qualifiedLeadsCount Int      @default(0)
+  lastUsageReset      DateTime @default(now())
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -193,9 +193,23 @@ model Campaign {
 model MessageTemplate {
   id       String  @id @default(uuid())
   name     String
-  content  String // Texto com {{name}}
-  mediaUrl String? // Imagem/Vídeo
+  content  String // Texto do corpo, com {{1}}, {{2}}… (placeholders da Meta)
+  mediaUrl String? // Imagem/Vídeo do cabeçalho
   buttons  String? // JSON string dos botões
+
+  // Sincronia com a Meta. O template vive na WABA, não no número: accountId
+  // guarda a conexão usada para sincronizar (de onde saem wabaId e token).
+  // Só status APPROVED pode ser disparado.
+  accountId      String?
+  metaId         String? // id na Meta; nulo enquanto for rascunho local
+  language       String    @default("pt_BR")
+  category       String    @default("UTILITY") // MARKETING | UTILITY | AUTHENTICATION
+  status         String    @default("DRAFT") // DRAFT | PENDING | APPROVED | REJECTED | PAUSED
+  headerType     String? // TEXT | IMAGE | VIDEO | DOCUMENT
+  headerText     String?
+  footerText     String?
+  rejectedReason String?
+  lastSyncedAt   DateTime?
 
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -204,10 +218,13 @@ model MessageTemplate {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, name, language])
+  @@index([tenantId, status])
 }
 
 model Plan {
-  id           String  @id @default(uuid())
+  id           String @id @default(uuid())
   name         String // Starter, Pro, Enterprise
   priceMonthly Float
   priceYearly  Float
@@ -215,8 +232,8 @@ model Plan {
   // Hard Limits (aplicados no acesso ao recurso)
   maxLeads              Int @default(500)
   maxSdrs               Int @default(1)
-  maxUsers              Int @default(2)  // usuários na equipe
-  maxWhatsAppNumbers    Int @default(1)  // números conectados
+  maxUsers              Int @default(2) // usuários na equipe
+  maxWhatsAppNumbers    Int @default(1) // números conectados
   maxKnowledgeBaseChars Int @default(50000) // tamanho do treino do agente
 
   // Usage Credits (renovam por mês)
@@ -224,12 +241,12 @@ model Plan {
   maxMessages Int @default(1000)
 
   // Feature toggles — ligam/desligam módulos inteiros
-  enableSdr         Boolean @default(true)
-  enableTokens      Boolean @default(true)
-  enableMessages    Boolean @default(true)
-  enableCalendar    Boolean @default(true)  // Google Calendar
-  enableAutomations Boolean @default(true)  // Lembretes/no-show
-  enableWebhooks    Boolean @default(false) // API pública/webhooks
+  enableSdr          Boolean @default(true)
+  enableTokens       Boolean @default(true)
+  enableMessages     Boolean @default(true)
+  enableCalendar     Boolean @default(true) // Google Calendar
+  enableAutomations  Boolean @default(true) // Lembretes/no-show
+  enableWebhooks     Boolean @default(false) // API pública/webhooks
   enableVoice        Boolean @default(false) // agente ouve (STT) e responde (TTS) em áudio
   enablePremiumVoice Boolean @default(false) // libera as vozes premium (ElevenLabs)
 
@@ -250,16 +267,16 @@ model Plan {
 }
 
 model SdrBot {
-  id     String  @id @default(uuid())
-  name   String
-  role   String  @default("INBOUND") // INBOUND, OUTBOUND
+  id   String @id @default(uuid())
+  name String
+  role String @default("INBOUND") // INBOUND, OUTBOUND
 
   // Função do agente (preset de persona + skills). Ver AgentFunctions.js.
   agentFunction String  @default("SCHEDULER") // SDR, SELLER, SUPPORT, SCHEDULER, CONSULTANT
   skills        String? // JSON array de skills habilitadas (ex.: ["schedule","send_catalog"])
 
   prompt String? @default("Você é um SDR focado em qualificar leads.")
-  
+
   // Áudio e Voz (ElevenLabs)
   voiceId      String? @default("21m00Tcm4TlvDq8ikWAM") // ID da voz (Default: Rachel)
   responseMode String  @default("TEXT") // TEXT, AUDIO, BOTH
@@ -348,13 +365,13 @@ model Automation {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String
-  phone     String? // WhatsApp do admin para Modo Comando
-  role      String   @default("ADMIN") // ADMIN, AGENT, OWNER, SUPERADMIN
-  tenantId  String
+  id       String  @id @default(uuid())
+  name     String
+  email    String  @unique
+  password String
+  phone    String? // WhatsApp do admin para Modo Comando
+  role     String  @default("ADMIN") // ADMIN, AGENT, OWNER, SUPERADMIN
+  tenantId String
 
   // Verificação de e-mail
   emailVerified              Boolean   @default(false)
@@ -379,17 +396,17 @@ model User {
 }
 
 model Conversation {
-  id        String   @id @default(uuid())
-  leadId    String   @unique
+  id        String  @id @default(uuid())
+  leadId    String  @unique
   tenantId  String
-  botActive Boolean  @default(true)
+  botActive Boolean @default(true)
 
   // Ordenação e não-lidas do inbox. lastMessageAt existe separado de
   // updatedAt porque updatedAt muda a cada toggle do bot, o que reordenaria
   // a lista sem mensagem nova.
   lastMessageAt      DateTime?
   lastMessagePreview String? // trecho da última mensagem, p/ a lista
-  unreadCount        Int     @default(0)
+  unreadCount        Int       @default(0)
 
   // Última mensagem RECEBIDA do cliente: define a janela de 24h da Meta,
   // fora da qual só é possível iniciar conversa por template aprovado.
@@ -539,9 +556,9 @@ model PlatformSettings {
 
   // ─── Motor de IA (configurável no painel admin) ───
   // Provedor ativo do agente: "GEMINI" | "OPENAI" | "ANTHROPIC"
-  aiProvider    String? @default("GEMINI")
+  aiProvider      String? @default("GEMINI")
   // Modelo escolhido (ex.: "gemini-2.5-flash", "gpt-4o", "claude-opus-4-8")
-  aiModel       String?
+  aiModel         String?
   // Chaves por provedor (uma para cada família de modelos)
   geminiApiKey    String?
   openaiApiKey    String?
@@ -549,10 +566,10 @@ model PlatformSettings {
 
   // ─── Motor de VOZ (também global, definido pelo admin) ───
   // Provedor de TTS: "GEMINI" | "ELEVENLABS"
-  voiceProvider     String? @default("GEMINI")
-  elevenLabsApiKey  String?
+  voiceProvider    String? @default("GEMINI")
+  elevenLabsApiKey String?
   // Vozes LIBERADAS para as contas — JSON: [{ id, name }]. Vazio = todas.
-  enabledVoices     String?
+  enabledVoices    String?
 
   // ─── Precificação de tokens (planos e recargas) ───
   // Câmbio USD→BRL usado para converter o preço real dos provedores.
@@ -568,8 +585,8 @@ model PlatformSettings {
 model TokenPackage {
   id        String   @id @default(uuid())
   name      String
-  tokens    Int      // quantos tokens de IA o pacote concede
-  price     Float    // preço em BRL
+  tokens    Int // quantos tokens de IA o pacote concede
+  price     Float // preço em BRL
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -634,9 +651,9 @@ model IcpProfile {
   goals       String? // Ex: Aumentar agendamentos, automatizar vendas
 
   // Configurações de Deep Research (IA Hunter)
-  relevantInfo        String? // Informações específicas que a IA deve buscar
-  searchKeywords      String? // Palavras-chave adicionais para o buscador
-  dailyResearchLimit  Int     @default(10) // Limite de pesquisas profundas por dia
+  relevantInfo       String? // Informações específicas que a IA deve buscar
+  searchKeywords     String? // Palavras-chave adicionais para o buscador
+  dailyResearchLimit Int     @default(10) // Limite de pesquisas profundas por dia
 
   // Automação
   isAutoHunterEnabled Boolean @default(false)
@@ -645,13 +662,13 @@ model IcpProfile {
   dailyLimit          Int     @default(200) // Limite de contatos diários
 
   // Vinculação específica de SDR (Opcional)
-  sdrId String? 
+  sdrId String?
 
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
   prospectionLogs ProspectionLog[]
 }
 
@@ -669,27 +686,27 @@ model Waitlist {
 }
 
 model ProspectionLog {
-  id        String   @id @default(uuid())
-  tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  icpId     String?
-  icp       IcpProfile? @relation(fields: [icpId], references: [id], onDelete: SetNull)
-  query     String
-  source    String   // Ex: GOOGLE_MAPS, LINKEDIN, APOLLO
-  leadsFound Int     @default(0)
-  status    String   // SUCCESS, FAILED
-  error     String?
-  createdAt DateTime @default(now())
+  id         String      @id @default(uuid())
+  tenantId   String
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  icpId      String?
+  icp        IcpProfile? @relation(fields: [icpId], references: [id], onDelete: SetNull)
+  query      String
+  source     String // Ex: GOOGLE_MAPS, LINKEDIN, APOLLO
+  leadsFound Int         @default(0)
+  status     String // SUCCESS, FAILED
+  error      String?
+  createdAt  DateTime    @default(now())
 }
 
 model FinancialRecord {
   id          String    @id @default(uuid())
   description String
   amount      Float
-  type        String    // REVENUE, EXPENSE
-  category    String    // Ex: Servidor, API OpenAI, Licença, Plano SaaS, etc.
+  type        String // REVENUE, EXPENSE
+  category    String // Ex: Servidor, API OpenAI, Licença, Plano SaaS, etc.
   isRecurring Boolean   @default(false)
-  frequency   String?   // MONTHLY, YEARLY
+  frequency   String? // MONTHLY, YEARLY
   dueDate     DateTime?
   paidAt      DateTime?
   tenantId    String?
@@ -699,20 +716,20 @@ model FinancialRecord {
 }
 
 model Invoice {
-  id          String    @id @default(uuid())
-  tenantId    String
-  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  amount      Float
-  status      String    @default("PENDING") // PENDING, PAID, OVERDUE, CANCELED
-  dueDate     DateTime
-  paidAt      DateTime?
+  id            String    @id @default(uuid())
+  tenantId      String
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  amount        Float
+  status        String    @default("PENDING") // PENDING, PAID, OVERDUE, CANCELED
+  dueDate       DateTime
+  paidAt        DateTime?
   // Período de competência (ex.: "2026-07"). Garante idempotência do cron:
   // uma fatura por tenant por período, imposta por constraint no banco.
   billingPeriod String?
   // Id da cobrança/pagamento no gateway; preenchido só pelo webhook.
   gatewayId     String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@unique([tenantId, billingPeriod])
 }
@@ -721,12 +738,12 @@ model Invoice {
 // rastreabilidade e conformidade (LGPD exige registro de tratamento).
 model AuditLog {
   id        String   @id @default(uuid())
-  tenantId  String?  // tenant afetado (quando aplicável)
-  actorId   String?  // usuário que executou (null = sistema/webhook)
-  action    String   // ex.: "INVOICE_PAID", "PLAN_UPDATED", "TENANT_DELETED"
-  entity    String?  // tipo da entidade afetada
-  entityId  String?  // id da entidade afetada
-  metadata  String?  // JSON com detalhes adicionais
+  tenantId  String? // tenant afetado (quando aplicável)
+  actorId   String? // usuário que executou (null = sistema/webhook)
+  action    String // ex.: "INVOICE_PAID", "PLAN_UPDATED", "TENANT_DELETED"
+  entity    String? // tipo da entidade afetada
+  entityId  String? // id da entidade afetada
+  metadata  String? // JSON com detalhes adicionais
   createdAt DateTime @default(now())
 
   @@index([tenantId])
@@ -776,7 +793,7 @@ model Service {
 model PaymentMethod {
   id       String  @id @default(uuid())
   tenantId String
-  name     String  // ex.: "Unimed", "PIX", "Cartão", "Vale-Refeição"
+  name     String // ex.: "Unimed", "PIX", "Cartão", "Vale-Refeição"
   notes    String? // observações (carência, limites, taxas)
   active   Boolean @default(true)
 

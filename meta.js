@@ -129,6 +129,111 @@ export class MetaManager {
     }
 
     /**
+     * Lista os templates da WABA. Templates vivem na conta (WABA), não no
+     * número — por isso a chamada usa wabaId, e não phoneId.
+     */
+    static async listTemplates(wabaId, accessToken) {
+        try {
+            const { data } = await axios.get(
+                `https://graph.facebook.com/${GRAPH_VERSION}/${wabaId}/message_templates`,
+                {
+                    headers: { Authorization: `Bearer ${accessToken}` },
+                    params: { limit: 200, fields: 'id,name,language,category,status,components,rejected_reason' },
+                    timeout: 30000,
+                }
+            );
+            return data?.data || [];
+        } catch (e) {
+            console.error('[Meta API] Erro ao listar templates:', e.response?.data?.error?.message || e.message);
+            return null;
+        }
+    }
+
+    /**
+     * Cria um template na Meta. Nasce PENDING e só pode ser disparado depois
+     * de aprovado — a aprovação é assíncrona e leva de minutos a horas.
+     * @returns {Promise<{id: string, status: string}|{error: string}>}
+     */
+    static async createTemplate(wabaId, accessToken, { name, language, category, components }) {
+        try {
+            const { data } = await axios.post(
+                `https://graph.facebook.com/${GRAPH_VERSION}/${wabaId}/message_templates`,
+                {
+                    name,
+                    language,
+                    category,
+                    components,
+                    // Deixa a Meta recategorizar em vez de rejeitar quando
+                    // discorda da categoria escolhida.
+                    allow_category_change: true,
+                },
+                { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, timeout: 30000 }
+            );
+            return { id: data?.id, status: data?.status || 'PENDING', category: data?.category };
+        } catch (e) {
+            const error = e.response?.data?.error;
+            console.error('[Meta API] Erro ao criar template:', error?.message || e.message);
+            return { error: error?.error_user_msg || error?.message || e.message };
+        }
+    }
+
+    /** Remove um template da WABA (por nome, como a Meta exige). */
+    static async deleteTemplate(wabaId, accessToken, name) {
+        try {
+            await axios.delete(
+                `https://graph.facebook.com/${GRAPH_VERSION}/${wabaId}/message_templates`,
+                { headers: { Authorization: `Bearer ${accessToken}` }, params: { name }, timeout: 30000 }
+            );
+            return true;
+        } catch (e) {
+            console.error('[Meta API] Erro ao remover template:', e.response?.data?.error?.message || e.message);
+            return false;
+        }
+    }
+
+    /**
+     * Dispara um template. É o único jeito de iniciar conversa fora da janela
+     * de 24h. `variables` preenche os {{1}}, {{2}}… do corpo, na ordem.
+     */
+    static async sendTemplate(phoneId, accessToken, to, { name, language = 'pt_BR', variables = [], headerMediaUrl = null }) {
+        const components = [];
+        if (headerMediaUrl) {
+            components.push({
+                type: 'header',
+                parameters: [{ type: 'image', image: { link: headerMediaUrl } }],
+            });
+        }
+        if (variables.length) {
+            components.push({
+                type: 'body',
+                parameters: variables.map((v) => ({ type: 'text', text: String(v ?? '') })),
+            });
+        }
+        try {
+            const { data } = await axios.post(
+                `https://graph.facebook.com/${GRAPH_VERSION}/${phoneId}/messages`,
+                {
+                    messaging_product: 'whatsapp',
+                    recipient_type: 'individual',
+                    to,
+                    type: 'template',
+                    template: {
+                        name,
+                        language: { code: language },
+                        ...(components.length ? { components } : {}),
+                    },
+                },
+                { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, timeout: 30000 }
+            );
+            return { ok: true, messageId: data?.messages?.[0]?.id || null };
+        } catch (e) {
+            const error = e.response?.data?.error;
+            console.error('[Meta API] Erro ao enviar template:', error?.message || e.message);
+            return { ok: false, error: error?.error_user_msg || error?.message || e.message };
+        }
+    }
+
+    /**
      * Envia mídia genérica (image | video | audio | document) pela Cloud API.
      * Aceita caminho local (/api/uploads/…) — sobe o arquivo e envia por
      * media_id — ou URL pública (envia por link).
