@@ -152,8 +152,8 @@ export default function Templates() {
     <DashboardLayout>
       <PageHeader
         title="Templates de mensagem"
-        description="Mensagens aprovadas pela Meta — necessárias para iniciar conversa fora da janela de 24h e para disparos em massa."
-        action={
+        subtitle="Mensagens aprovadas pela Meta — necessárias para iniciar conversa fora da janela de 24h e para disparos em massa."
+        actions={
           <div className="flex gap-2">
             <Button variant="outline" onClick={sync} disabled={syncing} className="rounded-2xl font-bold">
               <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? "animate-spin" : ""}`} />

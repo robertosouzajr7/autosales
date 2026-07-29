@@ -141,8 +141,8 @@ export default function Campaigns() {
     <DashboardLayout>
       <PageHeader
         title="Disparos em massa"
-        description="Envio de templates aprovados pela API oficial do WhatsApp."
-        action={
+        subtitle="Envio de templates aprovados pela API oficial do WhatsApp."
+        actions={
           <Button onClick={() => setModalOpen(true)} disabled={semFranquia} className="rounded-2xl font-bold bg-[#2563EB]">
             <Plus className="w-4 h-4 mr-2" /> Nova campanha
           </Button>
