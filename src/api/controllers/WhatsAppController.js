@@ -18,11 +18,19 @@ export const getAccounts = async (req, res) => {
       // Conexão oficial (Cloud API) x conexão via QR (Baileys). A oficial NÃO
       // tem QR — é configurada por credenciais e editada no painel.
       const isCloud = !!(acc.phoneId && acc.accessToken);
+      const isInstagram = acc.channel === "INSTAGRAM";
+      // Cloud API e Instagram não mantêm socket: não existe "cair a conexão".
+      // Enquanto as credenciais estiverem lá, a conexão está de pé — quem
+      // confirma de fato é o botão "testar". Ler o status do banco aqui faria
+      // um valor obsoleto aparecer como "desconectado" com tudo funcionando.
+      const derivedStatus = isCloud || (isInstagram && acc.accessToken)
+        ? "CONNECTED"
+        : acc.status;
       return {
         id: acc.id,
         name: acc.name,
         phone: acc.phone || "",
-        status: acc.status,
+        status: derivedStatus,
         channel: acc.channel || "WHATSAPP",
         mode: acc.channel === "INSTAGRAM" ? "INSTAGRAM" : (isCloud ? "CLOUD" : "QR"),
         enabled: acc.enabled !== false,

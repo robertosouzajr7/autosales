@@ -26,6 +26,16 @@ const WA_AUTH_BASE = process.env.WA_AUTH_DIR || path.join(process.cwd(), 'instan
 try { fs.mkdirSync(WA_AUTH_BASE, { recursive: true }); } catch (_) {}
 console.log(`[WhatsApp] Credenciais (auth_info) em: ${WA_AUTH_BASE}`);
 
+/**
+ * Conexões que NÃO são via QR: a oficial (Cloud API, identificada por
+ * phoneId + accessToken) e o Instagram. Elas não têm socket Baileys, então o
+ * estado delas nunca deve ser escrito por este módulo.
+ */
+export function isManagedElsewhere(account) {
+    if (!account) return false;
+    return account.channel === 'INSTAGRAM' || !!(account.phoneId && account.accessToken);
+}
+
 // Classe responsável por orquestrar múltiplas conexões de empresas (Multi-tenant SaaS)
 export class WhatsAppManager {
     /**
@@ -53,10 +63,19 @@ export class WhatsAppManager {
             // Verifica se a conta ainda existe no DB antes de tentar atualizar
             const account = await prisma.whatsAppAccount.findUnique({
                 where: { id: accountId },
-                select: { id: true }
+                select: { id: true, phoneId: true, accessToken: true, channel: true }
             });
 
             if (!account) return;
+
+            // Conexão oficial (Cloud API) ou Instagram não têm socket Baileys:
+            // o estado delas vem das credenciais, não daqui. Sem esta guarda,
+            // uma pasta auth_info órfã faz o Baileys marcar como DESCONECTADA
+            // uma conexão oficial que está funcionando normalmente.
+            if (isManagedElsewhere(account)) {
+                console.warn(`[WhatsApp DB] Ignorando status '${status}' para ${accountId}: conexão não é via QR.`);
+                return;
+            }
 
             const data = { status };
             if (phone) data.phone = phone;
@@ -478,6 +497,13 @@ export class WhatsAppManager {
                 const account = await prisma.whatsAppAccount.findUnique({ where: { id: accountId } });
                 if (!account) {
                     console.log(`[WhatsApp SaaS] Conta ${accountId} não existe mais no DB. Ignorando.`);
+                    continue;
+                }
+                // Número migrado para a API oficial costuma deixar a pasta
+                // auth_info para trás. Reconectar por QR aqui falha em loop e
+                // ainda sobrescreve o status da conexão oficial.
+                if (isManagedElsewhere(account)) {
+                    console.log(`[WhatsApp SaaS] ${accountId} (${account.name}) usa conexão oficial/Instagram — pulando restauração por QR. Credenciais antigas em ${path.join(instancesDir, accountId)} podem ser removidas.`);
                     continue;
                 }
                 console.log(`[WhatsApp SaaS] Reiniciando sessão salva para: ${accountId} (${account.name})`);
