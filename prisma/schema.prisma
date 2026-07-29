@@ -280,6 +280,11 @@ model SdrBot {
   postServiceCheckHours Int     @default(24) // Horas após serviço para enviar pós-venda
   enableWaitlist        Boolean @default(true) // Encaixe automático em desistências
 
+  // Conexões que este agente atende (JSON array de WhatsAppAccount.id).
+  // Vazio/nulo = atende todas as conexões da conta, que é o comportamento
+  // de quem só tem um número.
+  accountIds String?
+
   tenantId String
   active   Boolean @default(true)
 

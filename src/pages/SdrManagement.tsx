@@ -54,21 +54,25 @@ export default function SdrManagement() {
     enableWaitlist: true,
     voiceId: "Kore",
     responseMode: "TEXT",
+    accountIds: [] as string[],
     active: true
   });
   
   const [uploading, setUploading] = useState(false);
 
   const [hasWhatsApp, setHasWhatsApp] = useState<boolean>(false);
+  // Conexões da conta, para escolher quais o agente atende.
+  const [connections, setConnections] = useState<any[]>([]);
 
   const fetchData = async () => {
     const token = localStorage.getItem("token");
     try {
-      const [sdrsRes, settingsRes, fnRes, voicesRes] = await Promise.all([
+      const [sdrsRes, settingsRes, fnRes, voicesRes, connRes] = await Promise.all([
         fetch("/api/sdrs", { headers: { "Authorization": `Bearer ${token}` } }),
         fetch("/api/settings", { headers: { "Authorization": `Bearer ${token}` } }),
         fetch("/api/agent-functions", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch("/api/voices", { headers: { "Authorization": `Bearer ${token}` } })
+        fetch("/api/voices", { headers: { "Authorization": `Bearer ${token}` } }),
+        fetch("/api/whatsapp/accounts", { headers: { "Authorization": `Bearer ${token}` } })
       ]);
 
       const sdrData = await sdrsRes.json();
@@ -81,6 +85,7 @@ export default function SdrManagement() {
       setFunctions(fnData.functions || []);
       setSkillsCatalog(fnData.skills || []);
       setVoices(voiceData.voices || []);
+      setConnections(connRes.ok ? await connRes.json() : []);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
@@ -92,6 +97,8 @@ export default function SdrManagement() {
       setEditingSdr(sdr);
       let parsedSkills: string[] = [];
       try { parsedSkills = sdr.skills ? JSON.parse(sdr.skills) : []; } catch { parsedSkills = []; }
+      let parsedAccounts: string[] = [];
+      try { parsedAccounts = sdr.accountIds ? JSON.parse(sdr.accountIds) : []; } catch { parsedAccounts = []; }
       setForm({
         name: sdr.name || "",
         role: sdr.role || "SDR",
@@ -110,6 +117,7 @@ export default function SdrManagement() {
         enableWaitlist: sdr.enableWaitlist ?? true,
         voiceId: sdr.voiceId || "Kore",
         responseMode: sdr.responseMode || "TEXT",
+        accountIds: parsedAccounts,
         active: sdr.active ?? true
       });
     } else {
@@ -133,6 +141,7 @@ export default function SdrManagement() {
         enableWaitlist: true,
         voiceId: "Kore",
         responseMode: "TEXT",
+        accountIds: [],
         active: true
       });
     }
@@ -518,6 +527,51 @@ export default function SdrManagement() {
                     </div>
 
                     <Separator className="opacity-50" />
+
+                    {/* Conexões atendidas — só faz sentido com mais de um canal. */}
+                    {connections.length > 1 && (
+                      <div className="space-y-3">
+                        <div>
+                          <Label className="font-semibold text-xs text-slate-500 pl-1">Conexões que este agente atende</Label>
+                          <p className="text-xs text-slate-400 pl-1 mt-1">
+                            {form.accountIds.length === 0
+                              ? "Nenhuma marcada: o agente responde em todas as conexões."
+                              : `Responde em ${form.accountIds.length} de ${connections.length} conexões.`}
+                          </p>
+                        </div>
+                        <div className="space-y-1.5">
+                          {connections.map((c) => {
+                            const on = form.accountIds.includes(c.id);
+                            return (
+                              <button
+                                key={c.id}
+                                type="button"
+                                onClick={() => setForm({
+                                  ...form,
+                                  accountIds: on
+                                    ? form.accountIds.filter((x) => x !== c.id)
+                                    : [...form.accountIds, c.id],
+                                })}
+                                className={`w-full flex items-center gap-3 rounded-2xl px-5 py-3 text-left transition ${on ? "bg-[#2563EB]/10 ring-1 ring-[#2563EB]" : "bg-slate-50 hover:bg-slate-100"}`}
+                              >
+                                <span className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 ${on ? "bg-[#2563EB]" : "bg-slate-300"}`}>
+                                  {on && <Check className="w-3 h-3 text-white" />}
+                                </span>
+                                <span className="flex-1 min-w-0">
+                                  <span className="block text-sm font-bold text-slate-700 truncate">{c.name}</span>
+                                  <span className="block text-xs text-slate-400 truncate">
+                                    {c.channel === "INSTAGRAM" ? "Instagram" : c.mode === "CLOUD" ? "WhatsApp oficial" : "WhatsApp (QR)"}
+                                    {c.phone ? ` · ${c.phone}` : ""}
+                                  </span>
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {connections.length > 1 && <Separator className="opacity-50" />}
 
                     <div className="bg-slate-900 p-8 rounded-2xl space-y-6">
                        <div className="flex items-center gap-3 text-[#2DD4BF] mb-2">

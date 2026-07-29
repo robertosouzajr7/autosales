@@ -13,6 +13,33 @@ import cron from "node-cron";
 import axios from "axios";
 import { stopwatch } from "./src/api/utils/timing.js";
 
+/**
+ * Escolhe qual agente atende uma conexão. Um agente com `accountIds` vazio é
+ * curinga (atende tudo); quem lista conexões só responde às suas. O específico
+ * ganha do curinga, para que adicionar um agente dedicado a um número não exija
+ * mexer no agente que já existia.
+ */
+export function pickAgentForAccount(agents, accountId) {
+  if (!agents?.length) return null;
+
+  const listed = (a) => {
+    try {
+      const ids = a.accountIds ? JSON.parse(a.accountIds) : [];
+      return Array.isArray(ids) ? ids : [];
+    } catch {
+      return [];
+    }
+  };
+
+  if (accountId) {
+    const dedicated = agents.find((a) => listed(a).includes(accountId));
+    if (dedicated) return dedicated;
+  }
+  // Sem agente dedicado: cai no curinga. Se todos forem dedicados a outras
+  // conexões, usa o primeiro para não deixar o lead sem resposta.
+  return agents.find((a) => listed(a).length === 0) || agents[0];
+}
+
 // Traduz skills (ids amigáveis) em nomes de tools que o modelo entende.
 const SKILL_TO_TOOLS = {
   schedule: ["create_appointment", "get_availability"],
@@ -970,17 +997,19 @@ class AutomationEngine {
     const tid = lead.tenantId || context.tenantId;
     console.log(`[AutoEngine] 🔍 Buscando SDR para Tenant: ${tid}`);
 
-    const sdr = await prisma.sdrBot.findFirst({ 
-      where: { 
-        tenantId: tid, 
-        active: true 
-      } 
+    const candidates = await prisma.sdrBot.findMany({
+      where: { tenantId: tid, active: true },
+      orderBy: { createdAt: "asc" },
     });
+    const sdr = pickAgentForAccount(candidates, lead.waAccountId);
 
     if (!sdr) {
-      const allSdrs = await prisma.sdrBot.findMany({ where: { tenantId: tid } });
-      console.log(`[AutoEngine] ⚠️ Nenhum SDR ativo para o tenant ${tid}. (Total: ${allSdrs.length})`);
+      const total = await prisma.sdrBot.count({ where: { tenantId: tid } });
+      console.log(`[AutoEngine] ⚠️ Nenhum SDR ativo para o tenant ${tid}. (Total: ${total})`);
       return { sdr: null, history: "Sem histórico", kb: "" };
+    }
+    if (candidates.length > 1) {
+      console.log(`[AutoEngine] 🤖 Agente "${sdr.name}" atende a conexão ${lead.waAccountId || "(sem conexão)"}.`);
     }
 
     const conv = await prisma.conversation.findFirst({

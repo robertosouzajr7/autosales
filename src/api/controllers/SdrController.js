@@ -25,7 +25,7 @@ export const createSdr = async (req, res) => {
     responseDelay, voiceTone, escalationKeywords,
     followUpInterval, preConfirmationHours, noShowGraceMinutes,
     postServiceCheckHours, enableWaitlist, active,
-    voiceId, responseMode
+    voiceId, responseMode, accountIds
   } = req.body;
 
   try {
@@ -54,6 +54,8 @@ export const createSdr = async (req, res) => {
         role: role || "SDR",
         agentFunction: agentFunction || "SCHEDULER",
         skills: skills ? (typeof skills === "string" ? skills : JSON.stringify(skills)) : null,
+        // Conexões atendidas; vazio = todas.
+        accountIds: Array.isArray(accountIds) && accountIds.length ? JSON.stringify(accountIds) : null,
         prompt,
         knowledgeBase,
         trainingUrls,
@@ -87,7 +89,7 @@ export const updateSdr = async (req, res) => {
     responseDelay, voiceTone, escalationKeywords,
     followUpInterval, preConfirmationHours, noShowGraceMinutes,
     postServiceCheckHours, enableWaitlist, active,
-    voiceId, responseMode
+    voiceId, responseMode, accountIds
   } = req.body;
 
   try {
@@ -119,6 +121,9 @@ export const updateSdr = async (req, res) => {
         role,
         agentFunction: agentFunction || undefined,
         skills: skills !== undefined ? (typeof skills === "string" ? skills : JSON.stringify(skills)) : undefined,
+        accountIds: accountIds !== undefined
+          ? (Array.isArray(accountIds) && accountIds.length ? JSON.stringify(accountIds) : null)
+          : undefined,
         prompt,
         knowledgeBase,
         trainingUrls,
