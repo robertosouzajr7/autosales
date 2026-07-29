@@ -90,21 +90,36 @@ export class MetaManager {
             console.warn(`[Meta API] ${path.basename(filePath)} não é OGG/Opus — o WhatsApp exibiria como arquivo de áudio. Não enviado.`);
             return false;
         }
-        // O ";codecs=opus" é o que diferencia nota de voz de arquivo de música
-        // na Cloud API — ela não tem o flag `ptt` do Baileys.
+        // O upload precisa declarar o perfil Opus; o ";codecs=opus" é
+        // pré-requisito para o flag `voice` abaixo valer.
         const mediaId = await this.uploadMedia(phoneId, accessToken, buffer, 'audio/ogg; codecs=opus', path.basename(filePath));
         if (!mediaId) return false;
+
+        const send = (audio) => axios.post(
+            `https://graph.facebook.com/${GRAPH_VERSION}/${phoneId}/messages`,
+            { messaging_product: 'whatsapp', recipient_type: 'individual', to, type: 'audio', audio },
+            { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, timeout: 30000 }
+        );
+
+        // `voice: true` é o equivalente ao `ptt` do Baileys: sem ele a Cloud API
+        // entrega como arquivo de áudio mesmo estando em OGG/Opus.
         try {
-            await axios.post(
-                `https://graph.facebook.com/${GRAPH_VERSION}/${phoneId}/messages`,
-                { messaging_product: 'whatsapp', recipient_type: 'individual', to, type: 'audio', audio: { id: mediaId } },
-                { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, timeout: 30000 }
-            );
+            await send({ id: mediaId, voice: true });
             console.log(`[Meta API] 🔊 Nota de voz enviada para ${to}`);
             return true;
         } catch (e) {
-            console.error('[Meta API] Erro ao enviar áudio:', e.response?.data?.error?.message || e.message);
-            return false;
+            const err = e.response?.data?.error?.message || e.message;
+            // O flag ainda é beta: se a conta não estiver habilitada, reenvia
+            // como áudio comum em vez de deixar o lead sem resposta falada.
+            console.warn(`[Meta API] Envio como nota de voz falhou (${err}). Tentando como áudio comum…`);
+            try {
+                await send({ id: mediaId });
+                console.log(`[Meta API] 🔊 Áudio enviado para ${to} (sem flag de nota de voz).`);
+                return true;
+            } catch (e2) {
+                console.error('[Meta API] Erro ao enviar áudio:', e2.response?.data?.error?.message || e2.message);
+                return false;
+            }
         }
     }
 
