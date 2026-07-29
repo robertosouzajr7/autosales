@@ -32,6 +32,9 @@ const CATEGORIES = [
 const EMPTY = {
   name: "", content: "", category: "UTILITY", language: "pt_BR",
   headerType: "", headerText: "", footerText: "", buttons: [] as any[], accountId: "",
+  // headerHandle é o exemplo exigido pela Meta na aprovação (expira em ~24h);
+  // mediaUrl é o arquivo que vai em cada disparo.
+  headerHandle: "", mediaUrl: "", headerFileName: "",
 };
 
 export default function Templates() {
@@ -98,6 +101,7 @@ export default function Templates() {
       name: t.name, content: t.content, category: t.category, language: t.language,
       headerType: t.headerType || "", headerText: t.headerText || "",
       footerText: t.footerText || "", buttons: btns, accountId: t.accountId || connections[0]?.id || "",
+      headerHandle: "", mediaUrl: t.mediaUrl || "", headerFileName: "",
     });
     setModalOpen(true);
   };
@@ -138,6 +142,28 @@ export default function Templates() {
     const d = await res.json().catch(() => ({}));
     if (res.ok) { toast({ title: "Template removido" }); load(); }
     else toast({ title: d.error || "Erro ao remover", variant: "destructive" });
+  };
+
+  const [uploadingHeader, setUploadingHeader] = useState(false);
+
+  const uploadHeader = async (file: File) => {
+    setUploadingHeader(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      if (form.accountId) fd.append("accountId", form.accountId);
+      const res = await fetch("/api/templates/header-media", { method: "POST", headers: auth(), body: fd });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      setForm((f) => ({
+        ...f, headerType: d.headerType, headerHandle: d.handle, mediaUrl: d.url, headerFileName: d.name || file.name,
+      }));
+      toast({ title: "Arquivo de exemplo enviado" });
+    } catch (e: any) {
+      toast({ title: e.message || "Falha ao enviar o arquivo", variant: "destructive" });
+    } finally {
+      setUploadingHeader(false);
+    }
   };
 
   const setButton = (i: number, patch: any) => {
@@ -301,6 +327,62 @@ export default function Templates() {
                 </div>
               )}
             </div>
+
+            {form.headerType && form.headerType !== "TEXT" && (
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-slate-500">Arquivo do cabeçalho</Label>
+                <input
+                  type="file" id="header-file" className="hidden"
+                  accept={form.headerType === "IMAGE" ? "image/jpeg,image/png"
+                    : form.headerType === "VIDEO" ? "video/mp4,video/3gpp" : "application/pdf"}
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadHeader(f); e.target.value = ""; }}
+                />
+                {form.mediaUrl ? (
+                  <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3">
+                    {form.headerType === "IMAGE" ? (
+                      <img src={form.mediaUrl} alt="" className="w-16 h-16 rounded-xl object-cover" />
+                    ) : (
+                      <div className="w-16 h-16 rounded-xl bg-slate-200 flex items-center justify-center">
+                        <FileText className="w-6 h-6 text-slate-500" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-slate-700 truncate">
+                        {form.headerFileName || "Arquivo enviado"}
+                      </p>
+                      <p className="text-[11px] text-emerald-600 font-medium">
+                        {form.headerHandle ? "Pronto para submeter" : "Salvo — reenvie o arquivo para submeter à Meta"}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost" size="sm"
+                      onClick={() => document.getElementById("header-file")?.click()}
+                      disabled={uploadingHeader}
+                      className="rounded-xl text-xs font-bold shrink-0"
+                    >
+                      Trocar
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={() => document.getElementById("header-file")?.click()}
+                    disabled={uploadingHeader || connections.length === 0}
+                    className="w-full rounded-2xl font-bold"
+                  >
+                    {uploadingHeader
+                      ? <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Enviando…</>
+                      : <><Plus className="w-4 h-4 mr-2" /> Escolher arquivo</>}
+                  </Button>
+                )}
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  A Meta valida o template com um arquivo de exemplo.
+                  {form.headerType === "IMAGE" && " JPG ou PNG, até 5 MB."}
+                  {form.headerType === "VIDEO" && " MP4, até 16 MB."}
+                  {form.headerType === "DOCUMENT" && " PDF, até 100 MB."}
+                </p>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label className="text-xs font-bold text-slate-500">Corpo da mensagem</Label>

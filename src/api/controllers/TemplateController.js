@@ -22,14 +22,18 @@ async function resolveWabaAccount(tenantId, accountId = null) {
 }
 
 /** Monta o array `components` da Meta a partir dos campos do formulário. */
-export function buildComponents({ headerType, headerText, content, footerText, buttons }) {
+export function buildComponents({ headerType, headerText, content, footerText, buttons, headerHandle }) {
   const components = [];
 
   if (headerType === "TEXT" && headerText) {
     components.push({ type: "HEADER", format: "TEXT", text: headerText });
   } else if (headerType && headerType !== "TEXT") {
-    // Cabeçalho de mídia não leva conteúdo na definição: o arquivo vai no envio.
-    components.push({ type: "HEADER", format: headerType });
+    // Cabeçalho de mídia exige um exemplo: a Meta valida o template com um
+    // arquivo de amostra, cujo handle vem da Resumable Upload API. Sem o
+    // header_handle a criação é rejeitada.
+    const header = { type: "HEADER", format: headerType };
+    if (headerHandle) header.example = { header_handle: [headerHandle] };
+    components.push(header);
   }
 
   components.push({ type: "BODY", text: content });
@@ -79,6 +83,55 @@ function normalizeName(name) {
     .replace(/^_+|_+$/g, "")
     .slice(0, 512);
 }
+
+/**
+ * Recebe o arquivo do cabeçalho e devolve a URL (para preview/envio) e o
+ * handle da Meta (exigido na criação do template).
+ *
+ * Guardamos os dois porque servem a momentos diferentes: o handle valida o
+ * template na aprovação e expira em ~24h; a URL é o arquivo que vai de fato
+ * em cada disparo.
+ */
+export const uploadHeaderMedia = async (req, res) => {
+  const LIMITES = {
+    IMAGE: { mimes: ["image/jpeg", "image/png"], max: 5 * 1024 * 1024, rotulo: "imagem JPG ou PNG até 5 MB" },
+    VIDEO: { mimes: ["video/mp4", "video/3gpp"], max: 16 * 1024 * 1024, rotulo: "vídeo MP4 até 16 MB" },
+    DOCUMENT: { mimes: ["application/pdf"], max: 100 * 1024 * 1024, rotulo: "PDF até 100 MB" },
+  };
+
+  try {
+    if (!req.file) return res.status(400).json({ error: "Nenhum arquivo enviado." });
+
+    const mime = req.file.mimetype;
+    const tipo = mime.startsWith("image/") ? "IMAGE" : mime.startsWith("video/") ? "VIDEO" : "DOCUMENT";
+    const regra = LIMITES[tipo];
+    if (!regra.mimes.includes(mime)) {
+      return res.status(400).json({ error: `Formato não aceito pela Meta em cabeçalho. Use ${regra.rotulo}.` });
+    }
+    if (req.file.size > regra.max) {
+      return res.status(400).json({ error: `Arquivo grande demais. Limite: ${regra.rotulo}.` });
+    }
+
+    const account = await resolveWabaAccount(req.tenantId, req.body?.accountId);
+    if (!account) {
+      return res.status(400).json({ error: "Nenhuma conexão oficial com WABA configurada." });
+    }
+
+    const up = await MetaManager.uploadTemplateMedia(
+      account.accessToken, req.file.buffer, mime, req.file.originalname || "header"
+    );
+    if (up.error) return res.status(502).json({ error: up.error });
+
+    // Guarda uma cópia servível: o handle não pode ser reutilizado no envio.
+    const { saveMedia } = await import("../services/StorageService.js");
+    const ext = (req.file.originalname?.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const url = await saveMedia(req.file.buffer, ext, mime, req.tenantId, `${req.protocol}://${req.get("host")}`);
+
+    res.json({ handle: up.handle, url, headerType: tipo, name: req.file.originalname });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 
 export const listTemplates = async (req, res) => {
   try {
@@ -167,7 +220,7 @@ export const syncTemplates = async (req, res) => {
  */
 export const createTemplate = async (req, res) => {
   try {
-    const { name, content, category, language, headerType, headerText, footerText, buttons, accountId, submit } = req.body;
+    const { name, content, category, language, headerType, headerText, footerText, buttons, accountId, submit, headerHandle, mediaUrl } = req.body;
     if (!name || !content) return res.status(400).json({ error: "Nome e corpo são obrigatórios." });
 
     const normalized = normalizeName(name);
@@ -190,7 +243,15 @@ export const createTemplate = async (req, res) => {
       buttons: buttons ? (typeof buttons === "string" ? buttons : JSON.stringify(buttons)) : null,
       status: "DRAFT",
       accountId: accountId || null,
+      mediaUrl: mediaUrl || null,
     };
+
+    // Cabeçalho de mídia sem arquivo é rejeitado pela Meta na criação.
+    if (submit && headerType && headerType !== "TEXT" && !headerHandle) {
+      return res.status(400).json({
+        error: "Cabeçalho de mídia exige o envio de um arquivo de exemplo antes de submeter à Meta.",
+      });
+    }
 
     if (!submit) {
       const created = await prisma.messageTemplate.create({ data });
@@ -204,7 +265,7 @@ export const createTemplate = async (req, res) => {
       name: normalized,
       language: lang,
       category: data.category,
-      components: buildComponents(data),
+      components: buildComponents({ ...data, headerHandle }),
     });
     if (result.error) return res.status(400).json({ error: result.error });
 
@@ -241,7 +302,7 @@ export const updateTemplate = async (req, res) => {
       });
     }
 
-    const { name, content, category, language, headerType, headerText, footerText, buttons, submit, accountId } = req.body;
+    const { name, content, category, language, headerType, headerText, footerText, buttons, submit, accountId, headerHandle, mediaUrl } = req.body;
     const data = {
       ...(name !== undefined ? { name: normalizeName(name) } : {}),
       ...(content !== undefined ? { content } : {}),
@@ -253,6 +314,7 @@ export const updateTemplate = async (req, res) => {
       ...(buttons !== undefined
         ? { buttons: buttons ? (typeof buttons === "string" ? buttons : JSON.stringify(buttons)) : null }
         : {}),
+      ...(mediaUrl !== undefined ? { mediaUrl: mediaUrl || null } : {}),
     };
 
     if (!submit) {
@@ -261,6 +323,11 @@ export const updateTemplate = async (req, res) => {
     }
 
     const merged = { ...existing, ...data };
+    if (merged.headerType && merged.headerType !== "TEXT" && !headerHandle) {
+      return res.status(400).json({
+        error: "Cabeçalho de mídia exige o envio de um arquivo de exemplo antes de submeter à Meta.",
+      });
+    }
     const account = await resolveWabaAccount(req.tenantId, accountId || existing.accountId);
     if (!account) return res.status(400).json({ error: "Nenhuma conexão oficial com WABA para enviar à aprovação." });
 
@@ -268,7 +335,7 @@ export const updateTemplate = async (req, res) => {
       name: merged.name,
       language: merged.language,
       category: merged.category,
-      components: buildComponents(merged),
+      components: buildComponents({ ...merged, headerHandle }),
     });
     if (result.error) return res.status(400).json({ error: result.error });
 

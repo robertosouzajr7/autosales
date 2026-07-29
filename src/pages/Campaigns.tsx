@@ -137,13 +137,34 @@ export default function Campaigns() {
 
   const semFranquia = quota && quota.limit <= 0;
 
+  // Por que o botão de criar está bloqueado. Botão desabilitado sem motivo
+  // visível é o que mais confunde: aqui a razão aparece do lado dele.
+  const motivoBloqueio = (() => {
+    if (!form.name.trim()) return "Dê um nome à campanha.";
+    if (!form.templateId) {
+      return templates.length === 0
+        ? "Você ainda não tem template aprovado pela Meta. Crie um em Templates."
+        : "Escolha o template que será disparado.";
+    }
+    if (!preview) return "Calculando a projeção…";
+    if (!preview.approved) return "Este template ainda não foi aprovado pela Meta.";
+    if (preview.recipientCount === 0) return "Nenhum contato elegível nesse público.";
+    if (!preview.quota?.allowed) return preview.quota?.reason || "Franquia de disparos insuficiente.";
+    return null;
+  })();
+
   return (
     <DashboardLayout>
       <PageHeader
         title="Disparos em massa"
         subtitle="Envio de templates aprovados pela API oficial do WhatsApp."
         actions={
-          <Button onClick={() => setModalOpen(true)} disabled={semFranquia} className="rounded-2xl font-bold bg-[#2563EB]">
+          <Button
+            onClick={() => setModalOpen(true)}
+            disabled={semFranquia}
+            title={semFranquia ? "Seu plano não inclui disparos em massa — veja os planos abaixo." : undefined}
+            className="rounded-2xl font-bold bg-[#2563EB]"
+          >
             <Plus className="w-4 h-4 mr-2" /> Nova campanha
           </Button>
         }
@@ -365,8 +386,18 @@ export default function Campaigns() {
             )}
           </div>
 
-          <DialogFooter>
-            <Button onClick={create} disabled={busy || !preview?.canSend} className="rounded-2xl font-bold bg-[#2563EB]">
+          <DialogFooter className="flex-col sm:flex-row sm:items-center gap-2">
+            {motivoBloqueio && (
+              <p className="text-xs text-amber-700 font-medium flex items-start gap-1.5 flex-1 text-left">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                {motivoBloqueio}
+              </p>
+            )}
+            <Button
+              onClick={create}
+              disabled={busy || !!motivoBloqueio}
+              className="rounded-2xl font-bold bg-[#2563EB] shrink-0"
+            >
               <Clock className="w-4 h-4 mr-2" /> Criar campanha
             </Button>
           </DialogFooter>

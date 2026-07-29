@@ -146,6 +146,7 @@ router.delete("/campaigns/:id", CampaignController.deleteCampaign);
 router.get("/templates", TemplateController.listTemplates);
 router.post("/templates", TemplateController.createTemplate);
 router.post("/templates/sync", TemplateController.syncTemplates);
+router.post("/templates/header-media", upload.single("file"), TemplateController.uploadHeaderMedia);
 router.put("/templates/:id", TemplateController.updateTemplate);
 router.post("/templates/:id/duplicate", TemplateController.duplicateTemplate);
 router.delete("/templates/:id", TemplateController.deleteTemplate);

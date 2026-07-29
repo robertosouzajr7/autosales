@@ -235,6 +235,60 @@ export class MetaManager {
     }
 
     /**
+     * Sobe um arquivo pela Resumable Upload API e devolve o `handle` que o
+     * cabeçalho de mídia do template exige.
+     *
+     * É um fluxo diferente do upload de mensagem: são duas chamadas (abre a
+     * sessão, envia o binário) e o resultado NÃO é um media_id — é um handle
+     * curto, válido por cerca de 24h, que vai em example.header_handle.
+     *
+     * Usa META_APP_ID: a sessão de upload pertence ao app, não ao número.
+     */
+    static async uploadTemplateMedia(accessToken, buffer, mimeType, fileName = 'header') {
+        const appId = process.env.META_APP_ID;
+        if (!appId) {
+            return { error: 'META_APP_ID não configurado no servidor — necessário para cabeçalho de mídia.' };
+        }
+        try {
+            // 1) Abre a sessão de upload.
+            const { data: sessao } = await axios.post(
+                `https://graph.facebook.com/${GRAPH_VERSION}/${appId}/uploads`,
+                null,
+                {
+                    params: { file_name: fileName, file_length: buffer.length, file_type: mimeType },
+                    headers: { Authorization: `Bearer ${accessToken}` },
+                    timeout: 30000,
+                }
+            );
+            const sessionId = sessao?.id;
+            if (!sessionId) return { error: 'A Meta não devolveu id de sessão de upload.' };
+
+            // 2) Envia o binário. Aqui o esquema é OAuth (não Bearer) e o
+            // file_offset é obrigatório — enviamos o arquivo inteiro de uma vez.
+            const { data: envio } = await axios.post(
+                `https://graph.facebook.com/${GRAPH_VERSION}/${sessionId}`,
+                buffer,
+                {
+                    headers: {
+                        Authorization: `OAuth ${accessToken}`,
+                        file_offset: '0',
+                        'Content-Type': 'application/octet-stream',
+                    },
+                    maxBodyLength: Infinity,
+                    timeout: 120000,
+                }
+            );
+            if (!envio?.h) return { error: 'A Meta não devolveu o handle do arquivo.' };
+            console.log(`[Meta API] 📎 Handle de cabeçalho gerado (${mimeType}, ${buffer.length} bytes).`);
+            return { handle: envio.h };
+        } catch (e) {
+            const error = e.response?.data?.error;
+            console.error('[Meta API] Erro no upload de cabeçalho:', error?.message || e.message);
+            return { error: error?.error_user_msg || error?.message || e.message };
+        }
+    }
+
+    /**
      * Cria um template na Meta. Nasce PENDING e só pode ser disparado depois
      * de aprovado — a aprovação é assíncrona e leva de minutos a horas.
      * @returns {Promise<{id: string, status: string}|{error: string}>}
