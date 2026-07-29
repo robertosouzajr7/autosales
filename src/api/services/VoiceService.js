@@ -5,6 +5,7 @@ import crypto from "crypto";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import prisma from "../config/prisma.js";
+import { stopwatch } from "../utils/timing.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -321,6 +322,7 @@ class VoiceService {
   async _elevenLabsSpeech(text, voiceId, apiKey) {
     if (!apiKey) { console.error("[Voice] Sem chave da ElevenLabs (configure no admin)."); return null; }
     const voice = voiceId && !/^[A-Z][a-z]+$/.test(voiceId) ? voiceId : ELEVEN_DEFAULT_VOICE;
+    const sw = stopwatch("tts-elevenlabs");
     try {
       const { data } = await axios.post(
         `https://api.elevenlabs.io/v1/text-to-speech/${voice}`,
@@ -339,7 +341,11 @@ class VoiceService {
       const base = `tts_${crypto.randomBytes(6).toString("hex")}`;
       const mp3Path = path.join(AUDIO_DIR, `${base}.mp3`);
       fs.writeFileSync(mp3Path, Buffer.from(data));
-      return await this._toOpus(mp3Path, base);
+      sw.lap("api");
+      const out = await this._toOpus(mp3Path, base);
+      sw.lap("ffmpeg");
+      sw.done(`${voice} · ${text.length} chars`);
+      return out;
     } catch (e) {
       // O corpo do erro vem como arraybuffer — converte para texto legível.
       let detail = e.message;
@@ -355,6 +361,7 @@ class VoiceService {
     if (!key) { console.error("[Voice] Sem chave Gemini para TTS."); return null; }
     // IDs da ElevenLabs não valem como voz Gemini — cai no default.
     const voice = /^[A-Z][a-z]+$/.test(voiceName || "") ? voiceName : DEFAULT_VOICE;
+    const sw = stopwatch("tts-gemini");
     try {
       const { data } = await axios.post(
         `${GEMINI_BASE}/${TTS_MODEL}:generateContent?key=${key}`,
@@ -367,6 +374,7 @@ class VoiceService {
         },
         { timeout: 60000 }
       );
+      sw.lap("api");
       const b64 = data?.candidates?.[0]?.content?.parts?.find((p) => p.inlineData)?.inlineData?.data;
       if (!b64) { console.error("[Voice] TTS não retornou áudio."); return null; }
       const wav = pcmToWav(Buffer.from(b64, "base64"));
@@ -375,7 +383,10 @@ class VoiceService {
       const base = `tts_${crypto.randomBytes(6).toString("hex")}`;
       const wavPath = path.join(AUDIO_DIR, `${base}.wav`);
       fs.writeFileSync(wavPath, wav);
-      return await this._toOpus(wavPath, base);
+      const out = await this._toOpus(wavPath, base);
+      sw.lap("ffmpeg");
+      sw.done(`${voice} · ${text.length} chars`);
+      return out;
     } catch (e) {
       console.error("[Voice] Erro no TTS:", e.response?.data?.error?.message || e.message);
       return null;
