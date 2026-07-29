@@ -11,6 +11,7 @@ import TTSService from "./src/api/services/TTSService.js";
 import { getFunctionPreset, resolveSkills } from "./src/api/services/AgentFunctions.js";
 import cron from "node-cron";
 import axios from "axios";
+import { stopwatch } from "./src/api/utils/timing.js";
 
 // Traduz skills (ids amigáveis) em nomes de tools que o modelo entende.
 const SKILL_TO_TOOLS = {
@@ -961,9 +962,14 @@ class AutomationEngine {
   }
 
   async _getLeadFullContext(lead, context) {
+    // Quem já carregou o contexto (ex.: handleIncomingMessage, que precisa do
+    // SDR antes de escolher a persona) repassa aqui para não refazer as duas
+    // consultas — a de histórico puxa as últimas 15 mensagens.
+    if (context?.preloaded) return context.preloaded;
+
     const tid = lead.tenantId || context.tenantId;
     console.log(`[AutoEngine] 🔍 Buscando SDR para Tenant: ${tid}`);
-    
+
     const sdr = await prisma.sdrBot.findFirst({ 
       where: { 
         tenantId: tid, 
@@ -2560,26 +2566,33 @@ ${scrapeContext}
       }
 
       // Resolve a FUNÇÃO do agente (persona) e as SKILLS (tools habilitadas).
-      const { sdr } = await this._getLeadFullContext(lead, { tenantId });
+      const sw = stopwatch("engine");
+      const preloaded = await this._getLeadFullContext(lead, { tenantId });
+      const { sdr } = preloaded;
+      sw.lap("ctx");
+      // Repassado adiante para a IA reaproveitar o contexto já carregado.
+      const aiContext = { tenantId, preloaded };
 
       let aiResponse;
+      let usedTools = false;
       if (sdr) {
         const preset = getFunctionPreset(sdr.agentFunction);
-        const skills = resolveSkills(sdr);
-        const toolNames = skillsToToolNames(skills);
+        const toolNames = skillsToToolNames(resolveSkills(sdr));
+        usedTools = toolNames.length > 0;
         // Persona = função escolhida + instruções custom do agente.
         const persona = `${preset.persona}${sdr.prompt ? `\n\n# INSTRUÇÕES ADICIONAIS DO NEGÓCIO\n${sdr.prompt}` : ""}`;
 
-        if (toolNames.length > 0) {
-          const result = await this.callAIWithTools(persona, lead, { tenantId }, toolNames);
+        if (usedTools) {
+          const result = await this.callAIWithTools(persona, lead, aiContext, toolNames);
           aiResponse = result?.text || null;
         } else {
-          aiResponse = await this.callAI(persona, lead, { tenantId });
+          aiResponse = await this.callAI(persona, lead, aiContext);
         }
       } else {
-        aiResponse = await this.callAI(null, lead, { tenantId });
+        aiResponse = await this.callAI(null, lead, aiContext);
       }
-      if (!aiResponse) return null;
+      sw.lap(usedTools ? "ia+tools" : "ia");
+      if (!aiResponse) { sw.done(); return null; }
 
       // Resposta em áudio (TTS via Gemini) — recurso gated por plano. Só gera
       // se o agente está em modo AUDIO/BOTH E o plano do tenant tem enableVoice.
@@ -2593,13 +2606,15 @@ ${scrapeContext}
           const { default: VoiceService } = await import("./src/api/services/VoiceService.js");
           // tenantId decide se a voz premium (ElevenLabs) está liberada no plano.
           audioUrl = await VoiceService.synthesizeSpeech(aiResponse, sdr.voiceId, tenantId);
+          sw.lap("tts");
         }
       }
+      sw.done();
 
-      return { 
-        text: aiResponse, 
-        audioUrl, 
-        responseMode: sdr?.responseMode || "TEXT" 
+      return {
+        text: aiResponse,
+        audioUrl,
+        responseMode: sdr?.responseMode || "TEXT"
       };
     } catch (err) {
       console.error("[AutoEngine] Erro em handleIncomingMessage:", err.message);

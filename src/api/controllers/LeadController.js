@@ -4,6 +4,7 @@ import fs from "fs";
 import path from "path";
 import VoiceService from "../services/VoiceService.js";
 import MessagingService from "../services/MessagingService.js";
+import { stopwatch } from "../utils/timing.js";
 
 // Palavras que sinalizam pedido de descadastro (LGPD opt-out).
 const STOP_KEYWORDS = ["parar", "sair", "cancelar", "descadastrar", "stop", "remover", "pare"];
@@ -213,6 +214,8 @@ export const receiveWhatsappWebhook = async (req, res) => {
     return res.status(400).json({ success: false, error: "Parâmetros obrigatórios: tenantId, phone, content" });
   }
 
+  const sw = stopwatch("webhook");
+
   try {
     // Buscar primeira etapa se for um novo lead
     const firstStage = await prisma.pipelineStage.findFirst({
@@ -302,6 +305,7 @@ export const receiveWhatsappWebhook = async (req, res) => {
           // Usa o mimetype real quando o canal informou (Meta manda audio/ogg,
           // audio/mpeg, etc.); Baileys entrega ogg.
           const transcript = await VoiceService.transcribeAudio(buf, mediaMime || "audio/ogg");
+          sw.lap("stt");
           effectiveContent = transcript || "";
           displayContent = transcript ? `🎙️ ${transcript}` : "🎙️ (áudio sem transcrição)";
         }
@@ -397,6 +401,7 @@ export const receiveWhatsappWebhook = async (req, res) => {
 
     // 6. Aciona o SDR para gerar resposta via IA (texto transcrito, se áudio)
     const aiData = await AutomationEngine.handleIncomingMessage(lead, effectiveContent || content, tenantId);
+    sw.lap("engine");
 
     // 7. Se houve resposta da IA, salva no banco também
     if (aiData && aiData.text) {
@@ -416,8 +421,11 @@ export const receiveWhatsappWebhook = async (req, res) => {
       } catch (_) {}
     }
 
-    res.json({ 
-      success: true, 
+    sw.lap("db");
+    sw.done(messageType);
+
+    res.json({
+      success: true,
       ai_response: aiData?.text || null,
       ai_audio_url: aiData?.audioUrl || null,
       response_mode: aiData?.responseMode || "TEXT"

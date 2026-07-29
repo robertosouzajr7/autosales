@@ -2,6 +2,7 @@ import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
 import prisma from './src/api/config/prisma.js';
+import { stopwatch } from './src/api/utils/timing.js';
 
 // Versão da Graph API configurável — Meta descontinua versões antigas.
 const GRAPH_VERSION = process.env.META_GRAPH_VERSION || 'v21.0';
@@ -92,7 +93,9 @@ export class MetaManager {
         }
         // O upload precisa declarar o perfil Opus; o ";codecs=opus" é
         // pré-requisito para o flag `voice` abaixo valer.
+        const sw = stopwatch('meta-audio');
         const mediaId = await this.uploadMedia(phoneId, accessToken, buffer, 'audio/ogg; codecs=opus', path.basename(filePath));
+        sw.lap('upload');
         if (!mediaId) return false;
 
         const send = (audio) => axios.post(
@@ -105,6 +108,8 @@ export class MetaManager {
         // entrega como arquivo de áudio mesmo estando em OGG/Opus.
         try {
             await send({ id: mediaId, voice: true });
+            sw.lap('send');
+            sw.done();
             console.log(`[Meta API] 🔊 Nota de voz enviada para ${to}`);
             return true;
         } catch (e) {
