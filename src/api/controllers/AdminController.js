@@ -240,6 +240,11 @@ export const getPlatformSettings = async (_req, res) => {
       // Precificação de tokens
       usdToBrl: s.usdToBrl ?? DEFAULT_USD_BRL,
       tokenMarkup: s.tokenMarkup ?? 5.0,
+      // Motor de VOZ (global): provedor, chave mascarada e vozes liberadas
+      voiceProvider: s.voiceProvider || "GEMINI",
+      elevenLabsKeyMasked: maskSecret(s.elevenLabsApiKey || process.env.ELEVENLABS_API_KEY),
+      elevenLabsKeyConfigured: !!(s.elevenLabsApiKey || process.env.ELEVENLABS_API_KEY),
+      enabledVoices: (() => { try { return s.enabledVoices ? JSON.parse(s.enabledVoices) : []; } catch { return []; } })(),
       updatedAt: s.updatedAt,
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -253,8 +258,22 @@ export const updatePlatformSettings = async (req, res) => {
       stripeSecretKey, stripeWebhookSecret, stripePublishableKey,
       aiProvider, aiModel, geminiApiKey, openaiApiKey, anthropicApiKey,
       usdToBrl, tokenMarkup,
+      voiceProvider, elevenLabsApiKey, enabledVoices,
     } = req.body;
     const data = {};
+
+    // Motor de VOZ (global, igual à LLM): provedor, chave e vozes liberadas.
+    if (["GEMINI", "ELEVENLABS"].includes(voiceProvider)) data.voiceProvider = voiceProvider;
+    if (typeof elevenLabsApiKey === "string" && elevenLabsApiKey.trim()) {
+      data.elevenLabsApiKey = elevenLabsApiKey.trim();
+    }
+    if (Array.isArray(enabledVoices)) {
+      // Guarda só {id, name} — o cliente escolhe entre estas.
+      const clean = enabledVoices
+        .filter((v) => v && v.id)
+        .map((v) => ({ id: String(v.id), name: String(v.name || v.id) }));
+      data.enabledVoices = JSON.stringify(clean);
+    }
 
     // Precificação: câmbio > 0 e markup >= 1 (não vender abaixo do custo).
     if (usdToBrl !== undefined && Number.isFinite(parseFloat(usdToBrl)) && parseFloat(usdToBrl) > 0) {
@@ -297,6 +316,17 @@ export const updatePlatformSettings = async (req, res) => {
     });
     await audit({ actorId: req.userId, action: "PLATFORM_SETTINGS_UPDATED", entity: "PlatformSettings", entityId: "singleton" });
     res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
+// GET /api/admin/voices
+// Lista as vozes do provedor de voz ativo (ElevenLabs via chave global, ou o
+// catálogo do Gemini) para o admin escolher quais liberar às contas.
+export const getProviderVoices = async (_req, res) => {
+  try {
+    const { default: VoiceService } = await import("../services/VoiceService.js");
+    const result = await VoiceService.listProviderVoices();
+    res.json(result);
   } catch (e) { res.status(500).json({ error: e.message }); }
 };
 

@@ -167,6 +167,15 @@ router.put("/sdrs/:id", SdrController.updateSdr);
 router.delete("/sdrs/:id", SdrController.deleteSdr);
 router.post("/sdrs/:id/training", upload.single("file"), SdrController.trainSdr);
 
+// Vozes LIBERADAS pelo admin — o cliente escolhe entre estas no agente.
+// A chave do provedor é global e nunca é exposta.
+router.get("/voices", async (_req, res) => {
+  try {
+    const { default: VoiceService } = await import("../services/VoiceService.js");
+    res.json(await VoiceService.listEnabledVoices());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Funções e skills disponíveis para os agentes (catálogo estático)
 router.get("/agent-functions", (_req, res) => {
   res.json({ functions: listFunctions(), skills: SKILLS });
@@ -194,6 +203,9 @@ router.put("/admin/platform-settings", adminMiddleware, AdminController.updatePl
 router.get("/admin/reports", adminMiddleware, AdminController.getReports);
 router.post("/admin/tenants/:id/users", adminMiddleware, AdminController.createTenantUser);
 router.delete("/admin/tenants/:id/users/:userId", adminMiddleware, AdminController.deleteTenantUser);
+
+// Vozes do provedor ativo (admin escolhe quais liberar para as contas)
+router.get("/admin/voices", adminMiddleware, AdminController.getProviderVoices);
 
 // Precificação de tokens — custo real por modelo (base do cálculo automático)
 router.get("/admin/token-pricing", adminMiddleware, AdminController.getTokenPricing);

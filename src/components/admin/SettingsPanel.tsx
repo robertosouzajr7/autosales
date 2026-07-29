@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { adminApi } from "@/lib/adminApi";
-import { Bot, CreditCard, Globe, Loader2, ShieldCheck, Save, Coins } from "lucide-react";
+import { Bot, CreditCard, Globe, Loader2, ShieldCheck, Save, Coins, Mic, RefreshCw } from "lucide-react";
 
 export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
   const { toast } = useToast();
@@ -30,6 +30,14 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
   const [openaiKey, setOpenaiKey] = useState("");
   const [anthropicKey, setAnthropicKey] = useState("");
   const [savingAi, setSavingAi] = useState(false);
+
+  // Motor de VOZ (global): provedor, chave e vozes liberadas para as contas
+  const [voiceProvider, setVoiceProvider] = useState("GEMINI");
+  const [elevenKey, setElevenKey] = useState("");
+  const [providerVoices, setProviderVoices] = useState<any[]>([]);
+  const [enabledVoices, setEnabledVoices] = useState<any[]>([]);
+  const [voicesLoading, setVoicesLoading] = useState(false);
+  const [savingVoice, setSavingVoice] = useState(false);
 
   // Precificação de tokens (câmbio + markup padrão) e tabela de custo real
   const [usdToBrl, setUsdToBrl] = useState<number | string>(5.5);
@@ -58,11 +66,50 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
       setAiModel(gwRes.data.aiModel || "");
       setUsdToBrl(gwRes.data.usdToBrl ?? 5.5);
       setTokenMarkup(gwRes.data.tokenMarkup ?? 5);
+      setVoiceProvider(gwRes.data.voiceProvider || "GEMINI");
+      setEnabledVoices(gwRes.data.enabledVoices || []);
     }
     if (lpRes.ok && lpRes.data) setLp((prev: any) => ({ ...prev, ...lpRes.data }));
     if (prRes.ok) setPricing(prRes.data);
   };
   useEffect(() => { load(); }, []);
+
+  // Carrega as vozes do provedor ativo (ElevenLabs via chave global).
+  const loadVoices = async () => {
+    setVoicesLoading(true);
+    const res = await adminApi.get("/api/admin/voices");
+    if (res.ok) {
+      setProviderVoices(res.data?.voices || []);
+      if (res.data?.error) toast({ title: "Vozes", description: res.data.error, variant: "destructive" });
+    }
+    setVoicesLoading(false);
+  };
+  useEffect(() => { loadVoices(); }, [voiceProvider]);
+
+  const toggleVoice = (v: any) => {
+    const exists = enabledVoices.some((e: any) => e.id === v.id);
+    setEnabledVoices(exists
+      ? enabledVoices.filter((e: any) => e.id !== v.id)
+      : [...enabledVoices, { id: v.id, name: v.name }]);
+  };
+
+  const saveVoice = async () => {
+    setSavingVoice(true);
+    const res = await adminApi.put("/api/admin/platform-settings", {
+      voiceProvider,
+      elevenLabsApiKey: elevenKey || undefined,
+      enabledVoices,
+    });
+    setSavingVoice(false);
+    if (res.ok) {
+      toast({ title: "Motor de voz atualizado" });
+      setElevenKey("");
+      load();
+      loadVoices();
+    } else {
+      toast({ title: "Erro ao salvar", description: res.data?.error, variant: "destructive" });
+    }
+  };
 
   const savePricing = async () => {
     setSavingPricing(true);
@@ -334,6 +381,98 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
           <Button onClick={saveAI} disabled={savingAi} className="gap-2">
             {savingAi ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Salvar IA
+          </Button>
+        </div>
+      </Card>
+
+      {/* MOTOR DE VOZ (global — igual à LLM) */}
+      <Card className="rounded-2xl border-border p-6 space-y-5">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary grid place-items-center">
+            <Mic className="w-5 h-5" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold text-foreground">Motor de voz</h3>
+            <p className="text-xs text-muted-foreground">Provedor e vozes usados pelos agentes. A chave é da plataforma — o cliente só escolhe entre as vozes que você liberar.</p>
+          </div>
+        </div>
+
+        {/* Provedor */}
+        <div className="grid sm:grid-cols-2 gap-3">
+          {[
+            { id: "ELEVENLABS", label: "ElevenLabs", hint: "Vozes naturais (premium)", ok: gw?.elevenLabsKeyConfigured },
+            { id: "GEMINI", label: "Google Gemini", hint: "Incluso na chave do Gemini", ok: gw?.geminiKeyConfigured },
+          ].map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => setVoiceProvider(p.id)}
+              className={`text-left rounded-2xl border p-4 transition-all ${
+                voiceProvider === p.id ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/40"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-foreground">{p.label}</span>
+                {p.ok
+                  ? <Badge className="bg-emerald-100 text-emerald-700 border-none text-xs">Chave OK</Badge>
+                  : <Badge className="bg-amber-100 text-amber-800 border-none text-xs">Sem chave</Badge>}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">{p.hint}</p>
+              {voiceProvider === p.id && <p className="text-xs text-primary mt-2 font-medium">✓ Provedor ativo</p>}
+            </button>
+          ))}
+        </div>
+
+        {voiceProvider === "ELEVENLABS" && (
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">
+              Chave da ElevenLabs {gw?.elevenLabsKeyMasked && <span className="font-mono">({gw.elevenLabsKeyMasked})</span>}
+            </Label>
+            <Input type="password" placeholder="Cole uma nova chave para substituir" value={elevenKey} onChange={(e) => setElevenKey(e.target.value)} />
+          </div>
+        )}
+
+        {/* Vozes liberadas */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs text-muted-foreground">
+              Vozes liberadas para as contas {enabledVoices.length > 0 && `(${enabledVoices.length} selecionada${enabledVoices.length > 1 ? "s" : ""})`}
+            </Label>
+            <button onClick={loadVoices} className="text-[11px] text-primary hover:underline flex items-center gap-1">
+              <RefreshCw className={`w-3 h-3 ${voicesLoading ? "animate-spin" : ""}`} /> Atualizar lista
+            </button>
+          </div>
+          {providerVoices.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              {voicesLoading ? "Carregando vozes…" : "Nenhuma voz disponível — configure a chave do provedor e atualize."}
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2 max-h-56 overflow-y-auto p-1">
+              {providerVoices.map((v: any) => {
+                const on = enabledVoices.some((e: any) => e.id === v.id);
+                return (
+                  <button
+                    key={v.id}
+                    onClick={() => toggleVoice(v)}
+                    title={v.labels ? Object.values(v.labels).join(" · ") : v.name}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors ${
+                      on ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border hover:border-primary/40"
+                    }`}
+                  >
+                    {v.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <p className="text-[11px] text-muted-foreground">Nenhuma selecionada = todas as vozes do provedor ficam disponíveis.</p>
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[11px] text-muted-foreground">A chave nunca é exposta ao cliente — ele vê apenas o nome das vozes liberadas.</p>
+          <Button onClick={saveVoice} disabled={savingVoice} className="gap-2">
+            {savingVoice ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            Salvar voz
           </Button>
         </div>
       </Card>

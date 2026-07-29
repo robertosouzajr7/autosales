@@ -28,6 +28,8 @@ export default function SdrManagement() {
 
   const [functions, setFunctions] = useState<any[]>([]);
   const [skillsCatalog, setSkillsCatalog] = useState<any[]>([]);
+  // Vozes liberadas pelo admin do SaaS (a chave do provedor é global).
+  const [voices, setVoices] = useState<any[]>([]);
 
   const [form, setForm] = useState({
     name: "",
@@ -57,20 +59,23 @@ export default function SdrManagement() {
   const fetchData = async () => {
     const token = localStorage.getItem("token");
     try {
-      const [sdrsRes, settingsRes, fnRes] = await Promise.all([
+      const [sdrsRes, settingsRes, fnRes, voicesRes] = await Promise.all([
         fetch("/api/sdrs", { headers: { "Authorization": `Bearer ${token}` } }),
         fetch("/api/settings", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch("/api/agent-functions", { headers: { "Authorization": `Bearer ${token}` } })
+        fetch("/api/agent-functions", { headers: { "Authorization": `Bearer ${token}` } }),
+        fetch("/api/voices", { headers: { "Authorization": `Bearer ${token}` } })
       ]);
 
       const sdrData = await sdrsRes.json();
       const settingsData = await settingsRes.json();
       const fnData = await fnRes.json();
+      const voiceData = voicesRes.ok ? await voicesRes.json() : { voices: [] };
 
       setSdrs(Array.isArray(sdrData) ? sdrData : []);
       setHasWhatsApp(!!settingsData.hasWhatsAppConnection);
       setFunctions(fnData.functions || []);
       setSkillsCatalog(fnData.skills || []);
+      setVoices(voiceData.voices || []);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
@@ -501,18 +506,15 @@ export default function SdrManagement() {
                              <Label className="font-semibold text-xs text-white/50 pl-1">Voz</Label>
                              <Select value={form.voiceId} onValueChange={v => setForm({...form, voiceId: v})}>
                                 <SelectTrigger className="h-10 rounded-2xl border-none bg-white/5 text-white font-bold px-6 shadow-inner">
-                                   <SelectValue placeholder="Escolher voz" />
+                                   <SelectValue placeholder={voices.length ? "Escolher voz" : "Nenhuma voz disponível"} />
                                 </SelectTrigger>
                                 <SelectContent className="rounded-xl border-none shadow-sm">
-                                   <SelectItem value="Kore" className="font-bold">Kore (feminina, neutra)</SelectItem>
-                                   <SelectItem value="Aoede" className="font-bold">Aoede (feminina, suave)</SelectItem>
-                                   <SelectItem value="Leda" className="font-bold">Leda (feminina, jovem)</SelectItem>
-                                   <SelectItem value="Puck" className="font-bold">Puck (masculina, animada)</SelectItem>
-                                   <SelectItem value="Charon" className="font-bold">Charon (masculina, grave)</SelectItem>
-                                   <SelectItem value="Orus" className="font-bold">Orus (masculina, firme)</SelectItem>
+                                   {voices.map((v: any) => (
+                                     <SelectItem key={v.id} value={v.id} className="font-bold">{v.name}</SelectItem>
+                                   ))}
                                 </SelectContent>
                              </Select>
-                             <p className="text-xs font-bold text-white/20 pl-1">Voz do Google Gemini (gerida pela plataforma).</p>
+                             <p className="text-xs font-bold text-white/20 pl-1">Vozes liberadas pela plataforma.</p>
                           </div>
                        </div>
                     </div>

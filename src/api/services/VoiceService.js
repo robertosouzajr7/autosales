@@ -22,7 +22,8 @@ const execFileAsync = promisify(execFile);
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const STT_MODEL = "gemini-2.5-flash";
 const TTS_MODEL = "gemini-2.5-flash-preview-tts";
-const DEFAULT_VOICE = "Kore"; // voz neutra; boa em PT-BR
+const DEFAULT_VOICE = "Kore"; // voz neutra do Gemini; boa em PT-BR
+const ELEVEN_DEFAULT_VOICE = "21m00Tcm4TlvDq8ikWAM"; // Rachel (ElevenLabs)
 
 // Diretório para os áudios gerados. Usa o MESMO UPLOAD_DIR do StorageService
 // (volume persistente em produção) para que a URL /api/uploads/… encontre o
@@ -36,6 +37,32 @@ async function geminiKey() {
   } catch { /* usa env */ }
   return process.env.GEMINI_API_KEY || null;
 }
+
+/**
+ * Configuração GLOBAL de voz (definida pelo admin do SaaS, igual à LLM):
+ * provedor, chave e vozes liberadas. O tenant nunca vê a chave.
+ */
+export async function resolveVoiceConfig() {
+  let s = null;
+  try {
+    s = await prisma.platformSettings.findUnique({ where: { id: "singleton" } });
+  } catch { /* usa env */ }
+  const provider = (s?.voiceProvider || process.env.VOICE_PROVIDER || "GEMINI").toUpperCase();
+  const elevenKey = s?.elevenLabsApiKey || process.env.ELEVENLABS_API_KEY || null;
+  let enabledVoices = [];
+  try { enabledVoices = s?.enabledVoices ? JSON.parse(s.enabledVoices) : []; } catch { enabledVoices = []; }
+  return { provider, elevenKey, enabledVoices };
+}
+
+/** Vozes nativas do Gemini (catálogo fixo). */
+export const GEMINI_VOICES = [
+  { id: "Kore", name: "Kore (feminina, neutra)" },
+  { id: "Aoede", name: "Aoede (feminina, suave)" },
+  { id: "Leda", name: "Leda (feminina, jovem)" },
+  { id: "Puck", name: "Puck (masculina, animada)" },
+  { id: "Charon", name: "Charon (masculina, grave)" },
+  { id: "Orus", name: "Orus (masculina, firme)" },
+];
 
 // Envolve PCM (16-bit LE, mono) em um cabeçalho WAV para virar arquivo tocável.
 function pcmToWav(pcmBuffer, sampleRate = 24000, channels = 1, bitsPerSample = 16) {
@@ -112,11 +139,118 @@ class VoiceService {
     }
   }
 
-  /** Texto → arquivo WAV. Devolve caminho relativo (/uploads/…) ou null. */
-  async synthesizeSpeech(text, voiceName) {
+  /**
+   * Lista as vozes disponíveis no provedor ativo. Para a ElevenLabs consulta a
+   * API com a chave global (o admin escolhe quais liberar); para o Gemini
+   * devolve o catálogo fixo.
+   */
+  async listProviderVoices() {
+    const { provider, elevenKey } = await resolveVoiceConfig();
+    if (provider !== "ELEVENLABS") return { provider, voices: GEMINI_VOICES };
+    if (!elevenKey) return { provider, voices: [], error: "Chave da ElevenLabs não configurada." };
+    try {
+      const { data } = await axios.get("https://api.elevenlabs.io/v1/voices", {
+        headers: { "xi-api-key": elevenKey },
+        timeout: 30000,
+      });
+      const voices = (data?.voices || []).map((v) => ({
+        id: v.voice_id,
+        name: v.name,
+        // Metadados úteis para o admin escolher (sotaque, gênero, uso).
+        labels: v.labels || {},
+        preview: v.preview_url || null,
+      }));
+      return { provider, voices };
+    } catch (e) {
+      console.error("[Voice] Erro ao listar vozes da ElevenLabs:", e.response?.data?.detail?.message || e.message);
+      return { provider, voices: [], error: "Não foi possível listar as vozes (verifique a chave)." };
+    }
+  }
+
+  /**
+   * Vozes LIBERADAS para as contas. Se o admin não restringiu nada, devolve
+   * todas as do provedor ativo.
+   */
+  async listEnabledVoices() {
+    const { provider, enabledVoices } = await resolveVoiceConfig();
+    if (Array.isArray(enabledVoices) && enabledVoices.length) {
+      return { provider, voices: enabledVoices };
+    }
+    const all = await this.listProviderVoices();
+    return { provider, voices: all.voices.map((v) => ({ id: v.id, name: v.name })) };
+  }
+
+  /**
+   * Converte um arquivo de áudio para OGG/Opus (formato da nota de voz do
+   * WhatsApp). Devolve a URL canônica; mantém o original se o ffmpeg falhar.
+   */
+  async _toOpus(srcPath, base) {
+    const oggPath = path.join(AUDIO_DIR, `${base}.ogg`);
+    try {
+      await execFileAsync("ffmpeg", [
+        "-y", "-i", srcPath,
+        "-c:a", "libopus", "-b:a", "32k", "-ar", "48000", "-ac", "1",
+        "-application", "voip",
+        oggPath,
+      ]);
+      try { fs.unlinkSync(srcPath); } catch (_) {}
+      console.log(`[Voice] 🔊 TTS gerado em OGG/Opus: ${base}.ogg`);
+      return `/api/uploads/${base}.ogg`;
+    } catch (e) {
+      console.warn(`[Voice] ⚠️ ffmpeg falhou (${String(e.message).slice(0, 120)}). Mantendo original — o WhatsApp pode não exibir a nota de voz.`);
+      return `/api/uploads/${path.basename(srcPath)}`;
+    }
+  }
+
+  /**
+   * Texto → áudio, pelo provedor GLOBAL configurado pelo admin
+   * (Gemini ou ElevenLabs). Devolve caminho relativo ou null.
+   */
+  async synthesizeSpeech(text, voiceId) {
+    const { provider, elevenKey } = await resolveVoiceConfig();
+    if (provider === "ELEVENLABS") {
+      return this._elevenLabsSpeech(text, voiceId, elevenKey);
+    }
+    return this._geminiSpeech(text, voiceId);
+  }
+
+  /** TTS via ElevenLabs (vozes naturais) usando a chave GLOBAL do admin. */
+  async _elevenLabsSpeech(text, voiceId, apiKey) {
+    if (!apiKey) { console.error("[Voice] Sem chave da ElevenLabs (configure no admin)."); return null; }
+    const voice = voiceId && !/^[A-Z][a-z]+$/.test(voiceId) ? voiceId : ELEVEN_DEFAULT_VOICE;
+    try {
+      const { data } = await axios.post(
+        `https://api.elevenlabs.io/v1/text-to-speech/${voice}`,
+        {
+          text,
+          model_id: process.env.ELEVENLABS_MODEL || "eleven_multilingual_v2",
+          voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+        },
+        {
+          headers: { "xi-api-key": apiKey, "Content-Type": "application/json", accept: "audio/mpeg" },
+          responseType: "arraybuffer",
+          timeout: 60000,
+        }
+      );
+      if (!fs.existsSync(AUDIO_DIR)) fs.mkdirSync(AUDIO_DIR, { recursive: true });
+      const base = `tts_${crypto.randomBytes(6).toString("hex")}`;
+      const mp3Path = path.join(AUDIO_DIR, `${base}.mp3`);
+      fs.writeFileSync(mp3Path, Buffer.from(data));
+      return await this._toOpus(mp3Path, base);
+    } catch (e) {
+      // O corpo do erro vem como arraybuffer — converte para texto legível.
+      let detail = e.message;
+      try { if (e.response?.data) detail = Buffer.from(e.response.data).toString("utf8").slice(0, 200); } catch (_) {}
+      console.error("[Voice] Erro no TTS (ElevenLabs):", detail);
+      return null;
+    }
+  }
+
+  /** TTS nativo do Gemini (fallback/alternativa mais barata). */
+  async _geminiSpeech(text, voiceName) {
     const key = await geminiKey();
     if (!key) { console.error("[Voice] Sem chave Gemini para TTS."); return null; }
-    // O voiceId da ElevenLabs (legado) não vale como voz Gemini — usa o default.
+    // IDs da ElevenLabs não valem como voz Gemini — cai no default.
     const voice = /^[A-Z][a-z]+$/.test(voiceName || "") ? voiceName : DEFAULT_VOICE;
     try {
       const { data } = await axios.post(
@@ -138,25 +272,7 @@ class VoiceService {
       const base = `tts_${crypto.randomBytes(6).toString("hex")}`;
       const wavPath = path.join(AUDIO_DIR, `${base}.wav`);
       fs.writeFileSync(wavPath, wav);
-
-      // O WhatsApp só renderiza nota de voz em OGG/Opus — um WAV é aceito no
-      // envio mas não aparece no app. Convertemos com ffmpeg; se não houver
-      // ffmpeg, mantemos o WAV (que ao menos toca no painel).
-      const oggPath = path.join(AUDIO_DIR, `${base}.ogg`);
-      try {
-        await execFileAsync("ffmpeg", [
-          "-y", "-i", wavPath,
-          "-c:a", "libopus", "-b:a", "32k", "-ar", "48000", "-ac", "1",
-          "-application", "voip",
-          oggPath,
-        ]);
-        try { fs.unlinkSync(wavPath); } catch (_) {}
-        console.log(`[Voice] 🔊 TTS gerado em OGG/Opus: ${base}.ogg`);
-        return `/api/uploads/${base}.ogg`;
-      } catch (e) {
-        console.warn(`[Voice] ⚠️ ffmpeg falhou (${String(e.message).slice(0, 120)}). Mantendo WAV — o WhatsApp pode não exibir a nota de voz.`);
-        return `/api/uploads/${base}.wav`;
-      }
+      return await this._toOpus(wavPath, base);
     } catch (e) {
       console.error("[Voice] Erro no TTS:", e.response?.data?.error?.message || e.message);
       return null;

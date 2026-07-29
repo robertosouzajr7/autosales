@@ -527,6 +527,13 @@ model PlatformSettings {
   openaiApiKey    String?
   anthropicApiKey String?
 
+  // ─── Motor de VOZ (também global, definido pelo admin) ───
+  // Provedor de TTS: "GEMINI" | "ELEVENLABS"
+  voiceProvider     String? @default("GEMINI")
+  elevenLabsApiKey  String?
+  // Vozes LIBERADAS para as contas — JSON: [{ id, name }]. Vazio = todas.
+  enabledVoices     String?
+
   // ─── Precificação de tokens (planos e recargas) ───
   // Câmbio USD→BRL usado para converter o preço real dos provedores.
   usdToBrl    Float @default(5.5)
