@@ -11,6 +11,7 @@ import SdrManagement from "@/pages/SdrManagement"; // Módulo Multi-SDR
 import MeuNegocio from "@/pages/MeuNegocio";
 import Catalogo from "@/pages/Catalogo";
 import Templates from "./pages/Templates";
+import Campaigns from "./pages/Campaigns";
 import Onboarding from "@/pages/Onboarding";
 import Checkout from "@/pages/Checkout";
 import CheckoutReturn from "@/pages/CheckoutReturn";
@@ -56,6 +57,7 @@ function App() {
         <Route path="/clinica" element={<MeuNegocio />} />
         <Route path="/catalogo" element={<Catalogo />} />
         <Route path="/templates" element={<Templates />} />
+        <Route path="/campanhas" element={<Campaigns />} />
         <Route path="/sdrs" element={<SdrManagement />} />
         {/* "Automações" no menu agora aponta para os Lembretes (config simples). */}
         <Route path="/automations" element={<AutomationConfig />} />

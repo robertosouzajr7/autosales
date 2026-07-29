@@ -1,4 +1,17 @@
 import prisma from "../config/prisma.js";
+import { DEFAULT_RATES_USD } from "../services/WhatsAppPricingService.js";
+
+function safeJson(v) { try { return JSON.parse(v); } catch { return null; } }
+
+/** Tarifas efetivas: padrão da Meta sobrescrito pelo que o admin definiu. */
+function waRatesOf(s) {
+  const custom = safeJson(s?.waRates) || {};
+  const out = {};
+  for (const k of ["MARKETING", "UTILITY", "AUTHENTICATION"]) {
+    out[k] = typeof custom[k] === "number" ? custom[k] : DEFAULT_RATES_USD[k];
+  }
+  return out;
+}
 import bcrypt from "bcryptjs";
 import { audit } from "../services/AuditService.js";
 import {
@@ -240,6 +253,9 @@ export const getPlatformSettings = async (_req, res) => {
       // Precificação de tokens
       usdToBrl: s.usdToBrl ?? DEFAULT_USD_BRL,
       tokenMarkup: s.tokenMarkup ?? 5.0,
+      // Tarifas do WhatsApp: devolve o efetivo (padrão + override do admin).
+      waRates: waRatesOf(s),
+      waMarkup: s.waMarkup ?? 2.0,
       // Motor de VOZ (global): provedor, chave mascarada e vozes liberadas
       voiceProvider: s.voiceProvider || "GEMINI",
       elevenLabsKeyMasked: maskSecret(s.elevenLabsApiKey || process.env.ELEVENLABS_API_KEY),
@@ -257,7 +273,7 @@ export const updatePlatformSettings = async (req, res) => {
       mpAccessToken, paymentWebhookSecret,
       stripeSecretKey, stripeWebhookSecret, stripePublishableKey,
       aiProvider, aiModel, geminiApiKey, openaiApiKey, anthropicApiKey,
-      usdToBrl, tokenMarkup,
+      usdToBrl, tokenMarkup, waRates, waMarkup,
       voiceProvider, elevenLabsApiKey, enabledVoices,
     } = req.body;
     const data = {};
@@ -278,6 +294,20 @@ export const updatePlatformSettings = async (req, res) => {
     // Precificação: câmbio > 0 e markup >= 1 (não vender abaixo do custo).
     if (usdToBrl !== undefined && Number.isFinite(parseFloat(usdToBrl)) && parseFloat(usdToBrl) > 0) {
       data.usdToBrl = parseFloat(usdToBrl);
+    }
+    if (waMarkup !== undefined && Number.isFinite(parseFloat(waMarkup)) && parseFloat(waMarkup) >= 1) {
+      data.waMarkup = parseFloat(waMarkup);
+    }
+    if (waRates !== undefined) {
+      // Guarda só as categorias conhecidas com número válido — evita gravar
+      // lixo que depois derrubaria a projeção de custo.
+      const limpo = {};
+      const origem = typeof waRates === "string" ? safeJson(waRates) : waRates;
+      for (const k of ["MARKETING", "UTILITY", "AUTHENTICATION"]) {
+        const v = parseFloat(origem?.[k]);
+        if (Number.isFinite(v) && v >= 0) limpo[k] = v;
+      }
+      data.waRates = Object.keys(limpo).length ? JSON.stringify(limpo) : null;
     }
     if (tokenMarkup !== undefined && Number.isFinite(parseFloat(tokenMarkup)) && parseFloat(tokenMarkup) >= 1) {
       data.tokenMarkup = parseFloat(tokenMarkup);
