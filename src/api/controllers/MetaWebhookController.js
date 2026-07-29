@@ -128,15 +128,41 @@ export const receiveMetaWebhook = async (req, res) => {
         const messages = value.messages || [];
 
         for (const message of messages) {
-          if (message.type !== "text") {
-            console.log(`[Meta Webhook] Ignorando mensagem tipo '${message.type}'.`);
+          const from = message.from;
+          const name = contacts.find(c => c.wa_id === from)?.profile?.name || null;
+          if (!phoneId || !from) continue;
+
+          // Texto simples
+          if (message.type === "text") {
+            const content = message.text?.body || "";
+            if (!content) continue;
+            await MetaManager.handleIncoming(phoneId, from, name, content);
             continue;
           }
-          const from = message.from;
-          const content = message.text?.body || "";
-          const name = contacts.find(c => c.wa_id === from)?.profile?.name || null;
-          if (!phoneId || !from || !content) continue;
-          await MetaManager.handleIncoming(phoneId, from, name, content);
+
+          // Mídia: áudio (nota de voz), imagem e documento — o agente
+          // transcreve/lê o conteúdo, igual ao canal via QR.
+          const MEDIA_MAP = {
+            audio: { kind: "audio", messageType: "AUDIO" },
+            voice: { kind: "audio", messageType: "AUDIO" },
+            image: { kind: "img", messageType: "IMAGE" },
+            document: { kind: "doc", messageType: "DOCUMENT" },
+          };
+          const meta = MEDIA_MAP[message.type];
+          if (meta) {
+            const payload = message[message.type] || {};
+            if (!payload.id) continue;
+            await MetaManager.handleIncoming(phoneId, from, name, null, {
+              id: payload.id,
+              kind: meta.kind,
+              messageType: meta.messageType,
+              caption: payload.caption || null,
+              fileName: payload.filename || null,
+            });
+            continue;
+          }
+
+          console.log(`[Meta Webhook] Ignorando mensagem tipo '${message.type}'.`);
         }
       }
 

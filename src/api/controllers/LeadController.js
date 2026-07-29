@@ -272,14 +272,25 @@ export const receiveWhatsappWebhook = async (req, res) => {
 
       if (!planVoice) {
         // Plano sem voz: não transcreve; pede texto e encerra (sem custo de IA).
-        try {
-          const { WhatsAppManager } = await import("../../../whatsapp.js");
-          await WhatsAppManager.sendMessage(tenantId, phone, "Ainda não consigo ouvir áudios por aqui 🙏 Pode me enviar sua mensagem por texto?");
-        } catch (_) {}
+        // A resposta volta no payload — quem chamou (Baileys ou Meta) entrega
+        // pelo canal certo. Só usamos o Baileys diretamente quando é ele.
+        const aviso = "Ainda não consigo ouvir áudios por aqui 🙏 Pode me enviar sua mensagem por texto?";
+        if (source === "WhatsApp") {
+          try {
+            const { WhatsAppManager } = await import("../../../whatsapp.js");
+            await WhatsAppManager.sendMessage(tenantId, phone, aviso);
+          } catch (_) {}
+        }
         await prisma.message.create({
           data: { conversationId: conversation.id, tenantId, content: "🎙️ (áudio recebido)", mediaUrl: audioMediaUrl, role: "USER", messageType: "AUDIO" },
         }).catch(() => {});
-        return res.json({ success: true, voice_disabled: true, ai_response: null });
+        return res.json({
+          success: true,
+          voice_disabled: true,
+          // Canal oficial (Meta) usa este campo para responder ao cliente.
+          ai_response: source === "WhatsApp" ? null : aviso,
+          response_mode: "TEXT",
+        });
       }
 
       // Transcreve o arquivo local (content = /api/uploads/audio_xxx.ogg).
@@ -288,7 +299,9 @@ export const receiveWhatsappWebhook = async (req, res) => {
         const abs = localPathFor(content) || path.join(process.cwd(), "public", content.replace(/^\/+/, ""));
         if (fs.existsSync(abs)) {
           const buf = fs.readFileSync(abs);
-          const transcript = await VoiceService.transcribeAudio(buf, "audio/ogg");
+          // Usa o mimetype real quando o canal informou (Meta manda audio/ogg,
+          // audio/mpeg, etc.); Baileys entrega ogg.
+          const transcript = await VoiceService.transcribeAudio(buf, mediaMime || "audio/ogg");
           effectiveContent = transcript || "";
           displayContent = transcript ? `🎙️ ${transcript}` : "🎙️ (áudio sem transcrição)";
         }
