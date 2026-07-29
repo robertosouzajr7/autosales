@@ -28,7 +28,8 @@ import {
   Clock,
   Sparkles,
   Package,
-  CreditCard
+  CreditCard,
+  FileText
 } from "lucide-react";
 import { notificationStore } from "@/lib/notifications";
 
@@ -78,6 +79,7 @@ const navItems: NavItem[] = [
   { label: "Meu Negócio", icon: Building2, href: "/negocio" },
   { label: "Catálogo", icon: Package, href: "/catalogo" },
   { label: "Agente de IA", icon: Bot, href: "/sdrs" },
+  { label: "Templates", icon: FileText, href: "/templates" },
   { label: "Lembretes", icon: Zap, href: "/automations" },
   { label: "Conexões", icon: Smartphone, href: "/connections" },
   { label: "Assinatura", icon: CreditCard, href: "/assinatura" },
