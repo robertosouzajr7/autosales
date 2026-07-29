@@ -25,6 +25,11 @@ const STT_MODEL = "gemini-2.5-flash";
 const TTS_MODEL = "gemini-2.5-flash-preview-tts";
 const DEFAULT_VOICE = "Kore"; // voz neutra do Gemini; boa em PT-BR
 const ELEVEN_DEFAULT_VOICE = "21m00Tcm4TlvDq8ikWAM"; // Rachel (ElevenLabs)
+// Flash é o modelo de baixa latência da ElevenLabs (~75ms contra os ~5s do
+// multilingual_v2 medidos em produção). Num atendimento por WhatsApp a espera
+// pesa mais que a expressividade extra; para voltar ao modelo mais rico,
+// basta ELEVENLABS_MODEL=eleven_multilingual_v2.
+const ELEVEN_MODEL = process.env.ELEVENLABS_MODEL || "eleven_flash_v2_5";
 
 // Diretório para os áudios gerados. Usa o MESMO UPLOAD_DIR do StorageService
 // (volume persistente em produção) para que a URL /api/uploads/… encontre o
@@ -65,21 +70,27 @@ export const GEMINI_VOICES = [
 ];
 
 /**
- * Confere se o arquivo é um OGG com stream Opus — o único formato que o
+ * Confere se o conteúdo é um OGG com stream Opus — o único formato que o
  * WhatsApp renderiza como nota de voz. A primeira página traz "OggS" seguido
  * do cabeçalho "OpusHead" (num OGG/Vorbis viria "\x01vorbis").
+ * Aceita um Buffer (resposta de API) ou um caminho de arquivo.
  */
-function isOpusOgg(filePath) {
+function isOpusOgg(source) {
+  const head = Buffer.isBuffer(source) ? source.subarray(0, 64) : readHead(source);
+  if (!head || head.length < 36) return false;
+  if (head.subarray(0, 4).toString("latin1") !== "OggS") return false;
+  return head.includes("OpusHead");
+}
+
+function readHead(filePath) {
   let fd;
   try {
     fd = fs.openSync(filePath, "r");
-    const head = Buffer.alloc(64);
-    const read = fs.readSync(fd, head, 0, 64, 0);
-    if (read < 36) return false;
-    if (head.subarray(0, 4).toString("latin1") !== "OggS") return false;
-    return head.includes("OpusHead");
+    const buf = Buffer.alloc(64);
+    const read = fs.readSync(fd, buf, 0, 64, 0);
+    return buf.subarray(0, read);
   } catch {
-    return false;
+    return null;
   } finally {
     if (fd !== undefined) { try { fs.closeSync(fd); } catch (_) {} }
   }
@@ -328,21 +339,35 @@ class VoiceService {
         `https://api.elevenlabs.io/v1/text-to-speech/${voice}`,
         {
           text,
-          model_id: process.env.ELEVENLABS_MODEL || "eleven_multilingual_v2",
+          model_id: ELEVEN_MODEL,
           voice_settings: { stability: 0.5, similarity_boost: 0.75 },
         },
         {
-          headers: { "xi-api-key": apiKey, "Content-Type": "application/json", accept: "audio/mpeg" },
+          // Pede o Opus já no formato da nota de voz (48kHz/32kbps) — mesmo
+          // alvo do ffmpeg. Quando vem em OGG, a conversão é dispensada.
+          params: { output_format: "opus_48000_32" },
+          headers: { "xi-api-key": apiKey, "Content-Type": "application/json", accept: "audio/ogg" },
           responseType: "arraybuffer",
           timeout: 60000,
         }
       );
+      sw.lap("api");
       if (!fs.existsSync(AUDIO_DIR)) fs.mkdirSync(AUDIO_DIR, { recursive: true });
       const base = `tts_${crypto.randomBytes(6).toString("hex")}`;
-      const mp3Path = path.join(AUDIO_DIR, `${base}.mp3`);
-      fs.writeFileSync(mp3Path, Buffer.from(data));
-      sw.lap("api");
-      const out = await this._toOpus(mp3Path, base);
+      const buf = Buffer.from(data);
+
+      // Caminho rápido: já veio pronto, sem passar pelo ffmpeg.
+      if (isOpusOgg(buf)) {
+        const oggPath = path.join(AUDIO_DIR, `${base}.ogg`);
+        fs.writeFileSync(oggPath, buf);
+        sw.done(`${voice} · ${text.length} chars · opus direto`);
+        return `/api/uploads/${base}.ogg`;
+      }
+
+      // Veio em outro container (MP3, por ex.): converte como antes.
+      const rawPath = path.join(AUDIO_DIR, `${base}.mp3`);
+      fs.writeFileSync(rawPath, buf);
+      const out = await this._toOpus(rawPath, base);
       sw.lap("ffmpeg");
       sw.done(`${voice} · ${text.length} chars`);
       return out;
