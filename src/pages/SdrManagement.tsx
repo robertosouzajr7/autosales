@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
-  Bot, Plus, Trash2, Brain, Zap, Globe, Save, RefreshCw, Sliders, User, ShieldCheck, Clock, CheckCircle2, MessageSquare, Upload, FileText, FileJson, Power, Check
+  Bot, Plus, Trash2, Brain, Zap, Globe, Save, RefreshCw, Sliders, User, ShieldCheck, Clock, CheckCircle2, MessageSquare, Upload, FileText, FileJson, Power, Check, Play, Lock, Sparkles
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
@@ -22,6 +23,7 @@ export default function SdrManagement() {
   const [sdrs, setSdrs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSdr, setEditingSdr] = useState<any>(null);
@@ -30,6 +32,9 @@ export default function SdrManagement() {
   const [skillsCatalog, setSkillsCatalog] = useState<any[]>([]);
   // Vozes liberadas pelo admin do SaaS (a chave do provedor é global).
   const [voices, setVoices] = useState<any[]>([]);
+  const [previewingId, setPreviewingId] = useState<string | null>(null);
+  const [upgradeVoice, setUpgradeVoice] = useState<any>(null); // voz premium bloqueada
+  const previewAudio = useRef<HTMLAudioElement | null>(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -132,6 +137,39 @@ export default function SdrManagement() {
       });
     }
     setIsModalOpen(true);
+  };
+
+  // Toca alguns segundos da voz. Premium usa o preview da ElevenLabs; a voz
+  // padrão é gerada (e cacheada) pelo backend.
+  const playPreview = async (v: any) => {
+    try {
+      previewAudio.current?.pause();
+      setPreviewingId(v.id);
+      let url = v.preview;
+      if (!url) {
+        const token = localStorage.getItem("token");
+        const res = await fetch(`/api/voices/${encodeURIComponent(v.id)}/preview`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const d = await res.json();
+        url = d.url;
+      }
+      if (!url) throw new Error("sem amostra");
+      const audio = new Audio(url);
+      previewAudio.current = audio;
+      audio.onended = () => setPreviewingId(null);
+      audio.onerror = () => { setPreviewingId(null); toast({ title: "Não foi possível tocar a amostra", variant: "destructive" }); };
+      await audio.play();
+    } catch {
+      setPreviewingId(null);
+      toast({ title: "Não foi possível tocar a amostra", variant: "destructive" });
+    }
+  };
+
+  // Voz bloqueada abre o modal de upgrade; liberada é selecionada.
+  const selectVoice = (v: any) => {
+    if (v.locked) { setUpgradeVoice(v); return; }
+    setForm({ ...form, voiceId: v.id });
   };
 
   const handleSave = async () => {
@@ -504,17 +542,53 @@ export default function SdrManagement() {
                           
                           <div className="space-y-2">
                              <Label className="font-semibold text-xs text-white/50 pl-1">Voz</Label>
-                             <Select value={form.voiceId} onValueChange={v => setForm({...form, voiceId: v})}>
-                                <SelectTrigger className="h-10 rounded-2xl border-none bg-white/5 text-white font-bold px-6 shadow-inner">
-                                   <SelectValue placeholder={voices.length ? "Escolher voz" : "Nenhuma voz disponível"} />
-                                </SelectTrigger>
-                                <SelectContent className="rounded-xl border-none shadow-sm">
-                                   {voices.map((v: any) => (
-                                     <SelectItem key={v.id} value={v.id} className="font-bold">{v.name}</SelectItem>
-                                   ))}
-                                </SelectContent>
-                             </Select>
-                             <p className="text-xs font-bold text-white/20 pl-1">Vozes liberadas pela plataforma.</p>
+                             <div className="max-h-44 overflow-y-auto space-y-1.5 pr-1">
+                                {voices.length === 0 && (
+                                  <p className="text-xs font-bold text-white/30">Nenhuma voz disponível.</p>
+                                )}
+                                {voices.map((v: any) => {
+                                  const selected = form.voiceId === v.id;
+                                  return (
+                                    <div
+                                      key={v.id}
+                                      className={`flex items-center gap-2 rounded-xl px-3 py-2 transition-colors ${
+                                        selected ? "bg-[#2563EB]/20 ring-1 ring-[#2563EB]/40" : "bg-white/5 hover:bg-white/10"
+                                      }`}
+                                    >
+                                      {/* Ouvir amostra antes de escolher */}
+                                      <button
+                                        type="button"
+                                        onClick={() => playPreview(v)}
+                                        title="Ouvir amostra"
+                                        className="shrink-0 h-7 w-7 rounded-full bg-white/10 hover:bg-white/20 grid place-items-center text-white"
+                                      >
+                                        {previewingId === v.id
+                                          ? <RefreshCw className="w-3 h-3 animate-spin" />
+                                          : <Play className="w-3 h-3" />}
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => selectVoice(v)}
+                                        className="flex-1 text-left min-w-0"
+                                      >
+                                        <span className="text-xs font-bold text-white truncate block">{v.name}</span>
+                                        <span className="text-[10px] font-bold text-white/30">
+                                          {v.premium ? "Premium · ElevenLabs" : "Padrão"}
+                                        </span>
+                                      </button>
+
+                                      {v.locked && (
+                                        <span className="shrink-0 text-[10px] font-bold text-amber-300 flex items-center gap-1">
+                                          <Lock className="w-3 h-3" /> Upgrade
+                                        </span>
+                                      )}
+                                      {selected && !v.locked && <Check className="w-4 h-4 text-[#2DD4BF] shrink-0" />}
+                                    </div>
+                                  );
+                                })}
+                             </div>
+                             <p className="text-xs font-bold text-white/20 pl-1">Ouça a amostra antes de escolher. Vozes premium exigem upgrade.</p>
                           </div>
                        </div>
                     </div>
@@ -528,6 +602,45 @@ export default function SdrManagement() {
                   </div>
                </Tabs>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* UPGRADE — voz premium bloqueada pelo plano */}
+      <Dialog open={!!upgradeVoice} onOpenChange={(o) => !o && setUpgradeVoice(null)}>
+        <DialogContent className="rounded-2xl max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-[#2563EB]" /> Voz premium
+            </DialogTitle>
+            <DialogDescription>
+              A voz <b>{upgradeVoice?.name}</b> faz parte das vozes premium (ElevenLabs) —
+              mais naturais e expressivas, ideais para atendimento por áudio.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="rounded-xl bg-blue-50 p-4 space-y-2 text-sm text-slate-700">
+            <p className="font-semibold text-slate-900">O que muda com as vozes premium</p>
+            <ul className="space-y-1 text-xs">
+              <li>• Voz humana e natural, com entonação real</li>
+              <li>• Português do Brasil sem sotaque robótico</li>
+              <li>• Dezenas de vozes para combinar com a marca</li>
+            </ul>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              className="flex-1 gap-2"
+              onClick={() => upgradeVoice && playPreview(upgradeVoice)}
+            >
+              <Play className="w-4 h-4" /> Ouvir de novo
+            </Button>
+            <Button
+              className="flex-1 bg-[#2563EB] hover:bg-[#1D4ED8] text-white gap-2"
+              onClick={() => { setUpgradeVoice(null); navigate("/assinatura"); }}
+            >
+              <Sparkles className="w-4 h-4" /> Fazer upgrade
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -169,10 +169,23 @@ router.post("/sdrs/:id/training", upload.single("file"), SdrController.trainSdr)
 
 // Vozes LIBERADAS pelo admin — o cliente escolhe entre estas no agente.
 // A chave do provedor é global e nunca é exposta.
-router.get("/voices", async (_req, res) => {
+router.get("/voices", async (req, res) => {
   try {
     const { default: VoiceService } = await import("../services/VoiceService.js");
-    res.json(await VoiceService.listEnabledVoices());
+    // Passa o tenant para marcar as vozes premium como bloqueadas quando o
+    // plano não dá direito (a UI mostra, deixa ouvir e oferece o upgrade).
+    res.json(await VoiceService.listEnabledVoices(req.tenantId));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Amostra da voz (alguns segundos) para o cliente ouvir antes de escolher.
+// Vozes premium já vêm com preview_url da ElevenLabs; aqui geramos a do Gemini.
+router.get("/voices/:id/preview", async (req, res) => {
+  try {
+    const { default: VoiceService } = await import("../services/VoiceService.js");
+    const url = await VoiceService.previewVoice(req.params.id);
+    if (!url) return res.status(404).json({ error: "Não foi possível gerar a amostra." });
+    res.json({ url });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

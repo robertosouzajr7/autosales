@@ -2591,7 +2591,8 @@ ${scrapeContext}
         });
         if (t?.plan?.enableVoice) {
           const { default: VoiceService } = await import("./src/api/services/VoiceService.js");
-          audioUrl = await VoiceService.synthesizeSpeech(aiResponse, sdr.voiceId);
+          // tenantId decide se a voz premium (ElevenLabs) está liberada no plano.
+          audioUrl = await VoiceService.synthesizeSpeech(aiResponse, sdr.voiceId, tenantId);
         }
       }
 

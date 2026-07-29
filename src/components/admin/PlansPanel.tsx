@@ -29,6 +29,7 @@ const DEFAULT_PLAN = {
   enableAutomations: true,
   enableWebhooks: false,
   enableVoice: false,
+  enablePremiumVoice: false,
   sdrUnitCost: 15.0,
   tokenUnitCost: 0.08,
   messageUnitCost: 0.05,
@@ -67,6 +68,7 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
       enableAutomations: p.enableAutomations ?? true,
       enableWebhooks: p.enableWebhooks ?? false,
       enableVoice: p.enableVoice ?? false,
+      enablePremiumVoice: p.enablePremiumVoice ?? false,
     });
     setOpen(true);
   };
@@ -92,6 +94,7 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
       enableAutomations: !!form.enableAutomations,
       enableWebhooks: !!form.enableWebhooks,
       enableVoice: !!form.enableVoice,
+      enablePremiumVoice: !!form.enablePremiumVoice,
       // Custo real do plano hoje = só tokens (auto, do modelo ativo). Agente e
       // mensagem não têm custo, então gravamos 0 nesses campos legados.
       sdrUnitCost: 0,
@@ -201,6 +204,7 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
                   ["enableAutomations", "Automações / Lembretes"],
                   ["enableWebhooks", "Webhooks / API pública"],
                   ["enableVoice", "Voz — ouvir e responder áudio"],
+                  ["enablePremiumVoice", "Vozes premium (ElevenLabs)"],
                 ].map(([key, label]) => (
                   <div key={key} className="flex items-center justify-between">
                     <Label className="text-xs text-foreground">{label}</Label>

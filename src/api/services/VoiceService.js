@@ -47,11 +47,10 @@ export async function resolveVoiceConfig() {
   try {
     s = await prisma.platformSettings.findUnique({ where: { id: "singleton" } });
   } catch { /* usa env */ }
-  const provider = (s?.voiceProvider || process.env.VOICE_PROVIDER || "GEMINI").toUpperCase();
   const elevenKey = s?.elevenLabsApiKey || process.env.ELEVENLABS_API_KEY || null;
   let enabledVoices = [];
   try { enabledVoices = s?.enabledVoices ? JSON.parse(s.enabledVoices) : []; } catch { enabledVoices = []; }
-  return { provider, elevenKey, enabledVoices };
+  return { elevenKey, enabledVoices };
 }
 
 /** Vozes nativas do Gemini (catálogo fixo). */
@@ -145,39 +144,99 @@ class VoiceService {
    * devolve o catálogo fixo.
    */
   async listProviderVoices() {
-    const { provider, elevenKey } = await resolveVoiceConfig();
-    if (provider !== "ELEVENLABS") return { provider, voices: GEMINI_VOICES };
-    if (!elevenKey) return { provider, voices: [], error: "Chave da ElevenLabs não configurada." };
+    const { elevenKey } = await resolveVoiceConfig();
+    // Vozes padrão (Gemini) — sempre disponíveis, sem custo extra.
+    const voices = GEMINI_VOICES.map((v) => ({ ...v, provider: "GEMINI", premium: false, preview: null }));
+
+    // Vozes premium (ElevenLabs) — exigem plano com voz premium.
+    if (!elevenKey) return { voices, elevenConfigured: false };
     try {
       const { data } = await axios.get("https://api.elevenlabs.io/v1/voices", {
         headers: { "xi-api-key": elevenKey },
         timeout: 30000,
       });
-      const voices = (data?.voices || []).map((v) => ({
-        id: v.voice_id,
-        name: v.name,
-        // Metadados úteis para o admin escolher (sotaque, gênero, uso).
-        labels: v.labels || {},
-        preview: v.preview_url || null,
-      }));
-      return { provider, voices };
+      for (const v of data?.voices || []) {
+        voices.push({
+          id: v.voice_id,
+          name: v.name,
+          provider: "ELEVENLABS",
+          premium: true,
+          labels: v.labels || {},
+          // preview_url da própria ElevenLabs: amostra pronta, sem custo.
+          preview: v.preview_url || null,
+        });
+      }
+      return { voices, elevenConfigured: true };
     } catch (e) {
       console.error("[Voice] Erro ao listar vozes da ElevenLabs:", e.response?.data?.detail?.message || e.message);
-      return { provider, voices: [], error: "Não foi possível listar as vozes (verifique a chave)." };
+      return { voices, elevenConfigured: true, error: "Não foi possível listar as vozes premium (verifique a chave)." };
     }
   }
 
   /**
-   * Vozes LIBERADAS para as contas. Se o admin não restringiu nada, devolve
-   * todas as do provedor ativo.
+   * Vozes disponíveis para uma conta. Devolve TODAS as liberadas pelo admin,
+   * marcando as premium como `locked` quando o plano não dá direito — a UI
+   * mostra a voz, deixa ouvir a amostra e oferece o upgrade.
    */
-  async listEnabledVoices() {
-    const { provider, enabledVoices } = await resolveVoiceConfig();
-    if (Array.isArray(enabledVoices) && enabledVoices.length) {
-      return { provider, voices: enabledVoices };
-    }
+  async listEnabledVoices(tenantId = null) {
+    const { enabledVoices } = await resolveVoiceConfig();
     const all = await this.listProviderVoices();
-    return { provider, voices: all.voices.map((v) => ({ id: v.id, name: v.name })) };
+
+    // Filtro do admin (se houver): só as vozes que ele liberou no catálogo.
+    let voices = all.voices;
+    if (Array.isArray(enabledVoices) && enabledVoices.length) {
+      const ids = new Set(enabledVoices.map((v) => v.id));
+      voices = voices.filter((v) => ids.has(v.id) || !v.premium);
+    }
+
+    // Direito do plano às vozes premium.
+    let premiumAllowed = false;
+    if (tenantId) {
+      premiumAllowed = await prisma.tenant
+        .findUnique({ where: { id: tenantId }, select: { plan: { select: { enablePremiumVoice: true } } } })
+        .then((t) => !!t?.plan?.enablePremiumVoice)
+        .catch(() => false);
+    }
+
+    return {
+      premiumAllowed,
+      voices: voices.map((v) => ({
+        id: v.id,
+        name: v.name,
+        provider: v.provider,
+        premium: !!v.premium,
+        preview: v.preview || null,
+        locked: !!v.premium && !premiumAllowed,
+      })),
+    };
+  }
+
+  /** Descobre o provedor de uma voz pelo id (Gemini usa nomes, Eleven usa hash). */
+  providerOf(voiceId) {
+    return GEMINI_VOICES.some((v) => v.id === voiceId) ? "GEMINI" : "ELEVENLABS";
+  }
+
+  /**
+   * Gera (e cacheia) uma amostra curta de uma voz do Gemini para o cliente
+   * ouvir antes de escolher. As vozes da ElevenLabs já têm preview_url próprio.
+   */
+  async previewVoice(voiceId) {
+    const safe = String(voiceId).replace(/[^a-zA-Z0-9_-]/g, "");
+    if (!safe) return null;
+    const cached = path.join(AUDIO_DIR, `preview_${safe}.ogg`);
+    if (fs.existsSync(cached)) return `/api/uploads/preview_${safe}.ogg`;
+
+    const sample = "Olá! Sou o assistente virtual e é assim que a minha voz soa no atendimento.";
+    const url = await this._geminiSpeech(sample, safe);
+    if (!url) return null;
+    // Renomeia para o nome de cache (evita gerar de novo a cada clique).
+    try {
+      const generated = path.join(AUDIO_DIR, path.basename(url));
+      fs.renameSync(generated, cached);
+      return `/api/uploads/preview_${safe}.ogg`;
+    } catch {
+      return url;
+    }
   }
 
   /**
@@ -206,10 +265,23 @@ class VoiceService {
    * Texto → áudio, pelo provedor GLOBAL configurado pelo admin
    * (Gemini ou ElevenLabs). Devolve caminho relativo ou null.
    */
-  async synthesizeSpeech(text, voiceId) {
-    const { provider, elevenKey } = await resolveVoiceConfig();
+  async synthesizeSpeech(text, voiceId, tenantId = null) {
+    const { elevenKey } = await resolveVoiceConfig();
+    const provider = this.providerOf(voiceId);
+
     if (provider === "ELEVENLABS") {
-      return this._elevenLabsSpeech(text, voiceId, elevenKey);
+      // Voz premium: exige plano com direito. Sem direito, cai na voz padrão
+      // (não bloqueia o atendimento — só não usa a voz premium).
+      let allowed = false;
+      if (tenantId) {
+        allowed = await prisma.tenant
+          .findUnique({ where: { id: tenantId }, select: { plan: { select: { enablePremiumVoice: true } } } })
+          .then((t) => !!t?.plan?.enablePremiumVoice)
+          .catch(() => false);
+      }
+      if (allowed && elevenKey) return this._elevenLabsSpeech(text, voiceId, elevenKey);
+      console.warn("[Voice] Voz premium sem direito no plano (ou sem chave) — usando voz padrão.");
+      return this._geminiSpeech(text, DEFAULT_VOICE);
     }
     return this._geminiSpeech(text, voiceId);
   }

@@ -230,7 +230,8 @@ model Plan {
   enableCalendar    Boolean @default(true)  // Google Calendar
   enableAutomations Boolean @default(true)  // Lembretes/no-show
   enableWebhooks    Boolean @default(false) // API pública/webhooks
-  enableVoice       Boolean @default(false) // agente ouve (STT) e responde (TTS) em áudio
+  enableVoice        Boolean @default(false) // agente ouve (STT) e responde (TTS) em áudio
+  enablePremiumVoice Boolean @default(false) // libera as vozes premium (ElevenLabs)
 
   // Custos operacionais unitários (para cálculo de margem no admin)
   sdrUnitCost     Float @default(15.0)
