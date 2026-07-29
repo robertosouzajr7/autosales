@@ -1,5 +1,5 @@
 import prisma from "../config/prisma.js";
-import { WhatsAppManager } from "../../../whatsapp.js";
+import MessagingService from "../services/MessagingService.js";
 import nodemailer from "nodemailer";
 import axios from "axios";
 
@@ -148,7 +148,7 @@ export const sendCampaign = async (req, res) => {
               .replace("[empresa]", lead.company || "");
 
             if (campaign.channel === "WHATSAPP" && lead.phone) {
-              const success = await WhatsAppManager.sendMessage(tenantId, lead.phone, personalizedMessage);
+              const success = await MessagingService.sendText(tenantId, lead.phone, personalizedMessage);
               if (success) sent++; else errors++;
             } else if (campaign.channel === "EMAIL" && lead.email && transporter) {
               await transporter.sendMail({

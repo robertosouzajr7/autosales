@@ -3,6 +3,7 @@ import AutomationEngine from "../../../automation_engine.js";
 import fs from "fs";
 import path from "path";
 import VoiceService from "../services/VoiceService.js";
+import MessagingService from "../services/MessagingService.js";
 
 // Palavras que sinalizam pedido de descadastro (LGPD opt-out).
 const STOP_KEYWORDS = ["parar", "sair", "cancelar", "descadastrar", "stop", "remover", "pare"];
@@ -277,8 +278,7 @@ export const receiveWhatsappWebhook = async (req, res) => {
         const aviso = "Ainda não consigo ouvir áudios por aqui 🙏 Pode me enviar sua mensagem por texto?";
         if (source === "WhatsApp") {
           try {
-            const { WhatsAppManager } = await import("../../../whatsapp.js");
-            await WhatsAppManager.sendMessage(tenantId, phone, aviso);
+            await MessagingService.sendText(tenantId, phone, aviso);
           } catch (_) {}
         }
         await prisma.message.create({
@@ -378,8 +378,7 @@ export const receiveWhatsappWebhook = async (req, res) => {
       console.log(`[Webhook] 🛑 Opt-out registrado para ${phone}.`);
       // Confirmação curta e única (não passa pela IA).
       try {
-        const { WhatsAppManager } = await import("../../../whatsapp.js");
-        await WhatsAppManager.sendMessage(tenantId, phone, "Pronto! Você não receberá mais mensagens nossas. Se mudar de ideia, é só escrever.");
+        await MessagingService.sendText(tenantId, phone, "Pronto! Você não receberá mais mensagens nossas. Se mudar de ideia, é só escrever.");
       } catch (_) {}
       return res.json({ success: true, opted_out: true, ai_response: null });
     }

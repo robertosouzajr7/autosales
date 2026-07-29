@@ -1,5 +1,5 @@
 import prisma from "../config/prisma.js";
-import { WhatsAppManager } from "../../../whatsapp.js";
+import MessagingService from "../services/MessagingService.js";
 import { EventEmitter } from "events";
 import { messagesHeadroom } from "../middlewares/planLimits.js";
 
@@ -51,9 +51,9 @@ export const sendMessage = async (req, res) => {
     // Try sending via WhatsApp Manager
     let success = false;
     if (messageType === 'AUDIO') {
-      success = await WhatsAppManager.sendMedia(tenantId, lead.phone, content, 'audio');
+      success = await MessagingService.sendMedia(tenantId, lead.phone, content, 'audio');
     } else {
-      success = await WhatsAppManager.sendMessage(tenantId, lead.phone, content);
+      success = await MessagingService.sendText(tenantId, lead.phone, content);
     }
     
     if (!success) {
@@ -149,8 +149,7 @@ export const callIntent = async (req, res) => {
       `Olá, ${lead.name?.split(" ")[0] || "tudo bem"}! 👋\n\nPosso te chamar agora por aqui para uma conversa rápida? Tenho algumas novidades que podem te interessar! 📞\n\nResponda com "SIM" se estiver disponível ou me diga o melhor horário. 😊`;
 
     // Send via WhatsApp through the existing WhatsApp Manager
-    const { WhatsAppManager } = await import("../../../whatsapp.js");
-    const sent = await WhatsAppManager.sendMessage(tenantId, lead.phone, notificationText);
+    const sent = await MessagingService.sendText(tenantId, lead.phone, notificationText);
 
     if (!sent) {
       return res.status(500).json({ error: "Falha ao enviar mensagem. Verifique a conexão WhatsApp." });

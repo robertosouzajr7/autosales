@@ -90,6 +90,54 @@ export class MetaManager {
         }
     }
 
+    /**
+     * Envia mídia genérica (image | video | audio | document) pela Cloud API.
+     * Aceita caminho local (/api/uploads/…) — sobe o arquivo e envia por
+     * media_id — ou URL pública (envia por link).
+     */
+    static async sendWhatsAppMedia(phoneId, accessToken, to, mediaUrl, type = 'image', caption = '') {
+        try {
+            const kind = ['image', 'video', 'audio', 'document'].includes(type) ? type : 'image';
+            const payload = { messaging_product: 'whatsapp', recipient_type: 'individual', to, type: kind };
+
+            const { localPathFor } = await import('./src/api/services/StorageService.js');
+            const localPath = localPathFor(mediaUrl);
+
+            if (localPath && fs.existsSync(localPath)) {
+                const buffer = fs.readFileSync(localPath);
+                const ext = path.extname(localPath).toLowerCase();
+                const MIME = {
+                    '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+                    '.webp': 'image/webp', '.gif': 'image/gif', '.mp4': 'video/mp4',
+                    '.ogg': 'audio/ogg', '.mp3': 'audio/mpeg', '.pdf': 'application/pdf',
+                };
+                const mime = MIME[ext] || 'application/octet-stream';
+                const mediaId = await this.uploadMedia(phoneId, accessToken, buffer, mime, path.basename(localPath));
+                if (!mediaId) return false;
+                payload[kind] = { id: mediaId };
+            } else if (/^https?:\/\//i.test(mediaUrl)) {
+                payload[kind] = { link: mediaUrl };
+            } else {
+                console.warn(`[Meta API] Mídia não encontrada para envio: ${mediaUrl}`);
+                return false;
+            }
+
+            // Áudio não aceita caption na Cloud API.
+            if (caption && kind !== 'audio') payload[kind].caption = caption;
+
+            await axios.post(
+                `https://graph.facebook.com/${GRAPH_VERSION}/${phoneId}/messages`,
+                payload,
+                { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, timeout: 60000 }
+            );
+            console.log(`[Meta API] 📎 Mídia (${kind}) enviada para ${to}`);
+            return true;
+        } catch (e) {
+            console.error('[Meta API] Erro ao enviar mídia:', e.response?.data?.error?.message || e.message);
+            return false;
+        }
+    }
+
     /** Salva um buffer recebido no diretório de uploads e devolve a URL canônica. */
     static saveIncomingMedia(buffer, mimeType, prefix = 'media') {
         try {

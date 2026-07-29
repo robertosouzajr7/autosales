@@ -1,6 +1,8 @@
 import prisma from "./src/api/config/prisma.js";
 import { isTenantEntitled } from "./src/api/middlewares/subscription.js";
 import { WhatsAppManager } from "./whatsapp.js";
+// Envio unificado: escolhe Cloud API (Meta) ou Baileys conforme a conexão.
+import MessagingService from "./src/api/services/MessagingService.js";
 import { EmailService } from "./email_service.js";
 import CalendarService from "./calendar_service.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -216,9 +218,9 @@ class AutomationEngine {
     });
 
     if (mediaUrl && mediaType) {
-      return WhatsAppManager.sendMedia(tenantId, phone, mediaUrl, mediaType, content);
+      return MessagingService.sendMedia(tenantId, phone, mediaUrl, mediaType, content);
     }
-    return WhatsAppManager.sendMessage(tenantId, phone, content);
+    return MessagingService.sendText(tenantId, phone, content);
   }
 
   // ========== VARIABLE RESOLUTION ==========
@@ -475,7 +477,7 @@ class AutomationEngine {
             where: { leadId: lead.id },
             data: { botActive: false }
           });
-          await WhatsAppManager.sendMessage(lead.tenantId, lead.phone, msg);
+          await MessagingService.sendText(lead.tenantId, lead.phone, msg);
           result.output = { transferred: true };
           break;
         }
@@ -552,7 +554,7 @@ class AutomationEngine {
                  const icp = await prisma.icpProfile.findFirst({ where: { tenantId: lead.tenantId } });
                  const prompt = `Você é um SDR e deve iniciar um contato a frio pelo WhatsApp com ${lead.name}. Use o ICP: ${icp?.name || 'Geral'} como base. Seja curto e direto.`;
                  const text = await this._aiText(lead.tenantId, prompt);
-                 await WhatsAppManager.sendMessage(lead.tenantId, lead.phone, text);
+                 await MessagingService.sendText(lead.tenantId, lead.phone, text);
                  result.output = { channel: 'WHATSAPP', text: text.substring(0, 50) };
               }
            }
@@ -667,7 +669,7 @@ class AutomationEngine {
              ? `Olá ${lead.name}! Tenho estes horários livres:\n${slots.slice(0,3).map(s => `- ${s.toLocaleString()}`).join('\n')}\nQual fica melhor para você?`
              : "Infelizmente estamos com a agenda lotada para hoje. Posso sugerir amanhã?";
            
-           await WhatsAppManager.sendMessage(lead.tenantId, lead.phone, text);
+           await MessagingService.sendText(lead.tenantId, lead.phone, text);
            result.output = { slots: slots.length, text };
            break;
         }
@@ -1287,7 +1289,7 @@ class AutomationEngine {
                 mediaSent = true;
               }
             } else {
-              await WhatsAppManager.sendMedia(lead.tenantId, lead.phone, media.url, media.type, media.type === "audio" ? "" : caption);
+              await MessagingService.sendMedia(lead.tenantId, lead.phone, media.url, media.type, media.type === "audio" ? "" : caption);
               mediaSent = true;
             }
           } catch (e) {
@@ -1706,7 +1708,7 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
           update: { botActive: false },
           create: { leadId: lead.id, tenantId, botActive: false }
         });
-        await WhatsAppManager.sendMessage(tenantId, phone,
+        await MessagingService.sendText(tenantId, phone,
           "Entendi perfeitamente. Vou conectar você com nossa equipe agora! 🙏"
         );
         return true;
@@ -2392,7 +2394,7 @@ ${scrapeContext}
           const dateStr = appt.date.toLocaleDateString();
           const msg = `Olá ${appt.lead.name}! Passando para confirmar que recebi seu agendamento para o dia ${dateStr} às ${timeStr}. Estarei te esperando! ✅`;
           
-          await WhatsAppManager.sendMessage(tenantId, appt.lead.phone, msg);
+          await MessagingService.sendText(tenantId, appt.lead.phone, msg);
           await prisma.appointment.update({
             where: { id: appt.id },
             data: { notes: (appt.notes || "") + "\n[CONFIRMED_BY_SDR]" }
@@ -2417,7 +2419,7 @@ ${scrapeContext}
           const timeStr = appt.date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
           const msg = `Oi ${appt.lead.name}! Lembra que temos um compromisso hoje às ${timeStr}? Estaremos te aguardando! 😊`;
           
-          await WhatsAppManager.sendMessage(tenantId, appt.lead.phone, msg);
+          await MessagingService.sendText(tenantId, appt.lead.phone, msg);
           await prisma.appointment.update({
             where: { id: appt.id },
             data: { notes: (appt.notes || "") + "\n[REMINDER_SENT]" }
@@ -2441,7 +2443,7 @@ ${scrapeContext}
         for (const appt of missed) {
           const msg = `Olá ${appt.lead.name}, notamos que você não conseguiu comparecer ao nosso compromisso agora há pouco. Aconteceu algo? Se quiser reagendar, estou à disposição!`;
           
-          await WhatsAppManager.sendMessage(tenantId, appt.lead.phone, msg);
+          await MessagingService.sendText(tenantId, appt.lead.phone, msg);
           await prisma.appointment.update({
             where: { id: appt.id },
             data: { 
@@ -2468,7 +2470,7 @@ ${scrapeContext}
         for (const appt of toFollowUp) {
           const msg = `Oi ${appt.lead.name}! Como foi seu atendimento ontem? Espero que tenha sido excelente! Se precisar de algo mais, conte comigo. ✨`;
           
-          await WhatsAppManager.sendMessage(tenantId, appt.lead.phone, msg);
+          await MessagingService.sendText(tenantId, appt.lead.phone, msg);
           await prisma.appointment.update({
             where: { id: appt.id },
             data: { notes: (appt.notes || "") + "\n[POST_SERVICE_SENT]" }
@@ -2503,7 +2505,7 @@ ${scrapeContext}
       const dateStr = cancelledAppt.date.toLocaleDateString();
       const msg = `Oi ${nextOnList.lead.name}! Acabou de surgir uma vaga para agendamento no dia ${dateStr} às ${timeStr}. Você tem interesse em ocupar esse horário? Me avise aqui! 🚀`;
 
-      await WhatsAppManager.sendMessage(tenantId, nextOnList.lead.phone, msg);
+      await MessagingService.sendText(tenantId, nextOnList.lead.phone, msg);
 
       // 4. Atualizar status na lista de espera
       await prisma.waitlist.update({
@@ -2528,7 +2530,7 @@ ${scrapeContext}
   }
 
   async sendMessage(tenantId, phone, content) {
-    await WhatsAppManager.sendMessage(tenantId, phone, content);
+    await MessagingService.sendText(tenantId, phone, content);
   }
 
   /**

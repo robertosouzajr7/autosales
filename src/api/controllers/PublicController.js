@@ -1,5 +1,5 @@
 import prisma from "../config/prisma.js";
-import { WhatsAppManager } from "../../../whatsapp.js";
+import MessagingService from "../services/MessagingService.js";
 import AutomationEngine from "../../../automation_engine.js";
 import { getFunctionPreset } from "../services/AgentFunctions.js";
 
@@ -198,7 +198,7 @@ export const bookAppointment = async (req, res) => {
         const dateStr = new Date(date).toLocaleDateString();
         const sdrMsg = `Olá ${name}! Passando para confirmar que seu agendamento para o dia ${dateStr} às ${timeStr} foi recebido com sucesso. Já reservei aqui na minha agenda! ✅`;
         
-        await WhatsAppManager.sendMessage(tenantId, phone, sdrMsg);
+        await MessagingService.sendText(tenantId, phone, sdrMsg);
         console.log(`[Booking] ✅ Confirmação instantânea enviada para ${name} (${phone})`);
         
         // Marcar como já avisado para a rotina global não repetir
