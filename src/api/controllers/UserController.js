@@ -3,9 +3,14 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import speakeasy from "speakeasy";
 import QRCode from "qrcode";
+import {
+  MODULES, MODULE_IDS, PROFILES, PROFILE_IDS,
+  resolvePermissions, getProfile, isAdminProfile,
+} from "../services/AccessProfiles.js";
+import { invalidateUserCache } from "../middlewares/permissions.js";
 
-// Papéis que um tenant pode atribuir. SUPERADMIN nunca pode ser criado por rota de tenant.
-const TENANT_ROLES = ["OWNER", "ADMIN", "AGENT"];
+// Perfis que um tenant pode atribuir. SUPERADMIN nunca sai de rota de tenant.
+const TENANT_ROLES = PROFILE_IDS;
 
 // Campo que nunca deve ser retornado no JSON.
 function sanitize(user) {
@@ -15,21 +20,44 @@ function sanitize(user) {
   return safe;
 }
 
+/** Colaborador com o que a tela precisa: perfil, permissões e filas. */
+function apresentar(user) {
+  const limpo = sanitize(user);
+  return {
+    ...limpo,
+    profileLabel: getProfile(user.role).label,
+    isAdmin: isAdminProfile(user.role),
+    permissions: resolvePermissions(user),
+    // Diferencia "o admin escolheu estes módulos" de "está herdando do perfil".
+    permissionsCustom: !!user.permissions,
+    queues: (user.queueMemberships || []).map((m) => ({ id: m.queue.id, name: m.queue.name })),
+  };
+}
+
 export const getUsers = async (req, res) => {
   try {
     const tenantId = req.tenantId;
     if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
-    const users = await prisma.user.findMany({ where: { tenantId } });
-    res.json(users.map(sanitize));
+    const users = await prisma.user.findMany({
+      where: { tenantId },
+      include: { queueMemberships: { include: { queue: { select: { id: true, name: true } } } } },
+      orderBy: [{ active: "desc" }, { name: "asc" }],
+    });
+    res.json(users.map(apresentar));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 };
 
+/** Catálogo de perfis e módulos, para a tela montar o formulário. */
+export const getAccessCatalog = async (_req, res) => {
+  res.json({ profiles: PROFILES, modules: MODULES });
+};
+
 export const createUser = async (req, res) => {
   try {
     const tenantId = req.tenantId;
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, permissions, queueIds, jobTitle } = req.body;
     if (!password || password.length < 8) {
       return res.status(400).json({ error: "Senha deve ter ao menos 8 caracteres." });
     }
@@ -46,10 +74,129 @@ export const createUser = async (req, res) => {
         email: emailNormalized,
         password: hashedPassword,
         role: safeRole,
+        jobTitle: jobTitle || null,
+        // Sem escolha explícita, valem os módulos do perfil.
+        permissions: normalizarPermissoes(permissions),
         tenantId,
       },
     });
-    res.json(sanitize(user));
+    await sincronizarFilas(user.id, tenantId, queueIds);
+
+    const completo = await prisma.user.findUnique({
+      where: { id: user.id },
+      include: { queueMemberships: { include: { queue: { select: { id: true, name: true } } } } },
+    });
+    res.json(apresentar(completo));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+};
+
+/** Só grava a lista quando ela vem de fato — e só módulos que existem. */
+function normalizarPermissoes(permissions) {
+  if (!Array.isArray(permissions)) return undefined;
+  const limpa = [...new Set(permissions.filter((m) => MODULE_IDS.includes(m)))];
+  return JSON.stringify(limpa);
+}
+
+async function sincronizarFilas(userId, tenantId, queueIds) {
+  if (!Array.isArray(queueIds)) return;
+  const validas = await prisma.serviceQueue.findMany({
+    where: { id: { in: queueIds }, tenantId },
+    select: { id: true },
+  });
+  await prisma.queueMember.deleteMany({ where: { userId } });
+  if (validas.length) {
+    await prisma.queueMember.createMany({
+      data: validas.map((q) => ({ queueId: q.id, userId })),
+      skipDuplicates: true,
+    });
+  }
+}
+
+/**
+ * Edita o colaborador: dados, perfil, módulos liberados e filas.
+ * O admin não pode rebaixar nem desativar a si mesmo — é o jeito mais comum
+ * de uma conta ficar sem ninguém para administrar.
+ */
+export const updateUser = async (req, res) => {
+  try {
+    const alvo = await prisma.user.findFirst({ where: { id: req.params.id, tenantId: req.tenantId } });
+    if (!alvo) return res.status(404).json({ error: "Colaborador não encontrado." });
+
+    const { name, email, role, permissions, queueIds, jobTitle, active } = req.body;
+    const proprio = alvo.id === req.userId;
+
+    if (proprio && role && role !== alvo.role && !isAdminProfile(role)) {
+      return res.status(400).json({ error: "Você não pode tirar o seu próprio acesso de administrador." });
+    }
+    if (proprio && active === false) {
+      return res.status(400).json({ error: "Você não pode desativar o próprio acesso." });
+    }
+    if (alvo.role === "OWNER" && !proprio && (active === false || (role && role !== "OWNER"))) {
+      return res.status(403).json({ error: "O proprietário da conta não pode ser desativado nem rebaixado." });
+    }
+
+    const data = {};
+    if (name !== undefined) data.name = name;
+    if (jobTitle !== undefined) data.jobTitle = jobTitle || null;
+    if (role !== undefined) {
+      if (!TENANT_ROLES.includes(role)) return res.status(400).json({ error: `Perfil desconhecido: ${role}` });
+      data.role = role;
+      // Trocar de perfil sem mandar permissões volta para o padrão da função.
+      if (permissions === undefined) data.permissions = null;
+    }
+    if (permissions !== undefined) data.permissions = normalizarPermissoes(permissions) ?? null;
+    if (active !== undefined) {
+      data.active = !!active;
+      data.deactivatedAt = active ? null : new Date();
+    }
+    if (email !== undefined) {
+      const normalizado = String(email).trim().toLowerCase();
+      if (normalizado !== alvo.email) {
+        const dup = await prisma.user.findUnique({ where: { email: normalizado } });
+        if (dup) return res.status(409).json({ error: "Este e-mail já está em uso." });
+        data.email = normalizado;
+      }
+    }
+
+    await prisma.user.update({ where: { id: alvo.id }, data });
+    await sincronizarFilas(alvo.id, req.tenantId, queueIds);
+    // O cache de permissões precisa cair: senão a mudança só valeria em 30s.
+    invalidateUserCache(alvo.id);
+
+    const atualizado = await prisma.user.findUnique({
+      where: { id: alvo.id },
+      include: { queueMemberships: { include: { queue: { select: { id: true, name: true } } } } },
+    });
+    res.json(apresentar(atualizado));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+};
+
+/** Liga/desliga o acesso sem apagar histórico de atendimento. */
+export const setUserActive = async (req, res) => {
+  req.body = { active: !!req.body?.active };
+  return updateUser(req, res);
+};
+
+/** Admin define uma nova senha para o colaborador (esqueceu, trocou de pessoa). */
+export const resetUserPassword = async (req, res) => {
+  try {
+    const { password } = req.body || {};
+    if (!password || password.length < 8) {
+      return res.status(400).json({ error: "A nova senha precisa de ao menos 8 caracteres." });
+    }
+    const alvo = await prisma.user.findFirst({ where: { id: req.params.id, tenantId: req.tenantId } });
+    if (!alvo) return res.status(404).json({ error: "Colaborador não encontrado." });
+
+    await prisma.user.update({
+      where: { id: alvo.id },
+      data: { password: await bcrypt.hash(password, 10), passwordResetToken: null, passwordResetExpiresAt: null },
+    });
+    invalidateUserCache(alvo.id);
+    res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -60,9 +207,14 @@ export const deleteUser = async (req, res) => {
     if (req.params.id === req.userId) {
       return res.status(400).json({ error: "Você não pode excluir o próprio usuário" });
     }
-    await prisma.user.delete({
-      where: { id: req.params.id, tenantId: req.tenantId },
-    });
+    const alvo = await prisma.user.findFirst({ where: { id: req.params.id, tenantId: req.tenantId } });
+    if (!alvo) return res.status(404).json({ error: "Colaborador não encontrado." });
+    if (alvo.role === "OWNER") {
+      return res.status(403).json({ error: "O proprietário da conta não pode ser excluído. Transfira a conta antes." });
+    }
+
+    await prisma.user.delete({ where: { id: alvo.id } });
+    invalidateUserCache(alvo.id);
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -73,9 +225,14 @@ export const deleteUser = async (req, res) => {
 
 export const getMe = async (req, res) => {
   try {
-    const user = await prisma.user.findUnique({ where: { id: req.userId } });
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      include: { queueMemberships: { include: { queue: { select: { id: true, name: true } } } } },
+    });
     if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
-    res.json(sanitize(user));
+    // A tela usa isto para montar o menu: sem as permissões aqui, o frontend
+    // mostraria áreas que a API vai recusar.
+    res.json(apresentar(user));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

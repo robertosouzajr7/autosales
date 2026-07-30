@@ -31,6 +31,7 @@ import * as BusinessController from "../controllers/BusinessController.js";
 import * as ProductController from "../controllers/ProductController.js";
 import { listVerticalTemplates } from "../services/VerticalTemplates.js";
 import { listFunctions, SKILLS } from "../services/AgentFunctions.js";
+import { loadUser, requirePermission, requireTenantAdmin } from "../middlewares/permissions.js";
 import {
   requireCalendar,
   requireAutomations,
@@ -67,6 +68,8 @@ router.get("/auth/instagram/callback", MetaOAuthController.handleInstagramCallba
 
 // Protected Routes (Tenant context)
 router.use(authMiddleware);
+// Carrega o colaborador, barra quem foi desativado e resolve as permissões.
+router.use(loadUser);
 
 // Google Calendar (conexão da agenda)
 router.get("/google/status", GoogleCalendarController.getStatus);
@@ -74,20 +77,20 @@ router.get("/google/auth-url", GoogleCalendarController.getAuthUrl);
 router.post("/google/disconnect", GoogleCalendarController.disconnect);
 
 // Leads
-router.get("/leads", LeadController.getLeads);
-router.post("/leads", LeadController.createLead);
-router.put("/leads/:id", LeadController.updateLead);
-router.delete("/leads/:id", LeadController.deleteLead);
-router.post("/contacts/bulk-delete", LeadController.bulkDeleteLeads);
-router.post("/leads/bulk-enrich", LeadController.bulkEnrichLeads);
-router.get("/contacts/export", LeadController.exportContacts);
-router.post("/contacts/import-bulk", LeadController.importBulk);
+router.get("/leads", requirePermission("contacts"), LeadController.getLeads);
+router.post("/leads", requirePermission("contacts"), LeadController.createLead);
+router.put("/leads/:id", requirePermission("contacts"), LeadController.updateLead);
+router.delete("/leads/:id", requirePermission("contacts"), LeadController.deleteLead);
+router.post("/contacts/bulk-delete", requirePermission("contacts"), LeadController.bulkDeleteLeads);
+router.post("/leads/bulk-enrich", requirePermission("contacts"), LeadController.bulkEnrichLeads);
+router.get("/contacts/export", requirePermission("contacts"), LeadController.exportContacts);
+router.post("/contacts/import-bulk", requirePermission("contacts"), LeadController.importBulk);
 
 // Appointments (integração com Google Calendar exige plano com enableCalendar)
-router.get("/appointments", AppointmentController.getAppointments);
-router.post("/appointments", requireCalendar, AppointmentController.createAppointment);
-router.put("/appointments/:id", requireCalendar, AppointmentController.updateAppointment);
-router.delete("/appointments/:id", requireCalendar, AppointmentController.deleteAppointment);
+router.get("/appointments", requirePermission("appointments"), AppointmentController.getAppointments);
+router.post("/appointments", requirePermission("appointments"), requireCalendar, AppointmentController.createAppointment);
+router.put("/appointments/:id", requirePermission("appointments"), requireCalendar, AppointmentController.updateAppointment);
+router.delete("/appointments/:id", requirePermission("appointments"), requireCalendar, AppointmentController.deleteAppointment);
 
 // Bulk Messaging
 router.get("/bulk/campaigns", BulkController.getCampaigns);
@@ -97,34 +100,34 @@ router.post("/bulk/import-csv", BulkController.importCSV);
 
 // Settings
 router.get("/settings", SettingsController.getSettings);
-router.put("/settings", SettingsController.updateSettings);
+router.put("/settings", requirePermission("settings"), SettingsController.updateSettings);
 
 // WhatsApp Connections — criação bloqueada quando maxWhatsAppNumbers estoura
-router.get("/whatsapp/accounts", WhatsAppController.getAccounts);
-router.post("/whatsapp/accounts", requireWhatsAppSlot, WhatsAppController.createAccount);
-router.delete("/whatsapp/accounts/:id", WhatsAppController.deleteAccount);
-router.post("/whatsapp/accounts/:id/reconnect", WhatsAppController.reconnectAccount);
-router.post("/whatsapp/accounts/meta", requireWhatsAppSlot, WhatsAppController.createMetaAccount);
+router.get("/whatsapp/accounts", requirePermission("connections"), WhatsAppController.getAccounts);
+router.post("/whatsapp/accounts", requirePermission("connections"), requireWhatsAppSlot, WhatsAppController.createAccount);
+router.delete("/whatsapp/accounts/:id", requirePermission("connections"), WhatsAppController.deleteAccount);
+router.post("/whatsapp/accounts/:id/reconnect", requirePermission("connections"), WhatsAppController.reconnectAccount);
+router.post("/whatsapp/accounts/meta", requirePermission("connections"), requireWhatsAppSlot, WhatsAppController.createMetaAccount);
 // Conexão oficial (Cloud API): editar credenciais e testar — não há QR aqui.
-router.put("/whatsapp/accounts/:id/meta", WhatsAppController.updateMetaAccount);
-router.post("/whatsapp/accounts/:id/test", WhatsAppController.testMetaConnection);
+router.put("/whatsapp/accounts/:id/meta", requirePermission("connections"), WhatsAppController.updateMetaAccount);
+router.post("/whatsapp/accounts/:id/test", requirePermission("connections"), WhatsAppController.testMetaConnection);
 router.get("/whatsapp/qr/:id", WhatsAppController.qrCodeStream);
 
 // Instagram Direct — conexão em 1 clique (OAuth Meta) e manual
 router.get("/channels/instagram/oauth-url", MetaOAuthController.getOAuthUrl);
-router.post("/channels/instagram", WhatsAppController.createInstagramAccount);
-router.put("/channels/instagram/:id", WhatsAppController.updateInstagramAccount);
-router.post("/channels/instagram/:id/test", WhatsAppController.testInstagramConnection);
+router.post("/channels/instagram", requirePermission("connections"), WhatsAppController.createInstagramAccount);
+router.put("/channels/instagram/:id", requirePermission("connections"), WhatsAppController.updateInstagramAccount);
+router.post("/channels/instagram/:id/test", requirePermission("connections"), WhatsAppController.testInstagramConnection);
 
 // Automations — gate por enableAutomations
 router.get("/automations", AutomationController.getAutomations);
-router.post("/automations", requireAutomations, AutomationController.createAutomation);
-router.put("/automations/:id", requireAutomations, AutomationController.updateAutomation);
-router.delete("/automations/:id", AutomationController.deleteAutomation);
-router.post("/automations/:id/duplicate", requireAutomations, AutomationController.duplicateAutomation);
+router.post("/automations", requirePermission("flows"), requireAutomations, AutomationController.createAutomation);
+router.put("/automations/:id", requirePermission("flows"), requireAutomations, AutomationController.updateAutomation);
+router.delete("/automations/:id", requirePermission("flows"), AutomationController.deleteAutomation);
+router.post("/automations/:id/duplicate", requirePermission("flows"), requireAutomations, AutomationController.duplicateAutomation);
 router.get("/automations/executions/stats", AutomationController.getStats);
 router.get("/automations/config", AutomationController.getConfig);
-router.post("/automations/config", requireAutomations, AutomationController.updateConfig);
+router.post("/automations/config", requirePermission("reminders"), requireAutomations, AutomationController.updateConfig);
 // Catálogo de gatilhos: a tela do builder monta o formulário a partir dele.
 router.get("/automations/triggers", AutomationController.listTriggers);
 // Simulador de fluxos (execução sem efeitos) e portabilidade
@@ -133,21 +136,21 @@ router.post("/automations/simulate/:sessionId/message", requireAutomations, Auto
 router.get("/automations/simulate/:sessionId", AutomationController.simulateGet);
 router.delete("/automations/simulate/:sessionId", AutomationController.simulateStop);
 router.get("/automations/:id/export", AutomationController.exportAutomation);
-router.post("/automations/import", requireAutomations, AutomationController.importAutomation);
+router.post("/automations/import", requirePermission("flows"), requireAutomations, AutomationController.importAutomation);
 
 // Régua de lembretes: o que está programado, o que falhou e por quê.
 router.get("/automations/reminders", AutomationController.getReminders);
-router.post("/automations/reminders/:id/retry", requireAutomations, AutomationController.retryReminder);
+router.post("/automations/reminders/:id/retry", requirePermission("reminders"), requireAutomations, AutomationController.retryReminder);
 
 // Stats & Analytics
 router.get("/stats/dashboard", StatsController.getDashboardStats);
 router.get("/stats/results", StatsController.getResults);
-router.get("/analytics", AnalyticsController.getAnalytics);
+router.get("/analytics", requirePermission("analytics"), AnalyticsController.getAnalytics);
 
 // Messages & Conversations (Chat/Inbox)
-router.get("/messages/:leadId", MessageController.getMessages);
-router.post("/messages", requireActiveSubscription, MessageController.sendMessage);
-router.post("/messages/call-intent", requireActiveSubscription, MessageController.callIntent);
+router.get("/messages/:leadId", requirePermission("conversations"), MessageController.getMessages);
+router.post("/messages", requirePermission("conversations"), requireActiveSubscription, MessageController.sendMessage);
+router.post("/messages/call-intent", requirePermission("conversations"), requireActiveSubscription, MessageController.callIntent);
 // Disparo em massa (API oficial da Meta)
 // Seleção e importação de contatos (usada pelo disparo em massa)
 router.get("/contacts/search", ContactController.searchContacts);
@@ -156,64 +159,72 @@ router.get("/contacts/tags", ContactController.listTags);
 router.post("/contacts/import-csv", upload.single("file"), ContactController.importContactsCsv);
 router.get("/campaigns/:id/report", CampaignController.campaignReport);
 
-router.get("/campaigns", CampaignController.listCampaigns);
+router.get("/campaigns", requirePermission("campaigns"), CampaignController.listCampaigns);
 router.get("/campaigns/quota", CampaignController.getCampaignQuota);
-router.post("/campaigns/preview", CampaignController.previewCampaign);
-router.post("/campaigns", CampaignController.createCampaign);
+router.post("/campaigns/preview", requirePermission("campaigns"), CampaignController.previewCampaign);
+router.post("/campaigns", requirePermission("campaigns"), CampaignController.createCampaign);
 router.post("/campaigns/:id/start", CampaignController.startCampaign);
 router.post("/campaigns/:id/pause", CampaignController.pauseCampaign);
 router.delete("/campaigns/:id", CampaignController.deleteCampaign);
 
 // Templates de mensagem (WhatsApp Business / Meta)
 router.get("/templates", TemplateController.listTemplates);
-router.post("/templates", TemplateController.createTemplate);
+router.post("/templates", requirePermission("templates"), TemplateController.createTemplate);
 router.post("/templates/sync", TemplateController.syncTemplates);
 router.post("/templates/header-media", upload.single("file"), TemplateController.uploadHeaderMedia);
-router.put("/templates/:id", TemplateController.updateTemplate);
+router.put("/templates/:id", requirePermission("templates"), TemplateController.updateTemplate);
 router.post("/templates/:id/duplicate", TemplateController.duplicateTemplate);
-router.delete("/templates/:id", TemplateController.deleteTemplate);
+router.delete("/templates/:id", requirePermission("templates"), TemplateController.deleteTemplate);
 
-router.post("/messages/upload", upload.single("file"), MessageController.uploadAttachment);
-router.post("/messages/template", MessageController.sendTemplateToLead);
-router.get("/conversations", MessageController.getConversations);
-router.put("/conversations/:leadId/read", MessageController.markRead);
-router.put("/conversations/:leadId/toggle-bot", MessageController.toggleBot);
+router.post("/messages/upload", requirePermission("conversations"), upload.single("file"), MessageController.uploadAttachment);
+router.post("/messages/template", requirePermission("conversations"), MessageController.sendTemplateToLead);
+router.get("/conversations", requirePermission("conversations"), MessageController.getConversations);
+router.put("/conversations/:leadId/read", requirePermission("conversations"), MessageController.markRead);
+router.put("/conversations/:leadId/toggle-bot", requirePermission("conversations"), MessageController.toggleBot);
 // Filas de atendimento e fases da conversa
-router.get("/queues", AttendanceController.listQueues);
-router.post("/queues", AttendanceController.createQueue);
-router.put("/queues/:id", AttendanceController.updateQueue);
-router.delete("/queues/:id", AttendanceController.deleteQueue);
-router.get("/attendance/agents", AttendanceController.listAgents);
-router.get("/attendance/queue", AttendanceController.getQueue);
-router.get("/conversations/:id/status", AttendanceController.getConversationStatus);
-router.post("/conversations/:id/enqueue", AttendanceController.enqueueConversation);
-router.post("/conversations/:id/assign", AttendanceController.assignConversation);
-router.post("/conversations/:id/transfer", AttendanceController.transferConversation);
-router.post("/conversations/:id/return-bot", AttendanceController.returnToBot);
-router.post("/conversations/:id/close", AttendanceController.closeConversation);
-router.post("/conversations/:id/reopen", AttendanceController.reopenConversation);
+router.get("/queues", requirePermission("queues"), AttendanceController.listQueues);
+router.post("/queues", requirePermission("queues"), AttendanceController.createQueue);
+router.put("/queues/:id", requirePermission("queues"), AttendanceController.updateQueue);
+router.delete("/queues/:id", requirePermission("queues"), AttendanceController.deleteQueue);
+router.get("/attendance/agents", requirePermission("queues"), AttendanceController.listAgents);
+router.get("/attendance/queue", requirePermission("queues"), AttendanceController.getQueue);
+router.get("/conversations/:id/status", requirePermission("conversations"), AttendanceController.getConversationStatus);
+router.post("/conversations/:id/enqueue", requirePermission("conversations"), AttendanceController.enqueueConversation);
+router.post("/conversations/:id/assign", requirePermission("conversations"), AttendanceController.assignConversation);
+router.post("/conversations/:id/transfer", requirePermission("conversations"), AttendanceController.transferConversation);
+router.post("/conversations/:id/return-bot", requirePermission("conversations"), AttendanceController.returnToBot);
+router.post("/conversations/:id/close", requirePermission("conversations"), AttendanceController.closeConversation);
+router.post("/conversations/:id/reopen", requirePermission("conversations"), AttendanceController.reopenConversation);
 
 router.get("/events", MessageController.sseEvents);
 
 // (Rotas de prospecção outbound removidas — produto é inbound)
 
 // Users — criação bloqueada quando maxUsers estoura
-router.get("/users", UserController.getUsers);
-router.post("/users", requireUserSlot, UserController.createUser);
-router.delete("/users/:id", UserController.deleteUser);
-
-// Conta do usuário logado (perfil, senha, 2FA)
+// Conta do próprio usuário. Precisa vir ANTES de /users/:id — senão
+// "me" seria lido como id e cairia nas rotas de administração.
 router.get("/users/me", UserController.getMe);
 router.post("/users/me/password", UserController.changePassword);
 router.post("/users/me/2fa/setup", UserController.setup2FA);
 router.post("/users/me/2fa/enable", UserController.enable2FA);
 router.post("/users/me/2fa/disable", UserController.disable2FA);
 
+// Colaboradores — só quem administra a conta mexe aqui.
+router.get("/users", requireTenantAdmin, UserController.getUsers);
+router.get("/users/access-catalog", requireTenantAdmin, UserController.getAccessCatalog);
+router.post("/users", requireTenantAdmin, requireUserSlot, UserController.createUser);
+router.put("/users/:id", requireTenantAdmin, UserController.updateUser);
+router.post("/users/:id/active", requireTenantAdmin, UserController.setUserActive);
+router.post("/users/:id/password", requireTenantAdmin, UserController.resetUserPassword);
+router.delete("/users/:id", requireTenantAdmin, UserController.deleteUser);
+
+// Conta do usuário logado (perfil, senha, 2FA)
+
 // Pipeline Stages
 router.get("/pipeline-stages", PipelineController.getStages);
-router.post("/pipeline-stages", PipelineController.createStage);
-router.put("/pipeline-stages/:id", PipelineController.updateStage);
-router.delete("/pipeline-stages/:id", PipelineController.deleteStage);
+router.post("/pipeline-stages", requirePermission("crm"), PipelineController.createStage);
+router.put("/pipeline-stages/:id", requirePermission("crm"), PipelineController.updateStage);
+router.delete("/pipeline-stages/:id", requirePermission("crm"), PipelineController.deleteStage);
 
 // ICP Profiles
 router.get("/icp-profiles", ICPController.getProfiles);
@@ -223,10 +234,10 @@ router.delete("/icp-profiles/:id", ICPController.deleteProfile);
 
 // SDRs
 router.get("/sdrs", SdrController.getSdrs);
-router.post("/sdrs", SdrController.createSdr);
-router.put("/sdrs/:id", SdrController.updateSdr);
-router.delete("/sdrs/:id", SdrController.deleteSdr);
-router.post("/sdrs/:id/training", upload.single("file"), SdrController.trainSdr);
+router.post("/sdrs", requirePermission("agents"), SdrController.createSdr);
+router.put("/sdrs/:id", requirePermission("agents"), SdrController.updateSdr);
+router.delete("/sdrs/:id", requirePermission("agents"), SdrController.deleteSdr);
+router.post("/sdrs/:id/training", requirePermission("agents"), upload.single("file"), SdrController.trainSdr);
 
 // Vozes LIBERADAS pelo admin — o cliente escolhe entre estas no agente.
 // A chave do provedor é global e nunca é exposta.
@@ -257,9 +268,9 @@ router.get("/agent-functions", (_req, res) => {
 
 // Catálogo de produtos/serviços (com mídia)
 router.get("/products", ProductController.getProducts);
-router.post("/products", ProductController.createProduct);
-router.put("/products/:id", ProductController.updateProduct);
-router.delete("/products/:id", ProductController.deleteProduct);
+router.post("/products", requirePermission("catalog"), ProductController.createProduct);
+router.put("/products/:id", requirePermission("catalog"), ProductController.updateProduct);
+router.delete("/products/:id", requirePermission("catalog"), ProductController.deleteProduct);
 router.post("/products/upload", upload.single("file"), ProductController.uploadMedia);
 
 // Admin / SaaS Central (Required for AdminDashboard.tsx)
@@ -316,14 +327,14 @@ router.post("/admin/financial/trigger-billing", adminMiddleware, async (req, res
 
 // Meu Negócio (base de conhecimento do agente) — vocabulário genérico
 router.get("/business", BusinessController.getBusiness);
-router.put("/business/profile", BusinessController.updateProfile);
-router.put("/business/hours", BusinessController.updateBusinessHours);
-router.post("/business/apply-template", BusinessController.applyTemplate);
+router.put("/business/profile", requirePermission("business"), BusinessController.updateProfile);
+router.put("/business/hours", requirePermission("business"), BusinessController.updateBusinessHours);
+router.post("/business/apply-template", requirePermission("business"), BusinessController.applyTemplate);
 router.get("/business/verticals", (_req, res) => res.json(listVerticalTemplates()));
 
-router.post("/business/team", BusinessController.teamMember.create);
-router.put("/business/team/:id", BusinessController.teamMember.update);
-router.delete("/business/team/:id", BusinessController.teamMember.remove);
+router.post("/business/team", requirePermission("business"), BusinessController.teamMember.create);
+router.put("/business/team/:id", requirePermission("business"), BusinessController.teamMember.update);
+router.delete("/business/team/:id", requirePermission("business"), BusinessController.teamMember.remove);
 
 router.post("/business/services", BusinessController.service.create);
 router.put("/business/services/:id", BusinessController.service.update);
@@ -344,11 +355,11 @@ router.delete("/compliance/leads/:id", ComplianceController.deleteLeadData);
 
 router.get("/billing/portal", BillingController.getBillingPortalData);
 router.get("/billing/plans", BillingController.getActivePlans);
-router.post("/billing/checkout/:invoiceId", BillingController.createCheckoutSession);
-router.post("/billing/subscribe", BillingController.createSubscriptionCheckout);
-router.post("/billing/cancel", BillingController.cancelSubscription);
-router.post("/billing/resume", BillingController.resumeSubscription);
-router.post("/billing/upgrade", BillingController.upgradePlan);
+router.post("/billing/checkout/:invoiceId", requirePermission("billing"), BillingController.createCheckoutSession);
+router.post("/billing/subscribe", requirePermission("billing"), BillingController.createSubscriptionCheckout);
+router.post("/billing/cancel", requirePermission("billing"), BillingController.cancelSubscription);
+router.post("/billing/resume", requirePermission("billing"), BillingController.resumeSubscription);
+router.post("/billing/upgrade", requirePermission("billing"), BillingController.upgradePlan);
 
 // Recarga de tokens (pacotes definidos pelo admin) — cliente compra saldo extra
 router.get("/billing/token-packages", BillingController.getTokenPackages);

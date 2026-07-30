@@ -38,6 +38,15 @@ export const login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ error: "Credenciais inválidas" });
 
+    // Colaborador desativado não entra. A mensagem é explícita: ele não
+    // errou a senha, o acesso foi tirado.
+    if (user.active === false) {
+      return res.status(403).json({
+        error: "Seu acesso foi desativado. Fale com o administrador da conta.",
+        deactivated: true,
+      });
+    }
+
     // Se 2FA está ativo, exige o código TOTP antes de emitir o token.
     if (user.twoFactorEnabled) {
       if (!twoFactorCode) {

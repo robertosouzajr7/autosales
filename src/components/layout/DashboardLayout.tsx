@@ -68,6 +68,8 @@ interface NavItem {
   label: string;
   icon: React.ElementType;
   href: string;
+  /** Módulo exigido (AccessProfiles): sem ele o item some do menu. */
+  permission?: string;
   adminOnly?: boolean;
   feature?: string;
 }
@@ -101,6 +103,7 @@ const navItems: NavItem[] = [
   { label: "Lembretes", icon: Zap, href: "/automations" },
   { label: "Fluxos", icon: Workflow, href: "/automations/builder" },
   { label: "Conexões", icon: Smartphone, href: "/connections" },
+  { label: "Colaboradores", icon: Users, href: "/equipe", permission: "team" },
   { label: "Assinatura", icon: CreditCard, href: "/assinatura" },
   { label: "Configurações", icon: Settings, href: "/settings" },
   { label: "Admin SaaS", icon: ShieldCheck, href: "/admin", adminOnly: true },
@@ -111,7 +114,7 @@ interface SidebarNavProps {
   onNavClick?: () => void;
 }
 
-function SidebarNav({ collapsed, onNavClick, features }: SidebarNavProps & { features: any }) {
+function SidebarNav({ collapsed, onNavClick, features, permissions }: SidebarNavProps & { features: any; permissions: string[] | null }) {
   const location = useLocation();
   const ativo = hrefAtivo(location.pathname, navItems);
 
@@ -123,6 +126,9 @@ function SidebarNav({ collapsed, onNavClick, features }: SidebarNavProps & { fea
         
         if (item.adminOnly && !isAdmin) return null;
         if (item.feature && features && features[item.feature] === false) return null;
+        // Módulo bloqueado para este colaborador: o item nem aparece.
+        // (A API recusa do mesmo jeito — aqui é só não oferecer o caminho.)
+        if (permissions && item.permission && !permissions.includes(item.permission)) return null;
 
         const Icon = item.icon;
         const isActive = item.href === ativo;
@@ -194,8 +200,9 @@ function SidebarContent({
   features,
   planName,
   planData,
-  navigate
-}: SidebarContentProps & { features: any, planName: string, planData: any, navigate: any }) {
+  navigate,
+  permissions
+}: SidebarContentProps & { features: any, planName: string, planData: any, navigate: any, permissions: string[] | null }) {
   return (
     <div className="flex h-full flex-col font-sans bg-slate-900 bg-[radial-gradient(130%_55%_at_0%_0%,rgba(37,99,235,0.24),transparent_58%)]">
       {/* Logo e Info da Conta */}
@@ -237,7 +244,7 @@ function SidebarContent({
 
       {/* Nav items */}
       <div className="flex-1 overflow-y-auto py-3 scrollbar-thin">
-        <SidebarNav collapsed={collapsed} onNavClick={onNavClick} features={features} />
+        <SidebarNav collapsed={collapsed} onNavClick={onNavClick} features={features} permissions={permissions} />
       </div>
 
       {/* PLAN STATUS IN SIDEBAR */}
@@ -331,6 +338,22 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [planData, setPlanData] = useState<any>({ features: {}, name: "Básico", maxTokens: 0, usedTokens: 0, extraTokens: 0 });
+  // Módulos liberados para este colaborador. null = ainda carregando (não
+  // esconde nada antes de saber, para o menu não "piscar").
+  const [permissions, setPermissions] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    fetch("/api/users/me", { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((me) => {
+        if (!me) return;
+        setPermissions(Array.isArray(me.permissions) ? me.permissions : null);
+        if (me.role) localStorage.setItem("userRole", me.role);
+        if (me.id) localStorage.setItem("userId", me.id);
+        if (me.name) localStorage.setItem("userName", me.name);
+      })
+      .catch(() => {});
+  }, []);
   const location = useLocation();
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -433,6 +456,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           planName={planData.name}
           planData={planData}
           navigate={navigate}
+          permissions={permissions}
         />
       </aside>
 
@@ -450,6 +474,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             planName={planData.name}
             planData={planData}
             navigate={navigate}
+            permissions={permissions}
           />
         </SheetContent>
       </Sheet>

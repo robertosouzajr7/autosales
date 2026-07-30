@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import Team from "./pages/Team";
 import LandingPage from "@/pages/LandingPage";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
@@ -66,6 +67,7 @@ function App() {
         <Route path="/automations/builder" element={<Automations />} />
         <Route path="/docs" element={<Docs />} />
         <Route path="/connections" element={<Connections />} />
+        <Route path="/equipe" element={<Team />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/assinatura" element={<Assinatura />} />
         <Route path="/analytics" element={<Analytics />} />

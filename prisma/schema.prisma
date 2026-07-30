@@ -455,6 +455,14 @@ model User {
 
   lastLoginAt DateTime?
 
+  // Acesso do colaborador. `active=false` bloqueia o login sem apagar o
+  // histórico; `permissions` guarda os módulos liberados pelo admin (JSON),
+  // e nulo significa "o que o perfil da função dá".
+  active        Boolean   @default(true)
+  deactivatedAt DateTime?
+  permissions   String?
+  jobTitle      String?
+
   queueMemberships      QueueMember[]
   assignedConversations Conversation[] @relation("ConversationAssignee")
 
