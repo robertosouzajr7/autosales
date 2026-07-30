@@ -37,6 +37,9 @@ export default function Campaigns() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ name: "", templateId: "", accountId: "" });
+  // Valores dos {{n}} do template. A Meta exige exatamente a quantidade
+  // declarada — faltando um, o disparo falha com #132000 em cada contato.
+  const [variables, setVariables] = useState<string[]>([]);
   // Seleção explícita de contatos; substitui o filtro por etapa do funil.
   const [leadIds, setLeadIds] = useState<string[]>([]);
   const [report, setReport] = useState<any>(null);
@@ -97,6 +100,12 @@ export default function Campaigns() {
         return;
       }
       setPreview(d);
+      // Ao trocar de template, redimensiona a lista de variáveis preservando
+      // o que já foi digitado. {{1}} já vem com o nome do contato.
+      if (patch.templateId) {
+        const n = d.variableCount || 0;
+        setVariables(Array.from({ length: n }, (_, i) => (i === 0 ? "{{nome}}" : "")));
+      }
     } catch (e: any) {
       setPreview(null);
       setPreviewErro(e.message || "Não foi possível calcular a projeção.");
@@ -116,6 +125,7 @@ export default function Campaigns() {
           name: form.name,
           templateId: form.templateId,
           leadIds,
+          variables,
           accountId: form.accountId || undefined,
         }),
       });
@@ -124,6 +134,7 @@ export default function Campaigns() {
       toast({ title: "Campanha criada. Revise e dispare quando quiser." });
       setModalOpen(false);
       setForm({ name: "", templateId: "", accountId: "" });
+      setVariables([]);
       setLeadIds([]);
       setPreview(null);
       load();
@@ -197,6 +208,9 @@ export default function Campaigns() {
       return `Nenhum elegível: ${p.total} contato(s), ${p.semTelefone} sem telefone, ${p.optOut} em opt-out.`;
     }
     if (!preview.quota?.allowed) return preview.quota?.reason || "Franquia de disparos insuficiente.";
+    // {{1}} pode ficar em branco (vira o nome do contato); as demais, não.
+    const faltando = variables.findIndex((v, i) => i > 0 && !v.trim());
+    if (faltando > 0) return `Preencha o valor de {{${faltando + 1}}}.`;
     return null;
   })();
 
@@ -450,6 +464,35 @@ export default function Campaigns() {
                 </SelectContent>
               </Select>
             </div>
+
+            {variables.length > 0 && (
+              <div className="space-y-2 rounded-2xl bg-slate-50 p-4">
+                <Label className="text-xs font-bold text-slate-500">
+                  Variáveis do template ({variables.length})
+                </Label>
+                <p className="text-xs text-slate-500 font-medium">
+                  Use <code className="font-bold">{"{{nome}}"}</code> para inserir o nome de cada contato.
+                </p>
+                {preview?.template?.content && (
+                  <p className="text-xs text-slate-600 whitespace-pre-wrap border-l-2 border-slate-200 pl-2">
+                    {preview.template.content}
+                  </p>
+                )}
+                {variables.map((v, i) => (
+                  <Input
+                    key={i}
+                    value={v}
+                    onChange={(e) => {
+                      const next = [...variables];
+                      next[i] = e.target.value;
+                      setVariables(next);
+                    }}
+                    placeholder={`Valor de {{${i + 1}}}`}
+                    className="rounded-2xl bg-white border-none font-medium"
+                  />
+                ))}
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label className="text-xs font-bold text-slate-500">Contatos que vão receber</Label>

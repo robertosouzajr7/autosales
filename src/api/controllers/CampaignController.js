@@ -1,6 +1,7 @@
 import prisma from "../config/prisma.js";
 import { MetaManager } from "../../../meta.js";
 import { normalizePhone } from "../services/ContactIdentity.js";
+import { countVariables } from "./TemplateController.js";
 import {
   estimateCampaign,
   checkCampaignQuota,
@@ -62,6 +63,49 @@ async function diagnosticarPublico(tenantId, { stageId } = {}) {
   return { total, semTelefone, optOut, naEtapa };
 }
 
+// Token que a tela oferece para preencher a variável com o nome do contato.
+const TOKEN_NOME = /^\{\{\s*(nome|name)\s*\}\}$/i;
+
+/**
+ * Monta os parâmetros do template para UM destinatário.
+ *
+ * A Meta exige EXATAMENTE o número de parâmetros que o template declara —
+ * mandar um a mais (ou a menos) derruba o envio com #132000, que é o erro que
+ * aparecia em todo destinatário quando a campanha mandava sempre `[nome]`,
+ * mesmo em template sem nenhuma variável.
+ */
+function montarVariaveis(esperados, definidas, lead) {
+  return Array.from({ length: esperados }, (_, i) => {
+    const bruto = definidas[i];
+    const valor = bruto === undefined || bruto === null ? "" : String(bruto).trim();
+    // {{1}} sem valor assume o nome do contato — é o uso mais comum.
+    const escolhido = TOKEN_NOME.test(valor) || (!valor && i === 0)
+      ? (lead.name || "").trim() || "Cliente"
+      : valor;
+    // A Meta recusa parâmetro com quebra de linha ou tabulação.
+    return escolhido.replace(/\s+/g, " ");
+  });
+}
+
+/**
+ * Recusa a campanha antes do disparo quando falta variável. Sem isso o erro
+ * só aparece por destinatário, no log da Meta, depois de a campanha começar.
+ */
+function validarVariaveis(template, definidas) {
+  const esperados = countVariables(template.content);
+  if (!esperados) return null;
+  const lista = Array.isArray(definidas) ? definidas : [];
+  for (let i = 0; i < esperados; i++) {
+    const v = lista[i];
+    const valor = v === undefined || v === null ? "" : String(v).trim();
+    // {{1}} pode ficar em branco: cai no nome do contato.
+    if (!valor && i > 0) {
+      return `Este template usa ${esperados} variável(is). Informe o valor de {{${i + 1}}}.`;
+    }
+  }
+  return null;
+}
+
 async function resolveSender(tenantId, accountId = null) {
   const accounts = await prisma.whatsAppAccount.findMany({
     where: { tenantId, channel: { not: "INSTAGRAM" } },
@@ -93,7 +137,16 @@ export const previewCampaign = async (req, res) => {
       : null;
 
     res.json({
-      template: { id: template.id, name: template.name, category: template.category, status: template.status },
+      template: {
+        id: template.id,
+        name: template.name,
+        category: template.category,
+        status: template.status,
+        content: template.content,
+        headerType: template.headerType || "TEXT",
+      },
+      // A tela usa isso para pedir os valores dos {{n}} antes de criar.
+      variableCount: countVariables(template.content),
       approved: template.status === "APPROVED",
       recipientCount: recipients.length,
       estimate,
@@ -133,6 +186,11 @@ export const createCampaign = async (req, res) => {
     if (!template) return res.status(404).json({ error: "Template não encontrado." });
     if (template.status !== "APPROVED") {
       return res.status(400).json({ error: "Só é possível disparar template aprovado pela Meta." });
+    }
+
+    const faltaVariavel = validarVariaveis(template, variables);
+    if (faltaVariavel) {
+      return res.status(400).json({ error: faltaVariavel, variableCount: countVariables(template.content) });
     }
 
     const recipients = await resolveRecipients(req.tenantId, { tagIds, stageId, leadIds });
@@ -180,6 +238,12 @@ export const startCampaign = async (req, res) => {
     if (campaign.template.status !== "APPROVED") {
       return res.status(400).json({ error: "O template não está aprovado pela Meta." });
     }
+
+    // O template pode ter mudado depois da criação da campanha.
+    let variaveisSalvas = [];
+    try { variaveisSalvas = campaign.variables ? JSON.parse(campaign.variables) : []; } catch { variaveisSalvas = []; }
+    const faltaVariavel = validarVariaveis(campaign.template, variaveisSalvas);
+    if (faltaVariavel) return res.status(400).json({ error: faltaVariavel });
 
     const sender = await resolveSender(req.tenantId, campaign.accountId);
     if (!sender) return res.status(400).json({ error: "Nenhuma conexão oficial disponível para o disparo." });
@@ -230,6 +294,16 @@ export const startCampaign = async (req, res) => {
 async function runCampaign(campaign, sender, recipients, tenantId) {
   let variables = [];
   try { variables = campaign.variables ? JSON.parse(campaign.variables) : []; } catch { variables = []; }
+  if (!Array.isArray(variables)) variables = [];
+
+  // Quantos {{n}} o template declara. Template sem variável recebe lista vazia.
+  const esperados = countVariables(campaign.template.content);
+  // Cabeçalho de mídia precisa do arquivo no envio: o handle usado na
+  // aprovação não serve aqui, por isso guardamos a cópia em mediaUrl.
+  const headerMediaUrl =
+    campaign.template.headerType && campaign.template.headerType !== "TEXT"
+      ? campaign.template.mediaUrl
+      : null;
 
   let sent = 0;
   let failed = 0;
@@ -248,13 +322,14 @@ async function runCampaign(campaign, sender, recipients, tenantId) {
       break;
     }
 
-    // {{1}} é sempre o nome do lead quando não há valor fixo definido.
-    const vars = variables.length ? variables.map((v) => (v === "{{nome}}" ? lead.name : v)) : [lead.name];
+    const vars = montarVariaveis(esperados, variables, lead);
 
     const result = await MetaManager.sendTemplate(sender.phoneId, sender.accessToken, lead.phone, {
       name: campaign.template.name,
       language: campaign.template.language,
       variables: vars,
+      headerMediaUrl,
+      headerType: campaign.template.headerType || "IMAGE",
     });
 
     if (result.ok) sent++;
