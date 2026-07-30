@@ -77,6 +77,22 @@ class PipelineAutomation {
 
       await prisma.lead.update({ where: { id: leadId }, data });
       if (stage) console.log(`[Funil] Lead ${leadId} movido para "${stage.name}" por ${evento}.`);
+
+      // Os mesmos eventos alimentam os fluxos do builder (agendou, confirmou,
+      // faltou, concluiu). Import tardio para não criar ciclo com o motor.
+      const lead = await prisma.lead.findUnique({ where: { id: leadId } });
+      if (lead) {
+        const { default: engine } = await import("../../../automation_engine.js");
+        await engine
+          .dispatchTrigger(evento, { lead, tenantId, channel: lead.channel, stageName: stage?.name || null })
+          .catch(() => {});
+        // Mudar de etapa também é "mudou de etapa no funil".
+        if (stage) {
+          await engine
+            .dispatchTrigger("PIPELINE_MOVE", { lead, tenantId, channel: lead.channel, stageName: stage.name })
+            .catch(() => {});
+        }
+      }
       return stage || null;
     } catch (e) {
       console.error("[Funil] Falha ao mover o lead:", e.message);

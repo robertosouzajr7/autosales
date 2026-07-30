@@ -22,6 +22,10 @@ export const createAutomation = async (req, res) => {
   const { name, trigger, description, triggerConfig, nodes, edges } = req.body;
 
   try {
+    const { TRIGGER_IDS } = await import("../services/TriggerCatalog.js");
+    if (trigger && !TRIGGER_IDS.includes(trigger)) {
+      return res.status(400).json({ error: `Gatilho desconhecido: ${trigger}` });
+    }
     const automation = await prisma.automation.create({
       data: {
         name,
@@ -44,11 +48,18 @@ export const updateAutomation = async (req, res) => {
   if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
 
   const { id } = req.params;
-  const { name, active, nodes, edges, description, triggerConfig } = req.body;
+  const { name, active, nodes, edges, description, triggerConfig, trigger } = req.body;
 
   try {
     const data = {};
     if (name !== undefined) data.name = name;
+    // O gatilho podia ser escolhido só na criação: mudar de ideia obrigava a
+    // refazer o fluxo inteiro.
+    if (trigger !== undefined) {
+      const { TRIGGER_IDS } = await import("../services/TriggerCatalog.js");
+      if (!TRIGGER_IDS.includes(trigger)) return res.status(400).json({ error: `Gatilho desconhecido: ${trigger}` });
+      data.trigger = trigger;
+    }
     if (active !== undefined) data.active = active;
     if (nodes !== undefined) data.nodes = nodes;
     if (edges !== undefined) data.edges = edges;
@@ -403,6 +414,70 @@ export const importAutomation = async (req, res) => {
       ligacoes: edges.length,
       ligacoesDescartadas: (fluxo.edges?.length || 0) - edges.length,
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// ── Catálogo de gatilhos ─────────────────────────────────────────
+
+/** Lista de gatilhos e a configuração de cada um, para a tela montar o form. */
+export const listTriggers = async (req, res) => {
+  const { TRIGGERS, CATEGORIAS } = await import("../services/TriggerCatalog.js");
+  res.json({ triggers: TRIGGERS, categorias: CATEGORIAS });
+};
+
+/**
+ * Dispara um fluxo a partir de um sistema externo.
+ *
+ * Rota pública (o chamador não tem login): a autenticação é a chave que o
+ * dono do fluxo definiu no gatilho, enviada em X-Flow-Secret. Sem lead
+ * identificável o fluxo não roda — toda automação age sobre um contato.
+ */
+export const webhookTrigger = async (req, res) => {
+  try {
+    const automation = await prisma.automation.findUnique({ where: { id: req.params.id } });
+    if (!automation || !automation.active) return res.status(404).json({ error: "Fluxo não encontrado ou desligado." });
+
+    const { normalizeTrigger } = await import("../services/TriggerCatalog.js");
+    if (normalizeTrigger(automation.trigger) !== "WEBHOOK") {
+      return res.status(400).json({ error: "Este fluxo não é acionado por webhook." });
+    }
+
+    let config = {};
+    try { config = JSON.parse(automation.triggerConfig || "{}"); } catch { config = {}; }
+    const enviada = req.get("X-Flow-Secret") || req.body?.secret;
+    if (!config.secret || enviada !== config.secret) {
+      return res.status(401).json({ error: "Chave de segurança inválida." });
+    }
+
+    const { phone, email, leadId, name } = req.body || {};
+    const { normalizePhone } = await import("../services/ContactIdentity.js");
+    const telefone = normalizePhone(phone);
+
+    let lead = null;
+    if (leadId) lead = await prisma.lead.findFirst({ where: { id: leadId, tenantId: automation.tenantId } });
+    if (!lead && telefone) lead = await prisma.lead.findFirst({ where: { phone: telefone, tenantId: automation.tenantId } });
+    if (!lead && email) lead = await prisma.lead.findFirst({ where: { email, tenantId: automation.tenantId } });
+
+    if (!lead && telefone) {
+      lead = await prisma.lead.create({
+        data: { tenantId: automation.tenantId, name: name || `Contato ${telefone.slice(-4)}`, phone: telefone, source: "WEBHOOK" },
+      });
+    }
+    if (!lead) {
+      return res.status(400).json({ error: "Informe leadId, phone ou email de um contato existente." });
+    }
+
+    const { default: AutomationEngine } = await import("../../../automation_engine.js");
+    await AutomationEngine.dispatchTrigger("WEBHOOK", {
+      lead,
+      tenantId: automation.tenantId,
+      channel: lead.channel,
+      payload: req.body || {},
+    });
+
+    res.json({ success: true, leadId: lead.id });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -169,9 +169,12 @@ export const updateLead = async (req, res) => {
         });
       }
 
+      // O nome da etapa vai junto: é por ele que o fluxo filtra "só quando
+      // entrar em Agendados".
       AutomationEngine.dispatchTrigger("PIPELINE_MOVE", {
-        lead, tenantId: lead.tenantId,
-        oldStageId: oldLead.stageId, newStageId: req.body.stageId
+        lead, tenantId: lead.tenantId, channel: lead.channel,
+        oldStageId: oldLead.stageId, newStageId: req.body.stageId,
+        stageName: stage?.name || null,
       }).catch(e => console.error("[Leads] PIPELINE_MOVE trigger error:", e));
     }
     res.json(lead);
@@ -369,6 +372,7 @@ export const receiveWhatsappWebhook = async (req, res) => {
         data: { botActive: false }
       }).catch(() => {});
       console.log(`[Webhook] 🛑 Opt-out registrado para ${phone}.`);
+      AutomationEngine.dispatchTrigger("OPT_OUT", { lead, tenantId, channel: lead.channel }).catch(() => {});
       // Confirmação curta e única (não passa pela IA).
       try {
         await MessagingService.sendText(tenantId, phone, "Pronto! Você não receberá mais mensagens nossas. Se mudar de ideia, é só escrever.");
@@ -397,8 +401,31 @@ export const receiveWhatsappWebhook = async (req, res) => {
       return res.json({ success: true, ai_response: null, phase: conversation.phase });
     }
 
+    // 5.5 Contexto que alimenta os gatilhos de conversa. `primeiraMensagem`
+    // olha o histórico ANTES desta (por isso <= 1) e `respostaDeCampanha`
+    // marca quem está respondendo a um disparo recente.
+    const recebidasAntes = await prisma.message.count({
+      where: { conversationId: conversation.id, role: "USER" },
+    });
+    const disparoRecente = await prisma.campaignRecipient
+      .findFirst({
+        where: {
+          leadId: lead.id,
+          status: "SENT",
+          sentAt: { gte: new Date(Date.now() - 72 * 60 * 60 * 1000) },
+        },
+        select: { id: true },
+      })
+      .catch(() => null);
+
     // 6. Aciona o SDR para gerar resposta via IA (texto transcrito, se áudio)
-    const aiData = await AutomationEngine.handleIncomingMessage(lead, effectiveContent || content, tenantId, { replyId });
+    const aiData = await AutomationEngine.handleIncomingMessage(lead, effectiveContent || content, tenantId, {
+      replyId,
+      replyTitle: req.body?.replyTitle || null,
+      messageType,
+      primeiraMensagem: recebidasAntes <= 1,
+      respostaDeCampanha: !!disparoRecente,
+    });
     sw.lap("engine");
 
     // 7. Se houve resposta da IA, salva no banco também

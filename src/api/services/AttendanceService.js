@@ -58,6 +58,19 @@ async function registrar(conversation, { type, toPhase, actor, note, aviso }) {
   }
 }
 
+/**
+ * Avisa os fluxos que escutam eventos de atendimento. Import tardio para não
+ * criar ciclo: o motor também importa este serviço.
+ */
+function disparar(trigger, lead, tenantId, extra = {}) {
+  if (!lead || !tenantId) return;
+  import("../../../automation_engine.js")
+    .then(({ default: engine }) =>
+      engine.dispatchTrigger(trigger, { lead, tenantId, channel: lead.channel, ...extra })
+    )
+    .catch((e) => console.error(`[Atendimento] Falha ao disparar ${trigger}:`, e.message));
+}
+
 /** Quantas conversas estão na frente desta na fila. */
 async function posicaoNaFila(conversation) {
   if (!conversation.queuedAt) return null;
@@ -142,6 +155,11 @@ class AttendanceService {
     }
 
     console.log(`[Atendimento] Conversa ${conversation.id} entrou na fila (posição ${posicao}).`);
+    disparar("HANDOFF_QUEUED", atualizada.lead, atualizada.tenantId, {
+      queueName: fila?.name || null,
+      position: posicao,
+      reason,
+    });
     return { ...atualizada, position: posicao };
   }
 
@@ -185,6 +203,7 @@ class AttendanceService {
         { accountId: atualizada.lead.waAccountId }
       ).catch(() => {});
     }
+    disparar("ATTENDANCE_ASSIGNED", atualizada.lead, atualizada.tenantId, { agentName: atendente.name });
     return atualizada;
   }
 
@@ -274,6 +293,8 @@ class AttendanceService {
       actor,
       aviso: `Atendimento encerrado${actor ? ` por ${actor.name}` : ""}.`,
     });
+
+    disparar("ATTENDANCE_CLOSED", atualizada.lead, atualizada.tenantId, {});
 
     const despedida =
       mensagem === undefined ? "Atendimento encerrado. Se precisar de algo, é só chamar por aqui! 👋" : mensagem;

@@ -1,6 +1,7 @@
 import express from "express";
 import * as PublicController from "../controllers/PublicController.js";
 import { receiveWhatsappWebhook } from "../controllers/LeadController.js";
+import { webhookTrigger } from "../controllers/AutomationController.js";
 
 const router = express.Router();
 
@@ -12,5 +13,9 @@ router.post("/waitlist", PublicController.addToWaitlist);
 
 // Webhook interno do WhatsApp (chamado pelo Baileys em whatsapp.js)
 router.post("/webhook/whatsapp", receiveWhatsappWebhook);
+
+// Gatilho externo de fluxo. Público de propósito (quem chama é outro
+// sistema); a autenticação é a chave configurada no gatilho.
+router.post("/flows/:id/trigger", webhookTrigger);
 
 export default router;

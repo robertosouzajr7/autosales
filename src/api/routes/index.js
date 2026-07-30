@@ -125,6 +125,8 @@ router.post("/automations/:id/duplicate", requireAutomations, AutomationControll
 router.get("/automations/executions/stats", AutomationController.getStats);
 router.get("/automations/config", AutomationController.getConfig);
 router.post("/automations/config", requireAutomations, AutomationController.updateConfig);
+// Catálogo de gatilhos: a tela do builder monta o formulário a partir dele.
+router.get("/automations/triggers", AutomationController.listTriggers);
 // Simulador de fluxos (execução sem efeitos) e portabilidade
 router.post("/automations/:id/simulate", requireAutomations, AutomationController.simulateStart);
 router.post("/automations/simulate/:sessionId/message", requireAutomations, AutomationController.simulateSend);

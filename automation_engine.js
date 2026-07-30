@@ -621,6 +621,10 @@ class AutomationEngine {
               where: { id: lead.id },
               data: { tags: { connect: { id: tag.id } } }
             });
+            // Outro fluxo pode estar esperando essa tag para começar.
+            this.dispatchTrigger("TAG_ADDED", {
+              lead, tenantId: lead.tenantId, channel: lead.channel, tagName,
+            }).catch(() => {});
           }
           result.output = { tag: tagName };
           break;
@@ -1541,6 +1545,9 @@ class AutomationEngine {
         let tag = await prisma.tag.findFirst({ where: { name: args.tag_name } });
         if (!tag) tag = await prisma.tag.create({ data: { name: args.tag_name } });
         await prisma.lead.update({ where: { id: lead.id }, data: { tags: { connect: { id: tag.id } } } });
+        this.dispatchTrigger("TAG_ADDED", {
+          lead, tenantId: lead.tenantId, channel: lead.channel, tagName: args.tag_name,
+        }).catch(() => {});
         return { success: true, tag: args.tag_name };
       }
       case "get_availability": {
@@ -1948,23 +1955,28 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
 
   // ========== TRIGGER DISPATCHER ==========
 
+  /**
+   * Entrega um evento aos fluxos que escutam aquele gatilho.
+   *
+   * O filtro (palavra, botão, etapa, tag, fila, canal) vem do catálogo de
+   * gatilhos — antes só a palavra-chave era filtrada aqui dentro, e gatilhos
+   * como "mudou de etapa" disparavam em qualquer etapa.
+   */
   async dispatchTrigger(triggerType, data) {
     const { lead, tenantId } = data;
     if (!lead || !tenantId) return;
 
     try {
-      const automations = await prisma.automation.findMany({
-        where: { tenantId, active: true, trigger: triggerType }
-      });
+      const { matchesTrigger, normalizeTrigger } = await import("./src/api/services/TriggerCatalog.js");
+      const alvo = normalizeTrigger(triggerType);
+
+      const todas = await prisma.automation.findMany({ where: { tenantId, active: true } });
+      // NEW_MSG (nome antigo) continua valendo para fluxos já salvos.
+      const automations = todas.filter((a) => normalizeTrigger(a.trigger) === alvo);
 
       for (const auto of automations) {
-        // For KEYWORD trigger, check if message matches
-        if (triggerType === "KEYWORD" && data.message) {
-          const config = JSON.parse(auto.triggerConfig || "{}");
-          const keywords = config.keywords || [];
-          const msgLower = data.message.toLowerCase();
-          if (!keywords.some(k => msgLower.includes(k.toLowerCase()))) continue;
-        }
+        const casa = matchesTrigger(auto, { ...data, channel: data.channel || lead.channel });
+        if (!casa.ok) continue;
 
         // Check if already running for this lead
         const existing = await prisma.automationExecution.findFirst({
@@ -2123,11 +2135,25 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
       return true;
     }
 
-    // C. KEYWORD triggers
-    await this.dispatchTrigger("KEYWORD", { lead, tenantId, message: text });
+    // C. Gatilhos que nascem desta mensagem.
+    const evento = {
+      lead,
+      tenantId,
+      message: text,
+      channel: lead.channel,
+      replyId: opts.replyId || null,
+      replyTitle: opts.replyTitle || null,
+      mediaType: opts.messageType || null,
+    };
 
-    // D. NEW_MSG triggers
-    await this.dispatchTrigger("NEW_MSG", { lead, tenantId, message: text });
+    await this.dispatchTrigger("KEYWORD", evento);
+    await this.dispatchTrigger("INCOMING_MESSAGE", evento);
+    if (opts.replyId) await this.dispatchTrigger("BUTTON_CLICK", evento);
+    if (opts.messageType && opts.messageType !== "TEXT") {
+      await this.dispatchTrigger("MEDIA_RECEIVED", evento);
+    }
+    if (opts.primeiraMensagem) await this.dispatchTrigger("FIRST_MESSAGE", evento);
+    if (opts.respostaDeCampanha) await this.dispatchTrigger("CAMPAIGN_REPLY", evento);
 
     return false;
   }
@@ -2894,20 +2920,18 @@ ${scrapeContext}
       // (Sem esta chamada o COLLECT_INPUT/SEND_BUTTONS nunca retomava.)
       const tratadoPeloFluxo = await this.handleIncoming(lead.phone, content, tenantId, {
         replyId: opts.replyId || null,
+        replyTitle: opts.replyTitle || null,
+        // Repassados pelo webhook: alimentam os gatilhos de mídia, primeira
+        // mensagem e resposta a disparo.
+        messageType: opts.messageType || null,
+        primeiraMensagem: !!opts.primeiraMensagem,
+        respostaDeCampanha: !!opts.respostaDeCampanha,
         lead,
       }).catch((e) => {
         console.error("[AutoEngine] Erro ao retomar fluxo:", e.message);
         return false;
       });
       if (tratadoPeloFluxo) return null;
-
-      // Verifica se há automações INCOMING_MESSAGE ativas
-      const auts = await prisma.automation.findMany({
-        where: { tenantId, trigger: "INCOMING_MESSAGE", active: true }
-      });
-      for (const aut of auts) {
-        this.enqueueExecution(aut, lead);
-      }
 
       // Resolve a FUNÇÃO do agente (persona) e as SKILLS (tools habilitadas).
       const sw = stopwatch("engine");

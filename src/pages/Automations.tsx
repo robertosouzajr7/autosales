@@ -42,15 +42,34 @@ import "@xyflow/react/dist/style.css";
 
 // =================== CONSTANTS ===================
 
-// Gatilhos disponíveis. NEW_MSG/KEYWORD/PIPELINE_MOVE ficam ocultos por
-// enquanto (podem conflitar com o auto-responder de IA / precisam de mais
-// validação). Ativos: Novo Lead, Inatividade, Novo Agendamento e Cron.
-const TRIGGERS = [
-  { id: "NEW_LEAD", label: "Novo Lead", icon: <UserPlus className="w-4 h-4" />, color: "#3b82f6" },
-  { id: "INACTIVITY", label: "Inatividade", icon: <Clock className="w-4 h-4" />, color: "#ef4444" },
-  { id: "APPOINTMENT_CREATED", label: "Novo Agendamento", icon: <Calendar className="w-4 h-4" />, color: "#6366f1" },
-  { id: "SCHEDULE", label: "Agendador Recorrente (Cron)", icon: <Timer className="w-4 h-4" />, color: "#ec4899" },
-];
+// Só a aparência de cada gatilho. A lista, os rótulos e a configuração vêm do
+// catálogo do backend (GET /automations/triggers) — antes a tela tinha uma
+// lista própria com quatro opções, que não conversava com o motor.
+const TRIGGER_STYLE: Record<string, { icon: JSX.Element; color: string }> = {
+  NEW_LEAD: { icon: <UserPlus className="w-4 h-4" />, color: "#3b82f6" },
+  FIRST_MESSAGE: { icon: <MessageCircle className="w-4 h-4" />, color: "#0ea5e9" },
+  INCOMING_MESSAGE: { icon: <MessageSquare className="w-4 h-4" />, color: "#0284c7" },
+  KEYWORD: { icon: <ScanText className="w-4 h-4" />, color: "#8b5cf6" },
+  BUTTON_CLICK: { icon: <MousePointerClick className="w-4 h-4" />, color: "#7c3aed" },
+  MEDIA_RECEIVED: { icon: <Image className="w-4 h-4" />, color: "#059669" },
+  INACTIVITY: { icon: <Clock className="w-4 h-4" />, color: "#ef4444" },
+  OPT_OUT: { icon: <StopCircle className="w-4 h-4" />, color: "#64748b" },
+  HANDOFF_QUEUED: { icon: <Users className="w-4 h-4" />, color: "#f59e0b" },
+  ATTENDANCE_ASSIGNED: { icon: <UserPlus className="w-4 h-4" />, color: "#2563EB" },
+  ATTENDANCE_CLOSED: { icon: <StopCircle className="w-4 h-4" />, color: "#94a3b8" },
+  APPOINTMENT_CREATED: { icon: <Calendar className="w-4 h-4" />, color: "#6366f1" },
+  APPOINTMENT_CONFIRMED: { icon: <Calendar className="w-4 h-4" />, color: "#10b981" },
+  APPOINTMENT_CANCELLED: { icon: <Calendar className="w-4 h-4" />, color: "#f97316" },
+  APPOINTMENT_NOSHOW: { icon: <Calendar className="w-4 h-4" />, color: "#ef4444" },
+  APPOINTMENT_COMPLETED: { icon: <Calendar className="w-4 h-4" />, color: "#14b8a6" },
+  PIPELINE_MOVE: { icon: <MoveRight className="w-4 h-4" />, color: "#6366f1" },
+  TAG_ADDED: { icon: <Tag className="w-4 h-4" />, color: "#f59e0b" },
+  CAMPAIGN_REPLY: { icon: <Send className="w-4 h-4" />, color: "#db2777" },
+  SCHEDULE: { icon: <Timer className="w-4 h-4" />, color: "#ec4899" },
+  WEBHOOK: { icon: <Globe className="w-4 h-4" />, color: "#334155" },
+};
+
+const estiloGatilho = (id?: string) => TRIGGER_STYLE[id || ""] || { icon: <Zap className="w-4 h-4" />, color: "#10b981" };
 
 interface NodeTypeDef {
   id: string; label: string; icon: JSX.Element; color: string; category: string;
@@ -142,6 +161,81 @@ const VARIABLE_HINTS = [
   "{{extracted.nome}}", "{{extracted.empresa}}", "{{extracted.cargo}}",
   "{{current.date}}", "{{current.time}}", "{{current.day_of_week}}"
 ];
+
+/**
+ * Formulário do gatilho, montado a partir do catálogo que vem do backend.
+ * Assim a tela não precisa saber de cada gatilho: quem manda é o catálogo.
+ */
+function CamposDoGatilho({
+  definicao, config, onChange,
+}: { definicao: any; config: any; onChange: (c: any) => void }) {
+  if (!definicao?.campos?.length) return null;
+  const set = (k: string, v: any) => onChange({ ...config, [k]: v });
+
+  return (
+    <div className="space-y-4">
+      {definicao.campos.map((campo: any) => {
+        const valor = config?.[campo.key] ?? campo.padrao ?? "";
+        return (
+          <div key={campo.key} className="space-y-1.5">
+            <Label className="font-bold text-xs">
+              {campo.label}
+              {campo.opcional && <span className="text-slate-300 font-medium"> (opcional)</span>}
+            </Label>
+
+            {campo.type === "select" ? (
+              /* Vazio só vira "__vazio__" quando existe a opção "qualquer";
+                 senão o Select ficaria com um valor que não está na lista e
+                 apareceria em branco. */
+              <Select
+                value={
+                  String(valor || "") ||
+                  ((campo.options || []).some((o: any) => !o.value) ? "__vazio__" : (campo.options?.[0]?.value ?? ""))
+                }
+                onValueChange={(v) => set(campo.key, v === "__vazio__" ? "" : v)}
+              >
+                <SelectTrigger className="h-10 rounded-2xl border-2 border-slate-50 font-bold">
+                  <SelectValue placeholder="Escolha" />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl shadow-sm">
+                  {(campo.options || []).map((o: any) => (
+                    <SelectItem key={o.value || "__vazio__"} value={o.value || "__vazio__"}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : campo.type === "tags" ? (
+              <Input
+                value={Array.isArray(valor) ? valor.join(", ") : valor}
+                onChange={(e) => set(campo.key, e.target.value.split(",").map((v) => v.trim()).filter(Boolean))}
+                placeholder="separe por vírgula"
+                className="h-10 rounded-2xl border-2 border-slate-50"
+              />
+            ) : campo.type === "number" ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  value={valor}
+                  onChange={(e) => set(campo.key, Number(e.target.value))}
+                  className="h-10 w-32 rounded-2xl border-2 border-slate-50"
+                />
+                {campo.unidade && <span className="text-xs font-bold text-slate-400">{campo.unidade}</span>}
+              </div>
+            ) : (
+              <Input
+                value={valor}
+                onChange={(e) => set(campo.key, e.target.value)}
+                className={`h-10 rounded-2xl border-2 border-slate-50 ${campo.type === "cron" ? "font-mono" : ""}`}
+                placeholder={campo.padrao || ""}
+              />
+            )}
+
+            {campo.hint && <p className="text-[11px] text-slate-400 font-medium">{campo.hint}</p>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 // =================== TEMPLATES ===================
 const FLOW_TEMPLATES = [
@@ -364,6 +458,10 @@ export default function Automations() {
   const [execStats, setExecStats] = useState<any>(null);
   const [showTemplates, setShowTemplates] = useState(false);
   const [tenantLimits, setTenantLimits] = useState<any>({ aiEnabled: false, webhookEnabled: false });
+  // Catálogo de gatilhos vem do backend: uma fonte só para tela e motor.
+  const [catalogo, setCatalogo] = useState<{ triggers: any[]; categorias: any[] }>({ triggers: [], categorias: [] });
+  const [gatilhoModal, setGatilhoModal] = useState(false);
+  const [gatilhoEdit, setGatilhoEdit] = useState<{ trigger: string; config: any }>({ trigger: "NEW_LEAD", config: {} });
 
   // ReactFlow state
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -431,7 +529,35 @@ export default function Automations() {
     } catch { }
   };
 
-  useEffect(() => { fetchData(); fetchStats(); fetchTenantData(); }, []);
+  useEffect(() => {
+    fetchData(); fetchStats(); fetchTenantData();
+    fetch("/api/automations/triggers", { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } })
+      .then((r) => (r.ok ? r.json() : { triggers: [], categorias: [] }))
+      .then(setCatalogo)
+      .catch(() => {});
+  }, []);
+
+  const defGatilho = (id: string) => catalogo.triggers.find((t: any) => t.id === id);
+
+  /** Salva o gatilho de um fluxo já criado — antes era escolhido só na criação. */
+  const salvarGatilho = async () => {
+    if (!selectedAuto) return;
+    try {
+      const res = await fetch(`/api/automations/${selectedAuto.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
+        body: JSON.stringify({ trigger: gatilhoEdit.trigger, triggerConfig: JSON.stringify(gatilhoEdit.config || {}) }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Falha ao salvar o gatilho.");
+      setSelectedAuto({ ...selectedAuto, trigger: gatilhoEdit.trigger, triggerConfig: JSON.stringify(gatilhoEdit.config || {}) });
+      setGatilhoModal(false);
+      toast({ title: "Gatilho atualizado" });
+      fetchData();
+    } catch (e: any) {
+      toast({ title: e.message, variant: "destructive" });
+    }
+  };
 
   // -------- CRUD --------
   const handleCreateAuto = async () => {
@@ -912,7 +1038,7 @@ export default function Automations() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {autos.map(auto => {
-              const triggerDef = TRIGGERS.find(t => t.id === auto.trigger);
+              const triggerDef = { ...estiloGatilho(auto.trigger), label: defGatilho(auto.trigger)?.label || auto.trigger };
               const nodeCount = (() => { try { return JSON.parse(auto.nodes || "[]").length; } catch { return 0; } })();
               return (
                 <Card key={auto.id} className="border-none shadow-sm rounded-[32px] bg-white overflow-hidden hover:-translate-y-1 transition-all duration-300 group">
@@ -971,83 +1097,38 @@ export default function Automations() {
               <Input value={newAuto.name} onChange={e => setNewAuto({ ...newAuto, name: e.target.value })} className="h-10 rounded-2xl border-2 border-slate-50" placeholder="Ex: Follow-up Inteligente" />
             </div>
             <div className="space-y-2">
-              <Label className="font-bold text-xs ">Gatilho</Label>
-              <Select value={newAuto.trigger} onValueChange={v => setNewAuto({ ...newAuto, trigger: v })}>
+              <Label className="font-bold text-xs ">Gatilho — o que faz o fluxo começar</Label>
+              <Select
+                value={newAuto.trigger}
+                onValueChange={(v) => setNewAuto({ ...newAuto, trigger: v, triggerConfig: "{}" })}
+              >
                 <SelectTrigger className="h-10 rounded-2xl border-2 border-slate-50 font-bold"><SelectValue /></SelectTrigger>
-                <SelectContent className="rounded-2xl shadow-sm">
-                  {TRIGGERS.map(t => <SelectItem key={t.id} value={t.id} className="font-bold py-3"><span className="flex items-center gap-2">{t.icon} {t.label}</span></SelectItem>)}
+                <SelectContent className="rounded-2xl shadow-sm max-h-80">
+                  {catalogo.categorias.map((cat: any) => {
+                    const doGrupo = catalogo.triggers.filter((t: any) => t.categoria === cat.id);
+                    if (!doGrupo.length) return null;
+                    return (
+                      <div key={cat.id}>
+                        <p className="px-2 py-1.5 text-[10px] font-bold uppercase text-slate-400">{cat.label}</p>
+                        {doGrupo.map((t: any) => (
+                          <SelectItem key={t.id} value={t.id} className="font-bold py-2">{t.label}</SelectItem>
+                        ))}
+                      </div>
+                    );
+                  })}
                 </SelectContent>
               </Select>
+              {defGatilho(newAuto.trigger)?.hint && (
+                <p className="text-[11px] text-slate-400 font-medium">{defGatilho(newAuto.trigger)?.hint}</p>
+              )}
             </div>
-            {newAuto.trigger === "KEYWORD" && (
-              <div className="space-y-2">
-                <Label className="font-bold text-xs ">Palavras-chave</Label>
-                <Input placeholder="preço, promoção, desconto" onChange={e => setNewAuto({ ...newAuto, triggerConfig: JSON.stringify({ keywords: e.target.value.split(",").map(k => k.trim()) }) })} className="h-10 rounded-2xl border-2 border-slate-50" />
-              </div>
-            )}
-            {newAuto.trigger === "INACTIVITY" && (
-              <div className="space-y-2">
-                <Label className="font-bold text-xs ">Minutos de Inatividade</Label>
-                <Input type="number" defaultValue={1440} onChange={e => setNewAuto({ ...newAuto, triggerConfig: JSON.stringify({ inactivityMinutes: parseInt(e.target.value) }) })} className="h-10 rounded-2xl border-2 border-slate-50" />
-              </div>
-            )}
-            {newAuto.trigger === "SCHEDULE" && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="font-bold text-xs ">Frequência</Label>
-                  <Select defaultValue="daily_9" onValueChange={v => {
-                    const presets: Record<string, string> = {
-                      "every_hour": "0 * * * *",
-                      "daily_9": "0 9 * * *",
-                      "daily_14": "0 14 * * *",
-                      "weekdays_9": "0 9 * * 1-5",
-                      "monday_9": "0 9 * * 1",
-                      "custom": ""
-                    };
-                    const prev = JSON.parse(newAuto.triggerConfig || "{}");
-                    setNewAuto({ ...newAuto, triggerConfig: JSON.stringify({ ...prev, schedule: presets[v], preset: v }) });
-                  }}>
-                    <SelectTrigger className="h-10 rounded-2xl border-2 border-slate-50 font-bold"><SelectValue placeholder="Diário às 9h" /></SelectTrigger>
-                    <SelectContent className="rounded-2xl shadow-sm">
-                      <SelectItem value="every_hour">A cada hora</SelectItem>
-                      <SelectItem value="daily_9">Diário às 9h</SelectItem>
-                      <SelectItem value="daily_14">Diário às 14h</SelectItem>
-                      <SelectItem value="weekdays_9">Dias úteis às 9h</SelectItem>
-                      <SelectItem value="monday_9">Segundas às 9h</SelectItem>
-                      <SelectItem value="custom">Personalizado (cron)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {(() => { try { return JSON.parse(newAuto.triggerConfig || "{}").preset === "custom"; } catch { return false; } })() && (
-                  <div className="space-y-2">
-                    <Label className="font-bold text-xs ">Expressão Cron</Label>
-                    <Input placeholder="0 9 * * 1-5" onChange={e => {
-                      const prev = JSON.parse(newAuto.triggerConfig || "{}");
-                      setNewAuto({ ...newAuto, triggerConfig: JSON.stringify({ ...prev, schedule: e.target.value }) });
-                    }} className="h-10 rounded-2xl border-2 border-slate-50 font-mono " />
-                    <p className="text-xs font-bold text-slate-400">Formato: minuto hora dia mês dia_semana</p>
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <Label className="font-bold text-xs ">Filtro Alvo (Aplicar para:)</Label>
-                  <Select onValueChange={v => {
-                      let cfg: any = { schedule: "0 9 * * *", targetFilter: { status: "NEW" }, preset: "daily_9" };
-                      try { cfg = JSON.parse(newAuto.triggerConfig || "{}"); } catch(err){}
-                      cfg.targetFilter = { status: v };
-                      setNewAuto({ ...newAuto, triggerConfig: JSON.stringify(cfg) });
-                  }}>
-                    <SelectTrigger className="h-10 rounded-2xl border-2 border-slate-50 font-bold">
-                      <SelectValue placeholder="Selecione o filtro dos leads..." />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-2xl shadow-sm">
-                      <SelectItem value="NEW" className="font-bold">Leads Novos (Sem atendimento)</SelectItem>
-                      <SelectItem value="INACTIVE_7_DAYS" className="font-bold">Leads Inativos (Últimos 7 dias)</SelectItem>
-                      <SelectItem value="ALL" className="font-bold">Todos os Leads da Conta</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            )}
+
+            <CamposDoGatilho
+              definicao={defGatilho(newAuto.trigger)}
+              config={(() => { try { return JSON.parse(newAuto.triggerConfig || "{}"); } catch { return {}; } })()}
+              onChange={(c) => setNewAuto({ ...newAuto, triggerConfig: JSON.stringify(c) })}
+            />
+
             <div className="space-y-2">
               <Label className="font-bold text-xs ">Descrição</Label>
               <Textarea value={newAuto.description} onChange={e => setNewAuto({ ...newAuto, description: e.target.value })} className="min-h-[80px] rounded-2xl border-2 border-slate-50" placeholder="O que este fluxo faz?" />
@@ -1061,6 +1142,69 @@ export default function Automations() {
         </DialogContent>
       </Dialog>
 
+      {/* =============== GATILHO DO FLUXO =============== */}
+      <Dialog open={gatilhoModal} onOpenChange={setGatilhoModal}>
+        <DialogContent className="rounded-[32px] p-8 max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold flex items-center gap-2">
+              <Zap className="text-[#2563EB]" /> Quando este fluxo começa
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-5 py-3">
+            <div className="space-y-2">
+              <Label className="font-bold text-xs">Gatilho</Label>
+              <Select
+                value={gatilhoEdit.trigger}
+                onValueChange={(v) => setGatilhoEdit({ trigger: v, config: {} })}
+              >
+                <SelectTrigger className="h-10 rounded-2xl border-2 border-slate-50 font-bold"><SelectValue /></SelectTrigger>
+                <SelectContent className="rounded-2xl shadow-sm max-h-80">
+                  {catalogo.categorias.map((cat: any) => {
+                    const doGrupo = catalogo.triggers.filter((t: any) => t.categoria === cat.id);
+                    if (!doGrupo.length) return null;
+                    return (
+                      <div key={cat.id}>
+                        <p className="px-2 py-1.5 text-[10px] font-bold uppercase text-slate-400">{cat.label}</p>
+                        {doGrupo.map((t: any) => (
+                          <SelectItem key={t.id} value={t.id} className="font-bold py-2">{t.label}</SelectItem>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              {defGatilho(gatilhoEdit.trigger)?.hint && (
+                <p className="text-[11px] text-slate-400 font-medium">{defGatilho(gatilhoEdit.trigger)?.hint}</p>
+              )}
+            </div>
+
+            <CamposDoGatilho
+              definicao={defGatilho(gatilhoEdit.trigger)}
+              config={gatilhoEdit.config}
+              onChange={(c) => setGatilhoEdit({ ...gatilhoEdit, config: c })}
+            />
+
+            {gatilhoEdit.trigger === "WEBHOOK" && (
+              <div className="rounded-2xl bg-slate-50 p-3 space-y-1">
+                <p className="text-[11px] font-bold text-slate-500">URL para o sistema externo chamar</p>
+                <code className="block text-[11px] text-slate-600 break-all">
+                  POST {window.location.origin}/api/public/flows/{selectedAuto?.id}/trigger
+                </code>
+                <p className="text-[11px] text-slate-400">
+                  Cabeçalho <code>X-Flow-Secret</code> com a chave acima, e no corpo{" "}
+                  <code>{"{ \"phone\": \"5571...\" }"}</code> para identificar o contato.
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={salvarGatilho} className="w-full h-10 bg-slate-900 hover:bg-slate-800 rounded-2xl font-semibold text-sm">
+              <Save className="w-4 h-4 mr-2 text-[#2563EB]" /> Salvar gatilho
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* =============== TEMPLATES MODAL =============== */}
       <Dialog open={showTemplates} onOpenChange={setShowTemplates}>
         <DialogContent className="rounded-[32px] p-10 max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -1069,7 +1213,7 @@ export default function Automations() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             {FLOW_TEMPLATES.map((tmpl, i) => {
-              const trigDef = TRIGGERS.find(t => t.id === tmpl.trigger);
+              const trigDef = { ...estiloGatilho(tmpl.trigger), label: defGatilho(tmpl.trigger)?.label || tmpl.trigger };
               return (
                 <div key={i} className="p-6 rounded-2xl border-2 border-slate-100 hover:border-slate-300 transition-all cursor-pointer group" onClick={() => createFromTemplate(tmpl)}>
                   <div className="flex items-center justify-between">
@@ -1106,7 +1250,18 @@ export default function Automations() {
               <div>
                 <h2 className="text-lg font-semibold text-slate-900 tracking-tight leading-none uppercase">{selectedAuto?.name}</h2>
                 <p className="text-xs font-bold text-slate-400 mt-1 ">
-                  {nodes.length} blocos · {edges.length} conexões · Trigger: {TRIGGERS.find(t => t.id === selectedAuto?.trigger)?.label || selectedAuto?.trigger}
+                  {nodes.length} blocos · {edges.length} conexões · Gatilho:{" "}
+                  <button
+                    className="underline decoration-dotted hover:text-[#2563EB]"
+                    onClick={() => {
+                      let cfg = {};
+                      try { cfg = JSON.parse(selectedAuto?.triggerConfig || "{}"); } catch { cfg = {}; }
+                      setGatilhoEdit({ trigger: selectedAuto?.trigger || "NEW_LEAD", config: cfg });
+                      setGatilhoModal(true);
+                    }}
+                  >
+                    {defGatilho(selectedAuto?.trigger)?.label || selectedAuto?.trigger} (alterar)
+                  </button>
                 </p>
               </div>
             </div>
