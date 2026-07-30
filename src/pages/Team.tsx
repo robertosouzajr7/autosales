@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -176,6 +177,7 @@ export default function Team() {
 
   return (
     <DashboardLayout>
+      <PageContainer>
       <PageHeader
         title="Colaboradores"
         subtitle="Quem tem acesso à conta, com qual perfil e o que cada um enxerga."
@@ -363,6 +365,7 @@ export default function Team() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </PageContainer>
     </DashboardLayout>
   );
 }

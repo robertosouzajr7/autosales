@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -180,6 +181,7 @@ export default function Templates() {
 
   return (
     <DashboardLayout>
+      <PageContainer>
       <PageHeader
         title="Templates de mensagem"
         subtitle="Mensagens aprovadas pela Meta — necessárias para iniciar conversa fora da janela de 24h e para disparos em massa."
@@ -507,6 +509,7 @@ export default function Templates() {
           {previewing && <TemplatePreview template={previewing} className="py-2" />}
         </DialogContent>
       </Dialog>
+      </PageContainer>
     </DashboardLayout>
   );
 }

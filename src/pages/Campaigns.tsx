@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -221,6 +222,7 @@ export default function Campaigns() {
 
   return (
     <DashboardLayout>
+      <PageContainer>
       <PageHeader
         title="Disparos em massa"
         subtitle="Envio de templates aprovados pela API oficial do WhatsApp."
@@ -587,6 +589,7 @@ export default function Campaigns() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </PageContainer>
     </DashboardLayout>
   );
 }

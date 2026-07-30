@@ -47,6 +47,7 @@ import {
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
@@ -157,9 +158,14 @@ const navItems: NavItem[] = navGroups.flatMap((g) => g.items);
 interface SidebarNavProps {
   collapsed: boolean;
   onNavClick?: () => void;
+  /** Seções que o usuário fechou (guardadas entre sessões). */
+  fechados?: string[];
+  onToggleGroup?: (titulo: string) => void;
 }
 
-function SidebarNav({ collapsed, onNavClick, features, permissions }: SidebarNavProps & { features: any; permissions: string[] | null }) {
+function SidebarNav({
+  collapsed, onNavClick, features, permissions, fechados = [], onToggleGroup,
+}: SidebarNavProps & { features: any; permissions: string[] | null }) {
   const location = useLocation();
   const ativo = hrefAtivo(location.pathname, navItems);
   const isSuperadmin = (localStorage.getItem("userRole") || "OWNER") === "SUPERADMIN";
@@ -180,19 +186,35 @@ function SidebarNav({ collapsed, onNavClick, features, permissions }: SidebarNav
 
   return (
     <nav className="flex flex-col px-2.5">
-      {grupos.map((grupo, i) => (
+      {grupos.map((grupo, i) => {
+        // A seção da página aberta fica sempre visível, mesmo que o usuário
+        // a tenha fechado antes: esconder onde ele está seria desorientador.
+        const temAtivo = grupo.items.some((it) => it.href === ativo);
+        const aberto = collapsed || !grupo.title || temAtivo || !fechados.includes(grupo.title);
+
+        return (
         <div key={grupo.title ?? "topo"} className="flex flex-col gap-0.5">
           {grupo.title &&
             (collapsed ? (
               <div className="mx-auto my-2 h-px w-6 bg-slate-700/60" />
             ) : (
-              <p className="px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                {grupo.title}
-              </p>
+              <button
+                onClick={() => onToggleGroup?.(grupo.title!)}
+                className="group flex w-full items-center gap-1 rounded-lg px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 transition-colors hover:text-slate-300"
+              >
+                <ChevronRight
+                  className={cn(
+                    "h-3 w-3 shrink-0 transition-transform duration-200",
+                    aberto && "rotate-90",
+                    temAtivo && "opacity-40"
+                  )}
+                />
+                <span className="truncate">{grupo.title}</span>
+              </button>
             ))}
           {i === 0 && !grupo.title && <div className="h-1" />}
 
-          {grupo.items.map((item) => {
+          {aberto && grupo.items.map((item) => {
             const Icon = item.icon;
             const isActive = item.href === ativo;
 
@@ -234,7 +256,8 @@ function SidebarNav({ collapsed, onNavClick, features, permissions }: SidebarNav
             return <div key={item.href}>{linkContent}</div>;
           })}
         </div>
-      ))}
+        );
+      })}
     </nav>
   );
 }
@@ -263,8 +286,13 @@ function SidebarContent({
   planName,
   planData,
   navigate,
-  permissions
-}: SidebarContentProps & { features: any, planName: string, planData: any, navigate: any, permissions: string[] | null }) {
+  permissions,
+  fechados,
+  onToggleGroup,
+}: SidebarContentProps & {
+  features: any; planName: string; planData: any; navigate: any;
+  permissions: string[] | null; fechados: string[]; onToggleGroup: (t: string) => void;
+}) {
   return (
     <div className="flex h-full flex-col font-sans bg-slate-900 bg-[radial-gradient(130%_55%_at_0%_0%,rgba(37,99,235,0.24),transparent_58%)]">
       {/* Logo e Info da Conta */}
@@ -275,21 +303,45 @@ function SidebarContent({
         )}
       >
         <div className="flex items-center gap-2.5 w-full">
-          <LogoIcon className="w-7 h-7 shrink-0" />
+          {/* Recolhido, o próprio logo vira o botão de expandir: antes não
+              havia caminho de volta e o menu ficava preso em ícones. */}
+          {collapsed && showCollapseButton ? (
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={onToggleCollapse}
+                  className="group relative grid h-8 w-8 place-items-center rounded-lg transition-colors hover:bg-white/10"
+                  aria-label="Expandir menu"
+                >
+                  <LogoIcon className="h-7 w-7 transition-opacity group-hover:opacity-0" />
+                  <ChevronRight className="absolute h-4 w-4 text-white opacity-0 transition-opacity group-hover:opacity-100" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="font-medium">Expandir menu</TooltipContent>
+            </Tooltip>
+          ) : (
+            <LogoIcon className="w-7 h-7 shrink-0" />
+          )}
           {!collapsed && (
             <span className="truncate whitespace-nowrap text-[15px] font-bold tracking-tight text-white">
               Agentes <span className="text-primary">Virtuais</span>
             </span>
           )}
           {!collapsed && showCollapseButton && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onToggleCollapse}
-              className="ml-auto h-7 w-7 text-slate-400 hover:bg-slate-700 hover:text-white"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
+            <Tooltip delayDuration={300}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onToggleCollapse}
+                  aria-label="Recolher menu"
+                  className="ml-auto h-7 w-7 text-slate-400 hover:bg-slate-700 hover:text-white"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="font-medium">Recolher menu</TooltipContent>
+            </Tooltip>
           )}
         </div>
         {!collapsed && (
@@ -301,7 +353,14 @@ function SidebarContent({
 
       {/* Nav items */}
       <div className="flex-1 overflow-y-auto pb-2 scrollbar-thin">
-        <SidebarNav collapsed={collapsed} onNavClick={onNavClick} features={features} permissions={permissions} />
+        <SidebarNav
+          collapsed={collapsed}
+          onNavClick={onNavClick}
+          features={features}
+          permissions={permissions}
+          fechados={fechados}
+          onToggleGroup={onToggleGroup}
+        />
       </div>
 
       {/* Consumo de IA da conta — não faz sentido para o admin da plataforma. */}
@@ -394,8 +453,33 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
-  const [collapsed, setCollapsed] = useState(false);
+  // Menu recolhido e seções fechadas são preferência de quem usa: precisam
+  // sobreviver ao recarregar a página, senão o ajuste se perde a cada clique.
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem("menuRecolhido") === "1");
+  const [gruposFechados, setGruposFechados] = useState<string[]>(() => {
+    try {
+      const salvo = JSON.parse(localStorage.getItem("menuSecoesFechadas") || "[]");
+      return Array.isArray(salvo) ? salvo : [];
+    } catch {
+      return [];
+    }
+  });
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const alternarRecolhido = () => {
+    setCollapsed((antes) => {
+      localStorage.setItem("menuRecolhido", antes ? "0" : "1");
+      return !antes;
+    });
+  };
+
+  const alternarGrupo = (titulo: string) => {
+    setGruposFechados((antes) => {
+      const novo = antes.includes(titulo) ? antes.filter((t) => t !== titulo) : [...antes, titulo];
+      localStorage.setItem("menuSecoesFechadas", JSON.stringify(novo));
+      return novo;
+    });
+  };
   const [planData, setPlanData] = useState<any>({ features: {}, name: "Básico", maxTokens: 0, usedTokens: 0, extraTokens: 0 });
   // Módulos liberados para este colaborador. null = ainda carregando (não
   // esconde nada antes de saber, para o menu não "piscar").
@@ -499,6 +583,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     navItems.find((item) => item.href === hrefAtivo(location.pathname, navItems))?.label ?? "Dashboard";
 
   return (
+    // O Radix exige o provider como ancestral de qualquer Tooltip. Sem ele,
+    // recolher o menu quebrava a página inteira — era por isso que não dava
+    // para recolher a barra lateral.
+    <TooltipProvider delayDuration={0}>
     <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-[#0F172A]">
       {/* Desktop Sidebar */}
       <aside
@@ -510,13 +598,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       >
         <SidebarContent
           collapsed={collapsed}
-          onToggleCollapse={() => setCollapsed((prev) => !prev)}
+          onToggleCollapse={alternarRecolhido}
           showCollapseButton={true}
           features={planData.features}
           planName={planData.name}
           planData={planData}
           navigate={navigate}
           permissions={permissions}
+          fechados={gruposFechados}
+          onToggleGroup={alternarGrupo}
         />
       </aside>
 
@@ -535,6 +625,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             planData={planData}
             navigate={navigate}
             permissions={permissions}
+            fechados={gruposFechados}
+            onToggleGroup={alternarGrupo}
           />
         </SheetContent>
       </Sheet>
@@ -679,6 +771,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </main>
       </div>
     </div>
+    </TooltipProvider>
   );
 }
 

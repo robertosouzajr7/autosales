@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -270,6 +271,7 @@ export default function AutomationConfig() {
 
   return (
     <DashboardLayout>
+      <PageContainer>
       <div className="space-y-6 pb-20">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -553,6 +555,7 @@ export default function AutomationConfig() {
           </Button>
         </div>
       </div>
+      </PageContainer>
     </DashboardLayout>
   );
 }
