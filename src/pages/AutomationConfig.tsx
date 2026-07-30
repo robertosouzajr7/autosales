@@ -10,121 +10,125 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Clock,
-  Bell,
-  UserX,
-  MessageSquare,
-  Save,
-  RefreshCw,
-  Megaphone,
-  ShieldCheck,
-  CalendarClock,
-  AlertTriangle,
-  Handshake,
-  Send,
-  X,
-  Plus,
-  Sliders,
+  Clock, Bell, UserX, Save, RefreshCw, ShieldCheck, CalendarClock, AlertTriangle,
+  Handshake, X, Plus, Sliders, Video, CheckCircle2, GitBranch, Activity, Link2,
 } from "lucide-react";
 
-// ─────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────
+/**
+ * Lembretes e rotinas do agendamento.
+ *
+ * Esta tela chamava a API sem o cabeçalho de autenticação: toda leitura vinha
+ * 401 (a página mostrava os valores padrão como se fossem os salvos) e todo
+ * salvamento falhava. Além disso os interruptores eram estado local — ligar ou
+ * desligar não mudava nada no servidor.
+ */
 
-interface AutomationConfig {
+interface Config {
   id?: string;
   autoConfirmHours: number;
   lateToleranceMin: number;
   postServiceHours: number;
+  meetLinkMinutes: number;
   humanHandoffTags: string;
   confirmMsgTemplate: string;
   lateMsgTemplate: string;
   postServiceMsgTemplate: string;
+  bookedMsgTemplate: string;
+  meetMsgTemplate: string;
+  finalMsgTemplate: string;
+  confirmTemplateId: string;
+  remindersEnabled: boolean;
+  bookedEnabled: boolean;
+  confirmEnabled: boolean;
+  meetLinkEnabled: boolean;
+  finalEnabled: boolean;
+  noShowEnabled: boolean;
+  postServiceEnabled: boolean;
+  pipelineAutoEnabled: boolean;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Tag Input
-// ─────────────────────────────────────────────────────────────
+const PADRAO: Config = {
+  autoConfirmHours: 24,
+  lateToleranceMin: 15,
+  postServiceHours: 24,
+  meetLinkMinutes: 10,
+  humanHandoffTags: "",
+  confirmMsgTemplate: "Oi {name}! Passando para confirmar nosso compromisso de {date} às {time}. Podemos confirmar?",
+  lateMsgTemplate: "Olá {name}, não conseguimos te encontrar no horário das {time}. Aconteceu algo? Se quiser remarcar, é só me chamar.",
+  postServiceMsgTemplate: "Oi {name}! Como foi nosso atendimento? Seu retorno ajuda demais. ✨",
+  bookedMsgTemplate:
+    "Obrigado, {name}! 🙌 Seu agendamento está confirmado.\n\n📅 {date}\n🕒 {time}{link_block}\n\nPosso te ajudar com mais alguma coisa?",
+  meetMsgTemplate: "Oi {name}! Sua reunião começa em {minutes} minutos.\n\nEntre por aqui: {link}",
+  finalMsgTemplate: "{name}, sua reunião é agora! 🚀{link_block}",
+  confirmTemplateId: "",
+  remindersEnabled: true,
+  bookedEnabled: true,
+  confirmEnabled: true,
+  meetLinkEnabled: true,
+  finalEnabled: true,
+  noShowEnabled: true,
+  postServiceEnabled: true,
+  pipelineAutoEnabled: true,
+};
 
-function TagInput({
-  value,
-  onChange,
-  placeholder,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-}) {
+const KIND_LABEL: Record<string, string> = {
+  BOOKED: "Confirmação do agendamento",
+  CONFIRM: "Pedido de confirmação",
+  MEET_LINK: "Link da reunião",
+  FINAL: "Lembrete final",
+  NOSHOW: "Falta (no-show)",
+  POST_SERVICE: "Pós-atendimento",
+};
+
+const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
+
+function TagInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
   const [input, setInput] = useState("");
   const tags = value ? value.split(",").map((t) => t.trim()).filter(Boolean) : [];
 
   const addTag = () => {
     const trimmed = input.trim();
     if (!trimmed) return;
-    const next = [...tags, trimmed].join(", ");
-    onChange(next);
+    onChange([...tags, trimmed].join(", "));
     setInput("");
-  };
-
-  const removeTag = (idx: number) => {
-    const next = tags.filter((_, i) => i !== idx).join(", ");
-    onChange(next);
   };
 
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2 min-h-[44px]">
         {tags.map((tag, i) => (
-          <span
-            key={i}
-            className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700"
-          >
+          <span key={i} className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">
             {tag}
-            <button onClick={() => removeTag(i)} className="ml-0.5 hover:text-red-900">
+            <button onClick={() => onChange(tags.filter((_, x) => x !== i).join(", "))} className="ml-0.5 hover:text-red-900">
               <X className="h-3 w-3" />
             </button>
           </span>
         ))}
-        {tags.length === 0 && (
-          <span className="text-xs text-slate-400 py-0.5">{placeholder ?? "Nenhuma tag adicionada"}</span>
-        )}
+        {tags.length === 0 && <span className="text-xs text-slate-400 py-0.5">{placeholder ?? "Nenhuma tag adicionada"}</span>}
       </div>
       <div className="flex gap-2">
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder='Ex: "bolha", "queimadura", "reclamação"'
+          placeholder='Ex: "reclamação", "urgente", "cancelar"'
           className="h-9 text-sm"
           onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
         />
         <Button type="button" size="sm" variant="outline" onClick={addTag} className="shrink-0">
-          <Plus className="h-3.5 w-3.5 mr-1" />
-          Adicionar
+          <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar
         </Button>
       </div>
     </div>
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// Config card wrapper
-// ─────────────────────────────────────────────────────────────
-
 function ConfigCard({
-  icon: Icon,
-  iconColor,
-  iconBg,
-  title,
-  description,
-  children,
+  icon: Icon, iconColor, iconBg, title, description, enabled, onToggle, children,
 }: {
-  icon: React.ElementType;
-  iconColor: string;
-  iconBg: string;
-  title: string;
-  description: string;
-  children: React.ReactNode;
+  icon: React.ElementType; iconColor: string; iconBg: string; title: string; description: string;
+  enabled?: boolean; onToggle?: (v: boolean) => void; children?: React.ReactNode;
 }) {
   return (
     <Card className="border border-slate-200 shadow-sm">
@@ -133,55 +137,34 @@ function ConfigCard({
           <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconBg}`}>
             <Icon className={`h-5 w-5 ${iconColor}`} />
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <CardTitle className="text-base font-semibold text-slate-800">{title}</CardTitle>
             <CardDescription className="text-xs mt-0.5">{description}</CardDescription>
           </div>
+          {onToggle && <Switch checked={!!enabled} onCheckedChange={onToggle} className="mt-1 shrink-0" />}
         </div>
       </CardHeader>
-      <CardContent className="pt-0">{children}</CardContent>
+      {children && (
+        <CardContent className={`pt-0 transition-opacity ${onToggle && !enabled ? "opacity-40 pointer-events-none" : ""}`}>
+          {children}
+        </CardContent>
+      )}
     </Card>
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// Number field with unit label
-// ─────────────────────────────────────────────────────────────
-
 function NumberField({
-  id,
-  label,
-  unit,
-  value,
-  onChange,
-  min,
-  max,
-  hint,
+  id, label, unit, value, onChange, min, max, hint,
 }: {
-  id: string;
-  label: string;
-  unit: string;
-  value: number;
-  onChange: (v: number) => void;
-  min?: number;
-  max?: number;
-  hint?: string;
+  id: string; label: string; unit: string; value: number; onChange: (v: number) => void;
+  min?: number; max?: number; hint?: string;
 }) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={id} className="text-sm font-medium text-slate-700">
-        {label}
-      </Label>
+      <Label htmlFor={id} className="text-sm font-medium text-slate-700">{label}</Label>
       <div className="flex items-center gap-2">
-        <Input
-          id={id}
-          type="number"
-          min={min ?? 0}
-          max={max ?? 9999}
-          value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
-          className="h-9 w-28 text-sm"
-        />
+        <Input id={id} type="number" min={min ?? 0} max={max ?? 9999} value={value}
+          onChange={(e) => onChange(Number(e.target.value))} className="h-9 w-28 text-sm" />
         <span className="text-sm text-slate-500">{unit}</span>
       </div>
       {hint && <p className="text-xs text-slate-400">{hint}</p>}
@@ -189,43 +172,65 @@ function NumberField({
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// Main Page
-// ─────────────────────────────────────────────────────────────
+function MsgField({ label, value, onChange, hint, rows = 4 }: {
+  label: string; value: string; onChange: (v: string) => void; hint: string; rows?: number;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-sm font-medium text-slate-700">{label}</Label>
+      <Textarea value={value} onChange={(e) => onChange(e.target.value)}
+        className="text-xs text-slate-700 resize-none bg-white border-2" style={{ height: rows * 26 }} />
+      <p className="text-xs text-slate-400">{hint}</p>
+    </div>
+  );
+}
+
+const quando = (iso: string) =>
+  new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 
 export default function AutomationConfig() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [config, setConfig] = useState<AutomationConfig>({
-    autoConfirmHours: 24,
-    lateToleranceMin: 15,
-    postServiceHours: 24,
-    humanHandoffTags: "",
-    confirmMsgTemplate: "Olá {name}! 👋 Passando para confirmar seu atendimento de amanhã às {time}. Podemos confirmar? ✅",
-    lateMsgTemplate: "Oi {name}! 😊 Notamos que você ainda não chegou para o seu horário das {time}. Está tudo bem?",
-    postServiceMsgTemplate: "Oi {name}! Esperamos que tenha gostado do atendimento! ✨ Como foi sua experiência?",
-  });
+  const [config, setConfig] = useState<Config>(PADRAO);
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [status, setStatus] = useState<any>(null);
 
-  // Feature toggles (local only for UX — backed by real field in future)
-  const [features, setFeatures] = useState({
-    confirmationEnabled: true,
-    noShowEnabled: true,
-    postServiceEnabled: true,
-    handoffEnabled: true,
-    waitlistEnabled: true,
-    broadcastEnabled: false,
-  });
+  const set = <K extends keyof Config>(k: K, v: Config[K]) => setConfig((c) => ({ ...c, [k]: v }));
+
+  const carregarStatus = async () => {
+    try {
+      const r = await fetch("/api/automations/reminders", { headers: auth() });
+      setStatus(r.ok ? await r.json() : null);
+    } catch { setStatus(null); }
+  };
 
   useEffect(() => {
-    fetch("/api/automations/config")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.id) setConfig(data);
+    (async () => {
+      try {
+        const [cRes, tRes] = await Promise.all([
+          fetch("/api/automations/config", { headers: auth() }),
+          fetch("/api/templates", { headers: auth() }),
+        ]);
+        if (cRes.ok) {
+          const d = await cRes.json();
+          // Campos nulos no banco continuam com o texto padrão da tela.
+          setConfig({
+            ...PADRAO,
+            ...Object.fromEntries(Object.entries(d).filter(([, v]) => v !== null && v !== undefined)),
+          } as Config);
+        } else {
+          const d = await cRes.json().catch(() => ({}));
+          toast({ title: d.error || "Não foi possível carregar as configurações", variant: "destructive" });
+        }
+        const tpls = tRes.ok ? await tRes.json() : [];
+        setTemplates(tpls.filter((t: any) => t.status === "APPROVED"));
+      } finally {
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      }
+      carregarStatus();
+    })();
   }, []);
 
   const handleSave = async () => {
@@ -233,19 +238,25 @@ export default function AutomationConfig() {
     try {
       const res = await fetch("/api/automations/config", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...auth(), "Content-Type": "application/json" },
         body: JSON.stringify(config),
       });
-      if (!res.ok) throw new Error("Falha ao salvar");
-      toast({ title: "Configurações salvas!", description: "As regras de automação foram atualizadas." });
-    } catch {
-      toast({ title: "Erro", description: "Não foi possível salvar.", variant: "destructive" });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || "Falha ao salvar");
+      toast({ title: "Configurações salvas", description: "A régua já vale para os agendamentos futuros." });
+      carregarStatus();
+    } catch (e: any) {
+      toast({ title: e.message || "Não foi possível salvar", variant: "destructive" });
     }
     setSaving(false);
   };
 
-  const toggle = (key: keyof typeof features) =>
-    setFeatures((prev) => ({ ...prev, [key]: !prev[key] }));
+  const retry = async (id: string) => {
+    const res = await fetch(`/api/automations/reminders/${id}/retry`, { method: "POST", headers: auth() });
+    const d = await res.json().catch(() => ({}));
+    if (res.ok) { toast({ title: "Lembrete recolocado na fila" }); carregarStatus(); }
+    else toast({ title: d.error || "Erro ao reenviar", variant: "destructive" });
+  };
 
   if (loading) {
     return (
@@ -260,12 +271,11 @@ export default function AutomationConfig() {
   return (
     <DashboardLayout>
       <div className="space-y-6 pb-20">
-        {/* Header */}
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Lembretes e follow-ups</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Lembretes e rotinas</h1>
             <p className="text-sm text-slate-500 mt-0.5">
-              Confirmações, lembretes e mensagens automáticas para reduzir faltas e fidelizar seus clientes.
+              A régua completa do agendamento: confirmação, lembrete 24h antes, link da reunião e aviso final.
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -279,326 +289,265 @@ export default function AutomationConfig() {
           </div>
         </div>
 
-        <Tabs defaultValue="confirmations">
-          <TabsList className="bg-slate-100 border border-slate-200">
-            <TabsTrigger value="confirmations" className="gap-1.5 text-xs sm:text-sm">
-              <CalendarClock className="h-3.5 w-3.5" />
-              Confirmações
-            </TabsTrigger>
-            <TabsTrigger value="noshow" className="gap-1.5 text-xs sm:text-sm">
-              <UserX className="h-3.5 w-3.5" />
-              Faltas e Atrasos
-            </TabsTrigger>
-            <TabsTrigger value="postservice" className="gap-1.5 text-xs sm:text-sm">
-              <Handshake className="h-3.5 w-3.5" />
-              Pós-Atendimento
-            </TabsTrigger>
-            <TabsTrigger value="handoff" className="gap-1.5 text-xs sm:text-sm">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              Handoff Humano
-            </TabsTrigger>
-            <TabsTrigger value="campaigns" className="gap-1.5 text-xs sm:text-sm">
-              <Megaphone className="h-3.5 w-3.5" />
-              Campanhas
-            </TabsTrigger>
+        {!config.remindersEnabled && (
+          <div className="flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            A régua de lembretes está desligada — nenhum aviso automático sai enquanto isso.
+            <Button size="sm" variant="outline" className="ml-auto" onClick={() => set("remindersEnabled", true)}>
+              Ligar
+            </Button>
+          </div>
+        )}
+
+        <Tabs defaultValue="regua">
+          <TabsList className="bg-slate-100 border border-slate-200 flex-wrap h-auto">
+            <TabsTrigger value="regua" className="gap-1.5 text-xs sm:text-sm"><CalendarClock className="h-3.5 w-3.5" /> Régua do agendamento</TabsTrigger>
+            <TabsTrigger value="pos" className="gap-1.5 text-xs sm:text-sm"><UserX className="h-3.5 w-3.5" /> Faltas e pós-atendimento</TabsTrigger>
+            <TabsTrigger value="funil" className="gap-1.5 text-xs sm:text-sm"><GitBranch className="h-3.5 w-3.5" /> Funil</TabsTrigger>
+            <TabsTrigger value="handoff" className="gap-1.5 text-xs sm:text-sm"><ShieldCheck className="h-3.5 w-3.5" /> Handoff humano</TabsTrigger>
+            <TabsTrigger value="status" className="gap-1.5 text-xs sm:text-sm"><Activity className="h-3.5 w-3.5" /> Status</TabsTrigger>
           </TabsList>
 
-          {/* ── TAB: Confirmações ──────────────────────────────── */}
-          <TabsContent value="confirmations" className="mt-4 space-y-4">
+          {/* ── Régua do agendamento ───────────────────────────── */}
+          <TabsContent value="regua" className="mt-4 space-y-4">
             <ConfigCard
-              icon={Bell}
-              iconColor="text-blue-600"
-              iconBg="bg-blue-50"
-              title="Confirmação Automática"
-              description="O robô envia uma mensagem pedindo ao cliente para confirmar ou cancelar o agendamento antes do horário marcado."
+              icon={CheckCircle2} iconColor="text-emerald-600" iconBg="bg-emerald-50"
+              title="1. Assim que o cliente agenda"
+              description="Agradece, manda o resumo do agendamento e oferece o botão de encerrar o atendimento."
+              enabled={config.bookedEnabled} onToggle={(v) => set("bookedEnabled", v)}
             >
-              <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100">
-                <div>
-                  <p className="text-sm font-medium text-slate-700">Ativar confirmação automática</p>
-                  <p className="text-xs text-slate-400">O bot enviará mensagens de confirmação de forma autônoma.</p>
-                </div>
-                <Switch
-                  checked={features.confirmationEnabled}
-                  onCheckedChange={() => toggle("confirmationEnabled")}
-                />
-              </div>
-
-              <div className={`space-y-4 transition-opacity ${features.confirmationEnabled ? "" : "opacity-40 pointer-events-none"}`}>
-                <NumberField
-                  id="autoConfirmHours"
-                  label="Horas de antecedência para envio"
-                  unit="horas antes"
-                  value={config.autoConfirmHours}
-                  onChange={(v) => setConfig({ ...config, autoConfirmHours: v })}
-                  min={1}
-                  max={72}
-                  hint="Exemplo: 24h antes → a mensagem é enviada 1 dia antes do horário marcado."
-                />
-
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-medium text-slate-700">Mensagem de confirmação</Label>
-                  <Textarea
-                    className="text-xs text-slate-700 h-24 resize-none bg-white border-2"
-                    value={config.confirmMsgTemplate}
-                    onChange={(e) => setConfig({ ...config, confirmMsgTemplate: e.target.value })}
-                  />
-                  <p className="text-xs text-slate-400">
-                    Use {"{name}"} e {"{time}"} para inserir o nome e horário automaticamente.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2 bg-blue-50 text-blue-700 rounded-lg px-3 py-2.5 text-xs">
-                  <Clock className="h-3.5 w-3.5 shrink-0" />
-                  <span>
-                    Se o cliente responder <strong>SIM</strong>, o agendamento é mantido. Se responder <strong>NÃO</strong>ou não responder após {config.autoConfirmHours}h, a vaga é automaticamente liberada.
-                  </span>
-                </div>
-              </div>
+              <MsgField
+                label="Mensagem de confirmação do agendamento"
+                value={config.bookedMsgTemplate}
+                onChange={(v) => set("bookedMsgTemplate", v)}
+                hint="{name}, {date}, {time}, {title} e {link_block} (linha do link da reunião, quando existir)."
+                rows={5}
+              />
+              <p className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2.5 text-xs text-emerald-800">
+                <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                Vai com os botões “Tenho uma dúvida” e “Encerrar atendimento”.
+              </p>
             </ConfigCard>
 
             <ConfigCard
-              icon={RefreshCw}
-              iconColor="text-sky-600"
-              iconBg="bg-sky-50"
-              title="Fila de Espera (Encaixe Automático)"
-              description="Quando um cliente cancela, o sistema oferece a vaga automaticamente para quem está aguardando."
+              icon={Bell} iconColor="text-blue-600" iconBg="bg-blue-50"
+              title="2. Antes do compromisso — pedido de confirmação"
+              description="Pergunta se está confirmado, com botões de confirmar e remarcar."
+              enabled={config.confirmEnabled} onToggle={(v) => set("confirmEnabled", v)}
             >
-              <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100">
-                <div>
-                  <p className="text-sm font-medium text-slate-700">Ativar encaixe automático</p>
-                  <p className="text-xs text-slate-400">Notifica leads na fila quando uma vaga for liberada.</p>
-                </div>
-                <Switch
-                  checked={features.waitlistEnabled}
-                  onCheckedChange={() => toggle("waitlistEnabled")}
-                />
-              </div>
-              <div className={`space-y-2 transition-opacity ${features.waitlistEnabled ? "" : "opacity-40 pointer-events-none"}`}>
-                <div className="flex items-center gap-2 bg-sky-50 text-sky-700 rounded-lg px-3 py-2.5 text-xs">
-                  <MessageSquare className="h-3.5 w-3.5 shrink-0" />
-                  <span>
-                    O sistema avisará o primeiro cliente da fila: <em>"Surgiu uma vaga disponível para {"{data}"} às {"{hora}"}! Tem interesse?"</em>
-                  </span>
-                </div>
-              </div>
-            </ConfigCard>
-          </TabsContent>
-
-          {/* ── TAB: Faltas e Atrasos ──────────────────────────── */}
-          <TabsContent value="noshow" className="mt-4 space-y-4">
-            <ConfigCard
-              icon={AlertTriangle}
-              iconColor="text-amber-600"
-              iconBg="bg-amber-50"
-              title="Tolerância de Atraso"
-              description="Configure quantos minutos o robô aguarda antes de enviar uma mensagem de alerta ao cliente que está atrasado."
-            >
-              <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100">
-                <div>
-                  <p className="text-sm font-medium text-slate-700">Ativar alerta de atraso</p>
-                  <p className="text-xs text-slate-400">Bot envia mensagem automática quando cliente ultrapassa o tempo de tolerância.</p>
-                </div>
-                <Switch
-                  checked={features.noShowEnabled}
-                  onCheckedChange={() => toggle("noShowEnabled")}
-                />
-              </div>
-
-              <div className={`space-y-4 transition-opacity ${features.noShowEnabled ? "" : "opacity-40 pointer-events-none"}`}>
+              <div className="space-y-4">
                 <NumberField
-                  id="lateToleranceMin"
-                  label="Tempo de tolerância"
-                  unit="minutos de atraso"
-                  value={config.lateToleranceMin}
-                  onChange={(v) => setConfig({ ...config, lateToleranceMin: v })}
-                  min={5}
-                  max={120}
-                  hint="Após esse tempo, o bot pergunta automaticamente se o cliente ainda virá."
+                  id="autoConfirmHours" label="Antecedência" unit="horas antes"
+                  value={config.autoConfirmHours} onChange={(v) => set("autoConfirmHours", v)}
+                  min={1} max={168} hint="24h é o padrão. Agendamentos marcados com menos antecedência pulam este aviso."
                 />
-
+                <MsgField
+                  label="Mensagem" value={config.confirmMsgTemplate}
+                  onChange={(v) => set("confirmMsgTemplate", v)} hint="{name}, {date}, {time}." rows={3}
+                />
                 <div className="space-y-1.5">
-                  <Label className="text-sm font-medium text-slate-700">Mensagem de atraso</Label>
-                  <Textarea
-                    className="text-xs text-slate-700 h-20 resize-none bg-white border-2"
-                    value={config.lateMsgTemplate}
-                    onChange={(e) => setConfig({ ...config, lateMsgTemplate: e.target.value })}
-                  />
+                  <Label className="text-sm font-medium text-slate-700">Template para janela fechada</Label>
+                  <Select value={config.confirmTemplateId || "NONE"} onValueChange={(v) => set("confirmTemplateId", v === "NONE" ? "" : v)}>
+                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Escolha um template aprovado" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="NONE">Nenhum</SelectItem>
+                      {templates.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>{t.name} · {t.variableCount || 0} variável(is)</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <p className="text-xs text-slate-400">
-                    Use {"{name}"} e {"{time}"} para inserir os dados dinâmicos.
+                    Se o cliente não fala com você há mais de 24h, o WhatsApp só aceita template aprovado.
+                    Sem um template escolhido aqui, esse lembrete falha — e o motivo aparece na aba Status.
+                    {templates.length === 0 && (
+                      <> Você ainda não tem template aprovado: <a href="/templates" className="underline font-semibold">crie um</a>.</>
+                    )}
                   </p>
                 </div>
               </div>
             </ConfigCard>
+
+            <ConfigCard
+              icon={Video} iconColor="text-indigo-600" iconBg="bg-indigo-50"
+              title="3. Pouco antes — link da reunião"
+              description="Envia o link do Google Meet no WhatsApp e no e-mail do contato."
+              enabled={config.meetLinkEnabled} onToggle={(v) => set("meetLinkEnabled", v)}
+            >
+              <div className="space-y-4">
+                <NumberField
+                  id="meetLinkMinutes" label="Antecedência" unit="minutos antes"
+                  value={config.meetLinkMinutes} onChange={(v) => set("meetLinkMinutes", v)}
+                  min={1} max={120} hint="O link do Meet é criado junto com o evento no Google Calendar."
+                />
+                <MsgField
+                  label="Mensagem" value={config.meetMsgTemplate}
+                  onChange={(v) => set("meetMsgTemplate", v)} hint="{name}, {minutes}, {link}, {date}, {time}." rows={3}
+                />
+                <p className="flex items-start gap-2 rounded-lg bg-indigo-50 px-3 py-2.5 text-xs text-indigo-800">
+                  <Link2 className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                  Sem o Google Calendar conectado não existe link de Meet, e este lembrete é pulado.
+                  Conecte em <a href="/connections" className="underline font-semibold">Conexões</a>.
+                </p>
+              </div>
+            </ConfigCard>
+
+            <ConfigCard
+              icon={Clock} iconColor="text-orange-600" iconBg="bg-orange-50"
+              title="4. Na hora — lembrete final"
+              description="“Sua reunião é agora”, com o link junto."
+              enabled={config.finalEnabled} onToggle={(v) => set("finalEnabled", v)}
+            >
+              <MsgField
+                label="Mensagem" value={config.finalMsgTemplate}
+                onChange={(v) => set("finalMsgTemplate", v)} hint="{name}, {link}, {link_block}, {time}." rows={3}
+              />
+            </ConfigCard>
           </TabsContent>
 
-          {/* ── TAB: Pós-Atendimento ───────────────────────────── */}
-          <TabsContent value="postservice" className="mt-4 space-y-4">
+          {/* ── Faltas e pós-atendimento ───────────────────────── */}
+          <TabsContent value="pos" className="mt-4 space-y-4">
             <ConfigCard
-              icon={Handshake}
-              iconColor="text-[#2563EB]"
-              iconBg="bg-blue-50"
-              title="Follow-up Pós-Atendimento"
-              description="O robô envia uma mensagem após a conclusão do serviço para verificar a satisfação do cliente."
+              icon={AlertTriangle} iconColor="text-amber-600" iconBg="bg-amber-50"
+              title="Falta (no-show)"
+              description="Depois da tolerância, pergunta o que aconteceu e oferece remarcar."
+              enabled={config.noShowEnabled} onToggle={(v) => set("noShowEnabled", v)}
             >
-              <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100">
-                <div>
-                  <p className="text-sm font-medium text-slate-700">Ativar pós-atendimento automático</p>
-                  <p className="text-xs text-slate-400">Envia uma mensagem de acompanhamento após o serviço concluído.</p>
-                </div>
-                <Switch
-                  checked={features.postServiceEnabled}
-                  onCheckedChange={() => toggle("postServiceEnabled")}
-                />
-              </div>
-
-              <div className={`space-y-4 transition-opacity ${features.postServiceEnabled ? "" : "opacity-40 pointer-events-none"}`}>
+              <div className="space-y-4">
                 <NumberField
-                  id="postServiceHours"
-                  label="Enviar follow-up após"
-                  unit="horas do atendimento"
-                  value={config.postServiceHours}
-                  onChange={(v) => setConfig({ ...config, postServiceHours: v })}
-                  min={1}
-                  max={168}
-                  hint="Recomendamos entre 4h e 48h para o melhor índice de resposta."
+                  id="lateToleranceMin" label="Tolerância" unit="minutos após o horário"
+                  value={config.lateToleranceMin} onChange={(v) => set("lateToleranceMin", v)}
+                  min={5} max={240} hint="Quem confirmou presença pelo botão não recebe este aviso."
                 />
+                <MsgField label="Mensagem" value={config.lateMsgTemplate}
+                  onChange={(v) => set("lateMsgTemplate", v)} hint="{name}, {time}, {date}." rows={3} />
+              </div>
+            </ConfigCard>
 
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-medium text-slate-700">Mensagem pós-atendimento</Label>
-                  <Textarea
-                    className="text-xs text-slate-700 h-24 resize-none bg-white border-2"
-                    value={config.postServiceMsgTemplate}
-                    onChange={(e) => setConfig({ ...config, postServiceMsgTemplate: e.target.value })}
-                  />
-                  <p className="text-xs text-slate-400">
-                    Use {"{name}"} para personalizar com o nome da cliente.
-                  </p>
-                </div>
+            <ConfigCard
+              icon={Handshake} iconColor="text-[#2563EB]" iconBg="bg-blue-50"
+              title="Pós-atendimento"
+              description="Pesquisa de satisfação depois do atendimento concluído."
+              enabled={config.postServiceEnabled} onToggle={(v) => set("postServiceEnabled", v)}
+            >
+              <div className="space-y-4">
+                <NumberField
+                  id="postServiceHours" label="Enviar depois de" unit="horas do atendimento"
+                  value={config.postServiceHours} onChange={(v) => set("postServiceHours", v)}
+                  min={1} max={168} hint="Só sai para agendamento marcado como concluído."
+                />
+                <MsgField label="Mensagem" value={config.postServiceMsgTemplate}
+                  onChange={(v) => set("postServiceMsgTemplate", v)} hint="{name}, {date}." rows={3} />
               </div>
             </ConfigCard>
           </TabsContent>
 
-          {/* ── TAB: Handoff Humano ────────────────────────────── */}
+          {/* ── Funil ──────────────────────────────────────────── */}
+          <TabsContent value="funil" className="mt-4 space-y-4">
+            <ConfigCard
+              icon={GitBranch} iconColor="text-violet-600" iconBg="bg-violet-50"
+              title="Movimentação automática no funil"
+              description="Cada evento do atendimento empurra o contato para a etapa correspondente."
+              enabled={config.pipelineAutoEnabled} onToggle={(v) => set("pipelineAutoEnabled", v)}
+            >
+              <div className="space-y-2 text-sm">
+                {[
+                  ["Agendou", "Agendado"],
+                  ["Confirmou presença", "Confirmado / Agendado"],
+                  ["Atendimento concluído", "Atendido / Ganho"],
+                  ["Faltou", "No-show / Perdido"],
+                  ["Cancelou ou pediu para remarcar", "Contato / Qualificando"],
+                ].map(([evento, etapa]) => (
+                  <div key={evento} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
+                    <span className="text-slate-600">{evento}</span>
+                    <Badge variant="outline" className="font-semibold text-xs">{etapa}</Badge>
+                  </div>
+                ))}
+                <p className="text-xs text-slate-400 pt-1">
+                  A etapa é encontrada pelo nome no seu funil. Se nenhuma casar, o contato fica onde está —
+                  renomeie as etapas em <a href="/crm" className="underline font-semibold">CRM</a> para ativar o encaixe.
+                </p>
+              </div>
+            </ConfigCard>
+          </TabsContent>
+
+          {/* ── Handoff ────────────────────────────────────────── */}
           <TabsContent value="handoff" className="mt-4 space-y-4">
             <ConfigCard
-              icon={ShieldCheck}
-              iconColor="text-red-600"
-              iconBg="bg-red-50"
-              title="Transferência para Atendente Humano"
-              description="Defina palavras-chave que, se detectadas na conversa, pausam o bot e alertam um atendente humano automaticamente."
+              icon={ShieldCheck} iconColor="text-red-600" iconBg="bg-red-50"
+              title="Transferência para atendente humano"
+              description="Palavras que, ao aparecerem na conversa, pausam o bot e chamam um humano."
             >
-              <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100">
-                <div>
-                  <p className="text-sm font-medium text-slate-700">Ativar detecção de urgência</p>
-                  <p className="text-xs text-slate-400">O bot irá parar e chamar um humano quando detectar essas palavras.</p>
-                </div>
-                <Switch
-                  checked={features.handoffEnabled}
-                  onCheckedChange={() => toggle("handoffEnabled")}
-                />
-              </div>
-
-              <div className={`space-y-4 transition-opacity ${features.handoffEnabled ? "" : "opacity-40 pointer-events-none"}`}>
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-medium text-slate-700">Palavras-chave de emergência</Label>
-                  <p className="text-xs text-slate-400">
-                    Adicione as palavras ou expressões que indicam que o cliente precisa de atendimento humano urgente.
-                  </p>
-                  <TagInput
-                    value={config.humanHandoffTags}
-                    onChange={(v) => setConfig({ ...config, humanHandoffTags: v })}
-                    placeholder="Adicione palavras de emergência..."
-                  />
-                </div>
-
-                <div className="flex items-start gap-2 bg-red-50 text-red-700 rounded-lg px-3 py-2.5 text-xs">
+              <div className="space-y-4">
+                <TagInput value={config.humanHandoffTags} onChange={(v) => set("humanHandoffTags", v)}
+                  placeholder="Adicione palavras de emergência…" />
+                <p className="flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2.5 text-xs text-red-700">
                   <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                  <span>
-                    Quando detectar alguma dessas palavras, o bot enviará a mensagem:
-                    <em className="block mt-1 font-medium">
-                      "Entendo sua situação. Vou conectar você com nossa equipe agora mesmo! 🙏"
-                    </em>
-                    …e um alerta aparecerá no painel de Conversas para intervenção imediata.
-                  </span>
-                </div>
+                  Ao detectar uma dessas palavras o bot avisa que vai chamar a equipe e a conversa aparece
+                  destacada no painel de Conversas.
+                </p>
               </div>
             </ConfigCard>
           </TabsContent>
 
-          {/* ── TAB: Campanhas ────────────────────────────────── */}
-          <TabsContent value="campaigns" className="mt-4 space-y-4">
-            <ConfigCard
-              icon={Megaphone}
-              iconColor="text-indigo-600"
-              iconBg="bg-indigo-50"
-              title="Disparo de Campanhas em Massa"
-              description="Envie promoções e comunicados para todos os seus contatos ou segmentos específicos via WhatsApp."
-            >
-              <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100">
-                <div>
-                  <p className="text-sm font-medium text-slate-700">Ativar módulo de campanhas</p>
-                  <p className="text-xs text-slate-400">Habilita envios em massa controlados (anti-ban).</p>
-                </div>
-                <Switch
-                  checked={features.broadcastEnabled}
-                  onCheckedChange={() => toggle("broadcastEnabled")}
-                />
-              </div>
+          {/* ── Status ─────────────────────────────────────────── */}
+          <TabsContent value="status" className="mt-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-slate-500">
+                {status ? `${status.enviadosNaSemana} lembrete(s) enviados nos últimos 7 dias.` : "Sem dados ainda."}
+              </p>
+              <Button variant="outline" size="sm" onClick={carregarStatus} className="gap-1.5">
+                <RefreshCw className="h-3.5 w-3.5" /> Atualizar
+              </Button>
+            </div>
 
-              <div className={`space-y-4 transition-opacity ${features.broadcastEnabled ? "" : "opacity-40 pointer-events-none"}`}>
-                <div className="rounded-xl border border-dashed border-indigo-200 bg-indigo-50/50 p-4 space-y-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-slate-700">Texto da campanha</Label>
-                    <Textarea
-                      placeholder={`Olá {nome}! 🎉\nTemos uma promoção especial para você...\n\nResponda QUERO para garantir sua vaga!`}
-                      className="h-28 text-sm resize-none"
-                    />
+            <Card className="border border-slate-200 shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold text-slate-800">Próximos envios</CardTitle>
+                <CardDescription className="text-xs">O que está na fila, na ordem em que vai sair.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {!status?.proximos?.length ? (
+                  <p className="text-sm text-slate-400 py-6 text-center">Nenhum lembrete programado.</p>
+                ) : status.proximos.map((r: any) => (
+                  <div key={r.id} className="flex items-center gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm">
+                    <Badge variant="outline" className="text-[11px] font-bold shrink-0">{KIND_LABEL[r.kind] || r.kind}</Badge>
+                    <span className="truncate text-slate-600">{r.appointment?.lead?.name || "Contato"}</span>
+                    <span className="ml-auto text-xs text-slate-400 shrink-0">{quando(r.runAt)}</span>
                   </div>
+                ))}
+              </CardContent>
+            </Card>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-sm font-medium text-slate-700">Público-alvo</Label>
-                      <select className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm">
-                        <option value="all">Todos os contatos</option>
-                        <option value="leads">Apenas leads ativos</option>
-                        <option value="converted">Clientes convertidos</option>
-                        <option value="lost">Leads perdidos (reengajamento)</option>
-                      </select>
+            <Card className="border border-slate-200 shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold text-slate-800">Falhas recentes</CardTitle>
+                <CardDescription className="text-xs">Cada linha traz o motivo — e dá para reenviar.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {!status?.falhas?.length ? (
+                  <p className="text-sm text-slate-400 py-6 text-center">Nenhuma falha nos últimos 7 dias. 🎉</p>
+                ) : status.falhas.map((r: any) => (
+                  <div key={r.id} className="rounded-lg bg-red-50 px-3 py-2.5 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-[11px] font-bold shrink-0">{KIND_LABEL[r.kind] || r.kind}</Badge>
+                      <span className="truncate text-slate-700">{r.appointment?.lead?.name || "Contato"}</span>
+                      <Button size="sm" variant="ghost" className="ml-auto h-7 text-xs font-bold" onClick={() => retry(r.id)}>
+                        Tentar de novo
+                      </Button>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-sm font-medium text-slate-700">Limite de vouchers</Label>
-                      <Input type="number" placeholder="Ex: 30" className="h-9 text-sm" />
-                    </div>
+                    <p className="text-xs text-red-700 mt-1">{r.error || "Sem detalhe do erro."}</p>
                   </div>
-
-                  <Button className="w-full gap-2 bg-indigo-600 hover:bg-indigo-700">
-                    <Send className="h-4 w-4" />
-                    Pré-visualizar e Agendar Envio
-                  </Button>
-                </div>
-
-                <div className="flex items-center gap-2 bg-amber-50 text-amber-700 rounded-lg px-3 py-2.5 text-xs">
-                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                  <span>
-                    O envio é feito de forma cadenciada (5–10 segundos entre mensagens) para evitar bloqueio do número pelo WhatsApp.
-                  </span>
-                </div>
-              </div>
-            </ConfigCard>
+                ))}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
 
-        {/* Save footer */}
-        <div className="sticky bottom-0 bg-white/90 backdrop-blur border-t border-slate-200 -mx-4 px-4 py-3 flex items-center justify-between sm:-mx-8 sm:px-8 lg:-mx-8">
+        <div className="sticky bottom-0 bg-white/90 backdrop-blur border-t border-slate-200 -mx-4 px-4 py-3 flex items-center justify-between sm:-mx-8 sm:px-8">
           <p className="text-xs text-slate-400">
-            As configurações se aplicam a <strong>toda a conta</strong> e entram em vigor imediatamente.
+            Vale para <strong>toda a conta</strong>. Mudanças de horário recalculam a régua dos agendamentos futuros.
           </p>
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="bg-[#1D4ED8] hover:bg-emerald-700 gap-2"
-            size="sm"
-          >
+          <Button onClick={handleSave} disabled={saving} className="bg-[#1D4ED8] gap-2" size="sm">
             {saving ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
             {saving ? "Salvando…" : "Salvar"}
           </Button>

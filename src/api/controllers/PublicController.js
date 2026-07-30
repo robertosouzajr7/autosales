@@ -1,6 +1,6 @@
 import prisma from "../config/prisma.js";
 import { touchConversation } from "../services/ConversationService.js";
-import { buildIdentity, findOrCreateLead } from "../services/ContactIdentity.js";
+import { buildIdentity, findOrCreateLead, normalizePhone } from "../services/ContactIdentity.js";
 import MessagingService from "../services/MessagingService.js";
 import AutomationEngine from "../../../automation_engine.js";
 import { getFunctionPreset } from "../services/AgentFunctions.js";
@@ -149,65 +149,50 @@ export const submitChat = async (req, res) => {
 };
 
 
+/**
+ * Agendamento pelo link público.
+ *
+ * Passa pelo CalendarService — e não mais por um `appointment.create` solto —
+ * para herdar o mesmo comportamento do agendamento feito pelo agente:
+ * checagem de conflito, evento no Google com link do Meet, régua de lembretes
+ * e movimentação no funil.
+ */
 export const bookAppointment = async (req, res) => {
   const { tenantId, name, email, phone, date, title } = req.body;
   try {
+    const telefone = normalizePhone(phone);
+
     let lead;
     if (email) lead = await prisma.lead.findFirst({ where: { email, tenantId } });
-    if (!lead && phone) lead = await prisma.lead.findFirst({ where: { phone, tenantId } });
-    
+    if (!lead && telefone) lead = await prisma.lead.findFirst({ where: { phone: telefone, tenantId } });
+
     if (!lead) {
       lead = await prisma.lead.create({
-        data: { tenantId, name, email, phone, source: "PUBLIC_BOOKING", status: "SCHEDULED" }
+        data: {
+          tenantId,
+          name: name || "Contato",
+          email: email || null,
+          phone: telefone,
+          source: "PUBLIC_BOOKING",
+          status: "SCHEDULED",
+        },
       });
+    } else if (!lead.phone && telefone) {
+      lead = await prisma.lead.update({ where: { id: lead.id }, data: { phone: telefone } });
     }
 
-    const appointment = await prisma.appointment.create({
-      data: {
-        tenantId,
-        leadId: lead.id,
-        title: title || "Reunião de Alinhamento",
-        date: new Date(date),
-        status: "SCHEDULED"
+    const { default: CalendarService } = await import("../../../calendar_service.js");
+    let booked;
+    try {
+      booked = await CalendarService.createAppointment(tenantId, lead, date, title || "Reunião de Alinhamento");
+    } catch (e) {
+      if (e?.code === "SLOT_CONFLICT") {
+        return res.status(409).json({ error: "Esse horário acabou de ser ocupado. Escolha outro, por favor." });
       }
-    });
-
-    // Buscar a etapa "Agendado" ou similar para mover o lead
-    let stage = await prisma.pipelineStage.findFirst({
-      where: { tenantId, name: { contains: "Agendado" } }
-    });
-
-    // Se não achar pelo nome, pega a última etapa ou mantém a atual
-    const updateData = { status: "SCHEDULED" };
-    if (stage) {
-      updateData.stageId = stage.id;
+      throw e;
     }
 
-    await prisma.lead.update({
-      where: { id: lead.id },
-      data: updateData
-    });
-
-    // Enviar confirmação instantânea via SDR (Assíncrono para não travar a resposta do site)
-    setImmediate(async () => {
-      try {
-        const timeStr = new Date(date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-        const dateStr = new Date(date).toLocaleDateString();
-        const sdrMsg = `Olá ${name}! Passando para confirmar que seu agendamento para o dia ${dateStr} às ${timeStr} foi recebido com sucesso. Já reservei aqui na minha agenda! ✅`;
-        
-        await MessagingService.sendText(tenantId, phone, sdrMsg);
-        console.log(`[Booking] ✅ Confirmação instantânea enviada para ${name} (${phone})`);
-        
-        // Marcar como já avisado para a rotina global não repetir
-        await prisma.appointment.update({
-          where: { id: appointment.id },
-          data: { notes: (appointment.notes || "") + "\n[CONFIRMED_BY_SDR]" }
-        });
-      } catch (e) {
-        console.warn("[Booking] Falha ao enviar confirmação instantânea:", e.message);
-      }
-    });
-
+    const appointment = await prisma.appointment.findUnique({ where: { id: booked.appointmentId } });
     res.json({ success: true, appointment });
   } catch (error) {
     res.status(500).json({ error: error.message });

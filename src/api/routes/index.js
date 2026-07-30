@@ -124,6 +124,9 @@ router.post("/automations/:id/duplicate", requireAutomations, AutomationControll
 router.get("/automations/executions/stats", AutomationController.getStats);
 router.get("/automations/config", AutomationController.getConfig);
 router.post("/automations/config", requireAutomations, AutomationController.updateConfig);
+// Régua de lembretes: o que está programado, o que falhou e por quê.
+router.get("/automations/reminders", AutomationController.getReminders);
+router.post("/automations/reminders/:id/retry", requireAutomations, AutomationController.retryReminder);
 
 // Stats & Analytics
 router.get("/stats/dashboard", StatsController.getDashboardStats);

@@ -158,4 +158,27 @@ export async function sendTrialReminder({ to, name, daysLeft, planName }) {
   });
 }
 
-export default { sendVerificationEmail, sendPasswordResetEmail, sendTrialReminder };
+/**
+ * Link da reunião pouco antes do horário. Vai em paralelo ao WhatsApp: quem
+ * está no computador costuma abrir a call pelo e-mail.
+ */
+export async function sendMeetingLinkEmail({ to, name, link, when, minutes = 10 }) {
+  const heading = `Sua reunião começa em ${minutes} minutos`;
+  const html = wrap(`
+    <h2 style="margin:0 0 12px;font-size:20px;">${heading}</h2>
+    <p style="margin:0 0 20px;font-size:15px;line-height:1.5;">
+      ${name ? `Oi, ${name.split(" ")[0]}. ` : ""}Seu compromisso${when ? ` de <strong>${when}</strong>` : ""} está chegando.
+    </p>
+    <p style="margin:0 0 24px;">
+      <a href="${link}" style="display:inline-block;padding:12px 24px;background:#2563EB;color:#fff;text-decoration:none;border-radius:12px;font-weight:600;">
+        Entrar na reunião
+      </a>
+    </p>
+    <p style="margin:0;font-size:13px;color:#64748b;word-break:break-all;">
+      Ou copie este link: ${link}
+    </p>
+  `);
+  return send({ to, subject: heading, html, text: `${heading}${when ? ` (${when})` : ""}. Entre por aqui: ${link}` });
+}
+
+export default { sendVerificationEmail, sendPasswordResetEmail, sendTrialReminder, sendMeetingLinkEmail };

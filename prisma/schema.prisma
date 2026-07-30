@@ -374,6 +374,25 @@ model AutomationConfig {
   lateMsgTemplate        String? @default("Oi {name}! 😊 Notamos que você ainda não chegou para o seu horário das {time}. Está tudo bem?")
   postServiceMsgTemplate String? @default("Oi {name}! Esperamos que tenha gostado do atendimento! ✨ Como foi sua experiência?")
 
+  // Régua do agendamento: cada momento pode ser ligado/desligado sozinho.
+  remindersEnabled    Boolean @default(true)
+  bookedEnabled       Boolean @default(true)
+  confirmEnabled      Boolean @default(true)
+  meetLinkEnabled     Boolean @default(true)
+  finalEnabled        Boolean @default(true)
+  noShowEnabled       Boolean @default(true)
+  postServiceEnabled  Boolean @default(true)
+  pipelineAutoEnabled Boolean @default(true)
+
+  meetLinkMinutes   Int     @default(10)
+  // Template aprovado usado quando a janela de 24h já fechou.
+  confirmTemplateId String?
+  bookedMsgTemplate String?
+  meetMsgTemplate   String?
+  finalMsgTemplate  String?
+  // JSON { evento: nome da etapa } para mover o lead no funil.
+  stageMap          String?
+
   tenantId String @unique
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -483,18 +502,50 @@ model Message {
 }
 
 model Appointment {
-  id        String   @id @default(uuid())
-  leadId    String
-  tenantId  String
-  title     String
-  date      DateTime
-  status    String   @default("SCHEDULED")
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String    @id @default(uuid())
+  leadId        String
+  tenantId      String
+  title         String
+  date          DateTime
+  status        String    @default("SCHEDULED")
+  notes         String?
+  // Evento no Google e link do Meet, para o lembrete de 10 minutos antes.
+  googleEventId String?
+  meetLink      String?
+  confirmedAt   DateTime?
+  cancelledAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead      Lead                  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tenant    Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  reminders AppointmentReminder[]
+}
+
+// Um registro por momento da régua do agendamento (agradecimento, confirmação
+// 24h antes, link da call, lembrete final, no-show, pós-atendimento).
+//
+// Guardar cada envio como linha — em vez de flags dentro de Appointment.notes —
+// é o que permite saber o que ainda vai sair, o que falhou e por quê, além de
+// tornar o disparo idempotente mesmo com o processo reiniciando.
+model AppointmentReminder {
+  id            String    @id @default(uuid())
+  appointmentId String
+  tenantId      String
+  kind          String // BOOKED | CONFIRM | MEET_LINK | FINAL | NOSHOW | POST_SERVICE
+  runAt         DateTime
+  status        String    @default("PENDING") // PENDING | SENT | FAILED | SKIPPED | CANCELLED
+  attempts      Int       @default(0)
+  sentAt        DateTime?
+  channel       String?
+  error         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@unique([appointmentId, kind])
+  @@index([status, runAt])
 }
 
 model AutomationProgress {

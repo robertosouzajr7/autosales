@@ -161,45 +161,121 @@ export const getConfig = async (req, res) => {
   }
 };
 
+// Campos que a tela de lembretes controla. Lista explícita: o corpo da
+// requisição não pode escolher o que grava no banco.
+const CAMPOS_CONFIG = [
+  "autoConfirmHours", "lateToleranceMin", "postServiceHours", "humanHandoffTags",
+  "confirmMsgTemplate", "lateMsgTemplate", "postServiceMsgTemplate",
+  "remindersEnabled", "bookedEnabled", "confirmEnabled", "meetLinkEnabled",
+  "finalEnabled", "noShowEnabled", "postServiceEnabled", "pipelineAutoEnabled",
+  "meetLinkMinutes", "confirmTemplateId", "bookedMsgTemplate", "meetMsgTemplate",
+  "finalMsgTemplate", "stageMap",
+];
+
+const NUMERICOS = new Set(["autoConfirmHours", "lateToleranceMin", "postServiceHours", "meetLinkMinutes"]);
+
 export const updateConfig = async (req, res) => {
   const tenantId = req.tenantId;
   if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
 
-  const {
-    autoConfirmHours,
-    lateToleranceMin,
-    postServiceHours,
-    humanHandoffTags,
-    confirmMsgTemplate,
-    lateMsgTemplate,
-    postServiceMsgTemplate
-  } = req.body;
-
   try {
+    const data = {};
+    for (const campo of CAMPOS_CONFIG) {
+      const valor = req.body[campo];
+      if (valor === undefined) continue;
+      if (NUMERICOS.has(campo)) {
+        const n = Number(valor);
+        if (!Number.isFinite(n) || n < 0) {
+          return res.status(400).json({ error: `Valor inválido para ${campo}.` });
+        }
+        data[campo] = Math.round(n);
+      } else {
+        data[campo] = valor;
+      }
+    }
+
     const config = await prisma.automationConfig.upsert({
       where: { tenantId },
-      update: {
-        autoConfirmHours,
-        lateToleranceMin,
-        postServiceHours,
-        humanHandoffTags,
-        confirmMsgTemplate,
-        lateMsgTemplate,
-        postServiceMsgTemplate
-      },
-      create: {
-        tenantId,
-        autoConfirmHours,
-        lateToleranceMin,
-        postServiceHours,
-        humanHandoffTags,
-        confirmMsgTemplate,
-        lateMsgTemplate,
-        postServiceMsgTemplate
-      }
+      update: data,
+      create: { tenantId, ...data },
     });
-    
+
+    // Mudou a antecedência? Os agendamentos futuros precisam da régua
+    // recalculada — senão a configuração só valeria para o próximo cliente.
+    if (data.autoConfirmHours !== undefined || data.meetLinkMinutes !== undefined ||
+        data.lateToleranceMin !== undefined || data.postServiceHours !== undefined) {
+      reprogramarFuturos(tenantId).catch((e) =>
+        console.error("[Lembretes] Falha ao reprogramar a régua:", e.message)
+      );
+    }
+
     res.json(config);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/** Recalcula a régua dos agendamentos que ainda não aconteceram. */
+async function reprogramarFuturos(tenantId) {
+  const { default: ReminderService } = await import("../services/ReminderService.js");
+  const futuros = await prisma.appointment.findMany({
+    where: { tenantId, status: "SCHEDULED", date: { gte: new Date() } },
+    select: { id: true },
+    take: 500,
+  });
+  for (const appt of futuros) {
+    await ReminderService.scheduleForAppointment(appt.id, { skipBooked: true });
+  }
+}
+
+/**
+ * Régua dos próximos agendamentos + o que falhou. É a tela de diagnóstico:
+ * sem ela, "o lembrete não chegou" não tem resposta.
+ */
+export const getReminders = async (req, res) => {
+  const tenantId = req.tenantId;
+  if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
+
+  try {
+    const desde = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const [proximos, falhas, enviados] = await Promise.all([
+      prisma.appointmentReminder.findMany({
+        where: { tenantId, status: "PENDING" },
+        orderBy: { runAt: "asc" },
+        take: 50,
+        include: { appointment: { select: { title: true, date: true, lead: { select: { name: true, phone: true } } } } },
+      }),
+      prisma.appointmentReminder.findMany({
+        where: { tenantId, status: "FAILED", updatedAt: { gte: desde } },
+        orderBy: { updatedAt: "desc" },
+        take: 30,
+        include: { appointment: { select: { title: true, date: true, lead: { select: { name: true, phone: true } } } } },
+      }),
+      prisma.appointmentReminder.count({ where: { tenantId, status: "SENT", sentAt: { gte: desde } } }),
+    ]);
+
+    res.json({ proximos, falhas, enviadosNaSemana: enviados });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/** Recoloca um lembrete que falhou na fila. */
+export const retryReminder = async (req, res) => {
+  const tenantId = req.tenantId;
+  if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
+
+  try {
+    const lembrete = await prisma.appointmentReminder.findFirst({
+      where: { id: req.params.id, tenantId },
+    });
+    if (!lembrete) return res.status(404).json({ error: "Lembrete não encontrado." });
+
+    await prisma.appointmentReminder.update({
+      where: { id: lembrete.id },
+      data: { status: "PENDING", runAt: new Date(), error: null },
+    });
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

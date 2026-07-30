@@ -89,6 +89,9 @@ class AutomationEngine {
 
     // Schedulers
     this.checkInterval = setInterval(() => this.processPendingDelays(), 30 * 1000);
+    // Régua do agendamento: 1 min é a granularidade útil — o lembrete "10
+    // minutos antes" não sobrevive a uma varredura de 5 em 5 minutos.
+    this.reminderInterval = setInterval(() => this.processDueReminders(), 60 * 1000);
     this.routineInterval = setInterval(() => this.processGlobalRoutines(), 5 * 60 * 1000);
     this.inactivityInterval = setInterval(() => this.processInactivityTriggers(), 5 * 60 * 1000);
     this.queueInterval = setInterval(() => this.processQueue(), 1000);
@@ -1433,6 +1436,11 @@ class AutomationEngine {
             confirmado_em: gravado
               ? gravado.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" })
               : null,
+            // A régua já mandou o resumo com os botões de encerrar/dúvida.
+            // Sem este aviso a IA repetia data e hora logo em seguida.
+            note:
+              "O resumo do agendamento já foi enviado ao cliente com os botões de encerrar atendimento. " +
+              "Não repita data, hora nem link — no máximo dê uma resposta curta se o cliente perguntar algo.",
           };
         } catch (e) {
           if (e.code === "SLOT_CONFLICT") {
@@ -2675,111 +2683,51 @@ ${scrapeContext}
 
   // ========== GLOBAL ROUTINES (appointment lifecycle) ==========
 
-  async processGlobalRoutines() {
-    const now = new Date();
+  /**
+   * Envia os lembretes que venceram. Toda a régua do agendamento
+   * (agradecimento, confirmação 24h antes, link da call, lembrete final,
+   * no-show e pós-atendimento) vive em AppointmentReminder — cada momento com
+   * hora própria e resultado gravado.
+   */
+  async processDueReminders() {
     try {
-      // Processar cada SDR ativo para aplicar suas regras específicas
-      const sdrs = await prisma.sdrBot.findMany({ where: { active: true } });
+      const { default: ReminderService } = await import("./src/api/services/ReminderService.js");
+      await ReminderService.processDue();
+    } catch (err) {
+      console.error("[AutoEngine] Erro ao processar lembretes:", err.message);
+    }
+  }
 
-      for (const sdr of sdrs) {
-        const tenantId = sdr.tenantId;
+  /**
+   * Rede de segurança da régua: agendamento que entrou por algum caminho sem
+   * programar os lembretes (importação, criação direta no banco, versão
+   * anterior do sistema) ganha a régua aqui. Sem isso o cliente configuraria
+   * tudo na tela e continuaria sem receber nada.
+   */
+  async processGlobalRoutines() {
+    try {
+      const { default: ReminderService } = await import("./src/api/services/ReminderService.js");
+      const semRegua = await prisma.appointment.findMany({
+        where: {
+          status: "SCHEDULED",
+          date: { gte: new Date() },
+          reminders: { none: {} },
+        },
+        select: { id: true, createdAt: true },
+        take: 100,
+      });
 
-        // 1. CONFIRMAÇÃO IMEDIATA (Leads que acabaram de agendar e ainda não foram avisados)
-        const newAppts = await prisma.appointment.findMany({
-          where: { tenantId, status: "SCHEDULED", notes: { not: { contains: "[CONFIRMED_BY_SDR]" } } },
-          include: { lead: true }
-        });
-
-        for (const appt of newAppts) {
-          const timeStr = appt.date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-          const dateStr = appt.date.toLocaleDateString();
-          const msg = `Olá ${appt.lead.name}! Passando para confirmar que recebi seu agendamento para o dia ${dateStr} às ${timeStr}. Estarei te esperando! ✅`;
-          
-          await MessagingService.sendText(tenantId, appt.lead.phone, msg);
-          await prisma.appointment.update({
-            where: { id: appt.id },
-            data: { notes: (appt.notes || "") + "\n[CONFIRMED_BY_SDR]" }
-          });
-        }
-
-        // 2. PRÉ-CONFIRMAÇÃO (Janela configurada no SDR)
-        const preHours = sdr.preConfirmationHours || 12;
-        const preLimit = new Date(now.getTime() + preHours * 60 * 60 * 1000);
-        
-        const toRemind = await prisma.appointment.findMany({
-          where: { 
-            tenantId, 
-            status: "SCHEDULED", 
-            date: { lte: preLimit, gte: now },
-            notes: { not: { contains: "[REMINDER_SENT]" } } 
-          },
-          include: { lead: true }
-        });
-
-        for (const appt of toRemind) {
-          const timeStr = appt.date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-          const msg = `Oi ${appt.lead.name}! Lembra que temos um compromisso hoje às ${timeStr}? Estaremos te aguardando! 😊`;
-          
-          await MessagingService.sendText(tenantId, appt.lead.phone, msg);
-          await prisma.appointment.update({
-            where: { id: appt.id },
-            data: { notes: (appt.notes || "") + "\n[REMINDER_SENT]" }
-          });
-        }
-
-        // 3. NO-SHOW (Tolerância configurada no SDR)
-        const grace = sdr.noShowGraceMinutes || 15;
-        const noShowLimit = new Date(now.getTime() - grace * 60 * 1000);
-
-        const missed = await prisma.appointment.findMany({
-          where: { 
-            tenantId, 
-            status: "SCHEDULED", 
-            date: { lte: noShowLimit },
-            notes: { not: { contains: "[NOSHOW_NOTIFIED]" } }
-          },
-          include: { lead: true }
-        });
-
-        for (const appt of missed) {
-          const msg = `Olá ${appt.lead.name}, notamos que você não conseguiu comparecer ao nosso compromisso agora há pouco. Aconteceu algo? Se quiser reagendar, estou à disposição!`;
-          
-          await MessagingService.sendText(tenantId, appt.lead.phone, msg);
-          await prisma.appointment.update({
-            where: { id: appt.id },
-            data: { 
-              status: "NOSHOW",
-              notes: (appt.notes || "") + "\n[NOSHOW_NOTIFIED]" 
-            }
-          });
-        }
-
-        // 4. PÓS-ATENDIMENTO / CHECK-UP
-        const postHours = sdr.postServiceCheckHours || 24;
-        const postLimit = new Date(now.getTime() - postHours * 60 * 60 * 1000);
-
-        const toFollowUp = await prisma.appointment.findMany({
-          where: { 
-            tenantId, 
-            status: "COMPLETED", 
-            updatedAt: { lte: postLimit },
-            notes: { not: { contains: "[POST_SERVICE_SENT]" } }
-          },
-          include: { lead: true }
-        });
-
-        for (const appt of toFollowUp) {
-          const msg = `Oi ${appt.lead.name}! Como foi seu atendimento ontem? Espero que tenha sido excelente! Se precisar de algo mais, conte comigo. ✨`;
-          
-          await MessagingService.sendText(tenantId, appt.lead.phone, msg);
-          await prisma.appointment.update({
-            where: { id: appt.id },
-            data: { notes: (appt.notes || "") + "\n[POST_SERVICE_SENT]" }
-          });
-        }
+      for (const appt of semRegua) {
+        // Agendamento antigo não recebe o "obrigado pelo agendamento" — seria
+        // uma mensagem fora de hora para quem já agendou faz tempo.
+        const recente = Date.now() - new Date(appt.createdAt).getTime() < 15 * 60 * 1000;
+        await ReminderService.scheduleForAppointment(appt.id, { skipBooked: !recente });
+      }
+      if (semRegua.length) {
+        console.log(`[Lembretes] Régua programada para ${semRegua.length} agendamento(s) sem lembretes.`);
       }
     } catch (err) {
-      console.error("[AutoEngine] Erro nas rotinas globais:", err);
+      console.error("[AutoEngine] Erro nas rotinas globais:", err.message);
     }
   }
 
@@ -2850,6 +2798,17 @@ ${scrapeContext}
       if (!entitled) {
         console.log(`[AutoEngine] 🚫 Bot suspenso p/ tenant ${tenantId} (assinatura inativa).`);
         return null;
+      }
+
+      // Botões da régua do agendamento (confirmar, remarcar, encerrar) têm
+      // resposta própria: quem clicou espera a ação, não um papo da IA.
+      if (opts.replyId) {
+        const { default: ReminderService } = await import("./src/api/services/ReminderService.js");
+        const tratado = await ReminderService.handleButtonReply(opts.replyId, lead).catch((e) => {
+          console.error("[AutoEngine] Erro ao tratar botão do agendamento:", e.message);
+          return false;
+        });
+        if (tratado) return null;
       }
 
       // Fluxo pausado esperando resposta tem prioridade sobre a IA: se o

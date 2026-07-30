@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "migrate:new": "prisma migrate dev --name",
     "migrate:deploy": "prisma migrate deploy",
-    "migrate:status": "prisma migrate status"
+    "migrate:status": "prisma migrate status",
+    "test:reminders": "node scripts/test-reminders.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.113.0",

@@ -160,6 +160,7 @@ class CalendarService {
     // Insere no Google Calendar se conectado (best-effort — não bloqueia o
     // agendamento local se a API falhar).
     let googleEventId = null;
+    let meetLink = null;
     const auth = await this.getOAuth2Client(tenantId);
     if (auth) {
       try {
@@ -170,10 +171,26 @@ class CalendarService {
           start: { dateTime: start.toISOString(), timeZone: TIMEZONE },
           end: { dateTime: end.toISOString(), timeZone: TIMEZONE },
           attendees: lead.email ? [{ email: lead.email }] : [],
-          reminders: { useDefault: true }
+          reminders: { useDefault: true },
+          // Pede um Meet para o evento: é o link enviado 10 minutos antes.
+          conferenceData: {
+            createRequest: {
+              requestId: `av-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+              conferenceSolutionKey: { type: "hangoutsMeet" },
+            },
+          },
         };
-        const res = await calendar.events.insert({ calendarId: "primary", resource: event });
+        const res = await calendar.events.insert({
+          calendarId: "primary",
+          resource: event,
+          // Sem isso o Google ignora o conferenceData e devolve evento sem Meet.
+          conferenceDataVersion: 1,
+        });
         googleEventId = res.data.id;
+        meetLink =
+          res.data.hangoutLink ||
+          res.data.conferenceData?.entryPoints?.find((e) => e.entryPointType === "video")?.uri ||
+          null;
       } catch (err) {
         console.error(`[Calendar] Falha ao inserir no Google (tenant ${tenantId}):`, err.message);
       }
@@ -185,11 +202,24 @@ class CalendarService {
         leadId: lead.id,
         title: `${title}: ${lead.name}`,
         date: start,
-        status: "SCHEDULED"
+        status: "SCHEDULED",
+        googleEventId,
+        meetLink
       }
     });
 
-    return { appointmentId: appointment.id, googleEventId, date: start.toISOString() };
+    // Régua de lembretes + movimentação no funil. Best-effort: o agendamento
+    // já está gravado e não pode falhar por causa de um lembrete.
+    try {
+      const { default: ReminderService } = await import("./src/api/services/ReminderService.js");
+      await ReminderService.scheduleForAppointment(appointment.id);
+      const { default: PipelineAutomation } = await import("./src/api/services/PipelineAutomation.js");
+      await PipelineAutomation.onEvent(tenantId, lead.id, "APPOINTMENT_CREATED");
+    } catch (e) {
+      console.error("[Calendar] Falha ao programar a régua de lembretes:", e.message);
+    }
+
+    return { appointmentId: appointment.id, googleEventId, meetLink, date: start.toISOString() };
   }
 }
 
