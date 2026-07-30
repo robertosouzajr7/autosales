@@ -37,6 +37,20 @@ async function resolveRecipients(tenantId, { tagIds, stageId } = {}) {
   return leads.filter((l) => l.phone && l.phone.trim());
 }
 
+/**
+ * Por que o público ficou vazio. Sem isso a tela só diz "nenhum contato
+ * elegível", e o usuário não tem como saber se é filtro, telefone ou opt-out.
+ */
+async function diagnosticarPublico(tenantId, { stageId } = {}) {
+  const [total, semTelefone, optOut, naEtapa] = await Promise.all([
+    prisma.lead.count({ where: { tenantId } }),
+    prisma.lead.count({ where: { tenantId, OR: [{ phone: null }, { phone: "" }] } }),
+    prisma.lead.count({ where: { tenantId, optedOut: true } }),
+    stageId ? prisma.lead.count({ where: { tenantId, stageId } }) : Promise.resolve(null),
+  ]);
+  return { total, semTelefone, optOut, naEtapa };
+}
+
 async function resolveSender(tenantId, accountId = null) {
   const accounts = await prisma.whatsAppAccount.findMany({
     where: { tenantId, channel: { not: "INSTAGRAM" } },
@@ -62,6 +76,10 @@ export const previewCampaign = async (req, res) => {
     const recipients = await resolveRecipients(req.tenantId, { tagIds, stageId });
     const estimate = await estimateCampaign(recipients.length, template.category);
     const quota = await checkCampaignQuota(req.tenantId, recipients.length);
+    // Só investiga quando deu zero — evita 4 counts a cada digitação.
+    const publico = recipients.length === 0
+      ? await diagnosticarPublico(req.tenantId, { stageId })
+      : null;
 
     res.json({
       template: { id: template.id, name: template.name, category: template.category, status: template.status },
@@ -69,10 +87,12 @@ export const previewCampaign = async (req, res) => {
       recipientCount: recipients.length,
       estimate,
       quota,
+      publico,
       // Só libera o botão quando tudo está de pé.
       canSend: template.status === "APPROVED" && recipients.length > 0 && quota.allowed,
     });
   } catch (error) {
+    console.error("[Campanha] Falha na projeção:", error);
     res.status(500).json({ error: error.message });
   }
 };

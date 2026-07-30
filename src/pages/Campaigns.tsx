@@ -37,6 +37,7 @@ export default function Campaigns() {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ name: "", templateId: "", stageId: "", accountId: "" });
   const [preview, setPreview] = useState<any>(null);
+  const [previewErro, setPreviewErro] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
@@ -77,15 +78,26 @@ export default function Campaigns() {
   const runPreview = async (patch: any = {}) => {
     const next = { ...form, ...patch };
     setForm(next);
-    if (!next.templateId) return setPreview(null);
+    if (!next.templateId) { setPreview(null); setPreviewErro(null); return; }
+    setPreviewErro(null);
     try {
       const res = await fetch("/api/campaigns/preview", {
         method: "POST",
         headers: { ...auth(), "Content-Type": "application/json" },
         body: JSON.stringify({ templateId: next.templateId, stageId: next.stageId || undefined }),
       });
-      setPreview(res.ok ? await res.json() : null);
-    } catch { setPreview(null); }
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        // Erro engolido aqui deixava a tela presa em "calculando" sem pista.
+        setPreview(null);
+        setPreviewErro(d.error || `A projeção falhou (HTTP ${res.status}).`);
+        return;
+      }
+      setPreview(d);
+    } catch (e: any) {
+      setPreview(null);
+      setPreviewErro(e.message || "Não foi possível calcular a projeção.");
+    }
   };
 
   const create = async () => {
@@ -146,9 +158,17 @@ export default function Campaigns() {
         ? "Você ainda não tem template aprovado pela Meta. Crie um em Templates."
         : "Escolha o template que será disparado.";
     }
+    if (previewErro) return previewErro;
     if (!preview) return "Calculando a projeção…";
     if (!preview.approved) return "Este template ainda não foi aprovado pela Meta.";
-    if (preview.recipientCount === 0) return "Nenhum contato elegível nesse público.";
+    if (preview.recipientCount === 0) {
+      const p = preview.publico;
+      if (!p) return "Nenhum contato elegível nesse público.";
+      if (p.total === 0) return "Você ainda não tem contatos cadastrados.";
+      if (p.naEtapa === 0) return `Nenhum contato nessa etapa do funil (${p.total} no total).`;
+      if (p.semTelefone >= p.total) return `Nenhum dos ${p.total} contatos tem telefone cadastrado.`;
+      return `Nenhum elegível: ${p.total} contato(s), ${p.semTelefone} sem telefone, ${p.optOut} em opt-out.`;
+    }
     if (!preview.quota?.allowed) return preview.quota?.reason || "Franquia de disparos insuficiente.";
     return null;
   })();
