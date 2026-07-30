@@ -72,6 +72,21 @@ interface NavItem {
   feature?: string;
 }
 
+/**
+ * Qual item do menu está ativo.
+ *
+ * Comparar por prefixo sozinho acendia dois itens ao mesmo tempo: em
+ * /automations/builder ("Fluxos") o item /automations ("Lembretes") também
+ * casava. Vence sempre a rota mais específica.
+ */
+function hrefAtivo(pathname: string, items: NavItem[]): string | null {
+  const candidatos = items
+    .map((i) => i.href)
+    .filter((href) => pathname === href || pathname.startsWith(`${href}/`));
+  if (!candidatos.length) return null;
+  return candidatos.sort((a, b) => b.length - a.length)[0];
+}
+
 const navItems: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
   { label: "Conversas", icon: MessageSquare, href: "/conversations" },
@@ -98,6 +113,7 @@ interface SidebarNavProps {
 
 function SidebarNav({ collapsed, onNavClick, features }: SidebarNavProps & { features: any }) {
   const location = useLocation();
+  const ativo = hrefAtivo(location.pathname, navItems);
 
   return (
     <nav className="flex flex-col gap-1 px-3">
@@ -109,10 +125,7 @@ function SidebarNav({ collapsed, onNavClick, features }: SidebarNavProps & { fea
         if (item.feature && features && features[item.feature] === false) return null;
 
         const Icon = item.icon;
-        const isActive =
-          location.pathname === item.href ||
-          (item.href !== "/dashboard" &&
-           location.pathname.startsWith(item.href));
+        const isActive = item.href === ativo;
 
         const linkContent = (
           <Link
@@ -400,11 +413,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   const currentPage =
-    navItems.find(
-      (item) =>
-        location.pathname === item.href ||
-        (item.href !== "/dashboard" && location.pathname.startsWith(item.href))
-    )?.label ?? "Dashboard";
+    navItems.find((item) => item.href === hrefAtivo(location.pathname, navItems))?.label ?? "Dashboard";
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-[#0F172A]">
