@@ -91,7 +91,21 @@ export const PROFILES = [
 
 export const PROFILE_IDS = PROFILES.map((p) => p.id);
 
+/**
+ * Suporte da plataforma. Fica fora de PROFILES de propósito: nenhum cliente
+ * pode atribuir este perfil a um colaborador — ele só existe para a tela
+ * saber como chamar quem está logado.
+ */
+const PLATAFORMA = {
+  id: "SUPERADMIN",
+  label: "Suporte da plataforma",
+  hint: "Equipe do SaaS. Não é colaborador de nenhum cliente.",
+  admin: true,
+  modules: TUDO,
+};
+
 export function getProfile(id) {
+  if (id === "SUPERADMIN") return PLATAFORMA;
   return PROFILES.find((p) => p.id === id) || PROFILES.find((p) => p.id === "AGENT");
 }
 

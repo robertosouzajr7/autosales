@@ -25,10 +25,6 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const [users, setUsers] = useState<any[]>([]);
-  const [isNewUserModalOpen, setIsNewUserModalOpen] = useState(false);
-  const [newUser, setNewUser] = useState({ name: "", email: "", password: "", role: "AGENT" });
-
   // SaaS Billing & Subscription States
   const [billingData, setBillingData] = useState<any>(null);
   const [plans, setPlans] = useState<any[]>([]);
@@ -55,10 +51,7 @@ export default function Settings() {
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
     try {
-      const [resSettings, resUsers] = await Promise.all([
-        fetch("/api/settings", { headers }),
-        fetch("/api/users", { headers })
-      ]);
+      const resSettings = await fetch("/api/settings", { headers });
 
       // Token expirado → redireciona para login
       if (resSettings.status === 401) {
@@ -68,8 +61,7 @@ export default function Settings() {
       }
 
       const dataSettings = await resSettings.json();
-      const dataUsers = await resUsers.json();
-      
+
       setAiConfig({
         googleRefreshToken: dataSettings.googleRefreshToken || "",
         webChatUrl: dataSettings.webChatUrl || "",
@@ -80,8 +72,6 @@ export default function Settings() {
         provider: dataSettings.aiProvider || "",
         model: dataSettings.aiModel || "",
       });
-
-      setUsers(Array.isArray(dataUsers) ? dataUsers : []);
 
       // Fetch SaaS Billing details dynamically
       try {
@@ -213,9 +203,6 @@ export default function Settings() {
             <TabsTrigger value="general" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm">
               <Zap className="w-4 h-4 mr-2" /> Geral
             </TabsTrigger>
-            <TabsTrigger value="users" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm">
-              <Shield className="w-4 h-4 mr-2" /> Equipe
-            </TabsTrigger>
             <TabsTrigger value="account" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm">
               <Lock className="w-4 h-4 mr-2" /> Segurança
             </TabsTrigger>
@@ -262,6 +249,21 @@ export default function Settings() {
                       <Bot className="w-5 h-5 text-[#2563EB] shrink-0 mt-0.5" />
                       <span>A personalidade, o tom e as instruções do agente são configurados na página <b>Agentes</b> — junto com as informações do seu negócio em <b>Meu Negócio</b>.</span>
                    </div>
+
+                   <Separator className="opacity-50" />
+
+                   {/* A gestão de acessos vive só em Colaboradores. Aqui fica
+                       apenas o caminho, para quem procurava na aba antiga. */}
+                   <div className="rounded-2xl border border-slate-100 p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+                      <Shield className="w-5 h-5 text-slate-400 shrink-0" />
+                      <div className="flex-1">
+                         <p className="text-sm font-semibold text-slate-700">Colaboradores e permissões</p>
+                         <p className="text-sm text-slate-500">Cadastro, perfis de acesso, filas e ativação ficam em Colaboradores.</p>
+                      </div>
+                      <Button variant="outline" onClick={() => navigate("/equipe")} className="h-10 rounded-xl px-6 font-semibold text-xs uppercase shrink-0">
+                         Abrir Colaboradores
+                      </Button>
+                   </div>
                 </div>
              </Card>
           </TabsContent>
@@ -302,128 +304,9 @@ export default function Settings() {
             <SecurityPanel />
           </TabsContent>
 
-          <TabsContent value="users" className="space-y-6 animate-in slide-in-from-bottom-4">
-            <div className="flex justify-between items-center">
-               <h3 className="text-xl font-semibold text-slate-800 tracking-tight">Gestão da Equipe</h3>
-               <Button onClick={() => setIsNewUserModalOpen(true)} className="h-10 bg-slate-900 text-white rounded-xl px-6 font-semibold uppercase text-xs shadow-sm active:scale-95 transition-all">
-                  <Plus className="w-4 h-4 mr-2" /> Novo Colaborador
-               </Button>
-            </div>
-
-            <Card className="border-none shadow-sm rounded-2xl overflow-hidden bg-white">
-               <CardContent className="p-0">
-                  <div className="overflow-x-auto p-4">
-                     <table className="w-full text-left">
-                        <thead>
-                           <tr className="border-b border-slate-50">
-                              <th className="p-6 text-xs font-semibold text-slate-400 ">Colaborador</th>
-                              <th className="p-6 text-xs font-semibold text-slate-400 ">Nível de Acesso</th>
-                              <th className="p-6 text-xs font-semibold text-slate-400 text-right">Ações</th>
-                           </tr>
-                        </thead>
-                        <tbody>
-                           {users.map((user) => (
-                              <tr key={user.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors group">
-                                 <td className="p-6">
-                                    <div className="flex items-center gap-3">
-                                       <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-semibold text-slate-400">
-                                          {user.name.charAt(0)}
-                                       </div>
-                                       <div>
-                                          <p className="font-extrabold text-slate-800">{user.name}</p>
-                                          <p className="text-xs font-bold text-slate-400">{user.email}</p>
-                                       </div>
-                                    </div>
-                                 </td>
-                                 <td className="p-6">
-                                    <Badge variant="outline" className={`font-semibold text-xs ${user.role === 'ADMIN' ? 'border-slate-300 text-blue-600 bg-blue-50' : 'border-slate-200 text-slate-500 bg-slate-50'}`}>
-                                       {user.role}
-                                    </Badge>
-                                 </td>
-                                 <td className="p-6 text-right">
-                                    <Button 
-                                      variant="ghost" 
-                                      size="icon" 
-                                      className="text-red-400 hover:text-red-600 active:scale-90"
-                                      onClick={async () => {
-                                         if (confirm(`Remover acesso de ${user.name}?`)) {
-                                            const token = localStorage.getItem("token");
-                                            await fetch(`/api/users/${user.id}`, { 
-                                               method: "DELETE",
-                                               headers: { "Authorization": `Bearer ${token}` }
-                                            });
-                                            fetchData();
-                                         }
-                                      }}
-                                    >
-                                       <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                 </td>
-                              </tr>
-                           ))}
-                        </tbody>
-                     </table>
-                  </div>
-               </CardContent>
-             </Card>
-           </TabsContent>
-
          </Tabs>
       </div>
 
-      <Dialog open={isNewUserModalOpen} onOpenChange={setIsNewUserModalOpen}>
-         <DialogContent className="rounded-2xl p-10 max-w-md border-none shadow-sm">
-            <h2 className="text-2xl font-semibold tracking-tight mb-6">Novo <span className="text-[#2563EB]">Colaborador</span></h2>
-            <div className="space-y-4">
-               <div className="space-y-1">
-                  <Label className="text-xs font-semibold uppercase text-slate-400 pl-1">Nome Completo</Label>
-                  <Input value={newUser.name} onChange={e => setNewUser({...newUser, name: e.target.value})} className="h-10 rounded-2xl bg-slate-50 border-none font-bold" placeholder="Ex: João Silva" />
-               </div>
-               <div className="space-y-1">
-                  <Label className="text-xs font-semibold uppercase text-slate-400 pl-1">E-mail de Acesso</Label>
-                  <Input value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} className="h-10 rounded-2xl bg-slate-50 border-none font-bold" placeholder="joao@empresa.com" />
-               </div>
-               <div className="space-y-1">
-                  <Label className="text-xs font-semibold uppercase text-slate-400 pl-1">Senha Temporária</Label>
-                  <Input type="password" value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} className="h-10 rounded-2xl bg-slate-50 border-none font-bold" placeholder="******" />
-               </div>
-               <div className="space-y-1">
-                  <Label className="text-xs font-semibold uppercase text-slate-400 pl-1">Nível de Permissão</Label>
-                  <Select value={newUser.role} onValueChange={v => setNewUser({...newUser, role: v})}>
-                     <SelectTrigger className="h-10 rounded-2xl bg-slate-50 border-none font-bold">
-                        <SelectValue />
-                     </SelectTrigger>
-                     <SelectContent className="rounded-2xl border-none shadow-sm">
-                        <SelectItem value="AGENT">Colaborador (Agente)</SelectItem>
-                        <SelectItem value="ADMIN">Administrador (Total)</SelectItem>
-                     </SelectContent>
-                  </Select>
-               </div>
-               <Button 
-                  className="w-full h-11 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold rounded-2xl mt-4 shadow-sm "
-                  onClick={async () => {
-                     const token = localStorage.getItem("token");
-                     const res = await fetch("/api/users", {
-                        method: "POST",
-                        headers: { 
-                           "Content-Type": "application/json",
-                           "Authorization": `Bearer ${token}`
-                        },
-                        body: JSON.stringify(newUser)
-                     });
-                     if (res.ok) {
-                        toast({ title: "✅ Colaborador cadastrado!" });
-                        setIsNewUserModalOpen(false);
-                        setNewUser({ name: "", email: "", password: "", role: "AGENT" });
-                        fetchData();
-                     }
-                  }}
-               >
-                  Finalizar Cadastro
-               </Button>
-            </div>
-         </DialogContent>
-      </Dialog>
     </DashboardLayout>
   );
 }

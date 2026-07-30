@@ -45,12 +45,15 @@ async function seed() {
   const atendente = await prisma.user.create({
     data: { name: "Bruno Atendente", email: `bru${Date.now()}@teste.local`, password: "x", role: "AGENT", tenantId: tenant.id },
   });
-  return { tenant, dono, atendente };
+  const suporte = await prisma.user.create({
+    data: { name: "Suporte", email: `sup${Date.now()}@teste.local`, password: "x", role: "SUPERADMIN", tenantId: tenant.id },
+  });
+  return { tenant, dono, atendente, suporte };
 }
 
 async function main() {
   if (!SEGREDO) throw new Error("Defina JWT_SECRET igual ao do servidor.");
-  const { tenant, dono, atendente } = await seed();
+  const { tenant, dono, atendente, suporte } = await seed();
 
   // ── 1. Perfis ───────────────────────────────────────────────
   console.log("\n1. Perfis de acesso");
@@ -145,6 +148,35 @@ async function main() {
   ok(r.status === 400, `senha curta recusada (${r.status})`);
   r = await chamar(`/users/${carla.id}/password`, dono, { method: "POST", body: JSON.stringify({ password: "outrasenha123" }) });
   ok(r.status === 200, `senha redefinida (${r.status})`);
+
+  // ── 9. Painel do SaaS não duplica a gestão ──────────────────
+  console.log("\n9. Portal do SaaS (sem cadastro paralelo)");
+  r = await chamar(`/admin/tenants/${tenant.id}`, suporte);
+  ok(r.status === 200, `suporte abre o cliente (${r.status})`);
+  ok(
+    Array.isArray(r.corpo.users) && r.corpo.users.every((u) => u.password === undefined),
+    "a lista de colaboradores não vaza senha"
+  );
+
+  r = await chamar(`/admin/tenants/${tenant.id}/users`, suporte, {
+    method: "POST",
+    body: JSON.stringify({ name: "Paralelo", email: `par${Date.now()}@teste.local`, password: "senhaforte1" }),
+  });
+  ok(r.status === 409, `com admin ativo, o cadastro paralelo é recusado (${r.status})`);
+  ok(/Colaboradores/i.test(r.corpo.error || ""), `e aponta o lugar certo: "${r.corpo.error}"`);
+
+  // Conta trancada: ninguém consegue administrar. Aí sim o suporte entra.
+  await prisma.user.updateMany({
+    where: { tenantId: tenant.id, role: { in: ["OWNER", "ADMIN"] } },
+    data: { active: false },
+  });
+  r = await chamar(`/admin/tenants/${tenant.id}/users`, suporte, {
+    method: "POST",
+    body: JSON.stringify({ name: "Resgate", email: `res${Date.now()}@teste.local`, password: "senhaforte1", role: "ADMIN" }),
+  });
+  ok(r.status === 200, `sem administrador ativo, o acesso é restaurado (${r.status})`);
+  ok(r.corpo.role === "ADMIN", `e sempre como administrador (${r.corpo.role})`);
+  ok(r.corpo.password === undefined, "resposta não devolve a senha");
 
   console.log(`\n${falhas === 0 ? "✅ Todos os cenários passaram." : `❌ ${falhas} verificação(ões) falharam.`}`);
   await prisma.$disconnect();

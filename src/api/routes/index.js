@@ -286,8 +286,9 @@ router.put("/admin/platform-settings", adminMiddleware, AdminController.updatePl
 
 // Relatórios do SaaS
 router.get("/admin/reports", adminMiddleware, AdminController.getReports);
+// Acesso de emergência: só cria administrador quando o cliente ficou sem
+// nenhum. A gestão normal de colaboradores é do próprio cliente, em /equipe.
 router.post("/admin/tenants/:id/users", adminMiddleware, AdminController.createTenantUser);
-router.delete("/admin/tenants/:id/users/:userId", adminMiddleware, AdminController.deleteTenantUser);
 
 // Vozes do provedor ativo (admin escolhe quais liberar para as contas)
 router.get("/admin/voices", adminMiddleware, AdminController.getProviderVoices);

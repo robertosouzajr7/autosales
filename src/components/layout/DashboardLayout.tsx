@@ -74,6 +74,12 @@ interface NavItem {
   feature?: string;
 }
 
+interface NavGroup {
+  /** Título da seção. `null` = itens soltos no topo, sem cabeçalho. */
+  title: string | null;
+  items: NavItem[];
+}
+
 /**
  * Qual item do menu está ativo.
  *
@@ -89,25 +95,64 @@ function hrefAtivo(pathname: string, items: NavItem[]): string | null {
   return candidatos.sort((a, b) => b.length - a.length)[0];
 }
 
-const navItems: NavItem[] = [
-  { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
-  { label: "Conversas", icon: MessageSquare, href: "/conversations" },
-  { label: "Funil de Clientes", icon: Users, href: "/crm" },
-  { label: "Clientes", icon: BookUser, href: "/contacts" },
-  { label: "Agendamentos", icon: Calendar, href: "/appointments", feature: "calendar" },
-  { label: "Meu Negócio", icon: Building2, href: "/negocio" },
-  { label: "Catálogo", icon: Package, href: "/catalogo" },
-  { label: "Agente de IA", icon: Bot, href: "/sdrs" },
-  { label: "Templates", icon: FileText, href: "/templates" },
-  { label: "Disparos", icon: Megaphone, href: "/campanhas" },
-  { label: "Lembretes", icon: Zap, href: "/automations" },
-  { label: "Fluxos", icon: Workflow, href: "/automations/builder" },
-  { label: "Conexões", icon: Smartphone, href: "/connections" },
-  { label: "Colaboradores", icon: Users, href: "/equipe", permission: "team" },
-  { label: "Assinatura", icon: CreditCard, href: "/assinatura" },
-  { label: "Configurações", icon: Settings, href: "/settings" },
-  { label: "Admin SaaS", icon: ShieldCheck, href: "/admin", adminOnly: true },
+/**
+ * Menu por categoria.
+ *
+ * Antes eram 17 itens numa lista corrida, sem hierarquia: achar "Conexões"
+ * ou "Templates" virava caça ao tesouro. Cada seção agrupa o que se usa
+ * junto, e `permission` casa com os módulos de AccessProfiles — quem não
+ * tem o módulo não vê o item (a API recusa do mesmo jeito).
+ */
+const navGroups: NavGroup[] = [
+  {
+    title: null,
+    items: [
+      { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard", permission: "dashboard" },
+      { label: "Relatórios", icon: BarChart3, href: "/analytics", permission: "analytics" },
+    ],
+  },
+  {
+    title: "Atendimento",
+    items: [
+      { label: "Conversas", icon: MessageSquare, href: "/conversations", permission: "conversations" },
+      { label: "Agendamentos", icon: Calendar, href: "/appointments", permission: "appointments", feature: "calendar" },
+      { label: "Funil de clientes", icon: Target, href: "/crm", permission: "crm" },
+      { label: "Clientes", icon: BookUser, href: "/contacts", permission: "contacts" },
+    ],
+  },
+  {
+    title: "Automação",
+    items: [
+      { label: "Agente de IA", icon: Bot, href: "/sdrs", permission: "agents" },
+      { label: "Fluxos", icon: Workflow, href: "/automations/builder", permission: "flows" },
+      { label: "Lembretes", icon: Clock, href: "/automations", permission: "reminders" },
+    ],
+  },
+  {
+    title: "Conteúdo",
+    items: [
+      { label: "Meu negócio", icon: Building2, href: "/negocio", permission: "business" },
+      { label: "Catálogo", icon: Package, href: "/catalogo", permission: "catalog" },
+      { label: "Templates", icon: FileText, href: "/templates", permission: "templates" },
+      { label: "Disparos", icon: Megaphone, href: "/campanhas", permission: "campaigns" },
+    ],
+  },
+  {
+    title: "Configuração",
+    items: [
+      { label: "Conexões", icon: Smartphone, href: "/connections", permission: "connections" },
+      { label: "Colaboradores", icon: Users, href: "/equipe", permission: "team" },
+      { label: "Assinatura", icon: CreditCard, href: "/assinatura", permission: "billing" },
+      { label: "Configurações", icon: Settings, href: "/settings", permission: "settings" },
+    ],
+  },
+  {
+    title: "Plataforma",
+    items: [{ label: "Admin SaaS", icon: ShieldCheck, href: "/admin", adminOnly: true }],
+  },
 ];
+
+const navItems: NavItem[] = navGroups.flatMap((g) => g.items);
 
 interface SidebarNavProps {
   collapsed: boolean;
@@ -117,62 +162,79 @@ interface SidebarNavProps {
 function SidebarNav({ collapsed, onNavClick, features, permissions }: SidebarNavProps & { features: any; permissions: string[] | null }) {
   const location = useLocation();
   const ativo = hrefAtivo(location.pathname, navItems);
+  const isSuperadmin = (localStorage.getItem("userRole") || "OWNER") === "SUPERADMIN";
+
+  const visivel = (item: NavItem) => {
+    if (item.adminOnly && !isSuperadmin) return false;
+    if (item.feature && features && features[item.feature] === false) return false;
+    // Módulo bloqueado para este colaborador: o item nem aparece.
+    // (A API recusa do mesmo jeito — aqui é só não oferecer o caminho.)
+    if (permissions && item.permission && !permissions.includes(item.permission)) return false;
+    return true;
+  };
+
+  // Uma seção sem itens visíveis some inteira, cabeçalho junto.
+  const grupos = navGroups
+    .map((g) => ({ ...g, items: g.items.filter(visivel) }))
+    .filter((g) => g.items.length > 0);
 
   return (
-    <nav className="flex flex-col gap-1 px-3">
-      {navItems.map((item) => {
-        const userRole = localStorage.getItem("userRole") || "OWNER";
-        const isAdmin = userRole === "SUPERADMIN";
-        
-        if (item.adminOnly && !isAdmin) return null;
-        if (item.feature && features && features[item.feature] === false) return null;
-        // Módulo bloqueado para este colaborador: o item nem aparece.
-        // (A API recusa do mesmo jeito — aqui é só não oferecer o caminho.)
-        if (permissions && item.permission && !permissions.includes(item.permission)) return null;
+    <nav className="flex flex-col px-2.5">
+      {grupos.map((grupo, i) => (
+        <div key={grupo.title ?? "topo"} className="flex flex-col gap-0.5">
+          {grupo.title &&
+            (collapsed ? (
+              <div className="mx-auto my-2 h-px w-6 bg-slate-700/60" />
+            ) : (
+              <p className="px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                {grupo.title}
+              </p>
+            ))}
+          {i === 0 && !grupo.title && <div className="h-1" />}
 
-        const Icon = item.icon;
-        const isActive = item.href === ativo;
+          {grupo.items.map((item) => {
+            const Icon = item.icon;
+            const isActive = item.href === ativo;
 
-        const linkContent = (
-          <Link
-            to={item.href}
-            onClick={onNavClick}
-            className={cn(
-              "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
-              "hover:bg-white/10 hover:text-white",
-              isActive
-                ? "bg-gradient-to-r from-[#2563EB]/35 via-[#2563EB]/15 to-transparent text-white ring-1 ring-inset ring-white/10"
-                : "text-slate-400",
-              collapsed && "justify-center px-2"
-            )}
-          >
-            <Icon
-              className={cn(
-                "shrink-0 transition-colors duration-200",
-                isActive ? "text-[#93b4ff]" : "text-slate-400 group-hover:text-white",
-                collapsed ? "h-5 w-5" : "h-4 w-4"
-              )}
-            />
-            {!collapsed && <span className="truncate">{item.label}</span>}
-            {!collapsed && isActive && (
-              <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#2563EB]" />
-            )}
-          </Link>
-        );
+            const linkContent = (
+              <Link
+                to={item.href}
+                onClick={onNavClick}
+                className={cn(
+                  "relative flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors duration-150",
+                  "hover:bg-white/[0.06] hover:text-white",
+                  isActive ? "bg-white/[0.08] text-white" : "text-slate-400",
+                  collapsed && "justify-center px-2"
+                )}
+              >
+                {isActive && !collapsed && (
+                  <span className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-primary" />
+                )}
+                <Icon
+                  className={cn(
+                    "h-4 w-4 shrink-0 transition-colors duration-150",
+                    isActive ? "text-primary" : "text-slate-500"
+                  )}
+                />
+                {!collapsed && <span className="truncate">{item.label}</span>}
+              </Link>
+            );
 
-        if (collapsed) {
-          return (
-            <Tooltip key={item.href} delayDuration={0}>
-              <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-              <TooltipContent side="right" className="font-medium">
-                {item.label}
-              </TooltipContent>
-            </Tooltip>
-          );
-        }
+            if (collapsed) {
+              return (
+                <Tooltip key={item.href} delayDuration={0}>
+                  <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+                  <TooltipContent side="right" className="font-medium">
+                    {item.label}
+                  </TooltipContent>
+                </Tooltip>
+              );
+            }
 
-        return <div key={item.href}>{linkContent}</div>;
-      })}
+            return <div key={item.href}>{linkContent}</div>;
+          })}
+        </div>
+      ))}
     </nav>
   );
 }
@@ -209,13 +271,13 @@ function SidebarContent({
       <div
         className={cn(
           "flex flex-col justify-center border-b border-slate-700/60 px-4",
-          collapsed ? "h-16 items-center" : "h-24 items-start gap-1.5"
+          collapsed ? "h-14 items-center" : "h-16 items-start gap-0.5"
         )}
       >
         <div className="flex items-center gap-2.5 w-full">
-          <LogoIcon className="w-8 h-8 shrink-0" />
+          <LogoIcon className="w-7 h-7 shrink-0" />
           {!collapsed && (
-            <span className="text-lg font-bold tracking-tight text-white">
+            <span className="truncate whitespace-nowrap text-[15px] font-bold tracking-tight text-white">
               Agentes <span className="text-primary">Virtuais</span>
             </span>
           )}
@@ -231,24 +293,19 @@ function SidebarContent({
           )}
         </div>
         {!collapsed && (
-          <div className="w-full text-left truncate">
-            <p className="text-sm font-medium text-slate-200 leading-tight truncate">
-              {localStorage.getItem("companyName") || "Minha Empresa"}
-            </p>
-            <p className="text-xs text-slate-500 leading-tight mt-0.5">
-              Plano {planName || "Básico"}
-            </p>
-          </div>
+          <p className="w-full truncate text-left text-xs text-slate-500 leading-tight">
+            {localStorage.getItem("companyName") || "Minha Empresa"}
+          </p>
         )}
       </div>
 
       {/* Nav items */}
-      <div className="flex-1 overflow-y-auto py-3 scrollbar-thin">
+      <div className="flex-1 overflow-y-auto pb-2 scrollbar-thin">
         <SidebarNav collapsed={collapsed} onNavClick={onNavClick} features={features} permissions={permissions} />
       </div>
 
-      {/* PLAN STATUS IN SIDEBAR */}
-      {!collapsed && (() => {
+      {/* Consumo de IA da conta — não faz sentido para o admin da plataforma. */}
+      {!collapsed && localStorage.getItem("userRole") !== "SUPERADMIN" && (() => {
         const used = Number(planData?.usedTokens) || 0;
         const franchise = Number(planData?.maxTokens) || 0;
         const extra = Number(planData?.extraTokens) || 0;
@@ -256,22 +313,22 @@ function SidebarContent({
         const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
         const near = pct >= 90;
         return (
-          <div className="px-4 py-4 border-t border-slate-800">
-            <div className="p-3.5 bg-slate-800/50 rounded-xl space-y-2.5">
-              <div className="flex justify-between items-center">
-                <p className="text-xs font-medium text-slate-400">Créditos de IA</p>
-                <Badge className="bg-primary/15 text-primary border-none text-xs font-medium px-2">
+          <div className="px-3 pb-3 pt-2">
+            <div className="rounded-xl bg-slate-800/50 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-medium text-slate-400">Créditos de IA</p>
+                <Badge className="max-w-[110px] truncate bg-primary/15 px-2 text-[11px] font-medium text-primary border-none">
                   {planName || "Básico"}
                 </Badge>
               </div>
-              <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+              <div className="h-1 overflow-hidden rounded-full bg-slate-700">
                 <div
                   className={cn("h-full rounded-full transition-all duration-700", near ? "bg-amber-400" : "bg-primary")}
                   style={{ width: `${pct}%` }}
                 />
               </div>
-              <div className="flex justify-between items-center">
-                <p className="text-xs font-medium text-slate-300 tabular-nums">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-medium text-slate-300 tabular-nums">
                   {fmtTokens(used)} <span className="text-slate-500">/ {total > 0 ? fmtTokens(total) : "—"}</span>
                 </p>
                 <p className="text-[11px] text-slate-500">
@@ -286,23 +343,25 @@ function SidebarContent({
         );
       })()}
 
-      {/* Bottom user section */}
-      <div className="border-t border-slate-700/60 p-3">
-          <div className={cn("flex items-center gap-3 rounded-2xl px-2 py-2 transition-colors hover:bg-white/5", collapsed && "justify-center")}>
+      {/* Quem está logado (não a empresa — essa já aparece no topo). */}
+      <div className="border-t border-slate-700/60 p-2">
+          <div className={cn("flex items-center gap-3 rounded-xl px-2 py-1.5 transition-colors hover:bg-white/5", collapsed && "justify-center")}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-3 w-full outline-none">
-                  <Avatar className="h-8 w-8 shrink-0 border border-slate-700">
-                    <AvatarFallback className="bg-primary text-xs font-semibold text-white">
-                      {(localStorage.getItem("companyName")?.charAt(0) || "U").toUpperCase()}
+                <button className="flex items-center gap-2.5 w-full outline-none">
+                  <Avatar className="h-7 w-7 shrink-0 border border-slate-700">
+                    <AvatarFallback className="bg-primary text-[11px] font-semibold text-white">
+                      {(localStorage.getItem("userName")?.charAt(0) || "U").toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   {!collapsed && (
                     <div className="min-w-0 flex-1 text-left">
-                      <p className="truncate text-sm font-medium text-white">
-                        {localStorage.getItem("companyName") || "Minha Empresa"}
+                      <p className="truncate text-[13px] font-medium text-white">
+                        {localStorage.getItem("userName") || "Minha conta"}
                       </p>
-                      <p className="truncate text-xs text-slate-500">Plano {planName}</p>
+                      <p className="truncate text-[11px] text-slate-500">
+                        {localStorage.getItem("userProfileLabel") || "Colaborador"}
+                      </p>
                     </div>
                   )}
                 </button>
@@ -351,6 +410,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         if (me.role) localStorage.setItem("userRole", me.role);
         if (me.id) localStorage.setItem("userId", me.id);
         if (me.name) localStorage.setItem("userName", me.name);
+        if (me.profileLabel) localStorage.setItem("userProfileLabel", me.profileLabel);
       })
       .catch(() => {});
   }, []);
@@ -445,7 +505,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         className={cn(
           "relative hidden flex-col border-r border-slate-200 dark:border-slate-900/40 lg:flex",
           "transition-[width] duration-300 ease-in-out",
-          collapsed ? "w-[68px]" : "w-[260px]"
+          collapsed ? "w-[64px]" : "w-[244px]"
         )}
       >
         <SidebarContent
@@ -465,7 +525,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <SheetTrigger asChild>
           <span className="hidden" />
         </SheetTrigger>
-        <SheetContent side="left" className="w-[260px] p-0 border-r border-slate-200 dark:border-slate-900/40">
+        <SheetContent side="left" className="w-[244px] p-0 border-r border-slate-200 dark:border-slate-900/40">
           <SidebarContent
             collapsed={false}
             showCollapseButton={false}
@@ -571,22 +631,24 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 variant="ghost"
                 className="flex items-center gap-2 px-2 hover:bg-slate-100 dark:hover:bg-slate-900/20"
               >
-                <Avatar className="h-8 w-8">
+                <Avatar className="h-7 w-7">
                   <AvatarImage src="" />
-                  <AvatarFallback className="bg-primary text-xs font-semibold text-white">
-                    {(localStorage.getItem("companyName")?.charAt(0) || "U").toUpperCase()}
+                  <AvatarFallback className="bg-primary text-[11px] font-semibold text-white">
+                    {(localStorage.getItem("userName")?.charAt(0) || "U").toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <span className="hidden max-w-[160px] truncate text-sm font-medium text-slate-700 dark:text-white md:block">
-                  {localStorage.getItem("companyName") || "Minha Empresa"}
+                  {localStorage.getItem("userName") || "Minha conta"}
                 </span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 rounded-xl dark:bg-[#1E293B] dark:border-slate-900/40 dark:text-white">
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col gap-0.5">
-                  <p className="text-sm font-semibold truncate">{localStorage.getItem("companyName") || "Minha Empresa"}</p>
-                  <p className="text-xs text-muted-foreground dark:text-slate-400/40">Plano {planData.name || "Básico"}</p>
+                  <p className="text-sm font-semibold truncate">{localStorage.getItem("userName") || "Minha conta"}</p>
+                  <p className="text-xs text-muted-foreground dark:text-slate-400/40">
+                    {localStorage.getItem("companyName") || "Minha Empresa"} · Plano {planData.name || "Básico"}
+                  </p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="dark:bg-slate-900/45" />

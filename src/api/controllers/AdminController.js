@@ -32,7 +32,14 @@ export const getTenantDetail = async (req, res) => {
   try {
     const tenant = await prisma.tenant.findUnique({
       where: { id: req.params.id },
-      include: { users: true, plan: true }
+      include: {
+        // Nunca devolver o hash da senha para a tela — nem para o superadmin.
+        users: {
+          select: { id: true, name: true, email: true, role: true, active: true, jobTitle: true, createdAt: true },
+          orderBy: { createdAt: "asc" },
+        },
+        plan: true,
+      },
     });
     res.json(tenant);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -128,6 +135,15 @@ export const deleteTenant = async (req, res) => {
   }
 };
 
+/**
+ * Acesso de emergência para o suporte.
+ *
+ * A gestão de colaboradores é do próprio cliente (tela Colaboradores) — ter
+ * o mesmo cadastro aqui só criava dois lugares para a mesma coisa, com
+ * regras diferentes. O que sobra é o caso que o cliente não consegue
+ * resolver sozinho: a conta ficou sem nenhum administrador ativo. Fora
+ * disso, a rota recusa.
+ */
 export const createTenantUser = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
@@ -137,25 +153,32 @@ export const createTenantUser = async (req, res) => {
     if (password.length < 8) {
       return res.status(400).json({ error: "Senha deve ter ao menos 8 caracteres." });
     }
+
+    const admins = await prisma.user.count({
+      where: { tenantId: req.params.id, role: { in: ["OWNER", "ADMIN"] }, active: true },
+    });
+    if (admins > 0) {
+      return res.status(409).json({
+        error: "Este cliente já tem administrador ativo. Os colaboradores são cadastrados pelo próprio cliente, em Colaboradores.",
+      });
+    }
+
     const emailNormalized = String(email).trim().toLowerCase();
     const dup = await prisma.user.findUnique({ where: { email: emailNormalized } });
     if (dup) return res.status(409).json({ error: "Este e-mail já está cadastrado em outra conta." });
 
     // Usuários de tenant nunca recebem SUPERADMIN, nem por rota administrativa.
-    const safeRole = ["OWNER", "ADMIN", "AGENT"].includes(role) ? role : "AGENT";
+    const safeRole = role === "OWNER" ? "OWNER" : "ADMIN";
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
       data: { name, email: emailNormalized, password: hashedPassword, role: safeRole, tenantId: req.params.id }
     });
+    await audit({
+      tenantId: req.params.id, actorId: req.userId,
+      action: "TENANT_ADMIN_RESTORED", entity: "User", entityId: user.id,
+    });
     const { password: _pw, ...safe } = user;
     res.json(safe);
-  } catch (e) { res.status(500).json({ error: e.message }); }
-};
-
-export const deleteTenantUser = async (req, res) => {
-  try {
-    await prisma.user.delete({ where: { id: req.params.userId } });
-    res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 };
 

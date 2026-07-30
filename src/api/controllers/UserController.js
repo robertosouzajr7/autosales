@@ -39,7 +39,10 @@ export const getUsers = async (req, res) => {
     const tenantId = req.tenantId;
     if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
     const users = await prisma.user.findMany({
-      where: { tenantId },
+      // O suporte da plataforma (SUPERADMIN) pode estar vinculado a um tenant
+      // por herança do cadastro antigo: ele não é colaborador do cliente e
+      // não aparece — nem para listar, nem para o admin mexer.
+      where: { tenantId, role: { not: "SUPERADMIN" } },
       include: { queueMemberships: { include: { queue: { select: { id: true, name: true } } } } },
       orderBy: [{ active: "desc" }, { name: "asc" }],
     });
@@ -121,7 +124,7 @@ async function sincronizarFilas(userId, tenantId, queueIds) {
  */
 export const updateUser = async (req, res) => {
   try {
-    const alvo = await prisma.user.findFirst({ where: { id: req.params.id, tenantId: req.tenantId } });
+    const alvo = await prisma.user.findFirst({ where: { id: req.params.id, tenantId: req.tenantId, role: { not: "SUPERADMIN" } } });
     if (!alvo) return res.status(404).json({ error: "Colaborador não encontrado." });
 
     const { name, email, role, permissions, queueIds, jobTitle, active } = req.body;
@@ -188,7 +191,7 @@ export const resetUserPassword = async (req, res) => {
     if (!password || password.length < 8) {
       return res.status(400).json({ error: "A nova senha precisa de ao menos 8 caracteres." });
     }
-    const alvo = await prisma.user.findFirst({ where: { id: req.params.id, tenantId: req.tenantId } });
+    const alvo = await prisma.user.findFirst({ where: { id: req.params.id, tenantId: req.tenantId, role: { not: "SUPERADMIN" } } });
     if (!alvo) return res.status(404).json({ error: "Colaborador não encontrado." });
 
     await prisma.user.update({
@@ -207,7 +210,7 @@ export const deleteUser = async (req, res) => {
     if (req.params.id === req.userId) {
       return res.status(400).json({ error: "Você não pode excluir o próprio usuário" });
     }
-    const alvo = await prisma.user.findFirst({ where: { id: req.params.id, tenantId: req.tenantId } });
+    const alvo = await prisma.user.findFirst({ where: { id: req.params.id, tenantId: req.tenantId, role: { not: "SUPERADMIN" } } });
     if (!alvo) return res.status(404).json({ error: "Colaborador não encontrado." });
     if (alvo.role === "OWNER") {
       return res.status(403).json({ error: "O proprietário da conta não pode ser excluído. Transfira a conta antes." });

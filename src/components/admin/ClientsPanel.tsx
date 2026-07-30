@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { adminApi } from "@/lib/adminApi";
 import {
-  Plus, Search, Building2, Trash2, Loader2, Users as UsersIcon, Power,
+  Plus, Search, Building2, Trash2, Loader2, Users as UsersIcon, Power, ShieldAlert,
 } from "lucide-react";
 
 const SUB_STATUS = [
@@ -20,6 +20,11 @@ const SUB_STATUS = [
   { value: "PAST_DUE", label: "Inadimplente" },
   { value: "CANCELED", label: "Cancelado" },
 ];
+
+/** O cliente ainda tem alguém que consegue administrar a conta? */
+function temAdminAtivo(t: any) {
+  return (t?.users || []).some((u: any) => ["OWNER", "ADMIN"].includes(u.role) && u.active !== false);
+}
 
 function statusBadge(t: any) {
   if (t.active === false) return <Badge className="bg-rose-100 text-rose-700 border-none">Suspenso</Badge>;
@@ -51,8 +56,8 @@ export function ClientsPanel({ plans }: { plans: any[] }) {
   const [edit, setEdit] = useState<any>(null);
   const [saving, setSaving] = useState(false);
 
-  // add user (colaborador)
-  const [newUser, setNewUser] = useState({ name: "", email: "", password: "", role: "AGENT" });
+  // acesso de emergência: só quando o cliente ficou sem administrador ativo
+  const [newUser, setNewUser] = useState({ name: "", email: "", password: "", role: "ADMIN" });
   const [addingUser, setAddingUser] = useState(false);
 
   const load = async () => {
@@ -134,23 +139,12 @@ export function ClientsPanel({ plans }: { plans: any[] }) {
     const res = await adminApi.post(`/api/admin/tenants/${edit.id}/users`, newUser);
     setAddingUser(false);
     if (res.ok) {
-      toast({ title: "Colaborador adicionado" });
-      setNewUser({ name: "", email: "", password: "", role: "AGENT" });
+      toast({ title: "Acesso de administrador restaurado" });
+      setNewUser({ name: "", email: "", password: "", role: "ADMIN" });
       const refreshed = await adminApi.get(`/api/admin/tenants/${edit.id}`);
       if (refreshed.ok) setEdit(refreshed.data);
     } else {
       toast({ title: "Erro ao adicionar", description: res.data?.error, variant: "destructive" });
-    }
-  };
-
-  const handleRemoveUser = async (userId: string) => {
-    if (!edit || !confirm("Remover este colaborador?")) return;
-    const res = await adminApi.del(`/api/admin/tenants/${edit.id}/users/${userId}`);
-    if (res.ok) {
-      const refreshed = await adminApi.get(`/api/admin/tenants/${edit.id}`);
-      if (refreshed.ok) setEdit(refreshed.data);
-    } else {
-      toast({ title: "Erro ao remover", description: res.data?.error, variant: "destructive" });
     }
   };
 
@@ -341,6 +335,9 @@ export function ClientsPanel({ plans }: { plans: any[] }) {
                   <p className="text-xs text-muted-foreground">As mudanças só valem depois de clicar em "Salvar alterações".</p>
                 </TabsContent>
 
+                {/* Somente leitura: quem cadastra, edita e desativa
+                    colaborador é o admin do cliente, em Colaboradores.
+                    Aqui só existe a saída de emergência. */}
                 <TabsContent value="users" className="space-y-4">
                   <div className="rounded-xl border border-border divide-y divide-border">
                     {(edit.users || []).length === 0 ? (
@@ -353,35 +350,47 @@ export function ClientsPanel({ plans }: { plans: any[] }) {
                             <p className="text-sm font-medium text-foreground truncate">{u.name}</p>
                             <p className="text-xs text-muted-foreground truncate">{u.email}</p>
                           </div>
+                          {u.active === false && (
+                            <Badge className="bg-rose-100 text-rose-700 border-none text-xs">Desativado</Badge>
+                          )}
                           <Badge className="bg-muted text-muted-foreground border-none text-xs">{u.role}</Badge>
-                          <button onClick={() => handleRemoveUser(u.id)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-rose-50 hover:text-rose-600">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
                         </div>
                       ))
                     )}
                   </div>
 
-                  <div className="rounded-xl bg-muted p-4 space-y-3">
-                    <p className="text-xs font-semibold text-foreground">Adicionar colaborador</p>
-                    <div className="grid sm:grid-cols-2 gap-2">
-                      <Input placeholder="Nome" value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} />
-                      <Input type="email" placeholder="E-mail" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} />
-                      <Input type="password" placeholder="Senha (mín. 8)" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} />
-                      <Select value={newUser.role} onValueChange={(v) => setNewUser({ ...newUser, role: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="OWNER">OWNER</SelectItem>
-                          <SelectItem value="ADMIN">ADMIN</SelectItem>
-                          <SelectItem value="AGENT">AGENT</SelectItem>
-                        </SelectContent>
-                      </Select>
+                  {temAdminAtivo(edit) ? (
+                    <p className="text-xs text-muted-foreground">
+                      Cadastro, permissões e desativação de colaboradores são feitos pelo próprio cliente,
+                      na tela <b>Colaboradores</b>. Esta lista é apenas informativa.
+                    </p>
+                  ) : (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-3">
+                      <div className="flex items-start gap-2">
+                        <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                        <p className="text-xs text-amber-900">
+                          Este cliente está <b>sem administrador ativo</b> e não consegue gerir a própria equipe.
+                          Crie um acesso de administrador para devolver o controle da conta.
+                        </p>
+                      </div>
+                      <div className="grid sm:grid-cols-2 gap-2">
+                        <Input placeholder="Nome" value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} />
+                        <Input type="email" placeholder="E-mail" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} />
+                        <Input type="password" placeholder="Senha (mín. 8)" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} />
+                        <Select value={newUser.role} onValueChange={(v) => setNewUser({ ...newUser, role: v })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="OWNER">Proprietário</SelectItem>
+                            <SelectItem value="ADMIN">Administrador</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button size="sm" onClick={handleAddUser} disabled={addingUser} className="gap-2">
+                        {addingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                        Restaurar acesso
+                      </Button>
                     </div>
-                    <Button size="sm" onClick={handleAddUser} disabled={addingUser} className="gap-2">
-                      {addingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                      Adicionar
-                    </Button>
-                  </div>
+                  )}
                 </TabsContent>
               </Tabs>
 
