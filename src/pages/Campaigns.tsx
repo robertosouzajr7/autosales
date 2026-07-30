@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AudiencePicker } from "@/components/campaigns/AudiencePicker";
+import { TemplatePreview } from "@/components/templates/TemplatePreview";
 
 const brl = (v: number) =>
   (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -185,6 +186,10 @@ export default function Campaigns() {
   };
 
   const semFranquia = quota && quota.limit <= 0;
+
+  // A lista de /api/templates traz cabeçalho, rodapé e botões — o que a
+  // prévia precisa para montar o balão inteiro.
+  const templateSelecionado = templates.find((t) => t.id === form.templateId);
 
   // Por que o botão de criar está bloqueado. Botão desabilitado sem motivo
   // visível é o que mais confunde: aqui a razão aparece do lado dele.
@@ -434,7 +439,7 @@ export default function Campaigns() {
       </Dialog>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl">
           <DialogHeader>
             <DialogTitle className="font-bold">Nova campanha</DialogTitle>
             <DialogDescription>
@@ -442,6 +447,7 @@ export default function Campaigns() {
             </DialogDescription>
           </DialogHeader>
 
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label className="text-xs font-bold text-slate-500">Nome da campanha</Label>
@@ -473,11 +479,6 @@ export default function Campaigns() {
                 <p className="text-xs text-slate-500 font-medium">
                   Use <code className="font-bold">{"{{nome}}"}</code> para inserir o nome de cada contato.
                 </p>
-                {preview?.template?.content && (
-                  <p className="text-xs text-slate-600 whitespace-pre-wrap border-l-2 border-slate-200 pl-2">
-                    {preview.template.content}
-                  </p>
-                )}
                 {variables.map((v, i) => (
                   <Input
                     key={i}
@@ -546,6 +547,27 @@ export default function Campaigns() {
                 )}
               </div>
             )}
+          </div>
+
+            <div className="lg:border-l lg:pl-6">
+              <div className="lg:sticky lg:top-0 space-y-3 py-2">
+                <Label className="text-xs font-bold text-slate-500">Como o contato vai receber</Label>
+                {templateSelecionado ? (
+                  <TemplatePreview
+                    template={templateSelecionado}
+                    variables={variables}
+                    contactName={preview?.amostra?.name || "Maria"}
+                    businessName={
+                      connections.find((c) => c.id === form.accountId)?.name || connections[0]?.name || "Sua empresa"
+                    }
+                  />
+                ) : (
+                  <p className="text-xs text-slate-400 font-medium">
+                    Escolha o template para ver a mensagem como ela chega no WhatsApp.
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
 
           <DialogFooter className="flex-col sm:flex-row sm:items-center gap-2">

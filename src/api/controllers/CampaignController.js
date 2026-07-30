@@ -147,6 +147,9 @@ export const previewCampaign = async (req, res) => {
       },
       // A tela usa isso para pedir os valores dos {{n}} antes de criar.
       variableCount: countVariables(template.content),
+      // Primeiro destinatário: a prévia mostra o nome de quem vai receber de
+      // verdade, não um "Maria" genérico.
+      amostra: recipients[0] ? { name: recipients[0].name } : null,
       approved: template.status === "APPROVED",
       recipientCount: recipients.length,
       estimate,

@@ -11,8 +11,9 @@ import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  FileText, Plus, RefreshCw, Copy, Trash2, Send, Save, AlertCircle, CheckCircle2, Clock, XCircle, Info,
+  FileText, Plus, RefreshCw, Copy, Trash2, Send, Save, AlertCircle, CheckCircle2, Clock, XCircle, Info, Eye,
 } from "lucide-react";
+import { TemplatePreview } from "@/components/templates/TemplatePreview";
 
 /** Espelha os status da Meta; só APPROVED pode ser disparado. */
 const STATUS = {
@@ -47,6 +48,9 @@ export default function Templates() {
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({ ...EMPTY });
   const [saving, setSaving] = useState(false);
+  // Template da lista aberto só para visualizar (inclusive os já aprovados,
+  // que não podem mais ser editados).
+  const [previewing, setPreviewing] = useState<any>(null);
 
   const token = () => localStorage.getItem("token");
   const auth = () => ({ Authorization: `Bearer ${token()}` });
@@ -248,6 +252,9 @@ export default function Templates() {
                       )}
                     </div>
                     <div className="flex gap-1 shrink-0">
+                      <Button size="sm" variant="ghost" onClick={() => setPreviewing(t)} className="rounded-xl" title="Ver no WhatsApp">
+                        <Eye className="w-4 h-4" />
+                      </Button>
                       {t.status === "DRAFT" && (
                         <Button size="sm" variant="ghost" onClick={() => openEdit(t)} className="rounded-xl" title="Editar">
                           <Save className="w-4 h-4" />
@@ -269,7 +276,7 @@ export default function Templates() {
       )}
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl">
           <DialogHeader>
             <DialogTitle className="font-bold">{editing ? "Editar rascunho" : "Novo template"}</DialogTitle>
             <DialogDescription>
@@ -278,6 +285,7 @@ export default function Templates() {
             </DialogDescription>
           </DialogHeader>
 
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-5 py-2">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -464,6 +472,17 @@ export default function Templates() {
             )}
           </div>
 
+            <div className="lg:border-l lg:pl-6">
+              <div className="lg:sticky lg:top-0 space-y-3 py-2">
+                <Label className="text-xs font-bold text-slate-500">Como o cliente vai ver</Label>
+                <TemplatePreview
+                  template={form}
+                  businessName={connections.find((c) => c.id === form.accountId)?.name || "Sua empresa"}
+                />
+              </div>
+            </div>
+          </div>
+
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => save(false)} disabled={saving} className="rounded-2xl font-bold">
               <Save className="w-4 h-4 mr-2" /> Salvar rascunho
@@ -472,6 +491,20 @@ export default function Templates() {
               <Send className="w-4 h-4 mr-2" /> Enviar para aprovação
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!previewing} onOpenChange={(o) => !o && setPreviewing(null)}>
+        <DialogContent className="max-w-md rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="font-bold">{previewing?.name}</DialogTitle>
+            <DialogDescription>
+              {previewing?.variableCount > 0
+                ? `As ${previewing.variableCount} variável(is) são preenchidas no envio — aqui aparecem destacadas.`
+                : "Este template não usa variáveis."}
+            </DialogDescription>
+          </DialogHeader>
+          {previewing && <TemplatePreview template={previewing} className="py-2" />}
         </DialogContent>
       </Dialog>
     </DashboardLayout>

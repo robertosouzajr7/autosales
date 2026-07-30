@@ -9,6 +9,7 @@ import {
   ChevronRight, Calendar, Mic, MicOff, Play, Pause, Volume2,
   Instagram, Globe, Clock, FileText, Paperclip
 } from "lucide-react";
+import { TemplatePreview } from "@/components/templates/TemplatePreview";
 
 // Metadados de canal para o inbox multicanal (ícone, rótulo e cor).
 const CHANNEL_META: Record<string, { label: string; cls: string; Icon: any }> = {
@@ -155,6 +156,8 @@ export default function Conversations() {
   const [templates, setTemplates] = useState<any[]>([]);
   const [templateModal, setTemplateModal] = useState(false);
   const [sendingTemplate, setSendingTemplate] = useState(false);
+  // Escolher deixou de disparar direto: agora seleciona e mostra a prévia.
+  const [templateEscolhido, setTemplateEscolhido] = useState<any>(null);
   const [connections, setConnections] = useState<any[]>([]);
   const [channelFilter, setChannelFilter] = useState<string>("ALL"); // ALL | conexão(id) | SITE
   const [search, setSearch] = useState("");
@@ -341,6 +344,7 @@ export default function Conversations() {
       if (!res.ok) throw new Error(d.error || "Falha ao enviar template");
       toast({ title: "Template enviado" });
       setTemplateModal(false);
+      setTemplateEscolhido(null);
       fetchMessages(selectedChat.id);
       fetchData();
     } catch (e: any) {
@@ -914,7 +918,7 @@ export default function Conversations() {
       {/* MODAL DE CONTATO VIA WHATSAPP */}
       {/* Templates aprovados para reabrir conversa fora da janela de 24h */}
       <Dialog open={templateModal} onOpenChange={setTemplateModal}>
-        <DialogContent className="max-w-md rounded-3xl">
+        <DialogContent className="max-w-2xl rounded-3xl">
           <DialogHeader>
             <DialogTitle className="font-bold">Enviar template</DialogTitle>
             <DialogDescription>
@@ -922,22 +926,54 @@ export default function Conversations() {
               O envio reabre a conversa por mais 24h.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 max-h-80 overflow-y-auto py-2">
-            {templates.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-8">
-                Nenhum template aprovado ainda.{" "}
-                <a href="/templates" className="text-[#2563EB] font-bold underline">Criar um</a>
-              </p>
-            ) : templates.map((t) => (
-              <button
-                key={t.id} disabled={sendingTemplate}
-                onClick={() => sendTemplate(t.id)}
-                className="w-full text-left p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 transition disabled:opacity-50"
-              >
-                <span className="block font-bold text-sm text-slate-700">{t.name}</span>
-                <span className="block text-xs text-slate-500 mt-1 line-clamp-2">{t.content}</span>
-              </button>
-            ))}
+          <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_260px]">
+            <div className="space-y-2 max-h-80 overflow-y-auto py-2">
+              {templates.length === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-8">
+                  Nenhum template aprovado ainda.{" "}
+                  <a href="/templates" className="text-[#2563EB] font-bold underline">Criar um</a>
+                </p>
+              ) : templates.map((t) => (
+                <button
+                  key={t.id} disabled={sendingTemplate}
+                  onClick={() => setTemplateEscolhido(t)}
+                  className={`w-full text-left p-4 rounded-2xl transition disabled:opacity-50 ${
+                    templateEscolhido?.id === t.id
+                      ? "bg-blue-50 ring-2 ring-[#2563EB]"
+                      : "bg-slate-50 hover:bg-slate-100"
+                  }`}
+                >
+                  <span className="block font-bold text-sm text-slate-700">{t.name}</span>
+                  <span className="block text-xs text-slate-500 mt-1 line-clamp-2">{t.content}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Template custa dinheiro: mostrar o balão antes de enviar evita
+                mandar o texto errado para o cliente. */}
+            <div className="space-y-3 sm:border-l sm:pl-5">
+              {templateEscolhido ? (
+                <>
+                  <TemplatePreview
+                    template={templateEscolhido}
+                    contactName={selectedChat?.name || "Cliente"}
+                    businessName={selectedChat?.accountName || "Sua empresa"}
+                  />
+                  <Button
+                    onClick={() => sendTemplate(templateEscolhido.id)}
+                    disabled={sendingTemplate}
+                    className="w-full rounded-2xl font-bold bg-[#2563EB]"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    {sendingTemplate ? "Enviando…" : "Enviar este template"}
+                  </Button>
+                </>
+              ) : (
+                <p className="text-xs text-slate-400 font-medium py-8 text-center">
+                  Escolha um template para ver como ele chega no WhatsApp.
+                </p>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
