@@ -2444,28 +2444,28 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
            for (const place of places) {
               if (importedCount >= 5) break; // Batch limit per ICP per run
 
-              // Check if lead already exists
-              const existing = await prisma.lead.findFirst({
-                where: { tenantId, OR: [{ phone: place.phoneNumber }, { name: place.title }] }
-              });
-
-              if (!existing && place.phoneNumber) {
-                 await prisma.lead.create({
-                   data: {
-                     tenantId,
-                     name: place.title,
-                     phone: place.phoneNumber,
-                     source: "AUTO-HUNTER",
-                     status: "DISCOVERED",
-                     notes: `Localizado automaticamente via ICP: ${icp.name}.\nEndereço: ${place.address || 'N/A'}\nRating: ${place.rating || 'N/A'}`,
-                     extractedData: JSON.stringify({
-                       website: place.website,
-                       category: place.category,
-                       icpId: icp.id
-                     })
-                   }
+              if (place.phoneNumber) {
+                 const { resolveContact } = await import("./src/api/services/ContactIdentity.js");
+                 const { lead, criado } = await resolveContact(tenantId, {
+                   name: place.title,
+                   phone: place.phoneNumber,
+                   source: "AUTO-HUNTER",
+                   status: "DISCOVERED",
+                   notes: `Localizado automaticamente via ICP: ${icp.name}.\nEndereço: ${place.address || 'N/A'}\nRating: ${place.rating || 'N/A'}`,
                  });
-                 importedCount++;
+                 if (criado) {
+                   await prisma.lead.update({
+                     where: { id: lead.id },
+                     data: {
+                       extractedData: JSON.stringify({
+                         website: place.website,
+                         category: place.category,
+                         icpId: icp.id
+                       })
+                     }
+                   });
+                   importedCount++;
+                 }
               }
            }
 

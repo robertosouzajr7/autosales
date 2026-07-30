@@ -6,7 +6,24 @@ import VoiceService from "../services/VoiceService.js";
 import MessagingService from "../services/MessagingService.js";
 import { stopwatch } from "../utils/timing.js";
 import { touchConversation } from "../services/ConversationService.js";
-import { buildIdentity, findOrCreateLead } from "../services/ContactIdentity.js";
+import {
+  buildIdentity, findOrCreateLead, resolveContact, mergeLeads,
+  normalizePhone, normalizeEmail, buildIdentifiers,
+} from "../services/ContactIdentity.js";
+import { pushContactAsync } from "../services/CrmSyncService.js";
+
+/** Guarda telefone/e-mail do contato como chave de identidade. */
+async function registrarNovasChaves(tenantId, lead) {
+  for (const c of buildIdentifiers({ phone: lead.phone, email: lead.email })) {
+    await prisma.contactIdentity
+      .upsert({
+        where: { tenantId_type_value: { tenantId, type: c.type, value: c.value } },
+        update: {},
+        create: { tenantId, leadId: lead.id, type: c.type, value: c.value, rawValue: c.rawValue, source: "MANUAL" },
+      })
+      .catch(() => {});
+  }
+}
 
 // Palavras que sinalizam pedido de descadastro (LGPD opt-out).
 const STOP_KEYWORDS = ["parar", "sair", "cancelar", "descadastrar", "stop", "remover", "pare"];
@@ -63,29 +80,25 @@ export const importBulk = async (req, res) => {
       orderBy: { order: 'asc' }
     });
 
-    const createdLeads = [];
+    // Antes o upsert usava `phone` cru como chave: "(71) 98888-7777" e
+    // "5571988887777" viravam dois contatos, e quem não tinha telefone caía
+    // todo mundo na mesma chave vazia. Agora quem decide é o CDP.
+    let criados = 0;
+    let atualizados = 0;
+    const ids = [];
     for (const c of contacts) {
       if (!c.phone && !c.email) continue;
-      const lead = await prisma.lead.upsert({
-        where: { 
-          phone_tenantId: { phone: c.phone, tenantId } 
-        },
-        update: {
-          name: c.name || undefined,
-          email: c.email || undefined,
-        },
-        create: {
-          name: c.name || "Contato Importado",
-          phone: c.phone || null,
-          email: c.email || null,
-          source: "BULK_IMPORT",
-          tenantId,
-          stageId: firstStage?.id
-        }
+      const { lead, criado } = await resolveContact(tenantId, {
+        name: c.name,
+        phone: c.phone,
+        email: c.email,
+        source: "BULK_IMPORT",
+        stageId: firstStage?.id || null,
       });
-      createdLeads.push(lead.id);
+      criado ? criados++ : atualizados++;
+      ids.push(lead.id);
     }
-    res.json({ success: true, count: createdLeads.length });
+    res.json({ success: true, count: ids.length, criados, atualizados });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -106,30 +119,22 @@ export const createLead = async (req, res) => {
       finalStageId = firstStage?.id;
     }
 
-    const data = {
-      name: name || "Novo Lead",
-      tenantId,
-      ...(phone !== undefined && { phone }),
-      ...(email !== undefined && { email }),
-      ...(notes !== undefined && { notes }),
-      ...(status !== undefined && { status }),
-      ...(source !== undefined && { source }),
-      ...(finalStageId && { stageId: finalStageId }),
-      ...(isToEnrich !== undefined && { isToEnrich }),
-    };
-
-    const lead = await prisma.lead.upsert({
-      where: { 
-        phone_tenantId: { phone: phone || "", tenantId } 
-      },
-      update: data,
-      create: data
+    const { lead, criado } = await resolveContact(tenantId, {
+      name, phone, email, notes, status, source,
+      stageId: finalStageId || null,
     });
-    
-    if (lead.createdAt >= new Date(Date.now() - 2000)) {
+
+    if (isToEnrich !== undefined && lead.isToEnrich !== isToEnrich) {
+      await prisma.lead.update({ where: { id: lead.id }, data: { isToEnrich } });
+    }
+
+    if (criado) {
       AutomationEngine.dispatchTrigger("NEW_LEAD", { lead, tenantId }).catch(console.error);
     }
-    res.json(lead);
+    pushContactAsync(tenantId, lead.id, criado ? "CREATE" : "UPDATE");
+    // `duplicado` avisa a tela que o contato já existia — sem isso o usuário
+    // acha que cadastrou de novo e vai procurar a duplicata.
+    res.json({ ...lead, duplicado: !criado });
   } catch (e) { res.status(500).json({ error: e.message }); }
 };
 
@@ -143,8 +148,10 @@ export const updateLead = async (req, res) => {
     // Build update data with only defined scalar fields (tags is a relation — cannot be set as string)
     const dataToUpdate = {};
     if (name !== undefined) dataToUpdate.name = name;
-    if (phone !== undefined) dataToUpdate.phone = phone;
-    if (email !== undefined) dataToUpdate.email = email;
+    // Telefone/e-mail editados na tela entram normalizados: senão a mesma
+    // pessoa reapareceria como contato novo na próxima mensagem.
+    if (phone !== undefined) dataToUpdate.phone = phone ? normalizePhone(phone) : null;
+    if (email !== undefined) dataToUpdate.email = email ? normalizeEmail(email) : null;
     if (notes !== undefined) dataToUpdate.notes = notes;
     if (status !== undefined) dataToUpdate.status = status;
     if (source !== undefined) dataToUpdate.source = source;
@@ -156,7 +163,28 @@ export const updateLead = async (req, res) => {
     if (stageId !== undefined && stageId !== null && stageId !== '') dataToUpdate.stageId = stageId;
     else if (stageId === null) dataToUpdate.stageId = null;
 
+    // Telefone/e-mail que já pertencem a outro contato: é a mesma pessoa,
+    // então funde em vez de estourar o índice único.
+    for (const [campo, valor] of [["phone", dataToUpdate.phone], ["email", dataToUpdate.email]]) {
+      if (!valor || valor === oldLead[campo]) continue;
+      const dono = await prisma.lead.findFirst({
+        where: { tenantId: req.tenantId, [campo]: valor, id: { not: oldLead.id } },
+        select: { id: true },
+      });
+      if (dono) {
+        await mergeLeads(dono.id, oldLead.id);
+        const fundido = await prisma.lead.update({ where: { id: dono.id }, data: dataToUpdate });
+        pushContactAsync(req.tenantId, fundido.id, "UPDATE");
+        return res.json({ ...fundido, mesclado: true, mescladoCom: oldLead.id });
+      }
+    }
+
     const lead = await prisma.lead.update({ where: { id: req.params.id, tenantId: req.tenantId }, data: dataToUpdate });
+
+    // Novas chaves viram identidade do contato (telefone antigo continua
+    // valendo: quem escrever do número velho ainda cai na mesma pessoa).
+    await registrarNovasChaves(req.tenantId, lead);
+    pushContactAsync(req.tenantId, lead.id, "UPDATE");
 
     if (oldLead && req.body.stageId && oldLead.stageId !== req.body.stageId) {
       const stage = await prisma.pipelineStage.findFirst({ where: { id: req.body.stageId, tenantId: req.tenantId } });

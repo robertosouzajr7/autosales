@@ -90,6 +90,11 @@ model Tenant {
   businessHours  BusinessHour[]
   faqs           Faq[]
   serviceQueues  ServiceQueue[]
+
+  // CDP e integrações
+  contactIdentities ContactIdentity[]
+  apiKeys           ApiKey[]
+  crmConnections    CrmConnection[]
 }
 
 model PipelineStage {
@@ -169,9 +174,123 @@ model Lead {
   progressions         AutomationProgress[]
   automationExecutions AutomationExecution[]
   waitlists            Waitlist[]
+  identities           ContactIdentity[]
+
+  /// Quantas vezes este contato absorveu duplicatas. Serve de rastro para
+  /// entender a base depois de uma importação suja.
+  mergedCount Int @default(0)
 
   @@unique([phone, tenantId])
   @@index([tenantId, channel, externalId])
+  @@index([tenantId, email])
+}
+
+/// Chave de identidade do contato (CDP).
+///
+/// Um contato é a MESMA pessoa em vários canais: WhatsApp, Instagram, o
+/// formulário do site, o CRM. Guardar isso só em `Lead.phone` duplicava a
+/// base — cada canal chegava com um identificador diferente e virava um
+/// contato novo. Aqui cada identificador conhecido aponta para um único
+/// contato, e a unicidade por (tenant, tipo, valor) é o que impede a
+/// duplicata no banco, não só no código.
+model ContactIdentity {
+  id       String @id @default(uuid())
+  tenantId String
+  leadId   String
+
+  /// PHONE | EMAIL | WHATSAPP | INSTAGRAM | SITE | CPF | CRM | EXTERNAL
+  type     String
+  /// Valor normalizado — é ele que dedupe. Telefone vira E.164 sem "+".
+  value    String
+  /// Como o valor chegou, para auditoria ("(71) 98888-7777").
+  rawValue String?
+  /// Quem trouxe este identificador: canal, importação, provedor de CRM.
+  source   String?
+
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, type, value])
+  @@index([leadId])
+}
+
+/// Chave de API do cliente, para o CRM dele falar com a plataforma.
+model ApiKey {
+  id       String @id @default(uuid())
+  tenantId String
+  name     String
+
+  /// Primeiros caracteres, mostrados na tela ("av_live_a1b2…").
+  prefix String
+  /// Só o hash é guardado: a chave inteira aparece uma vez, na criação.
+  hash   String @unique
+
+  scopes     String    @default("contacts:read,contacts:write")
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+/// Conexão com um CRM externo (RD Station, HubSpot, Salesforce, Pipedrive).
+model CrmConnection {
+  id       String @id @default(uuid())
+  tenantId String
+
+  /// RDSTATION | HUBSPOT | SALESFORCE | PIPEDRIVE
+  provider String
+  name     String?
+
+  accessToken  String?
+  refreshToken String?
+  expiresAt    DateTime?
+  /// Extras do provedor (instanceUrl do Salesforce, domínio, etc.).
+  config       String?
+
+  /// IN = só puxa do CRM, OUT = só envia, BOTH = os dois.
+  direction String  @default("BOTH")
+  active    Boolean @default(true)
+
+  /// Mapa de campos personalizados, em JSON.
+  fieldMap String?
+
+  lastSyncAt  DateTime?
+  lastStatus  String?
+  lastError   String?
+  syncedCount Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  logs   CrmSyncLog[]
+
+  @@unique([tenantId, provider])
+}
+
+/// Histórico de sincronização, para o cliente ver o que entrou e o que falhou.
+model CrmSyncLog {
+  id           String @id @default(uuid())
+  connectionId String
+
+  /// IN | OUT
+  direction  String
+  /// OK | ERROR
+  status     String
+  leadId     String?
+  externalId String?
+  message    String?
+
+  createdAt DateTime @default(now())
+
+  connection CrmConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([connectionId, createdAt])
 }
 
 model Campaign {

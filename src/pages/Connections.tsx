@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { IntegrationsPanel } from "@/components/connections/IntegrationsPanel";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { QRCodeCanvas } from "qrcode.react";
@@ -16,7 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Plus, Smartphone, CheckCircle2, RefreshCw, Trash2, Code2,
   Globe, Instagram, Copy, ExternalLink, ShieldCheck, CalendarClock,
-  Eye, EyeOff, Wifi, Pencil, X,
+  Eye, EyeOff, Wifi, Pencil, X, Plug,
 } from "lucide-react";
 
 interface Connection {
@@ -475,7 +476,15 @@ export default function Connections() {
                 <Badge className="ml-2 bg-emerald-100 text-emerald-700 border-none text-[10px] px-1.5 py-0">on</Badge>
               )}
             </TabsTrigger>
+            <TabsTrigger value="integracoes" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm">
+              <Plug className="w-4 h-4 mr-2" /> CRM e API
+            </TabsTrigger>
           </TabsList>
+
+          {/* CRM E API ────────────────────────────────────────── */}
+          <TabsContent value="integracoes" className="space-y-6">
+            <IntegrationsPanel />
+          </TabsContent>
 
           {/* WHATSAPP ─────────────────────────────────────────── */}
           <TabsContent value="whatsapp" className="space-y-6">

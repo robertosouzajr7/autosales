@@ -8,8 +8,9 @@ import {
   MoreVertical, UserPlus, Phone, 
   Mail, MessageSquare, Download,
   Tag, ChevronRight, Star, Heart, Save,
-  LayoutGrid, List, Info, Trash2, Edit3, X, CheckCircle2
+  LayoutGrid, List, Info, Trash2, Edit3, X, CheckCircle2, Merge
 } from "lucide-react";
+import { DuplicatesDialog } from "@/components/contacts/DuplicatesDialog";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -48,6 +49,7 @@ export default function Contacts() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [importPreview, setImportPreview] = useState<{name: string, phone: string, email?: string}[]>([]);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isDuplicatesOpen, setIsDuplicatesOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -77,8 +79,15 @@ export default function Contacts() {
         headers: getHeaders(),
         body: JSON.stringify(newContact)
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        toast({ title: "🏢 Contato salvo com sucesso!" });
+        // O contato pode já existir com o telefone escrito de outro jeito —
+        // aí o cadastro atualiza em vez de criar uma segunda ficha.
+        toast(
+          data.duplicado
+            ? { title: "Este contato já existia", description: "Atualizamos a ficha que já estava na base, sem duplicar." }
+            : { title: "Contato salvo com sucesso!" }
+        );
         setIsAddModalOpen(false);
         setNewContact({ name: "", phone: "", email: "", tags: "", notes: "", status: "NEW" });
         fetchData();
@@ -256,7 +265,8 @@ export default function Contacts() {
                     accept=".csv" 
                     onChange={handleImportClick} 
                  />
-                 <Button variant="outline" size="icon" onClick={handleExport} className="h-10 w-10 rounded-2xl border-2"><Download className="w-4 h-4" /></Button>
+                 <Button variant="outline" size="icon" onClick={handleExport} className="h-10 w-10 rounded-2xl border-2" title="Exportar CSV"><Download className="w-4 h-4" /></Button>
+                 <Button variant="outline" size="icon" onClick={() => setIsDuplicatesOpen(true)} className="h-10 w-10 rounded-2xl border-2" title="Contatos repetidos"><Merge className="w-4 h-4" /></Button>
                  <Button variant="outline" size="icon" onClick={() => document.getElementById('csvImport')?.click()} className="h-10 w-10 rounded-2xl border-2"><UserPlus className="w-4 h-4" /></Button>
                  {selectedIds.size > 0 && (
                    <>
@@ -605,6 +615,8 @@ export default function Contacts() {
            </div>
         </DialogContent>
       </Dialog>
+      <DuplicatesDialog open={isDuplicatesOpen} onOpenChange={setIsDuplicatesOpen} onMerged={fetchData} />
+
     </DashboardLayout>
   );
 }

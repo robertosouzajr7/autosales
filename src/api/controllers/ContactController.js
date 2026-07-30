@@ -1,5 +1,5 @@
 import prisma from "../config/prisma.js";
-import { normalizePhone } from "../services/ContactIdentity.js";
+import { normalizePhone, resolveContact, buildIdentifiers, mergeLeads } from "../services/ContactIdentity.js";
 
 /**
  * Seleção de contatos para disparo.
@@ -162,7 +162,7 @@ export const importContactsCsv = async (req, res) => {
       orderBy: { order: "asc" },
     });
 
-    const resultado = { criados: 0, atualizados: 0, invalidos: [], duplicadosNoArquivo: 0 };
+    const resultado = { criados: 0, atualizados: 0, mesclados: 0, invalidos: [], duplicadosNoArquivo: 0 };
     const vistos = new Set();
 
     for (let i = 1; i < linhas.length; i++) {
@@ -182,31 +182,22 @@ export const importContactsCsv = async (req, res) => {
       if (vistos.has(telefone)) { resultado.duplicadosNoArquivo++; continue; }
       vistos.add(telefone);
 
-      const existente = await prisma.lead.findFirst({ where: { tenantId: req.tenantId, phone: telefone } });
-      if (existente) {
-        await prisma.lead.update({
-          where: { id: existente.id },
-          data: {
-            // Não sobrescreve dado bom com célula vazia do CSV.
-            ...(nome && { name: nome }),
-            ...(email && !existente.email && { email }),
-          },
-        });
-        resultado.atualizados++;
-      } else {
-        await prisma.lead.create({
-          data: {
-            tenantId: req.tenantId,
-            name: nome || `Contato ${telefone.slice(-4)}`,
-            phone: telefone,
-            email: email || null,
-            channel: "WHATSAPP",
-            source: "CSV_IMPORT",
-            status: "NEW",
-            stageId: firstStage?.id || null,
-          },
-        });
-        resultado.criados++;
+      // O CDP também casa por e-mail: a mesma pessoa cadastrada antes só
+      // com e-mail não vira contato novo por ter aparecido com telefone.
+      const { lead, criado, mesclados } = await resolveContact(req.tenantId, {
+        name: nome,
+        phone: telefone,
+        email,
+        channel: "WHATSAPP",
+        source: "CSV_IMPORT",
+        stageId: firstStage?.id || null,
+      });
+      if (criado) resultado.criados++;
+      else resultado.atualizados++;
+      resultado.mesclados += mesclados;
+      // Nome vindo da planilha é informação nova do cliente: prevalece.
+      if (!criado && nome && lead.name !== nome) {
+        await prisma.lead.update({ where: { id: lead.id }, data: { name: nome } });
       }
     }
 
@@ -271,4 +262,127 @@ export function formatarTelefone(phone) {
     return `+55 (${ddd}) ${meio}-${resto.slice(meio.length)}`;
   }
   return `+${d}`;
+}
+
+// ── CDP: identidades e duplicatas ─────────────────────────────────
+
+/** Todos os identificadores conhecidos de um contato. */
+export const contactIdentities = async (req, res) => {
+  try {
+    const lead = await prisma.lead.findFirst({ where: { id: req.params.id, tenantId: req.tenantId } });
+    if (!lead) return res.status(404).json({ error: "Contato não encontrado." });
+    const identidades = await prisma.contactIdentity.findMany({
+      where: { leadId: lead.id },
+      orderBy: { createdAt: "asc" },
+    });
+    res.json({
+      leadId: lead.id,
+      mergedCount: lead.mergedCount,
+      identities: identidades.map((i) => ({
+        id: i.id, type: i.type, value: i.value, rawValue: i.rawValue, source: i.source, createdAt: i.createdAt,
+      })),
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+};
+
+/**
+ * Duplicatas que sobraram da base antiga.
+ *
+ * O CDP impede duplicata nova, mas o que já estava gravado antes dele
+ * continua lá. Aqui o cliente vê o que ainda dá para juntar — sem juntar
+ * nada por conta própria: fusão é irreversível, quem decide é ele.
+ */
+export const listDuplicates = async (req, res) => {
+  try {
+    const leads = await prisma.lead.findMany({
+      where: { tenantId: req.tenantId },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true, phone: true, email: true, channel: true, createdAt: true },
+    });
+
+    const porChave = new Map();
+    for (const lead of leads) {
+      for (const c of buildIdentifiers({ phone: lead.phone, email: lead.email })) {
+        const k = `${c.type}|${c.value}`;
+        if (!porChave.has(k)) porChave.set(k, []);
+        porChave.get(k).push(lead);
+      }
+    }
+
+    // Um grupo por conjunto de contatos, não por chave: quem repete telefone
+    // E e-mail apareceria duas vezes.
+    const vistos = new Set();
+    const grupos = [];
+    const jaAgrupado = new Set();
+    for (const [chave, lista] of porChave) {
+      if (lista.length < 2) continue;
+      const assinatura = lista.map((l) => l.id).sort().join("|");
+      if (vistos.has(assinatura)) continue;
+      vistos.add(assinatura);
+      lista.forEach((l) => jaAgrupado.add(l.id));
+      const [tipo, valor] = chave.split("|");
+      grupos.push({ motivo: tipo === "PHONE" ? "Mesmo telefone" : "Mesmo e-mail", valor, contatos: lista, confianca: "ALTA" });
+    }
+
+    // Mesmo nome, sem nenhum identificador em comum: pode ser a mesma
+    // pessoa (uma ficha só com telefone, outra só com e-mail) ou dois
+    // homônimos. O sistema não funde por conta própria — sugere, e quem
+    // conhece o cliente decide.
+    const porNome = new Map();
+    for (const lead of leads) {
+      if (jaAgrupado.has(lead.id)) continue;
+      const n = normalizarNome(lead.name);
+      if (!n || n.length < 5) continue;
+      if (!porNome.has(n)) porNome.set(n, []);
+      porNome.get(n).push(lead);
+    }
+    for (const [nome, lista] of porNome) {
+      if (lista.length < 2) continue;
+      grupos.push({ motivo: "Mesmo nome", valor: lista[0].name, contatos: lista, confianca: "BAIXA" });
+    }
+
+    res.json({ total: grupos.length, grupos });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+};
+
+/** Funde contatos escolhidos na tela. O primeiro da lista é o que fica. */
+export const mergeContacts = async (req, res) => {
+  try {
+    const { canonicalId, ids } = req.body || {};
+    if (!canonicalId || !Array.isArray(ids) || !ids.length) {
+      return res.status(400).json({ error: "Informe canonicalId e a lista de ids a fundir." });
+    }
+
+    const todos = await prisma.lead.findMany({
+      where: { tenantId: req.tenantId, id: { in: [canonicalId, ...ids] } },
+      select: { id: true },
+    });
+    const validos = new Set(todos.map((l) => l.id));
+    if (!validos.has(canonicalId)) return res.status(404).json({ error: "Contato principal não encontrado." });
+
+    let fundidos = 0;
+    for (const id of ids) {
+      if (id === canonicalId || !validos.has(id)) continue;
+      await mergeLeads(canonicalId, id);
+      fundidos++;
+    }
+
+    const lead = await prisma.lead.findUnique({ where: { id: canonicalId } });
+    res.json({ success: true, fundidos, lead });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+};
+
+/** Nome comparável: sem acento, sem caixa, sem pontuação. */
+function normalizarNome(nome) {
+  return String(nome || "")
+    .trim().toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9 ]/g, "")
+    .replace(/\s+/g, " ");
 }

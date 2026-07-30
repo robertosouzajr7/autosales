@@ -197,20 +197,20 @@ export const importCSV = async (req, res) => {
   try {
     const tenantId = req.tenantId;
     const { contacts } = req.body;
-    const createdLeads = [];
+    // Importação nunca cria duplicata: o CDP resolve quem já existe pelo
+    // telefone ou e-mail, em qualquer formato que a planilha traga.
+    const { resolveContact } = await import("../services/ContactIdentity.js");
+    const ids = [];
+    let criados = 0;
+    let atualizados = 0;
     for (const c of contacts) {
       if (!c.phone && !c.email) continue;
-      const lead = await prisma.lead.create({
-        data: {
-          name: c.name || "Contato CSV",
-          phone: c.phone || null,
-          email: c.email || null,
-          source: "CSV_IMPORT",
-          tenantId
-        }
+      const { lead, criado } = await resolveContact(tenantId, {
+        name: c.name, phone: c.phone, email: c.email, source: "CSV_IMPORT",
       });
-      createdLeads.push(lead.id);
+      criado ? criados++ : atualizados++;
+      ids.push(lead.id);
     }
-    res.json({ success: true, count: createdLeads.length, leadIds: createdLeads });
+    res.json({ success: true, count: ids.length, criados, atualizados, leadIds: ids });
   } catch (e) { res.status(500).json({ error: e.message }); }
 };

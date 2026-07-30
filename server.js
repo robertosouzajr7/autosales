@@ -1,6 +1,7 @@
 import app, { initDB } from "./src/api/app.js";
 import { WhatsAppManager } from "./whatsapp.js";
 import BillingService from "./src/api/services/BillingService.js";
+import CrmSyncService from "./src/api/services/CrmSyncService.js";
 import prisma from "./src/api/config/prisma.js";
 import { logger, captureException } from "./src/api/config/logger.js";
 
@@ -14,6 +15,9 @@ async function startServer() {
     logger.info(`🚀 Servidor SaaS ON: http://localhost:${PORT}`);
     WhatsAppManager.bootExistingSessions().catch(e => logger.error({ err: e }, "Erro ao bootar sessões"));
     BillingService.initialize();
+    // Entrada de contatos dos CRMs conectados (HubSpot, Salesforce,
+    // Pipedrive). O RD Station entra por webhook e não depende disto.
+    CrmSyncService.iniciarSincronizacao(Number(process.env.CRM_SYNC_MINUTES) || 15);
   });
 }
 

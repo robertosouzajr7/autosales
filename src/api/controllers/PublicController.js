@@ -1,6 +1,6 @@
 import prisma from "../config/prisma.js";
 import { touchConversation } from "../services/ConversationService.js";
-import { buildIdentity, findOrCreateLead, normalizePhone } from "../services/ContactIdentity.js";
+import { buildIdentity, findOrCreateLead, normalizePhone, resolveContact } from "../services/ContactIdentity.js";
 import MessagingService from "../services/MessagingService.js";
 import AutomationEngine from "../../../automation_engine.js";
 import { getFunctionPreset } from "../services/AgentFunctions.js";
@@ -160,26 +160,11 @@ export const submitChat = async (req, res) => {
 export const bookAppointment = async (req, res) => {
   const { tenantId, name, email, phone, date, title } = req.body;
   try {
-    const telefone = normalizePhone(phone);
-
-    let lead;
-    if (email) lead = await prisma.lead.findFirst({ where: { email, tenantId } });
-    if (!lead && telefone) lead = await prisma.lead.findFirst({ where: { phone: telefone, tenantId } });
-
-    if (!lead) {
-      lead = await prisma.lead.create({
-        data: {
-          tenantId,
-          name: name || "Contato",
-          email: email || null,
-          phone: telefone,
-          source: "PUBLIC_BOOKING",
-          status: "SCHEDULED",
-        },
-      });
-    } else if (!lead.phone && telefone) {
-      lead = await prisma.lead.update({ where: { id: lead.id }, data: { phone: telefone } });
-    }
+    const { lead } = await resolveContact(tenantId, {
+      name, email, phone,
+      source: "PUBLIC_BOOKING",
+      status: "SCHEDULED",
+    });
 
     const { default: CalendarService } = await import("../../../calendar_service.js");
     let booked;
@@ -202,12 +187,7 @@ export const bookAppointment = async (req, res) => {
 export const addToWaitlist = async (req, res) => {
   const { tenantId, name, phone, email, notes } = req.body;
   try {
-    let lead = await prisma.lead.findFirst({ where: { phone, tenantId } });
-    if (!lead) {
-      lead = await prisma.lead.create({
-        data: { tenantId, name, phone, email, source: "WAITLIST" }
-      });
-    }
+    const { lead } = await resolveContact(tenantId, { name, phone, email, source: "WAITLIST" });
 
     const waitlistEntry = await prisma.waitlist.create({
       data: {

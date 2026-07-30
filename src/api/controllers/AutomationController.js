@@ -452,18 +452,12 @@ export const webhookTrigger = async (req, res) => {
     }
 
     const { phone, email, leadId, name } = req.body || {};
-    const { normalizePhone } = await import("../services/ContactIdentity.js");
-    const telefone = normalizePhone(phone);
+    const { resolveContact } = await import("../services/ContactIdentity.js");
 
     let lead = null;
     if (leadId) lead = await prisma.lead.findFirst({ where: { id: leadId, tenantId: automation.tenantId } });
-    if (!lead && telefone) lead = await prisma.lead.findFirst({ where: { phone: telefone, tenantId: automation.tenantId } });
-    if (!lead && email) lead = await prisma.lead.findFirst({ where: { email, tenantId: automation.tenantId } });
-
-    if (!lead && telefone) {
-      lead = await prisma.lead.create({
-        data: { tenantId: automation.tenantId, name: name || `Contato ${telefone.slice(-4)}`, phone: telefone, source: "WEBHOOK" },
-      });
+    if (!lead && (phone || email)) {
+      ({ lead } = await resolveContact(automation.tenantId, { name, phone, email, source: "WEBHOOK" }));
     }
     if (!lead) {
       return res.status(400).json({ error: "Informe leadId, phone ou email de um contato existente." });

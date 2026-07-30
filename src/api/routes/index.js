@@ -32,6 +32,9 @@ import * as ProductController from "../controllers/ProductController.js";
 import { listVerticalTemplates } from "../services/VerticalTemplates.js";
 import { listFunctions, SKILLS } from "../services/AgentFunctions.js";
 import { loadUser, requirePermission, requireTenantAdmin } from "../middlewares/permissions.js";
+import * as PublicApiController from "../controllers/PublicApiController.js";
+import * as IntegrationController from "../controllers/IntegrationController.js";
+import { apiKeyMiddleware, requireScope } from "../middlewares/apiKey.js";
 import {
   requireCalendar,
   requireAutomations,
@@ -65,6 +68,22 @@ router.get("/auth/google/callback", GoogleCalendarController.handleCallback);
 // Instagram Login nativo (produto "API do Instagram com login do Instagram").
 router.get("/auth/meta/callback", MetaOAuthController.handleCallback);
 router.get("/auth/instagram/callback", MetaOAuthController.handleInstagramCallback);
+
+// Webhook de CRM — público: quem chama é o RD Station, não o navegador.
+// A conexão é identificada pelo id na URL.
+router.post("/webhooks/crm/:connectionId", IntegrationController.crmWebhook);
+
+// ── API pública de contatos (v1) ────────────────────────────────────
+// Autenticada por chave de API, não por sessão: é o CRM do cliente que
+// chama. Fica ANTES do authMiddleware justamente por isso.
+const v1 = express.Router();
+v1.use(apiKeyMiddleware);
+v1.get("/contacts", requireScope("contacts:read"), PublicApiController.listContacts);
+v1.get("/contacts/:id", requireScope("contacts:read"), PublicApiController.getContact);
+v1.post("/contacts", requireScope("contacts:write"), PublicApiController.upsertContact);
+v1.post("/contacts/batch", requireScope("contacts:write"), PublicApiController.upsertBatch);
+v1.delete("/contacts/:id", requireScope("contacts:write"), PublicApiController.optOutContact);
+router.use("/v1", v1);
 
 // Protected Routes (Tenant context)
 router.use(authMiddleware);
@@ -153,6 +172,22 @@ router.post("/messages", requirePermission("conversations"), requireActiveSubscr
 router.post("/messages/call-intent", requirePermission("conversations"), requireActiveSubscription, MessageController.callIntent);
 // Disparo em massa (API oficial da Meta)
 // Seleção e importação de contatos (usada pelo disparo em massa)
+// Integrações: chaves de API e CRMs conectados (módulo Conexões).
+router.get("/integrations/api-keys", requirePermission("connections"), IntegrationController.listApiKeys);
+router.post("/integrations/api-keys", requirePermission("connections"), IntegrationController.createApiKey);
+router.delete("/integrations/api-keys/:id", requirePermission("connections"), IntegrationController.revokeApiKey);
+router.get("/integrations/crm/providers", requirePermission("connections"), IntegrationController.listCrmProviders);
+router.get("/integrations/crm", requirePermission("connections"), IntegrationController.listCrmConnections);
+router.post("/integrations/crm", requirePermission("connections"), IntegrationController.saveCrmConnection);
+router.post("/integrations/crm/:id/test", requirePermission("connections"), IntegrationController.testCrmConnection);
+router.post("/integrations/crm/:id/sync", requirePermission("connections"), IntegrationController.syncCrmConnection);
+router.get("/integrations/crm/:id/logs", requirePermission("connections"), IntegrationController.crmSyncLogs);
+router.delete("/integrations/crm/:id", requirePermission("connections"), IntegrationController.deleteCrmConnection);
+
+// Contatos (CDP)
+router.post("/contacts/merge", requirePermission("contacts"), ContactController.mergeContacts);
+router.get("/contacts/duplicates", requirePermission("contacts"), ContactController.listDuplicates);
+router.get("/contacts/:id/identities", requirePermission("contacts"), ContactController.contactIdentities);
 router.get("/contacts/search", ContactController.searchContacts);
 router.get("/contacts/search-ids", ContactController.searchContactIds);
 router.get("/contacts/tags", ContactController.listTags);
