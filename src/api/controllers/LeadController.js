@@ -382,10 +382,19 @@ export const receiveWhatsappWebhook = async (req, res) => {
       return res.json({ success: true, opted_out: true, ai_response: null });
     }
 
-    // 5. Verifica se o bot está ativo para esta conversa
-    if (!conversation.botActive) {
-      console.log(`[Webhook] 🤖 Bot desativado para ${phone}. Mensagem salva mas sem resposta automática.`);
-      return res.json({ success: true, ai_response: null });
+    // 4.7 Conversa encerrada que recebe mensagem volta ao automático: sem
+    // isso ela ficaria travada em CLOSED e o cliente falaria sozinho.
+    if (conversation.phase === "CLOSED") {
+      const { default: AttendanceService } = await import("../services/AttendanceService.js");
+      conversation = (await AttendanceService.onInbound(conversation.id)) || conversation;
+    }
+
+    // 5. Na fila ou em atendimento humano quem responde é a pessoa, não a IA.
+    if (!conversation.botActive || ["QUEUE", "HUMAN"].includes(conversation.phase)) {
+      console.log(
+        `[Webhook] 🤖 Sem resposta automática para ${phone} (fase ${conversation.phase || "BOT"}). Mensagem salva.`
+      );
+      return res.json({ success: true, ai_response: null, phase: conversation.phase });
     }
 
     // 6. Aciona o SDR para gerar resposta via IA (texto transcrito, se áudio)

@@ -18,6 +18,7 @@ import * as WhatsAppController from "../controllers/WhatsAppController.js";
 import * as AutomationController from "../controllers/AutomationController.js";
 import * as SdrController from "../controllers/SdrController.js";
 import * as MessageController from "../controllers/MessageController.js";
+import * as AttendanceController from "../controllers/AttendanceController.js";
 import * as TemplateController from "../controllers/TemplateController.js";
 import * as CampaignController from "../controllers/CampaignController.js";
 import * as ContactController from "../controllers/ContactController.js";
@@ -167,6 +168,21 @@ router.post("/messages/template", MessageController.sendTemplateToLead);
 router.get("/conversations", MessageController.getConversations);
 router.put("/conversations/:leadId/read", MessageController.markRead);
 router.put("/conversations/:leadId/toggle-bot", MessageController.toggleBot);
+// Filas de atendimento e fases da conversa
+router.get("/queues", AttendanceController.listQueues);
+router.post("/queues", AttendanceController.createQueue);
+router.put("/queues/:id", AttendanceController.updateQueue);
+router.delete("/queues/:id", AttendanceController.deleteQueue);
+router.get("/attendance/agents", AttendanceController.listAgents);
+router.get("/attendance/queue", AttendanceController.getQueue);
+router.get("/conversations/:id/status", AttendanceController.getConversationStatus);
+router.post("/conversations/:id/enqueue", AttendanceController.enqueueConversation);
+router.post("/conversations/:id/assign", AttendanceController.assignConversation);
+router.post("/conversations/:id/transfer", AttendanceController.transferConversation);
+router.post("/conversations/:id/return-bot", AttendanceController.returnToBot);
+router.post("/conversations/:id/close", AttendanceController.closeConversation);
+router.post("/conversations/:id/reopen", AttendanceController.reopenConversation);
+
 router.get("/events", MessageController.sseEvents);
 
 // (Rotas de prospecção outbound removidas — produto é inbound)

@@ -93,6 +93,17 @@ export const sendMessage = async (req, res) => {
       });
     }
 
+    // Atendente respondeu alguém que estava na fila: isso É começar a
+    // atender. Assumir a conversa aqui evita o contato ficar "esperando"
+    // enquanto já está sendo respondido.
+    if (conversation.phase === "QUEUE" && req.userId) {
+      const { default: AttendanceService } = await import("../services/AttendanceService.js");
+      conversation = await AttendanceService.assign(conversation.id, req.userId, {
+        tenantId,
+        avisarCliente: false,
+      }).catch(() => conversation);
+    }
+
     const message = await prisma.message.create({
       data: {
         conversationId: conversation.id,
@@ -222,11 +233,15 @@ export const getConversations = async (req, res) => {
   if (!tenantId) return res.json([]);
 
   try {
-    const { accountId, channel, q } = req.query;
+    const { accountId, channel, q, phase, assignedToId, queueId } = req.query;
 
     const conversations = await prisma.conversation.findMany({
       where: {
         tenantId,
+        // Abas do inbox: fila, meus atendimentos, automático, encerradas.
+        ...(phase ? { phase: { in: String(phase).split(",") } } : {}),
+        ...(assignedToId ? { assignedToId } : {}),
+        ...(queueId ? { queueId } : {}),
         ...(accountId || channel || q
           ? {
               lead: {
@@ -251,6 +266,8 @@ export const getConversations = async (req, res) => {
             waAccountId: true, optedOut: true, igUsername: true, externalId: true,
           },
         },
+        assignedTo: { select: { id: true, name: true } },
+        queue: { select: { id: true, name: true, color: true } },
       },
       // Conversa sem mensagem (lead recém-criado) vai para o fim.
       orderBy: [{ lastMessageAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
@@ -263,6 +280,20 @@ export const getConversations = async (req, res) => {
       select: { id: true, name: true, channel: true, phone: true },
     });
     const accountById = new Map(accounts.map((a) => [a.id, a]));
+
+    // Posição na fila calculada uma vez para todo o lote: ordem de entrada
+    // dentro de cada fila. Consultar por conversa seria N consultas.
+    const posicoes = new Map();
+    const naFila = conversations
+      .filter((c) => c.phase === "QUEUE" && c.queuedAt)
+      .sort((a, b) => new Date(a.queuedAt) - new Date(b.queuedAt));
+    const contadorPorFila = new Map();
+    for (const c of naFila) {
+      const chave = c.queueId || "_";
+      const proxima = (contadorPorFila.get(chave) || 0) + 1;
+      contadorPorFila.set(chave, proxima);
+      posicoes.set(c.id, proxima);
+    }
 
     res.json(
       conversations.map((c) => {
@@ -286,6 +317,14 @@ export const getConversations = async (req, res) => {
           accountName: acc?.name || null,
           windowOpen: isWindowOpen(c.lastInboundAt),
           windowMinutesLeft: windowMinutesLeft(c.lastInboundAt),
+          // Fase do atendimento e quem é o dono dela.
+          phase: c.phase || "BOT",
+          queue: c.queue || null,
+          queuedAt: c.queuedAt,
+          queuePosition: posicoes.get(c.id) || null,
+          handoffReason: c.handoffReason || null,
+          assignedTo: c.assignedTo || null,
+          assignedAt: c.assignedAt,
         };
       })
     );

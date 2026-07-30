@@ -7,7 +7,7 @@ import {
   Circle, MoreVertical, Smartphone, Bot,
   Phone, Mail, User,
   ChevronRight, Calendar, Mic, MicOff, Play, Pause, Volume2,
-  Instagram, Globe, Clock, FileText, Paperclip
+  Instagram, Globe, Clock, FileText, Paperclip, ArrowRightLeft, Users, XCircle
 } from "lucide-react";
 import { TemplatePreview } from "@/components/templates/TemplatePreview";
 
@@ -17,6 +17,30 @@ const CHANNEL_META: Record<string, { label: string; cls: string; Icon: any }> = 
   INSTAGRAM: { label: "Instagram", cls: "text-pink-600 bg-pink-50", Icon: Instagram },
   SITE: { label: "Site", cls: "text-blue-600 bg-blue-50", Icon: Globe },
 };
+/** Selo curto da fase do atendimento, usado na lista de conversas. */
+function faseSelo(chat: any, meuId: string) {
+  const fase = chat.phase || "BOT";
+  if (fase === "QUEUE") {
+    return {
+      label: chat.queuePosition ? `Fila #${chat.queuePosition}` : "Na fila",
+      cls: "bg-amber-100 text-amber-700",
+      title: chat.handoffReason ? `Aguardando atendente — ${chat.handoffReason}` : "Aguardando atendente humano",
+    };
+  }
+  if (fase === "HUMAN") {
+    const meu = chat.assignedTo?.id === meuId;
+    return {
+      label: meu ? "Você" : chat.assignedTo?.name?.split(" ")[0] || "Humano",
+      cls: meu ? "bg-blue-100 text-blue-700" : "bg-slate-200 text-slate-600",
+      title: `Em atendimento com ${chat.assignedTo?.name || "um atendente"}`,
+    };
+  }
+  if (fase === "CLOSED") {
+    return { label: "Encerrada", cls: "bg-slate-100 text-slate-400", title: "Atendimento encerrado" };
+  }
+  return null; // BOT é o normal: não polui a lista com selo.
+}
+
 function channelMeta(ch?: string) {
   return CHANNEL_META[(ch || "WHATSAPP").toUpperCase()] || CHANNEL_META.WHATSAPP;
 }
@@ -33,7 +57,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { notificationStore } from "@/lib/notifications";
 
@@ -160,6 +184,13 @@ export default function Conversations() {
   const [templateEscolhido, setTemplateEscolhido] = useState<any>(null);
   const [connections, setConnections] = useState<any[]>([]);
   const [channelFilter, setChannelFilter] = useState<string>("ALL"); // ALL | conexão(id) | SITE
+  // Fase do atendimento: fila humana, meus atendimentos, automático, encerradas.
+  const [phaseFilter, setPhaseFilter] = useState<string>("ALL");
+  const [agents, setAgents] = useState<any[]>([]);
+  const [queues, setQueues] = useState<any[]>([]);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferAlvo, setTransferAlvo] = useState<string>("");
+  const meuId = localStorage.getItem("userId") || "";
   const [search, setSearch] = useState("");
   const [selectedChat, setSelectedChat] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
@@ -194,17 +225,21 @@ export default function Conversations() {
   const fetchData = async () => {
     try {
       const token = localStorage.getItem("token");
-      const [convRes, settingsRes, connRes, tplRes] = await Promise.all([
+      const [convRes, settingsRes, connRes, tplRes, agentsRes, queuesRes] = await Promise.all([
         fetch("/api/conversations", { headers: { "Authorization": `Bearer ${token}` } }),
         fetch("/api/settings", { headers: { "Authorization": `Bearer ${token}` } }),
         fetch("/api/whatsapp/accounts", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch("/api/templates", { headers: { "Authorization": `Bearer ${token}` } })
+        fetch("/api/templates", { headers: { "Authorization": `Bearer ${token}` } }),
+        fetch("/api/attendance/agents", { headers: { "Authorization": `Bearer ${token}` } }),
+        fetch("/api/queues", { headers: { "Authorization": `Bearer ${token}` } })
       ]);
 
       const convData = convRes.ok ? await convRes.json() : [];
       const settingsData = await settingsRes.json();
       const connData = connRes.ok ? await connRes.json() : [];
       const tplData = tplRes.ok ? await tplRes.json() : [];
+      setAgents(agentsRes.ok ? await agentsRes.json() : []);
+      setQueues(queuesRes.ok ? await queuesRes.json() : []);
 
       // O endpoint já devolve ordenado por última mensagem. `id` vira o leadId
       // porque o resto da tela (mensagens, toggle do bot) trabalha com ele.
@@ -217,6 +252,12 @@ export default function Conversations() {
           conversations: [{ id: c.id, botActive: c.botActive }],
         }))
       );
+      // Mantém o cabeçalho do chat aberto em dia com a fase/dono atual.
+      setSelectedChat((prev: any) => {
+        if (!prev) return prev;
+        const fresco = (Array.isArray(convData) ? convData : []).find((c: any) => c.leadId === prev.id);
+        return fresco ? { ...prev, ...fresco, id: prev.id, conversationId: fresco.id } : prev;
+      });
       setTemplates(tplData.filter((t: any) => t.status === "APPROVED"));
       setConnections(Array.isArray(connData) ? connData : []);
       setHasWhatsApp(!!settingsData.hasWhatsAppConnection);
@@ -234,6 +275,51 @@ export default function Conversations() {
       const data = await res.json();
       setMessages(Array.isArray(data) ? data : []);
     } catch (e) {}
+  };
+
+  /**
+   * Ações de atendimento. Uma função só porque todas seguem o mesmo formato:
+   * POST na conversa, recarrega a lista e mostra o resultado.
+   */
+  const acaoAtendimento = async (
+    acao: "assign" | "transfer" | "return-bot" | "close" | "reopen" | "enqueue",
+    corpo: any = {},
+    okMsg?: string
+  ) => {
+    const conversationId = selectedChat?.conversationId;
+    if (!conversationId) return;
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(`/api/conversations/${conversationId}/${acao}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(corpo),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || "Não foi possível concluir a ação.");
+      if (okMsg) toast({ title: okMsg });
+      await fetchData();
+      fetchMessages(selectedChat.id);
+    } catch (e: any) {
+      toast({ title: e.message, variant: "destructive" });
+    }
+  };
+
+  const encerrarAtendimento = async () => {
+    if (!confirm(`Encerrar o atendimento de ${selectedChat?.name}?\n\nO cliente recebe um aviso de encerramento. Se ele escrever de novo, a IA reabre a conversa.`)) return;
+    await acaoAtendimento("close", {}, "Atendimento encerrado");
+  };
+
+  const confirmarTransferencia = async () => {
+    if (!transferAlvo) return;
+    const [tipo, id] = transferAlvo.split(":");
+    await acaoAtendimento(
+      "transfer",
+      tipo === "user" ? { userId: id } : { queueId: id },
+      tipo === "user" ? "Conversa transferida" : "Conversa devolvida à fila"
+    );
+    setTransferOpen(false);
+    setTransferAlvo("");
   };
 
   const toggleBot = async () => {
@@ -511,8 +597,30 @@ export default function Conversations() {
     return () => eventSource.close();
   }, []);
 
+  // Abas por fase do atendimento. "Minhas" = atribuídas a mim.
+  const contaFase = (fase: string) =>
+    chats.filter((c: any) =>
+      fase === "MINE"
+        ? c.phase === "HUMAN" && c.assignedTo?.id === meuId
+        : fase === "ALL"
+        ? c.phase !== "CLOSED"
+        : c.phase === fase
+    ).length;
+
+  const ABAS = [
+    { id: "ALL", label: "Ativas" },
+    { id: "QUEUE", label: "Na fila" },
+    { id: "MINE", label: "Minhas" },
+    { id: "BOT", label: "Com a IA" },
+    { id: "CLOSED", label: "Encerradas" },
+  ];
+
   // O backend já entrega ordenado por última mensagem; aqui só filtramos.
   const visibleChats = chats.filter((c: any) => {
+    const fase = c.phase || "BOT";
+    if (phaseFilter === "MINE") { if (!(fase === "HUMAN" && c.assignedTo?.id === meuId)) return false; }
+    else if (phaseFilter === "ALL") { if (fase === "CLOSED") return false; }
+    else if (fase !== phaseFilter) return false;
     if (channelFilter === "SITE") { if ((c.channel || "").toUpperCase() !== "SITE") return false; }
     else if (channelFilter !== "ALL") { if (c.waAccountId !== channelFilter) return false; }
     if (search.trim()) {
@@ -561,6 +669,33 @@ export default function Conversations() {
                   onChange={(e) => setSearch(e.target.value)}
                   className="h-11 pl-10 border-slate-200 rounded-2xl bg-white text-xs font-bold"
                 />
+             </div>
+
+             {/* Abas por fase: a fila humana precisa saltar aos olhos. */}
+             <div className="flex flex-wrap gap-1.5">
+               {ABAS.map((aba) => {
+                 const n = contaFase(aba.id);
+                 const ativa = phaseFilter === aba.id;
+                 const destaque = aba.id === "QUEUE" && n > 0;
+                 return (
+                   <button
+                     key={aba.id}
+                     onClick={() => setPhaseFilter(aba.id)}
+                     className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors flex items-center gap-1 ${
+                       ativa
+                         ? "bg-slate-900 text-white"
+                         : destaque
+                         ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                         : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                     }`}
+                   >
+                     {aba.label}
+                     {n > 0 && (
+                       <span className={`px-1 rounded-full text-[10px] ${ativa ? "bg-white/20" : "bg-white/70"}`}>{n}</span>
+                     )}
+                   </button>
+                 );
+               })}
              </div>
 
              {/* Filtro por canal / conexão (só aparece se houver >1 origem) */}
@@ -640,15 +775,19 @@ export default function Conversations() {
                              {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
                            </span>
                          )}
-                         {/* Sinaliza conversas em que a IA está pausada (atendimento humano) */}
-                         {chat.conversations?.[0]?.botActive === false && (
-                           <span
-                             title="IA pausada — abra a conversa e clique em 'Devolver ao assistente'"
-                             className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${selectedChat?.id === chat.id ? 'bg-white/15 text-amber-200' : 'bg-amber-100 text-amber-700'}`}
-                           >
-                             IA pausada
-                           </span>
-                         )}
+                         {/* Fase do atendimento: quem está com a conversa agora. */}
+                         {(() => {
+                           const selo = faseSelo(chat, meuId);
+                           if (!selo) return null;
+                           return (
+                             <span
+                               title={selo.title}
+                               className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${selectedChat?.id === chat.id ? "bg-white/15 text-white" : selo.cls}`}
+                             >
+                               {selo.label}
+                             </span>
+                           );
+                         })()}
                        </div>
                     </div>
                   </div>
@@ -694,23 +833,58 @@ export default function Conversations() {
                            </span>
                          ); })()}
                        </div>
-                       <p className="text-xs font-bold text-[#2563EB] mt-1.5 flex items-center gap-1.5">
-                         {selectedChat.conversations?.[0]?.botActive !== false ? (
-                            <><Circle className="w-2 h-2 fill-emerald-500" /> Atendimento via IA</>
+                       {/* Fase do atendimento: quem está com a conversa agora. */}
+                       <p className="text-xs font-bold mt-1.5 flex items-center gap-1.5">
+                         {selectedChat.phase === "QUEUE" ? (
+                           <span className="text-amber-600 flex items-center gap-1.5">
+                             <Circle className="w-2 h-2 fill-amber-500" />
+                             Na fila{selectedChat.queue?.name ? ` "${selectedChat.queue.name}"` : ""}
+                             {selectedChat.queuePosition ? ` · posição ${selectedChat.queuePosition}` : ""}
+                             {selectedChat.handoffReason ? ` · ${selectedChat.handoffReason}` : ""}
+                           </span>
+                         ) : selectedChat.phase === "HUMAN" ? (
+                           <span className="text-[#2563EB] flex items-center gap-1.5">
+                             <Circle className="w-2 h-2 fill-[#2563EB]" />
+                             Em atendimento com {selectedChat.assignedTo?.id === meuId ? "você" : selectedChat.assignedTo?.name || "um atendente"}
+                           </span>
+                         ) : selectedChat.phase === "CLOSED" ? (
+                           <span className="text-slate-400 flex items-center gap-1.5">
+                             <Circle className="w-2 h-2 fill-slate-300" /> Atendimento encerrado
+                           </span>
                          ) : (
-                            <><Circle className="w-2 h-2 fill-amber-500" /> IA Pausada (Transbordo Humano)</>
+                           <span className="text-emerald-600 flex items-center gap-1.5">
+                             <Circle className="w-2 h-2 fill-emerald-500" /> Atendimento automático (IA)
+                           </span>
                          )}
                        </p>
                     </div>
                  </div>
                  <div className="flex gap-2">
-                    <Button 
-                      onClick={toggleBot} 
-                      variant="outline" 
-                      className={`rounded-xl border-slate-100 font-bold text-xs ${selectedChat.conversations?.[0]?.botActive !== false ? 'hover:bg-slate-50' : 'bg-blue-50 border-emerald-100 text-[#2563EB] hover:bg-emerald-100'}`}
-                    >
-                      {selectedChat.conversations?.[0]?.botActive !== false ? "Assumir conversa" : "Devolver ao assistente"}
-                    </Button>
+                    {selectedChat.phase === "CLOSED" ? (
+                      <Button
+                        onClick={() => acaoAtendimento("reopen", { comoHumano: true }, "Atendimento reaberto")}
+                        className="rounded-xl font-bold text-xs bg-[#2563EB]"
+                      >
+                        Iniciar conversa
+                      </Button>
+                    ) : selectedChat.phase === "HUMAN" && selectedChat.assignedTo?.id === meuId ? (
+                      <Button
+                        onClick={encerrarAtendimento}
+                        variant="outline"
+                        className="rounded-xl border-slate-100 font-bold text-xs text-red-500 hover:bg-red-50"
+                      >
+                        Encerrar atendimento
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() =>
+                          acaoAtendimento("assign", {}, selectedChat.phase === "QUEUE" ? "Você assumiu o atendimento" : "Atendimento assumido")
+                        }
+                        className="rounded-xl font-bold text-xs bg-[#2563EB]"
+                      >
+                        {selectedChat.phase === "QUEUE" ? "Atender agora" : "Assumir conversa"}
+                      </Button>
+                    )}
                       <Button variant="outline" size="icon" className="rounded-xl border-slate-100 hover:bg-blue-50 hover:border-slate-300 group/call transition-colors"
                         onClick={handleOpenCallModal}
                         title="Iniciar contato por WhatsApp"
@@ -744,6 +918,43 @@ export default function Conversations() {
                            Copiar Telefone
                          </DropdownMenuItem>
                          <DropdownMenuSeparator />
+                         {selectedChat.phase !== "CLOSED" && (
+                           <>
+                             <DropdownMenuItem
+                               className="rounded-xl font-bold text-xs cursor-pointer"
+                               onClick={() => { setTransferAlvo(""); setTransferOpen(true); }}
+                             >
+                               <ArrowRightLeft className="w-4 h-4 mr-2 text-[#2563EB]" />
+                               Transferir conversa
+                             </DropdownMenuItem>
+                             {selectedChat.phase !== "BOT" && (
+                               <DropdownMenuItem
+                                 className="rounded-xl font-bold text-xs cursor-pointer"
+                                 onClick={() => acaoAtendimento("return-bot", {}, "Conversa devolvida ao agente de IA")}
+                               >
+                                 <Bot className="w-4 h-4 mr-2 text-emerald-600" />
+                                 Devolver para a IA
+                               </DropdownMenuItem>
+                             )}
+                             {selectedChat.phase === "BOT" && (
+                               <DropdownMenuItem
+                                 className="rounded-xl font-bold text-xs cursor-pointer"
+                                 onClick={() => acaoAtendimento("enqueue", { reason: "Enviada manualmente para a fila" }, "Conversa enviada para a fila")}
+                               >
+                                 <Users className="w-4 h-4 mr-2 text-amber-600" />
+                                 Enviar para a fila
+                               </DropdownMenuItem>
+                             )}
+                             <DropdownMenuItem
+                               className="rounded-xl font-bold text-xs cursor-pointer"
+                               onClick={encerrarAtendimento}
+                             >
+                               <XCircle className="w-4 h-4 mr-2 text-slate-500" />
+                               Encerrar atendimento
+                             </DropdownMenuItem>
+                             <DropdownMenuSeparator />
+                           </>
+                         )}
                          <DropdownMenuItem
                            className="rounded-xl font-bold text-xs cursor-pointer text-red-500 focus:text-red-600"
                            onClick={() => {
@@ -765,6 +976,20 @@ export default function Conversations() {
                  <div className="space-y-6 max-w-4xl mx-auto flex flex-col">
                     {messages.map(msg => {
                       const isOut = msg.role === 'SDR' || msg.role === 'ASSISTANT';
+                      // Marco do atendimento (entrou na fila, fulano assumiu,
+                      // encerrado): fica centralizado, sem virar fala de ninguém.
+                      if (msg.role === 'SYSTEM') {
+                        return (
+                          <div key={msg.id} className="flex justify-center">
+                            <span className="rounded-full bg-slate-200/70 px-3 py-1 text-[11px] font-bold text-slate-500">
+                              {msg.content}
+                              <span className="ml-2 font-medium text-slate-400">
+                                {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </span>
+                          </div>
+                        );
+                      }
                       return (
                         <div key={msg.id} className={`flex ${isOut ? 'justify-end' : 'justify-start'}`}>
                           <div className={`max-w-[70%] p-4 rounded-2xl text-sm font-medium shadow-sm ${isOut ? 'bg-slate-900 text-white rounded-tr-none' : 'bg-white text-slate-700 rounded-tl-none border border-slate-100'}`}>
@@ -916,6 +1141,58 @@ export default function Conversations() {
       </div>
 
       {/* MODAL DE CONTATO VIA WHATSAPP */}
+      {/* Transferência: outro atendente ou de volta para uma fila */}
+      <Dialog open={transferOpen} onOpenChange={setTransferOpen}>
+        <DialogContent className="max-w-md rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="font-bold">Transferir conversa</DialogTitle>
+            <DialogDescription>
+              Escolha um atendente para assumir agora, ou devolva para uma fila de atendimento.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-80 overflow-y-auto py-2">
+            {agents.length > 0 && (
+              <p className="text-[11px] font-bold text-slate-400 uppercase px-1">Atendentes</p>
+            )}
+            {agents.map((a: any) => (
+              <button
+                key={a.id}
+                onClick={() => setTransferAlvo(`user:${a.id}`)}
+                className={`w-full text-left p-3 rounded-2xl transition flex items-center justify-between ${
+                  transferAlvo === `user:${a.id}` ? "bg-blue-50 ring-2 ring-[#2563EB]" : "bg-slate-50 hover:bg-slate-100"
+                }`}
+              >
+                <span className="font-bold text-sm text-slate-700">
+                  {a.name} {a.id === meuId && <span className="text-slate-400 font-medium">(você)</span>}
+                </span>
+                <span className="text-[11px] font-bold text-slate-400">{a.emAtendimento} em atendimento</span>
+              </button>
+            ))}
+
+            {queues.length > 0 && (
+              <p className="text-[11px] font-bold text-slate-400 uppercase px-1 pt-2">Filas</p>
+            )}
+            {queues.map((f: any) => (
+              <button
+                key={f.id}
+                onClick={() => setTransferAlvo(`queue:${f.id}`)}
+                className={`w-full text-left p-3 rounded-2xl transition flex items-center justify-between ${
+                  transferAlvo === `queue:${f.id}` ? "bg-blue-50 ring-2 ring-[#2563EB]" : "bg-slate-50 hover:bg-slate-100"
+                }`}
+              >
+                <span className="font-bold text-sm text-slate-700">{f.name}</span>
+                <span className="text-[11px] font-bold text-slate-400">{f.aguardando} aguardando</span>
+              </button>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button onClick={confirmarTransferencia} disabled={!transferAlvo} className="rounded-2xl font-bold bg-[#2563EB]">
+              <ArrowRightLeft className="w-4 h-4 mr-2" /> Transferir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Templates aprovados para reabrir conversa fora da janela de 24h */}
       <Dialog open={templateModal} onOpenChange={setTemplateModal}>
         <DialogContent className="max-w-2xl rounded-3xl">

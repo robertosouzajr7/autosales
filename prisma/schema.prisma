@@ -89,6 +89,7 @@ model Tenant {
   paymentMethods PaymentMethod[]
   businessHours  BusinessHour[]
   faqs           Faq[]
+  serviceQueues  ServiceQueue[]
 }
 
 model PipelineStage {
@@ -454,6 +455,9 @@ model User {
 
   lastLoginAt DateTime?
 
+  queueMemberships      QueueMember[]
+  assignedConversations Conversation[] @relation("ConversationAssignee")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -465,6 +469,17 @@ model Conversation {
   leadId    String  @unique
   tenantId  String
   botActive Boolean @default(true)
+
+  // Fase do atendimento. BOT = agente de IA respondendo; QUEUE = na fila
+  // esperando um humano; HUMAN = atendente conduzindo; CLOSED = encerrada.
+  phase         String    @default("BOT")
+  queueId       String?
+  queuedAt      DateTime?
+  handoffReason String?
+  assignedToId  String?
+  assignedAt    DateTime?
+  closedAt      DateTime?
+  closedById    String?
 
   // Ordenação e não-lidas do inbox. lastMessageAt existe separado de
   // updatedAt porque updatedAt muda a cada toggle do bot, o que reordenaria
@@ -480,11 +495,15 @@ model Conversation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  lead     Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  messages Message[]
+  lead       Lead                @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tenant     Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  messages   Message[]
+  queue      ServiceQueue?       @relation(fields: [queueId], references: [id], onDelete: SetNull)
+  assignedTo User?               @relation("ConversationAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  events     ConversationEvent[]
 
   @@index([tenantId, lastMessageAt])
+  @@index([tenantId, phase, queuedAt])
 }
 
 model Message {
@@ -929,4 +948,61 @@ model Faq {
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
+}
+
+// Fila de atendimento humano. Um tenant pode ter várias (Vendas, Suporte…);
+// a conversa entra numa fila quando o agente de IA transfere.
+model ServiceQueue {
+  id          String  @id @default(uuid())
+  tenantId    String
+  name        String
+  description String?
+  color       String? @default("#2563EB")
+  order       Int     @default(0)
+  active      Boolean @default(true)
+  isDefault   Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  members       QueueMember[]
+  conversations Conversation[]
+
+  @@index([tenantId, active])
+}
+
+// Quem atende cada fila.
+model QueueMember {
+  id      String @id @default(uuid())
+  queueId String
+  userId  String
+
+  createdAt DateTime @default(now())
+
+  queue ServiceQueue @relation(fields: [queueId], references: [id], onDelete: Cascade)
+  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([queueId, userId])
+}
+
+// Linha do tempo do atendimento: entrou na fila, foi assumido, transferido,
+// devolvido à IA, encerrado. É o que permite auditar e mostrar o histórico
+// na conversa sem depender de mensagens de texto.
+model ConversationEvent {
+  id             String  @id @default(uuid())
+  conversationId String
+  tenantId       String
+  type           String // QUEUED | ASSIGNED | TRANSFERRED | RETURNED_TO_BOT | CLOSED | REOPENED
+  fromPhase      String?
+  toPhase        String?
+  actorUserId    String?
+  actorName      String?
+  note           String?
+
+  createdAt DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
 }

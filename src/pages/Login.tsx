@@ -40,6 +40,9 @@ export default function Login() {
       if (res.ok) {
         localStorage.setItem("token", data.token);
         localStorage.setItem("userRole", data.user.role);
+        // Guardado para a fila de atendimento saber quem é "eu" no inbox.
+        localStorage.setItem("userId", data.user.id);
+        localStorage.setItem("userName", data.user.name || "");
         if (data.tenant) {
           localStorage.setItem("tenantId", data.tenant.id);
           localStorage.setItem("userPlan", data.tenant.planId);
