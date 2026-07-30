@@ -1,6 +1,11 @@
 # Dockerfile para o Backend Express (server.js) em Produção
 FROM node:20-slim
 
+# Fuso do negócio: sem isso o container roda em UTC e agendamentos ficam
+# 3h deslocados do horário que o cliente escolheu.
+ENV TZ=America/Sao_Paulo
+
+
 # Instala bibliotecas necessárias para o Chromium (usado pelo Baileys/WhatsApp) e OpenSSL no Debian
 RUN apt-get update && apt-get install -y \
     chromium \
@@ -20,6 +25,7 @@ RUN apt-get update && apt-get install -y \
     libgtk-3-0 \
     openssl \
     ffmpeg \
+    tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \

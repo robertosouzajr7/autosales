@@ -338,13 +338,26 @@ export class MetaManager {
      * Dispara um template. É o único jeito de iniciar conversa fora da janela
      * de 24h. `variables` preenche os {{1}}, {{2}}… do corpo, na ordem.
      */
-    static async sendTemplate(phoneId, accessToken, to, { name, language = 'pt_BR', variables = [], headerMediaUrl = null }) {
+    static async sendTemplate(phoneId, accessToken, to, { name, language = 'pt_BR', variables = [], headerMediaUrl = null, headerType = 'IMAGE' }) {
         const components = [];
         if (headerMediaUrl) {
-            components.push({
-                type: 'header',
-                parameters: [{ type: 'image', image: { link: headerMediaUrl } }],
-            });
+            // A Meta busca o arquivo por HTTP, então precisa de URL absoluta —
+            // guardamos as mídias como caminho relativo (/api/uploads/…).
+            const base = (process.env.PUBLIC_URL || '').replace(/\/$/, '');
+            const link = /^https?:\/\//i.test(headerMediaUrl)
+                ? headerMediaUrl
+                : base ? `${base}${headerMediaUrl.startsWith('/') ? '' : '/'}${headerMediaUrl}` : null;
+
+            if (!link) {
+                console.warn('[Meta API] PUBLIC_URL não configurado — cabeçalho de mídia não pode ser enviado.');
+            } else {
+                const kind = String(headerType).toLowerCase();
+                const param =
+                    kind === 'video' ? { type: 'video', video: { link } }
+                    : kind === 'document' ? { type: 'document', document: { link } }
+                    : { type: 'image', image: { link } };
+                components.push({ type: 'header', parameters: [param] });
+            }
         }
         if (variables.length) {
             components.push({

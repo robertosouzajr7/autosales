@@ -43,7 +43,7 @@ export function pickAgentForAccount(agents, accountId) {
 
 // Traduz skills (ids amigáveis) em nomes de tools que o modelo entende.
 const SKILL_TO_TOOLS = {
-  schedule: ["create_appointment", "get_availability"],
+  schedule: ["create_appointment", "get_availability", "send_booking_link"],
   qualify: [], // comportamento de persona, sem tool
   send_catalog: ["list_catalog", "send_catalog_item"],
   move_pipeline: ["move_lead_stage"],
@@ -1258,10 +1258,27 @@ class AutomationEngine {
             type: "object",
             properties: {
               title: { type: "string", description: "Título do agendamento" },
-              iso_date: { type: "string", description: "Data e hora em ISO 8601" }
+              iso_date: {
+                type: "string",
+                description:
+                  "Data e hora em ISO 8601 COM o fuso de Brasília, ex.: 2026-08-10T14:00:00-03:00. " +
+                  "Use o horário que o cliente escolheu, no fuso local dele.",
+              }
             },
             required: ["title", "iso_date"]
           }
+        },
+        {
+          name: "send_booking_link",
+          description:
+            "Envia ao cliente o link da página de agendamento, onde ele mesmo escolhe o horário. " +
+            "Use quando o cliente pedir o link, preferir escolher sozinho, ou quando houver muitos horários para listar no chat.",
+          parameters: {
+            type: "object",
+            properties: {
+              message: { type: "string", description: "Frase curta que acompanha o link (opcional)" },
+            },
+          },
         },
         {
           name: "move_lead_stage",
@@ -1407,7 +1424,16 @@ class AutomationEngine {
           const booked = await CalendarService.createAppointment(
             lead.tenantId, lead, args.iso_date, args.title || "Consulta"
           );
-          return { success: true, ...booked };
+          // Devolve o horário COMO FOI GRAVADO, no fuso do negócio: assim a IA
+          // confirma ao cliente exatamente o que ficou na agenda.
+          const gravado = booked?.date ? new Date(booked.date) : null;
+          return {
+            success: true,
+            ...booked,
+            confirmado_em: gravado
+              ? gravado.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" })
+              : null,
+          };
         } catch (e) {
           if (e.code === "SLOT_CONFLICT") {
             // Devolve alternativas para a IA reofertar, sem inventar horário.
@@ -1421,6 +1447,20 @@ class AutomationEngine {
           }
           return { success: false, error: e.message };
         }
+      }
+      case "send_booking_link": {
+        const base = (process.env.PUBLIC_URL || "").replace(/\/$/, "");
+        if (!base) {
+          return { success: false, error: "PUBLIC_URL não configurado no servidor — não é possível montar o link." };
+        }
+        const link = `${base}/b/${lead.tenantId}`;
+        const texto = `${args.message ? `${args.message}\n\n` : ""}${link}`;
+        const enviado = lead.phone
+          ? await MessagingService.sendText(lead.tenantId, lead.phone, texto)
+          : false;
+        return enviado
+          ? { success: true, link, note: "Link enviado ao cliente. Não repita o link em texto." }
+          : { success: false, error: "Não foi possível enviar o link neste canal.", link };
       }
       case "move_lead_stage": {
         const stage = await prisma.pipelineStage.findFirst({ where: { name: { contains: args.stage_name }, tenantId: lead.tenantId } });

@@ -273,6 +273,21 @@ class VoiceService {
   }
 
   /**
+   * Converte um buffer de áudio para OGG/Opus e devolve a URL servível.
+   * O navegador grava em WebM, que o WhatsApp não aceita como nota de voz.
+   */
+  async bufferToOpus(buffer, extensaoOrigem = "webm") {
+    if (!fs.existsSync(AUDIO_DIR)) fs.mkdirSync(AUDIO_DIR, { recursive: true });
+    const base = `rec_${crypto.randomBytes(6).toString("hex")}`;
+    const ext = String(extensaoOrigem).replace(/[^a-z0-9]/gi, "") || "webm";
+    const srcPath = path.join(AUDIO_DIR, `${base}.${ext}`);
+    fs.writeFileSync(srcPath, buffer);
+    const url = await this._toOpus(srcPath, base);
+    // _toOpus devolve o original quando o ffmpeg falha; avisa quem chamou.
+    return { url, opus: url.endsWith(".ogg") };
+  }
+
+  /**
    * Converte um arquivo de áudio para OGG/Opus (formato da nota de voz do
    * WhatsApp). Devolve a URL canônica; mantém o original se o ffmpeg falhar.
    */

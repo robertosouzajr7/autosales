@@ -6,6 +6,44 @@ const BUSINESS_START_HOUR = 9;
 const BUSINESS_END_HOUR = 18;
 const TIMEZONE = "America/Sao_Paulo";
 
+/**
+ * Interpreta a data recebida da IA. Quando a string NÃO traz fuso ("2026-08-10
+ * T14:00"), o Node assume o fuso do servidor — que em container é UTC. O
+ * resultado era um agendamento 3h deslocado do que o cliente escolheu.
+ * Aqui uma data sem fuso é tratada como horário do negócio.
+ */
+export function parseBusinessDate(valor) {
+  if (valor instanceof Date) return valor;
+  const bruto = String(valor || "").trim();
+  if (!bruto) return new Date(NaN);
+
+  const temFuso = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(bruto);
+  if (temFuso) return new Date(bruto);
+
+  // Sem fuso: adiciona o deslocamento vigente do fuso do negócio.
+  const normalizado = bruto.replace(" ", "T");
+  const offset = offsetDoNegocio(new Date(normalizado + "Z"));
+  return new Date(`${normalizado}${offset}`);
+}
+
+/** Deslocamento do fuso do negócio na data dada (ex.: "-03:00"). */
+function offsetDoNegocio(referencia) {
+  const base = isNaN(referencia?.getTime?.()) ? new Date() : referencia;
+  // Compara o mesmo instante formatado no fuso alvo com o UTC.
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: TIMEZONE, hour12: false,
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+  const p = {};
+  for (const { type, value } of fmt.formatToParts(base)) p[type] = value;
+  const comoUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second);
+  const minutos = Math.round((comoUtc - base.getTime()) / 60000);
+  const sinal = minutos >= 0 ? "+" : "-";
+  const abs = Math.abs(minutos);
+  return `${sinal}${String(Math.floor(abs / 60)).padStart(2, "0")}:${String(abs % 60).padStart(2, "0")}`;
+}
+
 // Erro tipado para o caller (IA/UI) distinguir conflito de falha genérica.
 export class SlotConflictError extends Error {
   constructor(message = "Horário indisponível") {
@@ -106,7 +144,8 @@ class CalendarService {
    * o horário colidir com Google ou com um Appointment local existente.
    */
   async createAppointment(tenantId, lead, date, title = "Reunião - Agentes Virtuais") {
-    const start = new Date(date);
+    // parseBusinessDate: data sem fuso vinda da IA vale como horário do negócio.
+    const start = parseBusinessDate(date);
     if (isNaN(start.getTime())) throw new Error("Data inválida");
     const end = new Date(start.getTime() + SLOT_MINUTES * 60000);
 

@@ -401,35 +401,39 @@ export default function Conversations() {
 
   const sendAudio = async () => {
     if (!audioBlob || !selectedChat) return;
-    
-    // Convert blob to base64 to send via JSON
-    const reader = new FileReader();
-    reader.readAsDataURL(audioBlob);
-    reader.onloadend = async () => {
-      const base64Audio = reader.result as string;
+    const token = localStorage.getItem("token");
+    try {
+      // Sobe o arquivo e deixa o servidor converter para OGG/Opus. Antes isso
+      // ia como data-URL base64 no corpo JSON e sem token: nunca chegava.
+      const fd = new FormData();
+      fd.append("file", audioBlob, "gravacao.webm");
+      const up = await fetch("/api/messages/upload", {
+        method: "POST", headers: { Authorization: `Bearer ${token}` }, body: fd,
+      });
+      const upData = await up.json().catch(() => ({}));
+      if (!up.ok || !upData.url) throw new Error(upData.error || "Falha ao subir o áudio");
 
-      try {
-        const res = await fetch("/api/messages", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            leadId: selectedChat.id, 
-            content: base64Audio, 
-            role: "SDR",
-            messageType: "AUDIO" 
-          })
-        });
-        
-        if (res.ok) {
-          fetchMessages(selectedChat.id);
-          setAudioBlob(null);
-          setAudioUrl(null);
-          toast({ title: "🎙️ Áudio enviado com sucesso!" });
-        }
-      } catch (e) {
-        toast({ title: "Erro ao enviar áudio", variant: "destructive" });
-      }
-    };
+      const res = await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          leadId: selectedChat.id,
+          content: "🎙️ Áudio",
+          mediaUrl: upData.url,
+          role: "SDR",
+          messageType: "AUDIO",
+        }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || "Falha ao enviar o áudio");
+
+      fetchMessages(selectedChat.id);
+      setAudioBlob(null);
+      setAudioUrl(null);
+      toast({ title: "🎙️ Áudio enviado" });
+    } catch (e: any) {
+      toast({ title: e.message || "Erro ao enviar áudio", variant: "destructive" });
+    }
   };
 
   useEffect(() => {

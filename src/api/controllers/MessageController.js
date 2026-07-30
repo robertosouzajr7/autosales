@@ -1,6 +1,7 @@
 import prisma from "../config/prisma.js";
 import { touchConversation, markConversationRead, isWindowOpen, windowMinutesLeft } from "../services/ConversationService.js";
 import { contactHandle } from "../services/ContactIdentity.js";
+import { countVariables } from "./TemplateController.js";
 import MessagingService from "../services/MessagingService.js";
 import { EventEmitter } from "events";
 import { messagesHeadroom } from "../middlewares/planLimits.js";
@@ -337,11 +338,37 @@ export const sendTemplateToLead = async (req, res) => {
       accounts.find((a) => a.phoneId && a.accessToken);
     if (!sender) return res.status(400).json({ error: "Nenhuma conexão oficial disponível para enviar template." });
 
+    // A Meta exige EXATAMENTE o número de parâmetros que o template declara.
+    // Mandar um a mais (ou a menos) derruba o envio com #132000.
+    const esperados = countVariables(template.content);
+    let vars = [];
+    if (esperados > 0) {
+      vars = Array.from({ length: esperados }, (_, i) => {
+        const informado = variables[i];
+        if (informado !== undefined && informado !== null && String(informado).trim()) {
+          return String(informado);
+        }
+        // {{1}} sem valor assume o nome do contato, que é o uso mais comum.
+        return i === 0 ? lead.name || "" : "";
+      });
+      const faltando = vars.findIndex((v) => !v);
+      if (faltando >= 0) {
+        return res.status(400).json({
+          error: `Este template usa ${esperados} variável(is). Informe o valor de {{${faltando + 1}}}.`,
+          variableCount: esperados,
+        });
+      }
+    }
+
     const { MetaManager } = await import("../../../meta.js");
     const result = await MetaManager.sendTemplate(sender.phoneId, sender.accessToken, lead.phone, {
       name: template.name,
       language: template.language,
-      variables: variables.length ? variables : [lead.name],
+      variables: vars,
+      // Cabeçalho de mídia precisa do arquivo no envio: o handle da aprovação
+      // não serve aqui, por isso guardamos a cópia em mediaUrl.
+      headerMediaUrl: template.headerType && template.headerType !== "TEXT" ? template.mediaUrl : null,
+      headerType: template.headerType || "IMAGE",
     });
     if (!result.ok) return res.status(502).json({ error: result.error || "Falha ao enviar o template." });
 
@@ -352,7 +379,6 @@ export const sendTemplateToLead = async (req, res) => {
 
     // Guarda o texto já com as variáveis aplicadas, para o histórico mostrar
     // o que o cliente realmente recebeu.
-    const vars = variables.length ? variables : [lead.name];
     const rendered = String(template.content || "").replace(/\{\{(\d+)\}\}/g, (_, n) => vars[Number(n) - 1] ?? "");
 
     const message = await prisma.message.create({
@@ -384,6 +410,8 @@ export const uploadAttachment = async (req, res) => {
     "image/jpeg", "image/png", "image/webp", "image/gif",
     "video/mp4", "video/3gpp",
     "audio/ogg", "audio/mpeg", "audio/mp4", "audio/aac",
+    // Gravação do navegador: convertida para OGG/Opus antes de sair.
+    "audio/webm", "audio/webm;codecs=opus", "audio/wav", "audio/x-wav",
     "application/pdf",
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -401,13 +429,23 @@ export const uploadAttachment = async (req, res) => {
       return res.status(400).json({ error: `Formato não suportado pelo WhatsApp: ${mime}` });
     }
 
+    const ext = (req.file.originalname?.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+    // Áudio precisa sair em OGG/Opus, senão o WhatsApp mostra como arquivo.
+    if (mime.startsWith("audio/")) {
+      const { default: VoiceService } = await import("../services/VoiceService.js");
+      const { url, opus } = await VoiceService.bufferToOpus(req.file.buffer, ext);
+      if (!opus) {
+        return res.status(500).json({ error: "Não foi possível converter o áudio para o formato do WhatsApp." });
+      }
+      return res.json({ url, kind: "AUDIO", name: req.file.originalname || "audio.ogg" });
+    }
+
     const { saveMedia } = await import("../services/StorageService.js");
-    const ext = (req.file.originalname.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "");
     const url = await saveMedia(req.file.buffer, ext, mime, req.tenantId, `${req.protocol}://${req.get("host")}`);
 
     const kind = mime.startsWith("image/") ? "IMAGE"
-      : mime.startsWith("video/") ? "VIDEO"
-      : mime.startsWith("audio/") ? "AUDIO" : "DOCUMENT";
+      : mime.startsWith("video/") ? "VIDEO" : "DOCUMENT";
 
     res.json({ url, kind, name: req.file.originalname });
   } catch (e) {
