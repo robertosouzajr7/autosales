@@ -2323,7 +2323,10 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
       // A. Check Plan Monthly Research Limit
       if (tenant?.plan) {
         if (!tenant.plan.enableResearch) {
-          console.log(`[Enrichment] 🛑 Recurso de Deep Research desabilitado no plano para o tenant ${lead.tenantId}`);
+          console.log(`[Enrichment] 🛑 Deep Research desabilitado no plano do tenant ${lead.tenantId}. Baixando a flag do lead ${lead.id} para não reprocessar.`);
+          // Sem limpar isToEnrich o lead volta a cada ciclo do cron e o log
+          // enche de tentativas que nunca vão passar.
+          await prisma.lead.update({ where: { id: lead.id }, data: { isToEnrich: false } }).catch(() => {});
           return;
         }
         if (tenant.usedResearch >= tenant.plan.maxResearch) {

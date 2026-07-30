@@ -311,8 +311,12 @@ export class MetaManager {
             return { id: data?.id, status: data?.status || 'PENDING', category: data?.category };
         } catch (e) {
             const error = e.response?.data?.error;
-            console.error('[Meta API] Erro ao criar template:', error?.message || e.message);
-            return { error: error?.error_user_msg || error?.message || e.message };
+            // "Invalid parameter" é genérico; o motivo real vem em
+            // error_data.details, que é o que interessa para corrigir.
+            const detalhe = error?.error_data?.details || error?.error_user_msg || error?.error_user_title;
+            const msg = detalhe ? `${error?.message}: ${detalhe}` : (error?.message || e.message);
+            console.error('[Meta API] Erro ao criar template:', msg);
+            return { error: msg };
         }
     }
 

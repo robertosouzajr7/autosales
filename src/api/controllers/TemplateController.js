@@ -21,12 +21,24 @@ async function resolveWabaAccount(tenantId, accountId = null) {
   return usable[0] || null;
 }
 
+// Valores de amostra para os {{n}}. A Meta usa só para revisar o template —
+// no envio real cada variável recebe o valor de verdade.
+const EXEMPLOS_VARIAVEL = ["Maria", "10/08 às 14h", "R$ 150,00", "Pedido 1234", "Centro"];
+
 /** Monta o array `components` da Meta a partir dos campos do formulário. */
 export function buildComponents({ headerType, headerText, content, footerText, buttons, headerHandle }) {
   const components = [];
 
   if (headerType === "TEXT" && headerText) {
-    components.push({ type: "HEADER", format: "TEXT", text: headerText });
+    const header = { type: "HEADER", format: "TEXT", text: headerText };
+    // Variável no cabeçalho também exige exemplo (aqui é array simples).
+    const varsHeader = countVariables(headerText);
+    if (varsHeader > 0) {
+      header.example = {
+        header_text: Array.from({ length: varsHeader }, (_, i) => EXEMPLOS_VARIAVEL[i] || `exemplo${i + 1}`),
+      };
+    }
+    components.push(header);
   } else if (headerType && headerType !== "TEXT") {
     // Cabeçalho de mídia exige um exemplo: a Meta valida o template com um
     // arquivo de amostra, cujo handle vem da Resumable Upload API. Sem o
@@ -36,7 +48,16 @@ export function buildComponents({ headerType, headerText, content, footerText, b
     components.push(header);
   }
 
-  components.push({ type: "BODY", text: content });
+  // A Meta exige um exemplo para CADA variável do corpo — sem isso a criação
+  // volta como "Invalid parameter". body_text é array de arrays: um conjunto
+  // de valores por exemplo.
+  const body = { type: "BODY", text: content };
+  const totalVars = countVariables(content);
+  if (totalVars > 0) {
+    const exemplos = Array.from({ length: totalVars }, (_, i) => EXEMPLOS_VARIAVEL[i] || `exemplo${i + 1}`);
+    body.example = { body_text: [exemplos] };
+  }
+  components.push(body);
 
   if (footerText) components.push({ type: "FOOTER", text: footerText });
 
