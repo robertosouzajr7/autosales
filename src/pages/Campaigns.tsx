@@ -12,8 +12,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Megaphone, Plus, Play, Pause, Trash2, AlertTriangle, CheckCircle2, Clock, Users, Info, ArrowUpRight,
+  BarChart3, Download, XCircle,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { AudiencePicker } from "@/components/campaigns/AudiencePicker";
 
 const brl = (v: number) =>
   (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -30,12 +32,15 @@ export default function Campaigns() {
   const navigate = useNavigate();
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
-  const [stages, setStages] = useState<any[]>([]);
   const [connections, setConnections] = useState<any[]>([]);
   const [quota, setQuota] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", templateId: "", stageId: "", accountId: "" });
+  const [form, setForm] = useState({ name: "", templateId: "", accountId: "" });
+  // Seleção explícita de contatos; substitui o filtro por etapa do funil.
+  const [leadIds, setLeadIds] = useState<string[]>([]);
+  const [report, setReport] = useState<any>(null);
+  const [reportOpen, setReportOpen] = useState(false);
   const [preview, setPreview] = useState<any>(null);
   const [previewErro, setPreviewErro] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -44,10 +49,9 @@ export default function Campaigns() {
 
   const load = async () => {
     try {
-      const [cRes, tRes, sRes, connRes, qRes] = await Promise.all([
+      const [cRes, tRes, connRes, qRes] = await Promise.all([
         fetch("/api/campaigns", { headers: auth() }),
         fetch("/api/templates", { headers: auth() }),
-        fetch("/api/pipeline-stages", { headers: auth() }),
         fetch("/api/whatsapp/accounts", { headers: auth() }),
         fetch("/api/campaigns/quota", { headers: auth() }),
       ]);
@@ -55,7 +59,6 @@ export default function Campaigns() {
       const tpls = tRes.ok ? await tRes.json() : [];
       // Só template aprovado pode ser disparado.
       setTemplates(tpls.filter((t: any) => t.status === "APPROVED"));
-      setStages(sRes.ok ? await sRes.json() : []);
       const conns = connRes.ok ? await connRes.json() : [];
       setConnections(conns.filter((c: any) => c.mode === "CLOUD"));
       setQuota(qRes.ok ? await qRes.json() : null);
@@ -75,7 +78,7 @@ export default function Campaigns() {
     return () => clearInterval(t);
   }, [campaigns]);
 
-  const runPreview = async (patch: any = {}) => {
+  const runPreview = async (patch: any = {}, ids: string[] = leadIds) => {
     const next = { ...form, ...patch };
     setForm(next);
     if (!next.templateId) { setPreview(null); setPreviewErro(null); return; }
@@ -84,7 +87,7 @@ export default function Campaigns() {
       const res = await fetch("/api/campaigns/preview", {
         method: "POST",
         headers: { ...auth(), "Content-Type": "application/json" },
-        body: JSON.stringify({ templateId: next.templateId, stageId: next.stageId || undefined }),
+        body: JSON.stringify({ templateId: next.templateId, leadIds: ids.length ? ids : undefined }),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -112,7 +115,7 @@ export default function Campaigns() {
         body: JSON.stringify({
           name: form.name,
           templateId: form.templateId,
-          stageId: form.stageId || undefined,
+          leadIds,
           accountId: form.accountId || undefined,
         }),
       });
@@ -120,7 +123,8 @@ export default function Campaigns() {
       if (!res.ok) throw new Error(d.error);
       toast({ title: "Campanha criada. Revise e dispare quando quiser." });
       setModalOpen(false);
-      setForm({ name: "", templateId: "", stageId: "", accountId: "" });
+      setForm({ name: "", templateId: "", accountId: "" });
+      setLeadIds([]);
       setPreview(null);
       load();
     } catch (e: any) {
@@ -147,6 +151,28 @@ export default function Campaigns() {
     else toast({ title: d.error || "Erro ao remover", variant: "destructive" });
   };
 
+  const abrirRelatorio = async (c: any) => {
+    try {
+      const res = await fetch(`/api/campaigns/${c.id}/report`, { headers: auth() });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      setReport(d);
+      setReportOpen(true);
+    } catch (e: any) {
+      toast({ title: e.message || "Não foi possível abrir o relatório", variant: "destructive" });
+    }
+  };
+
+  const baixarCsv = async (id: string) => {
+    const res = await fetch(`/api/campaigns/${id}/report?formato=csv`, { headers: auth() });
+    if (!res.ok) return toast({ title: "Falha ao gerar o CSV", variant: "destructive" });
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "relatorio-disparo.csv"; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const semFranquia = quota && quota.limit <= 0;
 
   // Por que o botão de criar está bloqueado. Botão desabilitado sem motivo
@@ -158,6 +184,7 @@ export default function Campaigns() {
         ? "Você ainda não tem template aprovado pela Meta. Crie um em Templates."
         : "Escolha o template que será disparado.";
     }
+    if (leadIds.length === 0) return "Selecione ao menos um contato.";
     if (previewErro) return previewErro;
     if (!preview) return "Calculando a projeção…";
     if (!preview.approved) return "Este template ainda não foi aprovado pela Meta.";
@@ -300,6 +327,12 @@ export default function Campaigns() {
                           <Pause className="w-3.5 h-3.5 mr-1" /> Pausar
                         </Button>
                       )}
+                      {c.status !== "DRAFT" && (
+                        <Button size="sm" variant="outline" onClick={() => abrirRelatorio(c)}
+                          className="rounded-2xl font-bold" title="Relatório do disparo">
+                          <BarChart3 className="w-3.5 h-3.5 mr-1" /> Relatório
+                        </Button>
+                      )}
                       {c.status !== "RUNNING" && (
                         <Button size="sm" variant="ghost" onClick={() => remove(c)} className="rounded-xl text-red-500">
                           <Trash2 className="w-4 h-4" />
@@ -314,8 +347,80 @@ export default function Campaigns() {
         </div>
       )}
 
+      {/* Relatório do disparo */}
+      <Dialog open={reportOpen} onOpenChange={setReportOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="font-bold">Relatório do disparo</DialogTitle>
+            <DialogDescription>{report?.campanha?.name}</DialogDescription>
+          </DialogHeader>
+
+          {report && (
+            <div className="space-y-5 py-2">
+              <div className="grid grid-cols-4 gap-3">
+                {[
+                  ["Total", report.resumo.total, "text-slate-700"],
+                  ["Enviados", report.resumo.enviados, "text-emerald-600"],
+                  ["Falhas", report.resumo.falhas, "text-red-500"],
+                  ["Sucesso", `${report.resumo.taxaSucesso}%`, "text-[#2563EB]"],
+                ].map(([rotulo, valor, cor]) => (
+                  <div key={String(rotulo)} className="rounded-2xl bg-slate-50 p-3 text-center">
+                    <p className="text-[11px] font-bold text-slate-400 uppercase">{rotulo}</p>
+                    <p className={`text-xl font-bold ${cor}`}>{valor}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
+                <span>
+                  Template: <strong>{report.campanha.template}</strong> · {report.campanha.categoria}
+                  {" · "}Custo estimado: <strong>{brl(report.campanha.custoEstimado)}</strong>
+                </span>
+                <Button size="sm" variant="outline" onClick={() => baixarCsv(report.campanha.id)}
+                  className="rounded-2xl font-bold">
+                  <Download className="w-3.5 h-3.5 mr-1" /> CSV
+                </Button>
+              </div>
+
+              {report.errosAgrupados?.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-bold text-slate-500 uppercase">Falhas por motivo</p>
+                  {report.errosAgrupados.map((e: any, i: number) => (
+                    <div key={i} className="flex gap-3 items-start rounded-2xl bg-red-50 p-3">
+                      <span className="font-bold text-red-600 text-sm shrink-0">{e.qtd}x</span>
+                      <span className="text-xs text-red-800 flex-1">{e.motivo}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <p className="text-xs font-bold text-slate-500 uppercase">Destinatários</p>
+                <div className="border border-slate-100 rounded-2xl divide-y divide-slate-50 max-h-64 overflow-y-auto">
+                  {report.destinatarios.map((d: any) => (
+                    <div key={d.id} className="flex items-center gap-3 px-4 py-2">
+                      {d.status === "SENT"
+                        ? <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                        : d.status === "FAILED"
+                        ? <XCircle className="w-4 h-4 text-red-500 shrink-0" />
+                        : <Clock className="w-4 h-4 text-slate-300 shrink-0" />}
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-sm font-bold text-slate-700 truncate">{d.name || d.phone}</span>
+                        <span className="block text-[11px] text-slate-400 truncate">
+                          {d.phone}{d.error ? ` · ${d.error}` : ""}
+                        </span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-lg rounded-3xl">
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl">
           <DialogHeader>
             <DialogTitle className="font-bold">Nova campanha</DialogTitle>
             <DialogDescription>
@@ -347,17 +452,11 @@ export default function Campaigns() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs font-bold text-slate-500">Público</Label>
-              <Select value={form.stageId || "ALL"} onValueChange={(v) => runPreview({ stageId: v === "ALL" ? "" : v })}>
-                <SelectTrigger className="rounded-2xl bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL" className="font-bold">Todos os contatos</SelectItem>
-                  {stages.map((s) => (
-                    <SelectItem key={s.id} value={s.id} className="font-bold">Etapa: {s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-[11px] text-slate-400">Contatos que pediram descadastro são excluídos automaticamente.</p>
+              <Label className="text-xs font-bold text-slate-500">Contatos que vão receber</Label>
+              <AudiencePicker
+                value={leadIds}
+                onChange={(ids) => { setLeadIds(ids); runPreview({}, ids); }}
+              />
             </div>
 
             {connections.length > 1 && (
