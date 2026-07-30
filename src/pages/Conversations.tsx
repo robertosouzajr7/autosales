@@ -211,7 +211,7 @@ export default function Conversations() {
           id: c.leadId,
           conversationId: c.id,
           waAccountId: c.accountId,
-          conversations: [{ botActive: c.botActive }],
+          conversations: [{ id: c.id, botActive: c.botActive }],
         }))
       );
       setTemplates(tplData.filter((t: any) => t.status === "APPROVED"));
@@ -464,6 +464,22 @@ export default function Conversations() {
         // O servidor emite { conversationId, role, content, ... } ou nested { message: {...} }
         const message = msg.message || msg;
         const conversationId = message.conversationId || msg.conversationId;
+
+        // Mensagem DO CLIENTE reabre a janela de 24h. Sem atualizar aqui, a
+        // tela continuava mostrando "janela encerrada" mesmo depois de ele
+        // responder ao template, porque o estado vinha da carga inicial.
+        if (message.role === "USER") {
+          const alvoLeadId = message.leadId || null;
+          setChats((prev) => prev.map((c) => {
+            const daConversa = c.conversationId === conversationId || (alvoLeadId && c.id === alvoLeadId);
+            return daConversa ? { ...c, windowOpen: true, windowMinutesLeft: 24 * 60 } : c;
+          }));
+          setSelectedChat((sel: any) =>
+            sel && (sel.conversationId === conversationId || (alvoLeadId && sel.id === alvoLeadId))
+              ? { ...sel, windowOpen: true, windowMinutesLeft: 24 * 60 }
+              : sel
+          );
+        }
 
         // Atualiza mensagens se for o chat ativo
         const current = selectedChatRef.current;

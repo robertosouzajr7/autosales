@@ -1,5 +1,6 @@
 import prisma from "../config/prisma.js";
 import { MetaManager } from "../../../meta.js";
+import { normalizePhone } from "../services/ContactIdentity.js";
 import {
   estimateCampaign,
   checkCampaignQuota,
@@ -21,20 +22,30 @@ const SEND_INTERVAL_MS = Number(process.env.CAMPAIGN_SEND_INTERVAL_MS || 250);
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** Destinatários elegíveis: com telefone e sem opt-out (LGPD). */
-async function resolveRecipients(tenantId, { tagIds, stageId } = {}) {
-  const where = {
-    tenantId,
-    optedOut: false,
-    phone: { not: null },
-    ...(stageId ? { stageId } : {}),
-    ...(Array.isArray(tagIds) && tagIds.length ? { tags: { some: { id: { in: tagIds } } } } : {}),
-  };
+/**
+ * Destinatários elegíveis: telefone VÁLIDO e sem opt-out (LGPD).
+ * `leadIds` tem prioridade — é a seleção explícita feita na tela.
+ */
+async function resolveRecipients(tenantId, { tagIds, stageId, leadIds } = {}) {
+  const where = Array.isArray(leadIds) && leadIds.length
+    ? { tenantId, optedOut: false, id: { in: leadIds } }
+    : {
+        tenantId,
+        optedOut: false,
+        phone: { not: null },
+        ...(stageId ? { stageId } : {}),
+        ...(Array.isArray(tagIds) && tagIds.length ? { tags: { some: { id: { in: tagIds } } } } : {}),
+      };
+
   const leads = await prisma.lead.findMany({
     where,
     select: { id: true, name: true, phone: true },
   });
-  return leads.filter((l) => l.phone && l.phone.trim());
+  // normalizePhone é a mesma regra do resto do sistema: telefone que não passa
+  // aqui seria recusado pela Meta de qualquer forma.
+  return leads
+    .map((l) => ({ ...l, phone: normalizePhone(l.phone) }))
+    .filter((l) => !!l.phone);
 }
 
 /**
@@ -67,13 +78,13 @@ async function resolveSender(tenantId, accountId = null) {
  */
 export const previewCampaign = async (req, res) => {
   try {
-    const { templateId, tagIds, stageId } = req.body;
+    const { templateId, tagIds, stageId, leadIds } = req.body;
     const template = await prisma.messageTemplate.findFirst({
       where: { id: templateId, tenantId: req.tenantId },
     });
     if (!template) return res.status(404).json({ error: "Template não encontrado." });
 
-    const recipients = await resolveRecipients(req.tenantId, { tagIds, stageId });
+    const recipients = await resolveRecipients(req.tenantId, { tagIds, stageId, leadIds });
     const estimate = await estimateCampaign(recipients.length, template.category);
     const quota = await checkCampaignQuota(req.tenantId, recipients.length);
     // Só investiga quando deu zero — evita 4 counts a cada digitação.
@@ -113,7 +124,7 @@ export const listCampaigns = async (req, res) => {
 /** Cria a campanha já com a projeção congelada. */
 export const createCampaign = async (req, res) => {
   try {
-    const { name, templateId, tagIds, stageId, accountId, variables, scheduledAt } = req.body;
+    const { name, templateId, tagIds, stageId, accountId, variables, scheduledAt, leadIds } = req.body;
     if (!name || !templateId) return res.status(400).json({ error: "Nome e template são obrigatórios." });
 
     const template = await prisma.messageTemplate.findFirst({
@@ -124,7 +135,7 @@ export const createCampaign = async (req, res) => {
       return res.status(400).json({ error: "Só é possível disparar template aprovado pela Meta." });
     }
 
-    const recipients = await resolveRecipients(req.tenantId, { tagIds, stageId });
+    const recipients = await resolveRecipients(req.tenantId, { tagIds, stageId, leadIds });
     if (recipients.length === 0) return res.status(400).json({ error: "Nenhum destinatário elegível." });
 
     const quota = await checkCampaignQuota(req.tenantId, recipients.length);
@@ -139,6 +150,7 @@ export const createCampaign = async (req, res) => {
         templateId,
         accountId: accountId || null,
         targetTagIds: Array.isArray(tagIds) && tagIds.length ? JSON.stringify(tagIds) : null,
+        targetLeadIds: Array.isArray(leadIds) && leadIds.length ? JSON.stringify(leadIds) : null,
         variables: variables ? JSON.stringify(variables) : null,
         recipientCount: recipients.length,
         estimatedCost: estimate.priceBrl,
@@ -173,17 +185,35 @@ export const startCampaign = async (req, res) => {
     if (!sender) return res.status(400).json({ error: "Nenhuma conexão oficial disponível para o disparo." });
 
     let tagIds = [];
+    let leadIds = [];
     try { tagIds = campaign.targetTagIds ? JSON.parse(campaign.targetTagIds) : []; } catch { tagIds = []; }
-    const recipients = await resolveRecipients(req.tenantId, { tagIds });
+    try { leadIds = campaign.targetLeadIds ? JSON.parse(campaign.targetLeadIds) : []; } catch { leadIds = []; }
+    const recipients = await resolveRecipients(req.tenantId, { tagIds, leadIds });
     if (recipients.length === 0) return res.status(400).json({ error: "Nenhum destinatário elegível." });
 
     // Revalida a franquia: o público pode ter crescido desde a criação.
     const quota = await checkCampaignQuota(req.tenantId, recipients.length);
     if (!quota.allowed) return res.status(403).json({ error: quota.reason, quota });
 
+    // Recria a lista de destinatários: é a base do relatório final e permite
+    // dizer QUEM recebeu, não só quantos.
+    await prisma.campaignRecipient.deleteMany({ where: { campaignId: campaign.id } });
+    await prisma.campaignRecipient.createMany({
+      data: recipients.map((l) => ({
+        campaignId: campaign.id,
+        leadId: l.id,
+        name: l.name || null,
+        phone: l.phone,
+        status: "PENDING",
+      })),
+    });
+
     await prisma.campaign.update({
       where: { id: campaign.id },
-      data: { status: "RUNNING", startedAt: new Date(), sentCount: 0, errorCount: 0, errorLog: null },
+      data: {
+        status: "RUNNING", startedAt: new Date(), sentCount: 0, errorCount: 0,
+        errorLog: null, finishedAt: null, recipientCount: recipients.length,
+      },
     });
 
     runCampaign(campaign, sender, recipients, req.tenantId).catch((e) =>
@@ -232,6 +262,17 @@ async function runCampaign(campaign, sender, recipients, tenantId) {
       failed++;
       if (errors.length < 20) errors.push(`${lead.phone}: ${result.error}`);
     }
+
+    // Resultado individual, para o relatório.
+    await prisma.campaignRecipient.updateMany({
+      where: { campaignId: campaign.id, leadId: lead.id },
+      data: {
+        status: result.ok ? "SENT" : "FAILED",
+        error: result.ok ? null : String(result.error || "").slice(0, 500),
+        messageId: result.messageId || null,
+        sentAt: new Date(),
+      },
+    }).catch(() => {});
 
     if (sent % 25 === 0 || failed % 25 === 0) {
       await prisma.campaign
@@ -295,6 +336,85 @@ export const getCampaignQuota = async (req, res) => {
   try {
     const quota = await checkCampaignQuota(req.tenantId, 0);
     res.json(quota);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Relatório do disparo: quem recebeu, quem falhou e por quê.
+ * `?formato=csv` devolve o arquivo para download.
+ */
+export const campaignReport = async (req, res) => {
+  try {
+    const campaign = await prisma.campaign.findFirst({
+      where: { id: req.params.id, tenantId: req.tenantId },
+      include: { template: { select: { name: true, category: true } } },
+    });
+    if (!campaign) return res.status(404).json({ error: "Campanha não encontrada." });
+
+    const destinatarios = await prisma.campaignRecipient.findMany({
+      where: { campaignId: campaign.id },
+      orderBy: [{ status: "asc" }, { name: "asc" }],
+    });
+
+    if (req.query.formato === "csv") {
+      const escapa = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+      const linhas = [
+        ["Nome", "Telefone", "Status", "Erro", "Enviado em"].join(","),
+        ...destinatarios.map((d) => [
+          escapa(d.name),
+          escapa(d.phone),
+          escapa(d.status === "SENT" ? "Enviado" : d.status === "FAILED" ? "Falhou" : "Pendente"),
+          escapa(d.error),
+          escapa(d.sentAt ? new Date(d.sentAt).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) : ""),
+        ].join(",")),
+      ];
+      const nomeArquivo = `disparo-${campaign.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.csv`;
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="${nomeArquivo}"`);
+      // BOM para o Excel abrir com acentuação correta.
+      return res.send("﻿" + linhas.join("\n"));
+    }
+
+    const enviados = destinatarios.filter((d) => d.status === "SENT").length;
+    const falhas = destinatarios.filter((d) => d.status === "FAILED").length;
+    const pendentes = destinatarios.filter((d) => d.status === "PENDING").length;
+
+    // Agrupa os erros: 200 falhas do mesmo motivo cabem em uma linha.
+    const porErro = {};
+    for (const d of destinatarios) {
+      if (d.status !== "FAILED") continue;
+      const chave = (d.error || "Erro não informado").slice(0, 160);
+      porErro[chave] = (porErro[chave] || 0) + 1;
+    }
+
+    res.json({
+      campanha: {
+        id: campaign.id,
+        name: campaign.name,
+        status: campaign.status,
+        template: campaign.template?.name,
+        categoria: campaign.template?.category,
+        custoEstimado: campaign.estimatedCost,
+        iniciadoEm: campaign.startedAt,
+        concluidoEm: campaign.finishedAt,
+      },
+      resumo: {
+        total: destinatarios.length,
+        enviados,
+        falhas,
+        pendentes,
+        taxaSucesso: destinatarios.length ? Math.round((enviados / destinatarios.length) * 100) : 0,
+      },
+      errosAgrupados: Object.entries(porErro)
+        .map(([motivo, qtd]) => ({ motivo, qtd }))
+        .sort((a, b) => b.qtd - a.qtd),
+      destinatarios: destinatarios.map((d) => ({
+        id: d.id, name: d.name, phone: d.phone, status: d.status,
+        error: d.error, sentAt: d.sentAt,
+      })),
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

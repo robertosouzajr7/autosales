@@ -183,7 +183,8 @@ model Campaign {
   templateId String
   template   MessageTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
-  targetTagIds String? // IDs das tags participantes (JSON string)
+  targetTagIds  String? // IDs das tags participantes (JSON string)
+  targetLeadIds String? // seleção explícita de contatos (JSON array de Lead.id)
 
   // Conexão que dispara e projeção congelada na criação — a tarifa pode
   // mudar depois, e o histórico precisa refletir o que foi cobrado.
@@ -204,8 +205,34 @@ model Campaign {
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  recipients CampaignRecipient[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/// Um registro por destinatário de campanha. Sem isso o disparo só tinha
+/// contadores agregados, e não havia como dizer QUEM recebeu e quem falhou.
+model CampaignRecipient {
+  id         String  @id @default(uuid())
+  campaignId String
+  leadId     String?
+
+  // Nome e telefone congelados no momento do envio: o contato pode mudar
+  // depois, e o relatório precisa refletir o que foi usado.
+  name  String?
+  phone String
+
+  status    String    @default("PENDING") // PENDING | SENT | FAILED
+  error     String?
+  messageId String? // wamid, para cruzar com os webhooks de status
+  sentAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, status])
 }
 
 model MessageTemplate {

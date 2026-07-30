@@ -20,6 +20,7 @@ import * as SdrController from "../controllers/SdrController.js";
 import * as MessageController from "../controllers/MessageController.js";
 import * as TemplateController from "../controllers/TemplateController.js";
 import * as CampaignController from "../controllers/CampaignController.js";
+import * as ContactController from "../controllers/ContactController.js";
 import * as AnalyticsController from "../controllers/AnalyticsController.js";
 import * as FinancialController from "../controllers/FinancialController.js";
 import * as BillingController from "../controllers/BillingController.js";
@@ -134,6 +135,13 @@ router.get("/messages/:leadId", MessageController.getMessages);
 router.post("/messages", requireActiveSubscription, MessageController.sendMessage);
 router.post("/messages/call-intent", requireActiveSubscription, MessageController.callIntent);
 // Disparo em massa (API oficial da Meta)
+// Seleção e importação de contatos (usada pelo disparo em massa)
+router.get("/contacts/search", ContactController.searchContacts);
+router.get("/contacts/search-ids", ContactController.searchContactIds);
+router.get("/contacts/tags", ContactController.listTags);
+router.post("/contacts/import-csv", upload.single("file"), ContactController.importContactsCsv);
+router.get("/campaigns/:id/report", CampaignController.campaignReport);
+
 router.get("/campaigns", CampaignController.listCampaigns);
 router.get("/campaigns/quota", CampaignController.getCampaignQuota);
 router.post("/campaigns/preview", CampaignController.previewCampaign);
