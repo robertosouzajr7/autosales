@@ -6,6 +6,7 @@ import VoiceService from "../services/VoiceService.js";
 import MessagingService from "../services/MessagingService.js";
 import { stopwatch } from "../utils/timing.js";
 import { touchConversation } from "../services/ConversationService.js";
+import { buildIdentity, findOrCreateLead } from "../services/ContactIdentity.js";
 
 // Palavras que sinalizam pedido de descadastro (LGPD opt-out).
 const STOP_KEYWORDS = ["parar", "sair", "cancelar", "descadastrar", "stop", "remover", "pare"];
@@ -209,7 +210,7 @@ export const bulkDeleteLeads = async (req, res) => {
  * Rota: POST /api/webhook/whatsapp (pública, autenticada por tenantId no body)
  */
 export const receiveWhatsappWebhook = async (req, res) => {
-  const { tenantId, phone, name, content, source = 'WhatsApp', skipNewLeadTrigger, messageType = 'TEXT', channel = 'WHATSAPP', accountId, mediaMime, mediaCaption, fileName, replyId, replyTitle } = req.body;
+  const { tenantId, phone, name, content, source = 'WhatsApp', skipNewLeadTrigger, messageType = 'TEXT', channel = 'WHATSAPP', accountId, mediaMime, mediaCaption, fileName, replyId, replyTitle, igUsername, email } = req.body;
 
   if (!tenantId || !phone || !content) {
     return res.status(400).json({ success: false, error: "Parâmetros obrigatórios: tenantId, phone, content" });
@@ -224,29 +225,15 @@ export const receiveWhatsappWebhook = async (req, res) => {
       orderBy: { order: 'asc' }
     });
 
-    // 1. Upsert do Lead (Garante que não existam duplicados por telefone + tenantId)
-    // consentAt registra o opt-in na primeira interação inbound (base legal LGPD).
-    const lead = await prisma.lead.upsert({
-      where: {
-        phone_tenantId: { phone, tenantId }
-      },
-      update: {
-        name: name || undefined,
-        source: source || undefined,
-        channel: channel || undefined,
-        waAccountId: accountId || undefined
-      },
-      create: {
-        name: name || phone,
-        phone,
-        tenantId,
-        source,
-        channel: channel || "WHATSAPP",
-        waAccountId: accountId || null,
-        status: "NEW",
-        stageId: firstStage?.id,
-        consentAt: new Date()
-      }
+    // 1. Resolve o contato pelo identificador DO CANAL, não pelo telefone.
+    // `phone` só recebe telefone de verdade: o identificador cru (IGSID do
+    // Instagram, id de visitante do site, LID do WhatsApp) vai em externalId.
+    // consentAt registra o opt-in na primeira interação inbound (LGPD).
+    const identity = buildIdentity(channel || "WHATSAPP", phone, { name, email, igUsername });
+    const { lead } = await findOrCreateLead(tenantId, identity, {
+      source,
+      waAccountId: accountId || null,
+      stageId: firstStage?.id || null,
     });
 
     if (lead.createdAt >= new Date(Date.now() - 5000) && !skipNewLeadTrigger) {

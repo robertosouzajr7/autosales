@@ -135,6 +135,12 @@ model Lead {
   channel     String  @default("WHATSAPP") // WHATSAPP | INSTAGRAM | SITE
   waAccountId String?
 
+  // Identificador do contato NO CANAL: IGSID do Instagram, id de visitante do
+  // site, LID do WhatsApp. Antes tudo isso era gravado em `phone`, que passou a
+  // guardar só telefone de verdade.
+  externalId String?
+  igUsername String? // @usuario do Instagram
+
   // Contatos e canais adicionais (preenchidos pelo BDR)
   website     String?
   socialLinks String? // JSON: { linkedin, instagram, facebook, ... }
@@ -164,6 +170,7 @@ model Lead {
   waitlists            Waitlist[]
 
   @@unique([phone, tenantId])
+  @@index([tenantId, channel, externalId])
 }
 
 model Campaign {

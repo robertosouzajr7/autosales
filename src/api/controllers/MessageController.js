@@ -1,5 +1,6 @@
 import prisma from "../config/prisma.js";
 import { touchConversation, markConversationRead, isWindowOpen, windowMinutesLeft } from "../services/ConversationService.js";
+import { contactHandle } from "../services/ContactIdentity.js";
 import MessagingService from "../services/MessagingService.js";
 import { EventEmitter } from "events";
 import { messagesHeadroom } from "../middlewares/planLimits.js";
@@ -244,7 +245,10 @@ export const getConversations = async (req, res) => {
       },
       include: {
         lead: {
-          select: { id: true, name: true, phone: true, channel: true, waAccountId: true, optedOut: true },
+          select: {
+            id: true, name: true, phone: true, email: true, channel: true,
+            waAccountId: true, optedOut: true, igUsername: true, externalId: true,
+          },
         },
       },
       // Conversa sem mensagem (lead recém-criado) vai para o fim.
@@ -265,8 +269,12 @@ export const getConversations = async (req, res) => {
         return {
           id: c.id,
           leadId: c.leadId,
-          name: c.lead?.name || c.lead?.phone || "Sem nome",
+          name: c.lead?.name || contactHandle(c.lead) || "Sem nome",
           phone: c.lead?.phone || "",
+          email: c.lead?.email || "",
+          igUsername: c.lead?.igUsername || null,
+          // Contato a exibir conforme o canal: telefone, @usuario ou e-mail.
+          handle: contactHandle(c.lead),
           channel: c.lead?.channel || "WHATSAPP",
           optedOut: !!c.lead?.optedOut,
           botActive: c.botActive,

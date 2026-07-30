@@ -612,7 +612,25 @@ export class MetaManager {
      * Recebe uma DM do Instagram. `igId` é o Instagram Business Account ID
      * que identifica a conta conectada (roteia para o tenant).
      */
-    static async handleIncomingInstagram(igId, senderId, name, content) {
+    /**
+     * Nome e @usuario do remetente do Instagram. O webhook não traz esses
+     * dados — sem essa consulta o contato ficaria só com o IGSID.
+     * Falha aqui não impede o atendimento: é enriquecimento.
+     */
+    static async fetchInstagramProfile(igsid, accessToken) {
+        try {
+            const { data } = await axios.get(`https://graph.facebook.com/${GRAPH_VERSION}/${igsid}`, {
+                params: { fields: 'name,username', access_token: accessToken },
+                timeout: 15000,
+            });
+            return { name: data?.name || null, username: data?.username || null };
+        } catch (e) {
+            console.warn('[Instagram Hub] Não foi possível ler o perfil:', e.response?.data?.error?.message || e.message);
+            return { name: null, username: null };
+        }
+    }
+
+    static async handleIncomingInstagram(igId, senderId, name, content, username = null) {
         const account = await prisma.whatsAppAccount.findFirst({
             where: { igId, channel: "INSTAGRAM" }
         });
@@ -627,9 +645,26 @@ export class MetaManager {
             return;
         }
 
-        await this._routeToAI(account, senderId, name || 'Lead (Instagram)', content, 'Instagram', async (aiText) => {
-            await this.sendInstagramMessage(account.pageId, account.accessToken, senderId, aiText);
-        });
+        // O webhook do Instagram não manda nome nem @usuario; buscamos o perfil
+        // quando faltam, para o contato não ficar identificado pelo IGSID.
+        let perfilNome = name;
+        let perfilUser = username;
+        if (!perfilNome || !perfilUser) {
+            const perfil = await this.fetchInstagramProfile(senderId, account.accessToken);
+            perfilNome = perfilNome || perfil.name;
+            perfilUser = perfilUser || perfil.username;
+        }
+
+        // O senderId do Instagram (IGSID) NÃO é telefone: vai como identificador
+        // do canal, e o @usuario no campo próprio. `name` fica sem fallback
+        // numérico para não virar nome do contato.
+        await this._routeToAI(
+            account, senderId, perfilNome || null, content, 'Instagram',
+            async (aiText) => {
+                await this.sendInstagramMessage(account.pageId, account.accessToken, senderId, aiText);
+            },
+            { channel: 'INSTAGRAM', igUsername: perfilUser || null }
+        );
     }
 
     /**
@@ -647,7 +682,7 @@ export class MetaManager {
                     name,
                     content,
                     source,
-                    channel: account.channel || "INSTAGRAM",
+                    channel: extra.channel || account.channel || "INSTAGRAM",
                     accountId: account.id,
                     ...extra, // messageType, mediaMime, mediaCaption, fileName
                 },

@@ -597,6 +597,11 @@ export default function Conversations() {
                               </span>
                             ); })()}
                             <p className="font-semibold text-sm truncate">{chat.name}</p>
+                            {chat.handle && chat.handle !== chat.name && (
+                              <span className={`text-[10px] font-medium truncate shrink-0 ${selectedChat?.id === chat.id ? 'text-white/40' : 'text-slate-400'}`}>
+                                {chat.handle}
+                              </span>
+                            )}
                           </div>
                           <span className={`text-xs font-bold uppercase shrink-0 ${selectedChat?.id === chat.id ? 'text-white/40' : 'text-slate-300'}`}>
                             {chat.lastMessageAt ? fmtWhen(chat.lastMessageAt) : ""}

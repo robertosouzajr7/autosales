@@ -1940,7 +1940,9 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
   // ========== INCOMING MESSAGE HANDLER ==========
 
   async handleIncoming(phone, text, tenantId, opts = {}) {
-    const lead = await prisma.lead.findFirst({ where: { phone, tenantId } });
+    // Prefere o lead já resolvido: contato de Instagram/site não tem telefone,
+    // e a busca por telefone não o encontraria.
+    const lead = opts.lead || (phone ? await prisma.lead.findFirst({ where: { phone, tenantId } }) : null);
     if (!lead) return false;
 
     // A. TRIAGEM DE CRISE (Handoff Humano)
@@ -1956,7 +1958,9 @@ Retorne APENAS um JSON com: { "intent": "id_da_categoria", "confidence": 0.0-1.0
           update: { botActive: false },
           create: { leadId: lead.id, tenantId, botActive: false }
         });
-        await MessagingService.sendText(tenantId, phone,
+        // Sem telefone (Instagram/site) o aviso sai pelo canal de origem, que
+        // é tratado por quem chamou — aqui só evitamos enviar para null.
+        if (lead.phone) await MessagingService.sendText(tenantId, lead.phone,
           "Entendi perfeitamente. Vou conectar você com nossa equipe agora! 🙏"
         );
         return true;
@@ -2813,6 +2817,7 @@ ${scrapeContext}
       // (Sem esta chamada o COLLECT_INPUT/SEND_BUTTONS nunca retomava.)
       const tratadoPeloFluxo = await this.handleIncoming(lead.phone, content, tenantId, {
         replyId: opts.replyId || null,
+        lead,
       }).catch((e) => {
         console.error("[AutoEngine] Erro ao retomar fluxo:", e.message);
         return false;

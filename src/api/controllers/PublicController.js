@@ -1,5 +1,6 @@
 import prisma from "../config/prisma.js";
 import { touchConversation } from "../services/ConversationService.js";
+import { buildIdentity, findOrCreateLead } from "../services/ContactIdentity.js";
 import MessagingService from "../services/MessagingService.js";
 import AutomationEngine from "../../../automation_engine.js";
 import { getFunctionPreset } from "../services/AgentFunctions.js";
@@ -86,22 +87,15 @@ export const submitChat = async (req, res) => {
     if (leadId) {
       lead = await prisma.lead.findUnique({ where: { id: leadId } });
     }
-    
-    if (!lead && email) lead = await prisma.lead.findFirst({ where: { email, tenantId: resolvedTenantId } });
-    if (!lead && phone) lead = await prisma.lead.findFirst({ where: { phone, tenantId: resolvedTenantId } });
-    
+
     if (!lead) {
-      lead = await prisma.lead.create({
-        data: {
-          tenantId: resolvedTenantId,
-          name: name || "Visitante Web",
-          email,
-          phone,
-          source: "WEBCHAT",
-          channel: "SITE",
-          status: "NEW"
-        }
-      });
+      // O visitorId identifica a sessão do site — não é telefone. O telefone só
+      // entra se o visitante realmente informou um, e é validado antes.
+      const identity = buildIdentity("SITE", visitorId, { name, email });
+      const { normalizePhone } = await import("../services/ContactIdentity.js");
+      identity.phone = normalizePhone(phone);
+      const r = await findOrCreateLead(resolvedTenantId, identity, { source: "WEBCHAT" });
+      lead = r.lead;
     }
 
     // 2. Find or create conversation
