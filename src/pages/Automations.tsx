@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, DragEvent } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, DragEvent } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,8 @@ import {
   Inbox, Clock, Tag, MoveRight, Users, Calendar, FileEdit,
   StopCircle, Copy, Search, Send, ChevronRight, Layers, Map,
   Sparkles, Brain, GitBranch, Shuffle, BarChart3, Wrench, ScanText,
-  Image, Workflow, Lock, MousePointerClick, List, FileText
+  Image, Workflow, Lock, MousePointerClick, List, FileText,
+  Download, Upload, PlayCircle, Terminal, Variable, RotateCcw, Unlink, Info
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
@@ -25,6 +26,7 @@ import {
   Controls,
   MiniMap,
   addEdge,
+  reconnectEdge,
   useNodesState,
   useEdgesState,
   Handle,
@@ -81,6 +83,45 @@ const NODE_TYPES_DEF: NodeTypeDef[] = [
   // Lógica
   { id: "CONDITION", label: "Condição IF/ELSE", icon: <Split className="w-4 h-4" />, color: "#f97316", category: "logic" },
   { id: "END", label: "Fim do Fluxo", icon: <StopCircle className="w-4 h-4" />, color: "#94a3b8", category: "logic" },
+];
+
+/**
+ * O que cada bloco faz e o que ele deixa disponível para os próximos.
+ * Sem isso o builder tinha blocos mudos: dava para arrastar e não havia
+ * como saber o que configurar nem o que sai do outro lado.
+ */
+const NODE_HELP: Record<string, { o_que: string; saidas?: string; variaveis?: string }> = {
+  SEND_MSG: { o_que: "Envia uma mensagem de texto para o contato.", saidas: "Uma saída: segue para o próximo bloco." },
+  AI_RESPONSE: { o_que: "Chama a IA com o prompt que você escrever e (opcionalmente) envia a resposta.", variaveis: "{{ai.response}}" },
+  COLLECT_INPUT: { o_que: "Faz uma pergunta e espera a resposta do contato antes de continuar.", variaveis: "{{input.<variável>}}" },
+  SEND_BUTTONS: { o_que: "Envia até 3 botões. O fluxo para até o contato clicar.", saidas: "Uma saída por botão (pelo id da opção)." },
+  SEND_LIST: { o_que: "Envia um menu em lista (até 10 opções). O fluxo para até o contato escolher.", saidas: "Uma saída por opção." },
+  SEND_TEMPLATE: { o_que: "Envia um template aprovado pela Meta — único jeito de falar fora da janela de 24h." },
+  SEND_MEDIA: { o_que: "Envia imagem, vídeo, áudio ou documento." },
+  WAIT: { o_que: "Pausa o fluxo por um tempo antes de seguir." },
+  ADD_TAG: { o_que: "Marca o contato com uma tag." },
+  MOVE_STAGE: { o_que: "Move o contato para outra etapa do funil." },
+  TRANSFER_HUMAN: { o_que: "Coloca a conversa na fila de atendimento humano e para a IA." },
+  SCHEDULE_APPOINTMENT: { o_que: "Cria um agendamento na agenda do negócio." },
+  UPDATE_LEAD: { o_que: "Grava um valor num campo do contato." },
+  HTTP_REQUEST: { o_que: "Chama uma URL externa (webhook/API).", variaveis: "{{http.response}}" },
+  AI_TOOLS: { o_que: "IA com acesso às ferramentas do CRM (agenda, tags, funil)." },
+  EXTRACT_DATA: { o_que: "Lê o texto da conversa e extrai campos estruturados.", variaveis: "{{extracted.<campo>}}" },
+  CLASSIFY_INTENT: { o_que: "Classifica a intenção da mensagem.", saidas: "Uma saída por intenção configurada.", variaveis: "{{ai.intent}}" },
+  AB_TEST: { o_que: "Divide o tráfego entre variantes.", saidas: "Uma saída por variante.", variaveis: "{{ab.variant}}" },
+  AI_SCORE: { o_que: "Dá uma nota de 0 a 100 ao lead.", saidas: "Frio, morno e quente.", variaveis: "{{ai.score}}" },
+  SUBFLOW: { o_que: "Chama outro fluxo e volta quando ele terminar." },
+  CONDITION: { o_que: "Divide o caminho conforme as regras.", saidas: "Verdadeiro e Falso." },
+  END: { o_que: "Encerra o fluxo neste ponto.", saidas: "Nenhuma — é o fim do caminho." },
+};
+
+// Tipos que já têm formulário próprio no painel de propriedades. O resto cai
+// no editor genérico — nenhum bloco fica sem edição.
+const TIPOS_COM_FORMULARIO = [
+  "SEND_MSG", "SEND_BUTTONS", "SEND_LIST", "SEND_TEMPLATE", "SEND_MEDIA", "WAIT",
+  "COLLECT_INPUT", "AI_RESPONSE", "CONDITION", "ADD_TAG", "MOVE_STAGE", "TRANSFER_HUMAN",
+  "HTTP_REQUEST", "SCHEDULE_APPOINTMENT", "UPDATE_LEAD", "SUBFLOW", "AI_TOOLS",
+  "EXTRACT_DATA", "CLASSIFY_INTENT", "AB_TEST", "AI_SCORE",
 ];
 
 const OPERATORS = [
@@ -328,6 +369,13 @@ export default function Automations() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  // Simulador: sessão, trilha de execução e o que o "cliente" digita.
+  const [simAberto, setSimAberto] = useState(false);
+  const [sim, setSim] = useState<any>(null);
+  const [simMsg, setSimMsg] = useState("");
+  const [simAba, setSimAba] = useState<"conversa" | "console" | "variaveis">("conversa");
+  const [simCarregando, setSimCarregando] = useState(false);
   // Templates aprovados, para o bloco "Enviar Template".
   const [approvedTemplates, setApprovedTemplates] = useState<any[]>([]);
   useEffect(() => {
@@ -479,10 +527,12 @@ export default function Automations() {
     setSelectedAuto(auto);
     try {
       const parsedNodes = JSON.parse(auto.nodes || "[]");
-      const rfNodes = (Array.isArray(parsedNodes) ? parsedNodes : []).map((n: any) => ({
-        id: n.id || `node_${Math.random()}`, 
-        type: "automationNode", 
-        position: n.position || { x: 250, y: 0 },
+      const rfNodes = (Array.isArray(parsedNodes) ? parsedNodes : []).map((n: any, i: number) => ({
+        id: n.id || `node_${Math.random()}`,
+        type: "automationNode",
+        // Sem posição, cada bloco desce uma linha — empilhar todos em (250,0)
+        // deixava o fluxo ilegível e parecendo quebrado.
+        position: n.position && Number.isFinite(n.position.x) ? n.position : { x: 250, y: i * 180 },
         data: { ...(n.data || {}), nodeType: n.type || "SEND_MSG" },
       }));
       setNodes(rfNodes);
@@ -526,8 +576,39 @@ export default function Automations() {
     setEdges(eds => addEdge({ ...connection, animated: true, markerEnd: { type: MarkerType.ArrowClosed, color: "#94a3b8" } }, eds));
   }, [setEdges]);
 
+  // Ligação feita não era mais editável: só dava para apagar e refazer.
+  // Agora a ponta pode ser arrastada para outro bloco (reconexão) e soltar
+  // no vazio remove a ligação.
+  const reconectando = useRef(false);
+
+  const onReconnectStart = useCallback(() => { reconectando.current = true; }, []);
+
+  const onReconnect = useCallback((antiga: Edge, nova: Connection) => {
+    reconectando.current = false;
+    setEdges(eds => reconnectEdge(antiga, nova, eds));
+  }, [setEdges]);
+
+  const onReconnectEnd = useCallback((_: any, edge: Edge) => {
+    if (reconectando.current) {
+      setEdges(eds => eds.filter(e => e.id !== edge.id));
+      toast({ title: "Ligação removida" });
+    }
+    reconectando.current = false;
+  }, [setEdges, toast]);
+
+  const onEdgeClick = useCallback((_: any, edge: Edge) => {
+    setSelectedEdgeId(prev => (prev === edge.id ? null : edge.id));
+    setSelectedNodeId(null);
+  }, []);
+
+  const removerLigacao = (edgeId: string) => {
+    setEdges(eds => eds.filter(e => e.id !== edgeId));
+    setSelectedEdgeId(null);
+  };
+
   const onNodeClick = useCallback((_: any, node: Node) => {
     setSelectedNodeId(node.id === selectedNodeId ? null : node.id);
+    setSelectedEdgeId(null);
   }, [selectedNodeId]);
 
   // Drag & Drop from palette
@@ -599,6 +680,118 @@ export default function Automations() {
     }
   };
 
+  // -------- SIMULADOR --------
+
+  /** Nós/ligações no formato que o backend entende (igual ao salvar). */
+  const rascunho = () => ({
+    nodes: nodes.map((n) => ({
+      id: n.id, type: (n.data as any).nodeType, position: n.position,
+      data: { label: (n.data as any).label, config: (n.data as any).config || {} },
+    })),
+    edges,
+  });
+
+  const simIniciar = async () => {
+    if (!selectedAuto) return;
+    setSimCarregando(true);
+    try {
+      const res = await fetch(`/api/automations/${selectedAuto.id}/simulate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
+        // Manda o rascunho: dá para testar antes de salvar.
+        body: JSON.stringify(rascunho()),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Não foi possível iniciar a simulação.");
+      setSim(d);
+      setSimAberto(true);
+      setSimAba("conversa");
+      // Painel de propriedades e simulador juntos espremem o canvas.
+      setSelectedNodeId(null);
+      setSelectedEdgeId(null);
+    } catch (e: any) {
+      toast({ title: e.message, variant: "destructive" });
+    } finally {
+      setSimCarregando(false);
+    }
+  };
+
+  const simEnviar = async (texto: string, replyId: string | null = null) => {
+    if (!sim?.sessionId || (!texto.trim() && !replyId)) return;
+    setSimCarregando(true);
+    try {
+      const res = await fetch(`/api/automations/simulate/${sim.sessionId}/message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
+        body: JSON.stringify({ text: texto, replyId }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Falha ao enviar.");
+      setSim(d);
+      setSimMsg("");
+    } catch (e: any) {
+      toast({ title: e.message, variant: "destructive" });
+    } finally {
+      setSimCarregando(false);
+    }
+  };
+
+  const simEncerrar = async () => {
+    if (sim?.sessionId) {
+      fetch(`/api/automations/simulate/${sim.sessionId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      }).catch(() => {});
+    }
+    setSim(null);
+    setSimAberto(false);
+  };
+
+  // -------- EXPORTAR / IMPORTAR --------
+
+  const exportarFluxo = async (auto: any) => {
+    try {
+      const res = await fetch(`/api/automations/${auto.id}/export`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Falha ao exportar.");
+      const blob = new Blob([JSON.stringify(d, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `fluxo-${(auto.name || "sem-nome").toLowerCase().replace(/[^a-z0-9]+/g, "-")}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "Fluxo exportado" });
+    } catch (e: any) {
+      toast({ title: e.message, variant: "destructive" });
+    }
+  };
+
+  const importarFluxo = async (file: File) => {
+    try {
+      const texto = await file.text();
+      const pacote = JSON.parse(texto);
+      const res = await fetch("/api/automations/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
+        body: JSON.stringify(pacote),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Arquivo recusado.");
+      toast({
+        title: "Fluxo importado (desligado)",
+        description: `${d.blocos} bloco(s) e ${d.ligacoes} ligação(ões).${
+          d.ligacoesDescartadas > 0 ? ` ${d.ligacoesDescartadas} ligação(ões) órfã(s) foram descartadas.` : ""
+        } Revise e ative quando quiser.`,
+      });
+      fetchData();
+    } catch (e: any) {
+      toast({ title: e.message || "Arquivo inválido", variant: "destructive" });
+    }
+  };
+
   const removeNode = (nodeId: string) => {
     setNodes(nds => nds.filter(n => n.id !== nodeId));
     setEdges(eds => eds.filter(e => e.source !== nodeId && e.target !== nodeId));
@@ -613,6 +806,42 @@ export default function Automations() {
 
   const selectedNode = nodes.find(n => n.id === selectedNodeId);
   const selectedNodeData = selectedNode?.data as any;
+  const selectedEdge = edges.find(e => e.id === selectedEdgeId);
+
+  // Ligação selecionada fica destacada; durante a simulação os blocos que já
+  // rodaram acendem, e o bloco que está esperando resposta pulsa.
+  const caminhoSim: string[] = sim?.caminho || [];
+  const nodeAtualSim: string | null = sim?.nodeAtual || null;
+
+  const nodesRender = useMemo(
+    () =>
+      nodes.map((n) => {
+        if (!sim) return n;
+        const executou = caminhoSim.includes(n.id);
+        const atual = nodeAtualSim === n.id;
+        if (!executou && !atual) return { ...n, style: { ...(n.style || {}), opacity: 0.45 } };
+        return {
+          ...n,
+          style: {
+            ...(n.style || {}),
+            outline: atual ? "3px solid #f59e0b" : "3px solid #10b981",
+            outlineOffset: "3px",
+            borderRadius: "16px",
+          },
+        };
+      }),
+    [nodes, sim, caminhoSim.join(","), nodeAtualSim]
+  );
+
+  const edgesRender = useMemo(
+    () =>
+      edges.map((e) =>
+        e.id === selectedEdgeId
+          ? { ...e, style: { ...(e.style || {}), stroke: "#2563EB", strokeWidth: 3 }, animated: true }
+          : e
+      ),
+    [edges, selectedEdgeId]
+  );
 
   // =================== RENDER ===================
   return (
@@ -641,6 +870,18 @@ export default function Automations() {
             )}
             <div className="flex flex-col items-end gap-1">
               <div className="flex gap-3">
+                <input
+                  type="file" id="importar-fluxo" accept="application/json,.json" className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) importarFluxo(f); e.target.value = ""; }}
+                />
+                <Button
+                  onClick={() => document.getElementById("importar-fluxo")?.click()}
+                  variant="outline"
+                  className="h-11 px-6 rounded-2xl font-semibold uppercase text-xs border-2"
+                  title="Importar um fluxo exportado (.json)"
+                >
+                  <Upload className="w-4 h-4 mr-2" /> Importar
+                </Button>
                 <Button 
                   onClick={() => hasSdr ? setShowTemplates(true) : toast({ title: "SDR Necessário", description: "Contrate um SDR antes de criar automações.", variant: "destructive" })} 
                   variant="outline" 
@@ -701,7 +942,8 @@ export default function Automations() {
                       {auto.description && <p className="text-xs text-slate-400 font-medium line-clamp-2">{auto.description}</p>}
                       <div className="flex items-center justify-between pt-1">
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg" onClick={() => duplicateAuto(auto.id)}><Copy className="w-3.5 h-3.5 text-slate-300" /></Button>
+                          <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg" onClick={() => duplicateAuto(auto.id)} title="Duplicar"><Copy className="w-3.5 h-3.5 text-slate-300" /></Button>
+                          <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg" onClick={() => exportarFluxo(auto)} title="Exportar (.json)"><Download className="w-3.5 h-3.5 text-slate-300" /></Button>
                           <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg hover:bg-red-50" onClick={() => deleteAuto(auto.id)}><Trash2 className="w-3.5 h-3.5 text-slate-300" /></Button>
                         </div>
                         <button onClick={() => openBuilder(auto)} className="text-[#2563EB] font-semibold text-xs flex items-center gap-1 hover:gap-2 transition-all">
@@ -869,6 +1111,17 @@ export default function Automations() {
               </div>
             </div>
             <div className="flex gap-3">
+              <Button
+                onClick={sim ? simEncerrar : simIniciar}
+                disabled={simCarregando}
+                variant="outline"
+                className={`h-10 px-4 rounded-xl font-semibold uppercase text-xs border-2 ${sim ? "border-amber-300 text-amber-600" : ""}`}
+              >
+                {sim ? <><RotateCcw className="w-4 h-4 mr-2" /> Encerrar teste</> : <><PlayCircle className="w-4 h-4 mr-2" /> Simular</>}
+              </Button>
+              <Button onClick={() => exportarFluxo(selectedAuto)} variant="outline" className="h-10 px-4 rounded-xl font-semibold uppercase text-xs border-2">
+                <Download className="w-4 h-4 mr-2" /> Exportar
+              </Button>
               <Button onClick={() => setIsBuilderOpen(false)} variant="ghost" className="h-10 w-10 rounded-xl text-slate-300"><X className="w-5 h-5" /></Button>
               <Button onClick={handleSaveWorkflow} className="h-10 bg-slate-900 hover:bg-black px-6 rounded-xl font-semibold uppercase text-xs text-white shadow-sm">
                 <Save className="w-4 h-4 mr-2 text-[#2563EB]" /> Salvar
@@ -940,12 +1193,18 @@ export default function Automations() {
             {/* REACTFLOW CANVAS */}
             <div className="flex-1" onDragOver={onDragOver} onDrop={onDrop}>
               <ReactFlow
-                nodes={nodes}
-                edges={edges}
+                nodes={nodesRender}
+                edges={edgesRender}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
+                onReconnect={onReconnect}
+                onReconnectStart={onReconnectStart}
+                onReconnectEnd={onReconnectEnd}
+                onEdgeClick={onEdgeClick}
                 onNodeClick={onNodeClick}
+                edgesReconnectable
+                reconnectRadius={20}
                 nodeTypes={nodeTypes}
                 defaultEdgeOptions={defaultEdgeOptions}
                 fitView
@@ -967,13 +1226,188 @@ export default function Automations() {
                 <Panel position="top-right" className="flex gap-2">
                   <div className="bg-white/80 backdrop-blur-sm rounded-xl px-4 py-2 shadow-lg flex items-center gap-2">
                     <Map className="w-4 h-4 text-slate-400" />
-                    <span className="text-xs font-semibold text-slate-500 ">
-                      Arraste blocos do menu · Conecte arrastando os handles
+                    <span className="text-xs font-semibold text-slate-500">
+                      Arraste as pontas de uma ligação para religar · solte no vazio para remover
                     </span>
                   </div>
                 </Panel>
+
+                {/* Ligação selecionada: dá para ver de onde vem, para onde vai
+                    e qual ramo ela representa — e removê-la sem adivinhação. */}
+                {selectedEdge && (
+                  <Panel position="bottom-center">
+                    <div className="bg-white rounded-2xl shadow-lg border border-slate-100 px-4 py-3 flex items-center gap-4">
+                      <div className="text-xs">
+                        <p className="font-bold text-slate-700">
+                          {(nodes.find(n => n.id === selectedEdge.source)?.data as any)?.label || selectedEdge.source}
+                          <ArrowRight className="w-3 h-3 inline mx-1.5 text-slate-400" />
+                          {(nodes.find(n => n.id === selectedEdge.target)?.data as any)?.label || selectedEdge.target}
+                        </p>
+                        <p className="text-slate-400 font-medium mt-0.5">
+                          {selectedEdge.sourceHandle
+                            ? `Ramo "${selectedEdge.sourceHandle}"`
+                            : "Saída padrão"}
+                          {" · arraste uma das pontas para religar"}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-xl text-xs font-bold text-red-500 border-red-100 hover:bg-red-50"
+                        onClick={() => removerLigacao(selectedEdge.id)}
+                      >
+                        <Unlink className="w-3.5 h-3.5 mr-1.5" /> Remover ligação
+                      </Button>
+                    </div>
+                  </Panel>
+                )}
               </ReactFlow>
             </div>
+
+            {/* SIMULADOR + DEPURADOR */}
+            {simAberto && sim && (
+              <div className="w-[400px] bg-white border-l border-slate-100 flex flex-col shrink-0">
+                <div className="p-4 border-b border-slate-100">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <PlayCircle className="w-4 h-4 text-[#2563EB]" /> Simulação
+                      </h4>
+                      <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+                        {sim.status === "WAITING"
+                          ? "Esperando a resposta do cliente"
+                          : sim.status === "FINISHED"
+                          ? "Fluxo terminou"
+                          : sim.status === "ERROR"
+                          ? "Parou com erro"
+                          : "Executando"}
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="icon" className="w-7 h-7" onClick={simEncerrar}>
+                      <X className="w-4 h-4 text-slate-300" />
+                    </Button>
+                  </div>
+                  <div className="flex gap-1">
+                    {([
+                      ["conversa", "Conversa", MessageCircle],
+                      ["console", `Console (${sim.trilha?.length || 0})`, Terminal],
+                      ["variaveis", "Variáveis", Variable],
+                    ] as const).map(([id, label, Icon]) => (
+                      <button
+                        key={id}
+                        onClick={() => setSimAba(id as any)}
+                        className={`flex-1 px-2 py-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-colors ${
+                          simAba === id ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                        }`}
+                      >
+                        <Icon className="w-3 h-3" /> {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                  {simAba === "conversa" && (
+                    <>
+                      {(sim.mensagens || []).map((m: any, i: number) => (
+                        <div key={i} className={`flex ${m.de === "lead" ? "justify-end" : "justify-start"}`}>
+                          <div
+                            className={`max-w-[85%] rounded-2xl px-3 py-2 text-xs font-medium whitespace-pre-wrap ${
+                              m.de === "lead" ? "bg-slate-900 text-white rounded-tr-none" : "bg-slate-100 text-slate-700 rounded-tl-none"
+                            }`}
+                          >
+                            {m.texto}
+                            {(m.opcoes || []).length > 0 && (
+                              <div className="mt-2 space-y-1">
+                                {m.opcoes.map((o: any) => (
+                                  <button
+                                    key={o.id}
+                                    disabled={sim.status !== "WAITING" || simCarregando}
+                                    onClick={() => simEnviar(o.titulo, o.id)}
+                                    className="w-full rounded-lg bg-white border border-slate-200 px-2 py-1 text-[11px] font-bold text-[#2563EB] hover:bg-blue-50 disabled:opacity-50"
+                                  >
+                                    {o.titulo}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {sim.status === "FINISHED" && (
+                        <p className="text-center text-[11px] font-bold text-slate-400 py-3">— fim do fluxo —</p>
+                      )}
+                    </>
+                  )}
+
+                  {simAba === "console" && (
+                    <div className="space-y-1.5 font-mono">
+                      {(sim.trilha || []).map((t: any, i: number) => {
+                        const cor =
+                          t.nivel === "erro" ? "border-red-300 bg-red-50" :
+                          t.nivel === "aviso" ? "border-amber-300 bg-amber-50" :
+                          t.nivel === "logica" ? "border-orange-200 bg-orange-50" :
+                          t.nivel === "ia" ? "border-violet-200 bg-violet-50" :
+                          t.nivel === "requisicao" ? "border-slate-300 bg-slate-100" :
+                          t.nivel === "variavel" ? "border-cyan-200 bg-cyan-50" :
+                          "border-slate-200 bg-white";
+                        return (
+                          <details key={i} className={`rounded-lg border ${cor} px-2 py-1.5`}>
+                            <summary className="cursor-pointer text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                              <span className="text-slate-400">{String(t.passo).padStart(2, "0")}</span>
+                              {t.rotulo && <span className="text-slate-400">[{t.rotulo}]</span>}
+                              {t.titulo}
+                            </summary>
+                            {t.detalhe && (
+                              <p className="mt-1.5 text-[11px] text-slate-600 whitespace-pre-wrap leading-relaxed">{t.detalhe}</p>
+                            )}
+                            {t.saida && (
+                              <p className="mt-1 text-[10px] font-bold text-slate-500">→ segue pelo ramo "{t.saida}"</p>
+                            )}
+                            {t.config && Object.keys(t.config).length > 0 && (
+                              <pre className="mt-1.5 max-h-40 overflow-auto rounded bg-slate-900 p-2 text-[10px] text-slate-200">
+                                {JSON.stringify(t.config, null, 2)}
+                              </pre>
+                            )}
+                          </details>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {simAba === "variaveis" && (
+                    <pre className="rounded-xl bg-slate-900 p-3 text-[11px] text-slate-200 overflow-auto">
+                      {JSON.stringify(sim.variaveis || {}, null, 2)}
+                    </pre>
+                  )}
+                </div>
+
+                <div className="p-3 border-t border-slate-100">
+                  <div className="flex gap-2">
+                    <Input
+                      value={simMsg}
+                      onChange={(e) => setSimMsg(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && simEnviar(simMsg)}
+                      placeholder={sim.status === "WAITING" ? "Responda como o cliente…" : "O fluxo não espera resposta agora"}
+                      className="h-9 rounded-xl text-xs"
+                      disabled={simCarregando}
+                    />
+                    <Button
+                      size="icon"
+                      className="h-9 w-9 rounded-xl bg-[#2563EB] shrink-0"
+                      disabled={simCarregando || !simMsg.trim()}
+                      onClick={() => simEnviar(simMsg)}
+                    >
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-medium mt-2 leading-relaxed">
+                    Nada é enviado ao cliente. Tags, etapas, agendamentos e requisições aparecem no console como
+                    "ação simulada", sem acontecer de verdade.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* PROPERTIES PANEL */}
             {selectedNode && selectedNodeData && (
@@ -991,6 +1425,42 @@ export default function Automations() {
                 </div>
 
                 <div className="space-y-4">
+                  {/* O que este bloco faz, o que ele produz e quantas saídas
+                      tem. Antes o painel abria mudo e o bloco parecia quebrado. */}
+                  {(() => {
+                    const ajuda = NODE_HELP[selectedNodeData.nodeType];
+                    if (!ajuda) return null;
+                    return (
+                      <div className="rounded-xl bg-slate-50 p-3 space-y-1.5">
+                        <p className="text-[11px] font-bold text-slate-500 flex items-center gap-1.5">
+                          <Info className="w-3 h-3" /> {selectedNodeData.label || selectedNodeData.nodeType}
+                        </p>
+                        <p className="text-[11px] text-slate-500 leading-relaxed">{ajuda.o_que}</p>
+                        {ajuda.saidas && <p className="text-[11px] text-slate-400">Saídas: {ajuda.saidas}</p>}
+                        {ajuda.variaveis && (
+                          <p className="text-[11px] text-slate-400">
+                            Deixa disponível: <code className="bg-slate-200 px-1 rounded">{ajuda.variaveis}</code>
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Nome do bloco no canvas: sempre editável. */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold text-slate-400">Nome do bloco</Label>
+                    <Input
+                      value={selectedNodeData.label || ""}
+                      onChange={(e) =>
+                        setNodes((nds) =>
+                          nds.map((n) => (n.id === selectedNode.id ? { ...n, data: { ...n.data, label: e.target.value } } : n))
+                        )
+                      }
+                      className="h-9 rounded-xl border-slate-100 text-xs"
+                      placeholder="Ex.: Perguntar interesse"
+                    />
+                  </div>
+
                   {selectedNodeData.nodeType === "SEND_MSG" && (
                     <div className="space-y-2">
                       <Label className="text-xs font-semibold text-slate-400">Mensagem</Label>
@@ -1416,6 +1886,61 @@ export default function Automations() {
                       </div>
                       <p className="text-xs text-[#2563EB] font-bold">Score salvo em {"{{ai.score}}"} e no Lead.qualificationScore</p>
                     </>
+                  )}
+
+                  {/* Editor genérico: qualquer bloco sem formulário próprio
+                      continua editável (e o que já estava configurado fica
+                      visível), em vez de abrir um painel vazio. */}
+                  {!TIPOS_COM_FORMULARIO.includes(selectedNodeData.nodeType) && (
+                    <div className="space-y-3">
+                      {selectedNodeData.nodeType === "END" ? (
+                        <p className="text-xs text-slate-400 leading-relaxed">
+                          Este bloco não tem propriedades — ele só encerra o caminho.
+                        </p>
+                      ) : (
+                        <>
+                          <Label className="text-xs font-semibold text-slate-400">Propriedades</Label>
+                          {Object.entries(selectedNodeData.config || {}).map(([chave, valor]) => (
+                            <div key={chave} className="space-y-1">
+                              <div className="flex items-center justify-between">
+                                <Label className="text-[11px] font-bold text-slate-500">{chave}</Label>
+                                <button
+                                  className="text-[10px] font-bold text-red-400 hover:text-red-600"
+                                  onClick={() => {
+                                    const { [chave]: _, ...resto } = selectedNodeData.config || {};
+                                    setNodes((nds) =>
+                                      nds.map((n) => (n.id === selectedNode.id ? { ...n, data: { ...n.data, config: resto } } : n))
+                                    );
+                                  }}
+                                >
+                                  remover
+                                </button>
+                              </div>
+                              <Input
+                                value={typeof valor === "object" ? JSON.stringify(valor) : String(valor ?? "")}
+                                onChange={(e) => updateNodeConfig(selectedNode.id, chave, e.target.value)}
+                                className="h-8 rounded-lg border-slate-100 text-xs"
+                              />
+                            </div>
+                          ))}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full rounded-xl text-xs font-bold"
+                            onClick={() => {
+                              const chave = prompt("Nome da propriedade:");
+                              if (chave?.trim()) updateNodeConfig(selectedNode.id, chave.trim(), "");
+                            }}
+                          >
+                            <Plus className="w-3 h-3 mr-1" /> Adicionar propriedade
+                          </Button>
+                          <p className="text-[10px] text-slate-400 leading-relaxed">
+                            Este bloco ainda não tem um formulário dedicado. Os valores vão direto para a configuração do
+                            bloco — use o simulador para conferir o resultado.
+                          </p>
+                        </>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>

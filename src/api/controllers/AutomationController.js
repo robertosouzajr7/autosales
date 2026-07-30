@@ -280,3 +280,130 @@ export const retryReminder = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// ── Simulador de fluxos ──────────────────────────────────────────
+
+/**
+ * Roda o fluxo como se um lead estivesse conversando, sem enviar nada e sem
+ * gravar tag/etapa/agendamento. Devolve a trilha de execução para a tela
+ * mostrar o passo a passo, as variáveis e os erros de ligação.
+ */
+export const simulateStart = async (req, res) => {
+  try {
+    const { default: FlowSimulator } = await import("../services/FlowSimulator.js");
+    const estado = await FlowSimulator.start(req.tenantId, req.params.id, {
+      // Rascunho da tela tem prioridade: dá para testar antes de salvar.
+      nodes: req.body?.nodes,
+      edges: req.body?.edges,
+      lead: req.body?.lead,
+    });
+    res.json(estado);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+export const simulateSend = async (req, res) => {
+  try {
+    const { default: FlowSimulator } = await import("../services/FlowSimulator.js");
+    const estado = await FlowSimulator.send(req.params.sessionId, req.body?.text || "", req.body?.replyId || null);
+    res.json(estado);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+export const simulateGet = async (req, res) => {
+  const { default: FlowSimulator } = await import("../services/FlowSimulator.js");
+  const estado = FlowSimulator.get(req.params.sessionId);
+  if (!estado) return res.status(404).json({ error: "Sessão de simulação expirada." });
+  res.json(estado);
+};
+
+export const simulateStop = async (req, res) => {
+  const { default: FlowSimulator } = await import("../services/FlowSimulator.js");
+  res.json(FlowSimulator.stop(req.params.sessionId));
+};
+
+/** Fluxo em JSON, para levar de uma conta para outra. */
+export const exportAutomation = async (req, res) => {
+  try {
+    const auto = await prisma.automation.findFirst({ where: { id: req.params.id, tenantId: req.tenantId } });
+    if (!auto) return res.status(404).json({ error: "Fluxo não encontrado." });
+
+    let nodes = [];
+    let edges = [];
+    try { nodes = JSON.parse(auto.nodes || "[]"); } catch { nodes = []; }
+    try { edges = JSON.parse(auto.edges || "[]"); } catch { edges = []; }
+
+    res.json({
+      formato: "agentesvirtuais.fluxo",
+      versao: 1,
+      exportadoEm: new Date().toISOString(),
+      fluxo: {
+        name: auto.name,
+        description: auto.description,
+        trigger: auto.trigger,
+        triggerConfig: auto.triggerConfig,
+        nodes,
+        edges,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/** Cria um fluxo a partir de um JSON exportado. */
+export const importAutomation = async (req, res) => {
+  try {
+    const pacote = req.body?.fluxo ? req.body : { fluxo: req.body };
+    const fluxo = pacote.fluxo || {};
+    if (!fluxo.name) return res.status(400).json({ error: "Arquivo inválido: falta o nome do fluxo." });
+    if (!Array.isArray(fluxo.nodes)) return res.status(400).json({ error: "Arquivo inválido: lista de blocos ausente." });
+
+    // Ids de bloco são reescritos: dois fluxos importados no mesmo negócio
+    // não podem colidir, e o arquivo pode vir de outra conta.
+    const mapa = new Map();
+    const nodes = fluxo.nodes.map((n, i) => {
+      const novo = `node_${Date.now()}_${i}`;
+      mapa.set(n.id, novo);
+      // Arquivo sem posição empilharia todos os blocos no mesmo ponto do
+      // canvas — o fluxo viraria uma pilha ilegível. Distribui em coluna.
+      const position = n.position && Number.isFinite(n.position.x)
+        ? n.position
+        : { x: 250, y: i * 180 };
+      return { ...n, id: novo, position };
+    });
+    const edges = (Array.isArray(fluxo.edges) ? fluxo.edges : [])
+      .filter((e) => mapa.has(e.source) && mapa.has(e.target))
+      .map((e, i) => ({
+        ...e,
+        id: `edge_${Date.now()}_${i}`,
+        source: mapa.get(e.source),
+        target: mapa.get(e.target),
+      }));
+
+    const criado = await prisma.automation.create({
+      data: {
+        tenantId: req.tenantId,
+        name: req.body?.name || `${fluxo.name} (importado)`,
+        description: fluxo.description || null,
+        trigger: fluxo.trigger || "NEW_LEAD",
+        triggerConfig: fluxo.triggerConfig || "{}",
+        nodes: JSON.stringify(nodes),
+        edges: JSON.stringify(edges),
+        active: false, // importado nasce desligado: revise antes de valer.
+      },
+    });
+
+    res.json({
+      automation: criado,
+      blocos: nodes.length,
+      ligacoes: edges.length,
+      ligacoesDescartadas: (fluxo.edges?.length || 0) - edges.length,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

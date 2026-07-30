@@ -125,6 +125,14 @@ router.post("/automations/:id/duplicate", requireAutomations, AutomationControll
 router.get("/automations/executions/stats", AutomationController.getStats);
 router.get("/automations/config", AutomationController.getConfig);
 router.post("/automations/config", requireAutomations, AutomationController.updateConfig);
+// Simulador de fluxos (execução sem efeitos) e portabilidade
+router.post("/automations/:id/simulate", requireAutomations, AutomationController.simulateStart);
+router.post("/automations/simulate/:sessionId/message", requireAutomations, AutomationController.simulateSend);
+router.get("/automations/simulate/:sessionId", AutomationController.simulateGet);
+router.delete("/automations/simulate/:sessionId", AutomationController.simulateStop);
+router.get("/automations/:id/export", AutomationController.exportAutomation);
+router.post("/automations/import", requireAutomations, AutomationController.importAutomation);
+
 // Régua de lembretes: o que está programado, o que falhou e por quê.
 router.get("/automations/reminders", AutomationController.getReminders);
 router.post("/automations/reminders/:id/retry", requireAutomations, AutomationController.retryReminder);
