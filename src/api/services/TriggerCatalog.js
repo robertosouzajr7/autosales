@@ -30,6 +30,22 @@ const CANAL = {
   ],
 };
 
+/**
+ * Convivência com o agente de IA enquanto o fluxo roda. O padrão é pausar: se
+ * os dois falam ao mesmo tempo, o cliente recebe mensagens contraditórias.
+ */
+const IA_DURANTE = {
+  key: "aiDuring",
+  label: "Enquanto este fluxo roda",
+  type: "select",
+  padrao: "pause",
+  options: [
+    { value: "pause", label: "Pausar o agente de IA (recomendado)" },
+    { value: "allow", label: "Deixar o agente responder junto" },
+  ],
+  hint: "Pausado, o agente só volta a responder quando o fluxo terminar.",
+};
+
 export const TRIGGERS = [
   // ── Contato e conversa ─────────────────────────────────────────
   {
@@ -37,21 +53,21 @@ export const TRIGGERS = [
     label: "Novo contato",
     hint: "Quando um contato entra na base (formulário, importação, primeira mensagem).",
     categoria: "contato",
-    campos: [CANAL],
+    campos: [CANAL, IA_DURANTE],
   },
   {
     id: "FIRST_MESSAGE",
     label: "Primeira mensagem do contato",
     hint: "Só na primeira vez que a pessoa escreve. Ideal para boas-vindas.",
     categoria: "contato",
-    campos: [CANAL],
+    campos: [CANAL, IA_DURANTE],
   },
   {
     id: "INCOMING_MESSAGE",
     label: "Qualquer mensagem recebida",
     hint: "Toda vez que o contato manda algo. Use com cuidado: dispara muito.",
     categoria: "contato",
-    campos: [CANAL],
+    campos: [CANAL, IA_DURANTE],
   },
   {
     id: "KEYWORD",
@@ -72,6 +88,7 @@ export const TRIGGERS = [
         ],
       },
       CANAL,
+      IA_DURANTE,
     ],
   },
   {
@@ -88,6 +105,7 @@ export const TRIGGERS = [
         hint: "Deixe vazio para qualquer opção. Ex.: opt_1, Confirmar.",
       },
       CANAL,
+      IA_DURANTE,
     ],
   },
   {
@@ -110,6 +128,7 @@ export const TRIGGERS = [
         ],
       },
       CANAL,
+      IA_DURANTE,
     ],
   },
   {
@@ -119,6 +138,7 @@ export const TRIGGERS = [
     categoria: "contato",
     campos: [
       { key: "inactivityMinutes", label: "Tempo sem resposta", type: "number", unidade: "minutos", padrao: 1440 },
+      IA_DURANTE,
     ],
   },
   {
@@ -126,7 +146,7 @@ export const TRIGGERS = [
     label: "Pediu para não receber mais",
     hint: "O contato mandou uma palavra de descadastro (SAIR, PARAR).",
     categoria: "contato",
-    campos: [],
+    campos: [IA_DURANTE],
   },
 
   // ── Atendimento humano ─────────────────────────────────────────
@@ -135,21 +155,21 @@ export const TRIGGERS = [
     label: "Entrou na fila de atendimento",
     hint: "A IA (ou um operador) transferiu a conversa para a fila humana.",
     categoria: "atendimento",
-    campos: [{ key: "queueName", label: "Somente na fila", type: "text", opcional: true }],
+    campos: [{ key: "queueName", label: "Somente na fila", type: "text", opcional: true }, IA_DURANTE],
   },
   {
     id: "ATTENDANCE_ASSIGNED",
     label: "Atendente assumiu a conversa",
     hint: "Alguém da equipe pegou o atendimento.",
     categoria: "atendimento",
-    campos: [],
+    campos: [IA_DURANTE],
   },
   {
     id: "ATTENDANCE_CLOSED",
     label: "Atendimento encerrado",
     hint: "A conversa foi encerrada pelo painel. Bom para pesquisa de satisfação.",
     categoria: "atendimento",
-    campos: [],
+    campos: [IA_DURANTE],
   },
 
   // ── Agenda ─────────────────────────────────────────────────────
@@ -158,35 +178,35 @@ export const TRIGGERS = [
     label: "Novo agendamento",
     hint: "O contato marcou um horário (pelo agente, pelo link ou pelo painel).",
     categoria: "agenda",
-    campos: [],
+    campos: [IA_DURANTE],
   },
   {
     id: "APPOINTMENT_CONFIRMED",
     label: "Presença confirmada",
     hint: "O contato clicou em confirmar no lembrete.",
     categoria: "agenda",
-    campos: [],
+    campos: [IA_DURANTE],
   },
   {
     id: "APPOINTMENT_CANCELLED",
     label: "Agendamento cancelado",
     hint: "Cancelado pelo contato ou pelo painel.",
     categoria: "agenda",
-    campos: [],
+    campos: [IA_DURANTE],
   },
   {
     id: "APPOINTMENT_NOSHOW",
     label: "Faltou (no-show)",
     hint: "Passou a tolerância e o contato não apareceu.",
     categoria: "agenda",
-    campos: [],
+    campos: [IA_DURANTE],
   },
   {
     id: "APPOINTMENT_COMPLETED",
     label: "Atendimento concluído",
     hint: "O agendamento foi marcado como concluído.",
     categoria: "agenda",
-    campos: [],
+    campos: [IA_DURANTE],
   },
 
   // ── Funil ──────────────────────────────────────────────────────
@@ -197,6 +217,7 @@ export const TRIGGERS = [
     categoria: "funil",
     campos: [
       { key: "stageName", label: "Somente ao entrar na etapa", type: "text", opcional: true, hint: "Deixe vazio para qualquer etapa." },
+      IA_DURANTE,
     ],
   },
   {
@@ -204,7 +225,7 @@ export const TRIGGERS = [
     label: "Recebeu uma tag",
     hint: "Uma tag foi adicionada ao contato.",
     categoria: "funil",
-    campos: [{ key: "tagName", label: "Somente a tag", type: "text", opcional: true }],
+    campos: [{ key: "tagName", label: "Somente a tag", type: "text", opcional: true }, IA_DURANTE],
   },
 
   // ── Campanha ───────────────────────────────────────────────────
@@ -215,6 +236,7 @@ export const TRIGGERS = [
     categoria: "campanha",
     campos: [
       { key: "withinHours", label: "Janela após o disparo", type: "number", unidade: "horas", padrao: 72 },
+      IA_DURANTE,
     ],
   },
 
@@ -226,6 +248,7 @@ export const TRIGGERS = [
     categoria: "tempo",
     campos: [
       { key: "schedule", label: "Expressão cron", type: "cron", padrao: "0 9 * * *", hint: "Ex.: 0 9 * * 1-5 (dias úteis às 9h)." },
+      IA_DURANTE,
     ],
   },
   {
@@ -235,6 +258,7 @@ export const TRIGGERS = [
     categoria: "tempo",
     campos: [
       { key: "secret", label: "Chave de segurança", type: "text", hint: "Enviada no cabeçalho X-Flow-Secret. Gere uma sequência aleatória." },
+      IA_DURANTE,
     ],
   },
 ];

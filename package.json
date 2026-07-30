@@ -16,7 +16,8 @@
     "test:reminders": "node scripts/test-reminders.mjs",
     "test:attendance": "node scripts/test-attendance.mjs",
     "test:flows": "node scripts/test-flow-simulator.mjs",
-    "test:triggers": "node scripts/test-triggers.mjs"
+    "test:triggers": "node scripts/test-triggers.mjs",
+    "test:ai-flows": "node scripts/test-ai-flow-awareness.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.113.0",

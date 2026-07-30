@@ -281,6 +281,23 @@ export const getConversations = async (req, res) => {
     });
     const accountById = new Map(accounts.map((a) => [a.id, a]));
 
+    // Fluxos em andamento por contato: é o que explica, no painel, por que a
+    // IA está calada numa conversa. Uma consulta para o lote inteiro.
+    const execucoes = await prisma.automationExecution.findMany({
+      where: {
+        leadId: { in: conversations.map((c) => c.leadId) },
+        status: { in: ["RUNNING", "WAITING_INPUT", "WAITING_DELAY"] },
+      },
+      select: { leadId: true, status: true, resumeAt: true, automation: { select: { name: true } } },
+      orderBy: { startedAt: "desc" },
+    });
+    const fluxoPorLead = new Map();
+    for (const e of execucoes) {
+      if (!fluxoPorLead.has(e.leadId)) {
+        fluxoPorLead.set(e.leadId, { name: e.automation?.name || "Fluxo", status: e.status, resumeAt: e.resumeAt });
+      }
+    }
+
     // Posição na fila calculada uma vez para todo o lote: ordem de entrada
     // dentro de cada fila. Consultar por conversa seria N consultas.
     const posicoes = new Map();
@@ -325,6 +342,8 @@ export const getConversations = async (req, res) => {
           handoffReason: c.handoffReason || null,
           assignedTo: c.assignedTo || null,
           assignedAt: c.assignedAt,
+          // Fluxo conduzindo a conversa neste momento (se houver).
+          activeFlow: fluxoPorLead.get(c.leadId) || null,
         };
       })
     );

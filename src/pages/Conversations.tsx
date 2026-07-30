@@ -38,7 +38,16 @@ function faseSelo(chat: any, meuId: string) {
   if (fase === "CLOSED") {
     return { label: "Encerrada", cls: "bg-slate-100 text-slate-400", title: "Atendimento encerrado" };
   }
-  return null; // BOT é o normal: não polui a lista com selo.
+  // No automático, o que importa destacar é quando um fluxo assumiu a
+  // conversa — é o motivo de o agente de IA estar calado.
+  if (chat.activeFlow) {
+    return {
+      label: "Fluxo",
+      cls: "bg-violet-100 text-violet-700",
+      title: `Fluxo "${chat.activeFlow.name}" conduzindo a conversa`,
+    };
+  }
+  return null; // BOT sem fluxo é o normal: não polui a lista com selo.
 }
 
 function channelMeta(ch?: string) {
@@ -850,6 +859,17 @@ export default function Conversations() {
                          ) : selectedChat.phase === "CLOSED" ? (
                            <span className="text-slate-400 flex items-center gap-1.5">
                              <Circle className="w-2 h-2 fill-slate-300" /> Atendimento encerrado
+                           </span>
+                         ) : selectedChat.activeFlow ? (
+                           <span className="text-violet-600 flex items-center gap-1.5">
+                             <Circle className="w-2 h-2 fill-violet-500" />
+                             Fluxo "{selectedChat.activeFlow.name}" conduzindo
+                             {selectedChat.activeFlow.status === "WAITING_INPUT"
+                               ? " · esperando resposta do cliente"
+                               : selectedChat.activeFlow.status === "WAITING_DELAY"
+                               ? " · em pausa programada"
+                               : " · executando"}
+                             {" · a IA volta quando terminar"}
                            </span>
                          ) : (
                            <span className="text-emerald-600 flex items-center gap-1.5">
