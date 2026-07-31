@@ -72,6 +72,13 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
   const realConversationCost = unidadeServico
     ? unidadeServico.unitCostBrl * qtdConversas * MSGS_POR_CONVERSA
     : 0;
+  // A franquia de conversas é custo variável como qualquer outro, então
+  // entra no preço sugerido com a mesma margem do WhatsApp. Sem isto o
+  // preço sugerido cobria tokens e disparos e entregava as conversas de
+  // graça — quanto maior a franquia, maior o rombo.
+  const conversationSalePrice = unidadeServico
+    ? unidadeServico.unitPriceBrl * qtdConversas * MSGS_POR_CONVERSA
+    : 0;
 
   // No QR Code a Meta não cobra por mensagem — o custo é manter o número de
   // pé. Somar tarifa de disparo num plano de QR Code inventaria custo.
@@ -169,7 +176,14 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
   const simMargin = simPrice > 0 ? (simProfit / simPrice) * 100 : 0;
   // Cada custo tem a sua margem, configurada na administração do SaaS.
   const suggestedPlanPrice = pricing
-    ? Number((realTokenCost * (pricing.tokenMarkup || 5) + campaignSalePrice + realBaileysCost * (pricing.waMarkup || 2)).toFixed(2))
+    ? Number(
+        (
+          realTokenCost * (pricing.tokenMarkup || 5) +
+          conversationSalePrice +
+          campaignSalePrice +
+          realBaileysCost * (pricing.waMarkup || 2)
+        ).toFixed(2)
+      )
     : 0;
   const precoAbaixoDoCusto = simPrice > 0 && simPrice < simCost;
 
@@ -422,7 +436,12 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">
-                        Preço sugerido (IA {pricing.tokenMarkup || 5}x{qtdDisparos > 0 ? ` · disparo ${pricing.waMarkup || 2}x` : ""})
+                        Preço sugerido ({[
+                          `IA ${pricing.tokenMarkup || 5}x`,
+                          realConversationCost > 0 && `conversa ${pricing.waMarkup || 2}x`,
+                          qtdDisparos > 0 && `disparo ${pricing.waMarkup || 2}x`,
+                          realBaileysCost > 0 && `número ${pricing.waMarkup || 2}x`,
+                        ].filter(Boolean).join(" · ")})
                       </span>
                       <button
                         type="button"
@@ -439,7 +458,8 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
                       </p>
                     )}
                     <p className="text-[11px] text-muted-foreground">
-                      As margens (IA e disparo) são definidas em Configurações → Precificação.
+                      As margens (IA e WhatsApp — conversa, disparo e número) são definidas em
+                      Configurações → Precificação.
                     </p>
                   </>
                 ) : (
