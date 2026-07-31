@@ -70,6 +70,10 @@ export default function Comecar() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ respostas: finais }),
       }).then((x) => x.json());
+      // As respostas ficam guardadas assim que o diagnóstico fecha, e não só
+      // quando alguém escolhe um plano: quem chega sem plano publicado também
+      // segue para o cadastro, e o negócio dele não pode se perder no caminho.
+      sessionStorage.setItem("respostasOnboarding", JSON.stringify(finais));
       setResultado(r);
     } catch {
       setResultado({ erro: true });
@@ -195,12 +199,33 @@ export default function Comecar() {
 }
 
 function Resultado({ resultado, onEscolher, onRefazer }: any) {
-  if (resultado?.erro || (!resultado?.oficial && !resultado?.qrcode)) {
+  const navigate = useNavigate();
+
+  if (resultado?.erro) {
     return (
       <div className="space-y-4 py-16 text-center">
         <AlertTriangle className="mx-auto h-8 w-8 text-amber-400" />
         <p className="text-lg font-medium">Não consegui montar a recomendação agora.</p>
         <Button onClick={onRefazer} variant="outline" className="rounded-xl">Tentar de novo</Button>
+      </div>
+    );
+  }
+
+  // Sem plano publicado não há o que recomendar. Oferecer "tentar de novo"
+  // aqui seria mandar a pessoa bater na mesma porta: o caminho honesto é
+  // abrir a conta e começar o teste enquanto os planos não saem.
+  if (!resultado?.oficial && !resultado?.qrcode) {
+    return (
+      <div className="space-y-4 py-16 text-center">
+        <Sparkles className="mx-auto h-8 w-8 text-primary" />
+        <p className="text-lg font-medium">Seus planos ainda estão sendo publicados</p>
+        <p className="mx-auto max-w-md text-sm text-slate-400">
+          Guardamos suas respostas. Crie a conta e use os 7 dias de teste — quando o plano certo
+          entrar no ar, ele já aparece no painel.
+        </p>
+        <Button onClick={() => navigate("/register")} className="gap-2 rounded-xl">
+          Criar conta e testar <ArrowRight className="h-4 w-4" />
+        </Button>
       </div>
     );
   }
@@ -228,9 +253,12 @@ function Resultado({ resultado, onEscolher, onRefazer }: any) {
           Refazer as perguntas
         </button>
         <span className="text-slate-700">·</span>
-        <a href="/#pricing" className="text-slate-400 underline-offset-4 hover:text-white hover:underline">
+        <button
+          onClick={() => navigate("/planos")}
+          className="text-slate-400 underline-offset-4 hover:text-white hover:underline"
+        >
           Ver todos os planos
-        </a>
+        </button>
       </div>
     </div>
   );

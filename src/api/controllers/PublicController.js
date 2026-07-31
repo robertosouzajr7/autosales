@@ -61,6 +61,32 @@ export const getEntryPlans = async (_req, res) => {
   }
 };
 
+/**
+ * Catálogo completo para a página /planos.
+ *
+ * Só entra plano ativo e pago: plano de R$ 0 na base é fixture de teste ou
+ * cortesia interna, e ninguém contrata da vitrine. A lista sai ordenada por
+ * preço e separada por canal, que é a única divisão que muda o custo — a
+ * tela não decide nada, ela mostra o que existe cadastrado.
+ */
+export const getAllPlans = async (_req, res) => {
+  try {
+    const planos = await prisma.plan.findMany({
+      where: { active: true, priceMonthly: { gt: 0 } },
+      orderBy: { priceMonthly: "asc" },
+    });
+    const modo = (p) => String(p.whatsappMode || "BOTH").toUpperCase();
+    res.json({
+      planos,
+      oficiais: planos.filter((p) => ["OFFICIAL", "BOTH"].includes(modo(p))),
+      qrcode: planos.filter((p) => ["BAILEYS", "BOTH"].includes(modo(p))),
+      total: planos.length,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 export const getWebchat = async (req, res) => {
   const { id } = req.params; // tenantId
   try {

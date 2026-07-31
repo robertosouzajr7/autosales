@@ -10,6 +10,7 @@ router.get("/landing", PublicController.getLandingPage);
 router.get("/plan-questions", PublicController.getPlanQuestions);
 router.post("/plan-advisor", PublicController.recommendPlan);
 router.get("/entry-plans", PublicController.getEntryPlans);
+router.get("/plans", PublicController.getAllPlans);
 
 router.get("/webchat/:id", PublicController.getWebchat);
 router.post("/chat", PublicController.submitChat);

@@ -27,6 +27,7 @@ import PublicBooking from "@/pages/PublicBooking";
 import PublicWebchat from "@/pages/PublicWebchat";
 import Docs from "@/pages/Docs";
 import VerifyEmail from "@/pages/VerifyEmail";
+import Planos from "./pages/Planos";
 import Comecar from "./pages/Comecar";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
@@ -45,6 +46,8 @@ function App() {
         <Route path="/verify-email" element={<VerifyEmail />} />
         {/* Contratação guiada: perguntas → plano ideal → cadastro. */}
         <Route path="/comecar" element={<Comecar />} />
+        {/* Catálogo completo, para quem quer conferir além da recomendação. */}
+        <Route path="/planos" element={<Planos />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/b/:tenantId" element={<PublicBooking />} />

@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
-  Check, MessageSquare, ArrowRight, Users, Star, Send, X, Clock, AlertCircle,
+  MessageSquare, ArrowRight, Users, Star, Send, X, Clock, AlertCircle,
   Sun, Moon, Bot, Instagram, Package, CalendarDays, LayoutGrid, Menu, Phone, Globe,
-  Zap, Workflow, Megaphone, Mic, Users2, Plug, QrCode, BadgeCheck, Sparkles
+  Zap, Workflow, Megaphone, Mic, Users2, Plug, Sparkles
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -15,20 +15,9 @@ import { Logo } from "@/components/Logo";
 
 const CHANNELS = ["no WhatsApp", "no Instagram", "no seu site"];
 
-function Limite({ k, v, destaque }: { k: string; v: string; destaque?: boolean }) {
-  return (
-    <div>
-      <p className={destaque ? "text-white/60" : "text-slate-400"}>{k}</p>
-      <p className="font-semibold">{v}</p>
-    </div>
-  );
-}
-
 export default function LandingPage() {
   const [settings, setSettings] = useState<any>(null);
   const [plans, setPlans] = useState<any[]>([]);
-  // Planos de entrada (um por canal) — é o que a seção de preços mostra.
-  const [entryPlans, setEntryPlans] = useState<any>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMessage, setChatMessage] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -49,11 +38,6 @@ export default function LandingPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    fetch("/api/public/entry-plans")
-      .then((r) => r.json())
-      .then((d) => setEntryPlans(d))
-      .catch(() => {});
-
     fetch("/api/public/landing")
       .then((res) => res.json())
       .then((data) => {
@@ -426,108 +410,42 @@ export default function LandingPage() {
       </section>
 
       {/* ===================== PLANOS ===================== */}
-      {/* Duas colunas, não cinco: a diferença que importa é o canal do
-          WhatsApp. Quem quer comparar tudo passa pelo questionário. */}
+      {/* Sem tabela de preços: plano só aparece depois do diagnóstico. Uma
+          grade de colunas obriga o visitante a virar analista de si mesmo
+          antes de comprar — e o preço certo depende do volume dele. */}
       <section id="pricing" className="py-24 px-5 lg:px-16 border-t border-slate-200/70 dark:border-white/10">
-        <div className="max-w-5xl mx-auto space-y-12">
-          <div className="text-center space-y-3 max-w-2xl mx-auto">
-            <h2 className="text-3xl lg:text-5xl font-bold tracking-[-0.03em] text-balance">Comece por aqui</h2>
-            <p className="text-slate-500 dark:text-slate-400 text-lg">
-              A diferença entre os dois é só como o WhatsApp conecta. 7 dias grátis nos dois.
+        <div className="max-w-3xl mx-auto text-center space-y-8">
+          <div className="space-y-4">
+            <Badge className="border-none bg-[#2563EB]/15 text-[#2563EB] font-semibold">
+              <Sparkles className="w-3 h-3 mr-1" /> Leva menos de um minuto
+            </Badge>
+            <h2 className="text-3xl lg:text-5xl font-bold tracking-[-0.03em] text-balance">
+              Qual plano é o seu?
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 text-lg text-balance">
+              Responda 5 perguntas sobre o seu atendimento e mostramos os dois planos que servem —
+              um por QR Code e um com API oficial. Sem tabela para decifrar.
             </p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
-            {[
-              {
-                plano: entryPlans?.qrcode,
-                icone: QrCode,
-                titulo: "Por QR Code",
-                selo: "Mais econômico",
-                destaque: false,
-                bom: [
-                  "Conecta lendo o QR, em 1 minuto",
-                  "Usa o número que você já tem",
-                  "Sem cobrança por mensagem",
-                ],
-                nota: "Canal não oficial — a Meta pode bloquear o número.",
-              },
-              {
-                plano: entryPlans?.oficial,
-                icone: BadgeCheck,
-                titulo: "Com API oficial",
-                selo: "Mais robusto",
-                destaque: true,
-                bom: [
-                  "Conta verificada, com selo",
-                  "Número sem risco de bloqueio",
-                  "Disparo em massa liberado",
-                ],
-                nota: "A Meta cobra por mensagem de campanha.",
-              },
-            ].map((op) =>
-              op.plano ? (
-                <Card
-                  key={op.titulo}
-                  className={`p-8 rounded-3xl space-y-6 relative overflow-hidden transition-transform hover:-translate-y-1 ${
-                    op.destaque ? "bg-[#2563EB] text-white border-none shadow-2xl shadow-[#2563EB]/30" : glass
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-sm font-medium">
-                      <op.icone className="w-4 h-4" /> {op.titulo}
-                    </span>
-                    <Badge className={`border-none text-[11px] font-semibold ${op.destaque ? "bg-white/20 text-white" : "bg-[#2563EB]/15 text-[#2563EB]"}`}>
-                      {op.selo}
-                    </Badge>
-                  </div>
-
-                  <div>
-                    <p className={`text-sm ${op.destaque ? "text-white/70" : "text-slate-400"}`}>{op.plano.name}</p>
-                    <h3 className="text-5xl font-bold tracking-tight tabular-nums">
-                      R$ {op.plano.priceMonthly}
-                      <span className={`text-sm font-medium ${op.destaque ? "text-white/70" : "text-slate-400"}`}>/mês</span>
-                    </h3>
-                  </div>
-
-                  <ul className={`space-y-2.5 pt-5 border-t ${op.destaque ? "border-white/15" : "border-slate-200/70 dark:border-white/10"}`}>
-                    {op.bom.map((li) => (
-                      <li key={li} className="flex items-center gap-2 text-[13px] font-medium">
-                        <Check className="w-4 h-4 shrink-0" /> {li}
-                      </li>
-                    ))}
-                    <li className={`flex items-start gap-2 text-[12px] pt-1 ${op.destaque ? "text-white/60" : "text-slate-400"}`}>
-                      <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" /> {op.nota}
-                    </li>
-                  </ul>
-
-                  <div className={`grid grid-cols-2 gap-3 pt-5 border-t text-[12px] ${op.destaque ? "border-white/15" : "border-slate-200/70 dark:border-white/10"}`}>
-                    <Limite destaque={op.destaque} k="Conversas/mês" v={op.plano.maxConversations ? op.plano.maxConversations.toLocaleString("pt-BR") : "Sem limite"} />
-                    <Limite destaque={op.destaque} k="Pessoas" v={String(op.plano.maxUsers)} />
-                    <Limite destaque={op.destaque} k="Números" v={String(op.plano.maxWhatsAppNumbers)} />
-                    <Limite destaque={op.destaque} k="Disparos/mês" v={op.plano.maxCampaignMessages ? op.plano.maxCampaignMessages.toLocaleString("pt-BR") : "—"} />
-                  </div>
-
-                  <Link to={`/comecar`} className="block w-full">
-                    <Button className={`w-full h-13 font-semibold rounded-2xl text-base border-none transition-transform active:scale-95 h-14 ${op.destaque ? "bg-white text-[#2563EB] hover:bg-slate-50 shadow-xl" : "bg-[#2563EB] text-white hover:bg-[#1D4ED8]"}`}>
-                      Testar 7 dias grátis
-                    </Button>
-                  </Link>
-                </Card>
-              ) : null
-            )}
-          </div>
-
-          <div className="text-center">
-            <Link to="/comecar" className="inline-flex items-center gap-2 text-sm font-medium text-[#2563EB] hover:underline underline-offset-4">
-              <Sparkles className="w-4 h-4" /> Precisa de mais? Responda 5 perguntas e veja o plano certo
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link to="/comecar">
+              <Button className="h-14 px-8 rounded-2xl text-base font-semibold bg-[#2563EB] text-white hover:bg-[#1D4ED8] border-none transition-transform active:scale-95 gap-2">
+                Descobrir meu plano ideal <ArrowRight className="w-4 h-4" />
+              </Button>
             </Link>
-            {entryPlans?.total > 2 && (
-              <p className="mt-2 text-xs text-slate-400">
-                Temos {entryPlans.total} planos — estes são os de entrada.
-              </p>
-            )}
+            <Link to="/planos">
+              <Button variant="outline" className="h-14 px-8 rounded-2xl text-base font-semibold">
+                Ver todos os planos
+              </Button>
+            </Link>
           </div>
+
+          <p className="text-sm text-slate-400 flex flex-wrap items-center justify-center gap-x-5 gap-y-1">
+            <span><strong className="text-slate-600 dark:text-slate-300">7 dias grátis</strong> em qualquer plano</span>
+            <span><strong className="text-slate-600 dark:text-slate-300">Sem cartão</strong> para testar</span>
+            <span><strong className="text-slate-600 dark:text-slate-300">Cancele</strong> em um clique</span>
+          </p>
         </div>
       </section>
 

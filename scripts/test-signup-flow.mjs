@@ -145,6 +145,38 @@ async function main() {
   ok(resp.corpo.qrcode.priceMonthly <= (resp.corpo.oficial.priceMonthly || Infinity) || true, "ordenados por preço");
   ok(typeof resp.corpo.total === "number", `informa quantos planos existem no total (${resp.corpo.total})`);
 
+  // ── 7. Catálogo completo da página /planos ──────────────────
+  console.log("\n7. Todos os planos");
+  resp = await get("/public/plans");
+  ok(resp.status === 200, `responde (${resp.status})`);
+  ok(Array.isArray(resp.corpo.planos) && resp.corpo.planos.length > 0, `lista os planos (${resp.corpo.planos?.length})`);
+  ok(
+    resp.corpo.planos.every((p) => p.priceMonthly > 0),
+    "plano de R$ 0 não vai para a vitrine"
+  );
+  ok(
+    resp.corpo.planos.every((p, i, a) => i === 0 || a[i - 1].priceMonthly <= p.priceMonthly),
+    "sai ordenado do mais barato para o mais caro"
+  );
+  ok(
+    resp.corpo.qrcode.some((p) => p.id === pequeno.id) && !resp.corpo.oficiais.some((p) => p.id === pequeno.id),
+    "plano de QR Code entra só na coluna de QR Code"
+  );
+  ok(
+    resp.corpo.oficiais.some((p) => p.id === grande.id) && !resp.corpo.qrcode.some((p) => p.id === grande.id),
+    "plano oficial entra só na coluna oficial"
+  );
+
+  // A tela nasce vazia e precisa saber disso para não prometer preço que
+  // ainda não existe — é o estado de quem acabou de subir a plataforma.
+  const ativos = (await prisma.plan.findMany({ where: { active: true }, select: { id: true } })).map((p) => p.id);
+  await prisma.plan.updateMany({ where: { id: { in: ativos } }, data: { active: false } });
+  resp = await get("/public/plans");
+  ok(resp.corpo.total === 0 && resp.corpo.planos.length === 0, "sem plano publicado, devolve lista vazia em vez de erro");
+  // Só volta a ligar o que estava ligado: plano desativado de propósito
+  // continua desativado.
+  await prisma.plan.updateMany({ where: { id: { in: ativos } }, data: { active: true } });
+
   await prisma.plan.deleteMany({ where: { id: { in: [pequeno.id, grande.id] } } }).catch(() => {});
 
   console.log(`\n${falhas === 0 ? "✅ Todos os cenários passaram." : `❌ ${falhas} verificação(ões) falharam.`}`);
