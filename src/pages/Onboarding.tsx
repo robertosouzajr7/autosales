@@ -71,7 +71,28 @@ export default function Onboarding() {
     if (!vertical) return;
     setSaving(true);
     try {
-      await fetch("/api/business/profile", { method: "PUT", headers: authHeaders(), body: JSON.stringify({ ...profile, businessType: vertical }) });
+      // O tipo de negócio é o que o painel exige para deixar de mandar a
+      // pessoa de volta para cá. Se ele não gravar, seguir para o painel só
+      // devolve o visitante ao wizard — por isso a falha para o fluxo aqui,
+      // com o motivo na tela, em vez de virar um vaivém sem explicação.
+      const res = await fetch("/api/business/profile", {
+        method: "PUT",
+        headers: authHeaders(),
+        body: JSON.stringify({ ...profile, businessType: vertical }),
+      });
+      if (!res.ok) {
+        const erro = await res.json().catch(() => ({}));
+        toast({
+          title: "Não consegui salvar seu negócio",
+          description: erro.error || `O servidor respondeu ${res.status}.`,
+          variant: "destructive",
+        });
+        setSaving(false);
+        return;
+      }
+
+      // Horários e template são complementos: se falharem, o cadastro
+      // essencial já está de pé e a pessoa ajusta depois no painel.
       await fetch("/api/business/hours", { method: "PUT", headers: authHeaders(), body: JSON.stringify({ hours }) });
       await fetch("/api/business/apply-template", { method: "POST", headers: authHeaders(), body: JSON.stringify({ businessType: vertical }) });
       toast({ title: "Tudo pronto!", description: "Seu agente já tem uma base para começar. Vamos conectar o WhatsApp?" });

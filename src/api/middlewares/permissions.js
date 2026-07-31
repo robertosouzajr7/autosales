@@ -103,6 +103,12 @@ const LIVRE_SEM_VERIFICAR = [
   "/settings",          // GET: o painel precisa saber o nome da conta
   "/billing/",          // ver plano e regularizar pagamento
   "/compliance/",
+  // Onboarding: descrever o próprio negócio é terminar o cadastro, não usar
+  // recurso — nada aqui envia mensagem nem sai para fora. Travar isto
+  // prendia a conta num vaivém entre o painel e o wizard, porque o painel
+  // manda para o wizard quando falta o tipo de negócio e o wizard não
+  // conseguia gravá-lo.
+  "/business",
 ];
 
 export function requireVerifiedEmail(req, res, next) {

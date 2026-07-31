@@ -27,6 +27,14 @@ async function post(caminho, corpo, token) {
   });
   return { status: res.status, corpo: await res.json().catch(() => ({})) };
 }
+async function put(caminho, corpo, token) {
+  const res = await fetch(`${API}/api${caminho}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: JSON.stringify(corpo),
+  });
+  return { status: res.status, corpo: await res.json().catch(() => ({})) };
+}
 async function get(caminho, token) {
   const res = await fetch(`${API}/api${caminho}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -88,6 +96,14 @@ async function main() {
   ok(resp.corpo.emailNotVerified === true, "e a resposta diz o motivo");
   resp = await post("/whatsapp/accounts", { name: "QR" }, token);
   ok(resp.status === 403, `conectar canal é bloqueado (${resp.status})`);
+
+  // O onboarding é exceção: descrever o próprio negócio é terminar o
+  // cadastro. Travar isto prendia a conta num vaivém — o painel manda para o
+  // wizard quando falta o tipo de negócio, e o wizard não conseguia gravá-lo.
+  resp = await put("/business/profile", { businessType: "CLINICA", businessAbout: "teste" }, token);
+  ok(resp.status === 200, `onboarding grava o negócio mesmo sem confirmar (${resp.status})`);
+  resp = await get("/business", token);
+  ok(resp.corpo.profile?.businessType === "CLINICA", "e o painel passa a enxergar o tipo de negócio");
 
   // Confirma e o painel libera.
   const user = await prisma.user.findUnique({ where: { email } });
