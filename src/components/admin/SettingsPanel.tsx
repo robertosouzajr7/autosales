@@ -52,6 +52,7 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
   // margem aplicada em cima. É o que define o preço da franquia dos planos.
   const [waRates, setWaRates] = useState<any>({ MARKETING: 0.0625, UTILITY: 0.0068, AUTHENTICATION: 0.0068, SERVICE: 0 });
   const [waMarkup, setWaMarkup] = useState<number | string>(2);
+  const [baileysCost, setBaileysCost] = useState<number | string>(0);
   const [savingWa, setSavingWa] = useState(false);
 
   // Landing CMS
@@ -77,6 +78,7 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
       setTokenMarkup(gwRes.data.tokenMarkup ?? 5);
       if (gwRes.data.waRates) setWaRates(gwRes.data.waRates);
       setWaMarkup(gwRes.data.waMarkup ?? 2);
+      setBaileysCost(gwRes.data.baileysNumberCost ?? 0);
       setVoiceProvider(gwRes.data.voiceProvider || "GEMINI");
       setEnabledVoices(gwRes.data.enabledVoices || []);
     }
@@ -143,6 +145,7 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
         SERVICE: Number(waRates.SERVICE),
       },
       waMarkup: Number(waMarkup),
+      baileysNumberCost: Number(baileysCost),
     });
     setSavingWa(false);
     if (res.ok) { toast({ title: "Precificação de disparo atualizada" }); load(); }
@@ -612,12 +615,20 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
           ))}
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-3">
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">Margem sobre o disparo (x)</Label>
             <Input type="number" step="0.1" min={1} value={waMarkup} onChange={(e) => setWaMarkup(e.target.value)} />
             <p className="text-[11px] text-muted-foreground">
               Ex.: 2 = você cobra o dobro do que a Meta cobra. Mínimo 1 (vender pelo custo).
+            </p>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Custo por número no QR Code (R$/mês)</Label>
+            <Input type="number" step="0.01" min={0} value={baileysCost} onChange={(e) => setBaileysCost(e.target.value)} />
+            <p className="text-[11px] text-muted-foreground">
+              Planos por QR Code não pagam a Meta, mas custam a sessão de pé. Sem este número,
+              eles aparecem como se custassem zero.
             </p>
           </div>
           <div className="space-y-1">

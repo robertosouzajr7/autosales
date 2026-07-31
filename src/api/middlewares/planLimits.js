@@ -78,6 +78,36 @@ export const requireWhatsAppSlot = requireCountUnder({
   label: "números WhatsApp",
 });
 
+/**
+ * O canal pedido cabe no plano?
+ *
+ * O plano é quem define o canal porque é quem carrega o custo: no oficial a
+ * Meta cobra por mensagem, no QR Code não. Deixar o cliente trocar de canal
+ * por fora do plano quebraria a conta de margem inteira.
+ *
+ * @param canal "OFFICIAL" (Cloud API) ou "BAILEYS" (QR Code)
+ */
+export function requireWhatsAppMode(canal) {
+  return async (req, res, next) => {
+    try {
+      const tenant = await loadTenantWithPlan(req.tenantId);
+      const modo = String(tenant?.plan?.whatsappMode || "BOTH").toUpperCase();
+      if (modo === "BOTH" || modo === canal) return next();
+
+      const nomes = { OFFICIAL: "API oficial da Meta", BAILEYS: "QR Code" };
+      return res.status(403).json({
+        error:
+          `O plano ${tenant?.plan?.name || "atual"} usa ${nomes[modo] || modo}. ` +
+          `Para conectar por ${nomes[canal] || canal}, troque de plano.`,
+        whatsappMode: modo,
+        requested: canal,
+      });
+    } catch (e) {
+      next();
+    }
+  };
+}
+
 export const requireUserSlot = requireCountUnder({
   field: "maxUsers",
   count: (tenantId) => prisma.user.count({ where: { tenantId } }),

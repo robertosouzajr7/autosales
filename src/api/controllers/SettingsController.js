@@ -33,6 +33,9 @@ export const getSettings = async (req, res) => {
       hasWhatsAppConnection,
       hasSdr,
       planFeatures,
+      // Canal de WhatsApp do plano: a tela de Conexões esconde o que este
+      // plano não permite, em vez de deixar o cliente tentar e tomar 403.
+      whatsappMode: (tenant?.plan?.whatsappMode || "BOTH").toUpperCase(),
       companyName: tenant?.name,
       phone: tenant?.phone,
       // Modelo global ativo (somente leitura para o cliente).

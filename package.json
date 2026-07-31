@@ -22,6 +22,7 @@
     "test:cdp": "node scripts/test-contacts-cdp.mjs",
     "test:pricing": "node scripts/test-dispatch-pricing.mjs",
     "test:usage": "node scripts/test-usage-limits.mjs",
+    "test:channel": "node scripts/test-whatsapp-mode.mjs",
     "contacts:dedupe": "node scripts/dedupe-contacts.mjs"
   },
   "dependencies": {

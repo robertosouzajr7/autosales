@@ -266,9 +266,12 @@ export default function Campaigns() {
                 <p className="text-xs text-slate-400 mt-2">
                   Restam <strong>{quota.remaining.toLocaleString("pt-BR")}</strong> disparos. Ao esgotar, novos envios
                   ficam bloqueados até a renovação.
-                  {quota.unitPriceBrl > 0 && (
+                  {quota.cobraPorMensagem === false ? (
+                    <> Seu plano dispara por QR Code: <strong>sem cobrança por mensagem</strong> — a
+                    franquia existe para proteger o número de bloqueio por volume.</>
+                  ) : quota.unitPriceBrl > 0 ? (
                     <> Cada disparo {String(quota.category || "").toLowerCase()} vale <strong>{brl(quota.unitPriceBrl)}</strong>.</>
-                  )}
+                  ) : null}
                 </p>
               </>
             )}

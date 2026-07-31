@@ -46,10 +46,11 @@ export async function resolvePricing() {
  * Projeção de gasto de um disparo.
  * @returns custo real (o que a Meta cobra) e preço (o que o cliente paga).
  */
-export async function estimateCampaign(recipientCount, category = "UTILITY") {
+export async function estimateCampaign(recipientCount, category = "UTILITY", opts = {}) {
   const { rates, usdToBrl, markup } = await resolvePricing();
   const cat = String(category || "UTILITY").toUpperCase();
-  const unitUsd = rates[cat] ?? rates.UTILITY;
+  // Plano de QR Code não passa pela Meta: nenhuma mensagem é cobrada.
+  const unitUsd = opts.cobraPorMensagem === false ? 0 : (rates[cat] ?? rates.UTILITY);
 
   const costUsd = unitUsd * recipientCount;
   const costBrl = costUsd * usdToBrl;
@@ -66,6 +67,7 @@ export async function estimateCampaign(recipientCount, category = "UTILITY") {
     priceBrl,
     usdToBrl,
     markup,
+    cobraPorMensagem: opts.cobraPorMensagem !== false,
   };
 }
 
@@ -84,6 +86,56 @@ export async function unitPricing() {
     };
   }
   return { categorias: saida, usdToBrl, markup };
+}
+
+export const WHATSAPP_MODES = {
+  OFFICIAL: "OFFICIAL",
+  BAILEYS: "BAILEYS",
+  BOTH: "BOTH",
+};
+
+/** O plano tem custo por mensagem na Meta? Só o canal oficial tem. */
+export function cobraPorMensagem(plano) {
+  const modo = String(plano?.whatsappMode || WHATSAPP_MODES.BOTH).toUpperCase();
+  return modo !== WHATSAPP_MODES.BAILEYS;
+}
+
+/** Custo mensal por número no QR Code, definido na administração. */
+export async function baileysNumberCost() {
+  const s = await prisma.platformSettings
+    .findUnique({ where: { id: "singleton" }, select: { baileysNumberCost: true } })
+    .catch(() => null);
+  return Number(s?.baileysNumberCost || 0);
+}
+
+/**
+ * Custo de WhatsApp do plano inteiro, pelo canal que ele usa.
+ *
+ * No oficial o custo vem das mensagens (disparo + serviço). No QR Code não
+ * existe custo por mensagem — existe o custo de manter cada número de pé,
+ * que é fixo e some da conta se ninguém somar.
+ */
+export async function planWhatsappCost(plano) {
+  const modo = String(plano?.whatsappMode || WHATSAPP_MODES.BOTH).toUpperCase();
+
+  if (modo === WHATSAPP_MODES.BAILEYS) {
+    const unit = await baileysNumberCost();
+    const numeros = Math.max(1, Number(plano?.maxWhatsAppNumbers) || 1);
+    return {
+      modo,
+      porMensagem: false,
+      custoBrl: unit * numeros,
+      detalhe: `${numeros} número(s) × ${unit.toFixed(2)}/mês de infraestrutura`,
+    };
+  }
+
+  const disparo = await planCampaignCost(plano?.maxCampaignMessages, plano?.campaignCategory);
+  return {
+    modo,
+    porMensagem: true,
+    custoBrl: disparo.custoBrl,
+    detalhe: `${disparo.quantidade} disparo(s) ${String(disparo.category).toLowerCase()}`,
+  };
 }
 
 /**
@@ -122,7 +174,12 @@ export async function checkCampaignQuota(tenantId, recipientCount) {
     where: { id: tenantId },
     select: {
       usedCampaignMessages: true,
-      plan: { select: { maxCampaignMessages: true, name: true, campaignCategory: true } },
+      plan: {
+        select: {
+          maxCampaignMessages: true, name: true, campaignCategory: true,
+          whatsappMode: true,
+        },
+      },
     },
   });
   if (!tenant) return { allowed: false, reason: "Conta não encontrada." };
@@ -135,7 +192,18 @@ export async function checkCampaignQuota(tenantId, recipientCount) {
   const categoria = tenant.plan?.campaignCategory || "MARKETING";
   const { categorias } = await unitPricing();
   const unitPriceBrl = categorias[categoria]?.unitPriceBrl ?? 0;
-  const extras = { category: categoria, unitPriceBrl, planName: tenant.plan?.name || null };
+  // Em plano de QR Code a Meta não cobra: o preço unitário é zero e a
+  // franquia vira limite de volume, não de custo. A tela precisa saber a
+  // diferença, senão mostra "R$ 0,00" sem explicar por quê.
+  const modo = String(tenant.plan?.whatsappMode || "BOTH").toUpperCase();
+  const cobra = modo !== "BAILEYS";
+  const extras = {
+    category: categoria,
+    unitPriceBrl: cobra ? unitPriceBrl : 0,
+    whatsappMode: modo,
+    cobraPorMensagem: cobra,
+    planName: tenant.plan?.name || null,
+  };
 
   if (limit <= 0) {
     return {
@@ -174,6 +242,7 @@ export async function consumeCampaignQuota(tenantId, sent) {
 }
 
 export default {
-  DEFAULT_RATES_USD, resolvePricing, estimateCampaign, unitPricing, planCampaignCost,
+  DEFAULT_RATES_USD, WHATSAPP_MODES, resolvePricing, estimateCampaign, unitPricing,
+  planCampaignCost, planWhatsappCost, baileysNumberCost, cobraPorMensagem,
   checkCampaignQuota, consumeCampaignQuota,
 };

@@ -184,6 +184,8 @@ export default function Connections() {
 
   // Google Calendar
   const [gcal, setGcal] = useState<{ configured: boolean; connected: boolean }>({ configured: false, connected: false });
+  // Canal liberado pelo plano: OFFICIAL | BAILEYS | BOTH.
+  const [whatsappMode, setWhatsappMode] = useState<string>("BOTH");
   const [gcalLoading, setGcalLoading] = useState(false);
 
   const fetchGcal = async () => {
@@ -246,6 +248,11 @@ export default function Connections() {
     fetchConnections();
     fetchInstagram();
     fetchGcal();
+    // O plano decide o canal de WhatsApp; a tela só mostra o que ele permite.
+    fetch("/api/settings", { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((d) => setWhatsappMode(String(d?.whatsappMode || "BOTH").toUpperCase()))
+      .catch(() => {});
     setTenantId(localStorage.getItem("tenantId") || "");
 
     // Retorno do OAuth do Google (?google=connected|denied|expired|error|notoken)
@@ -496,6 +503,23 @@ export default function Connections() {
                 <Plus className="w-4 h-4" /> Nova conexão
               </Button>
             </div>
+
+            {whatsappMode !== "BOTH" && (
+              <div className="flex items-start gap-2 rounded-xl border border-border bg-muted px-4 py-3 text-sm text-muted-foreground">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                {whatsappMode === "BAILEYS" ? (
+                  <span>
+                    Seu plano conecta o WhatsApp por <strong>QR Code</strong>. Não há cobrança por
+                    mensagem, e o número é o seu — mantenha o aparelho e a linha ativos.
+                  </span>
+                ) : (
+                  <span>
+                    Seu plano usa a <strong>API oficial da Meta</strong>. Cada template entregue é
+                    cobrado pela Meta conforme a categoria; respostas dentro da janela de 24h não são.
+                  </span>
+                )}
+              </div>
+            )}
 
             {connections.length === 0 ? (
               <Card className="rounded-2xl border-border">

@@ -23,6 +23,7 @@ const DEFAULT_PLAN = {
   maxKnowledgeBaseChars: 50000,
   maxTokens: 100000,
   maxMessages: 1000,
+  whatsappMode: "BOTH", // OFFICIAL | BAILEYS | BOTH
   maxConversations: 0, // 0 = sem limite de conversas
   maxCampaignMessages: 0, // 0 = plano sem disparo em massa
   campaignCategory: "MARKETING", // categoria de referência para custear a franquia
@@ -66,13 +67,19 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
   // não cobra serviço, então isto dá zero — e passa a somar sozinho quando a
   // tarifa for preenchida (a cobrança começa em outubro/2026).
   const MSGS_POR_CONVERSA = 8;
-  const unidadeServico = pricing?.waUnit?.SERVICE;
+  const unidadeServico = form.whatsappMode === "BAILEYS" ? null : pricing?.waUnit?.SERVICE;
   const qtdConversas = Number(form.maxConversations) || 0;
   const realConversationCost = unidadeServico
     ? unidadeServico.unitCostBrl * qtdConversas * MSGS_POR_CONVERSA
     : 0;
 
-  const unidadeDisparo = pricing?.waUnit?.[form.campaignCategory || "MARKETING"];
+  // No QR Code a Meta não cobra por mensagem — o custo é manter o número de
+  // pé. Somar tarifa de disparo num plano de QR Code inventaria custo.
+  const soQrCode = form.whatsappMode === "BAILEYS";
+  const custoNumero = Number(pricing?.baileysNumberCost || 0);
+  const realBaileysCost = soQrCode ? custoNumero * Math.max(1, Number(form.maxWhatsAppNumbers) || 1) : 0;
+
+  const unidadeDisparo = soQrCode ? null : pricing?.waUnit?.[form.campaignCategory || "MARKETING"];
   const qtdDisparos = Number(form.maxCampaignMessages) || 0;
   const realCampaignCost = unidadeDisparo ? unidadeDisparo.unitCostBrl * qtdDisparos : 0;
   const campaignSalePrice = unidadeDisparo ? unidadeDisparo.unitPriceBrl * qtdDisparos : 0;
@@ -87,6 +94,7 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
       maxUsers: p.maxUsers ?? 2,
       maxWhatsAppNumbers: p.maxWhatsAppNumbers ?? 1,
       maxKnowledgeBaseChars: p.maxKnowledgeBaseChars ?? 50000,
+      whatsappMode: p.whatsappMode || "BOTH",
       maxConversations: p.maxConversations ?? 0,
       maxCampaignMessages: p.maxCampaignMessages ?? 0,
       campaignCategory: p.campaignCategory || "MARKETING",
@@ -113,6 +121,7 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
       maxKnowledgeBaseChars: Number(form.maxKnowledgeBaseChars),
       maxTokens: Number(form.maxTokens),
       maxMessages: Number(form.maxMessages),
+      whatsappMode: form.whatsappMode || "BOTH",
       maxConversations: Number(form.maxConversations),
       maxCampaignMessages: Number(form.maxCampaignMessages),
       campaignCategory: form.campaignCategory || "MARKETING",
@@ -154,13 +163,13 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
   // Simulador de margem: o plano tem DOIS custos variáveis — os tokens de IA
   // e os disparos no WhatsApp. Considera o pior caso (cliente usa a franquia
   // inteira), que é o cenário que o preço precisa cobrir.
-  const simCost = realTokenCost + realCampaignCost + realConversationCost;
+  const simCost = realTokenCost + realCampaignCost + realConversationCost + realBaileysCost;
   const simPrice = Number(form.priceMonthly) || 0;
   const simProfit = simPrice - simCost;
   const simMargin = simPrice > 0 ? (simProfit / simPrice) * 100 : 0;
   // Cada custo tem a sua margem, configurada na administração do SaaS.
   const suggestedPlanPrice = pricing
-    ? Number((realTokenCost * (pricing.tokenMarkup || 5) + campaignSalePrice).toFixed(2))
+    ? Number((realTokenCost * (pricing.tokenMarkup || 5) + campaignSalePrice + realBaileysCost * (pricing.waMarkup || 2)).toFixed(2))
     : 0;
   const precoAbaixoDoCusto = simPrice > 0 && simPrice < simCost;
 
@@ -189,6 +198,13 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
               <li>{p.maxSdrs} agente(s) · {(p.maxTokens / 1000).toLocaleString("pt-BR")}k tokens</li>
               <li>{p.maxMessages?.toLocaleString("pt-BR")} msgs · {p.maxLeads?.toLocaleString("pt-BR")} contatos</li>
               <li>{p.maxWhatsAppNumbers ?? 1} nº WhatsApp · {p.maxUsers ?? 2} usuários</li>
+              <li>
+                {p.whatsappMode === "BAILEYS"
+                  ? "WhatsApp por QR Code"
+                  : p.whatsappMode === "OFFICIAL"
+                    ? "WhatsApp API oficial"
+                    : "QR Code ou API oficial"}
+              </li>
               <li>
                 {(p.maxConversations ?? 0) > 0
                   ? `${(p.maxConversations).toLocaleString("pt-BR")} conversas/mês`
@@ -292,6 +308,27 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
                   </div>
                 ))}
                 <div className="space-y-1 col-span-2">
+                  <Label className="text-xs text-muted-foreground">Canal de WhatsApp</Label>
+                  <Select
+                    value={form.whatsappMode || "BOTH"}
+                    onValueChange={(v) => setForm({ ...form, whatsappMode: v })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="OFFICIAL">API oficial (Meta Cloud) — cobra por mensagem</SelectItem>
+                      <SelectItem value="BAILEYS">QR Code — sem custo por mensagem</SelectItem>
+                      <SelectItem value="BOTH">Os dois — o cliente escolhe</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-muted-foreground">
+                    {form.whatsappMode === "BAILEYS"
+                      ? "Canal não oficial: sem tarifa da Meta, mas o número do cliente pode ser bloqueado por ela. O custo aqui é a infraestrutura da sessão."
+                      : form.whatsappMode === "OFFICIAL"
+                        ? "Canal oficial: cada template entregue é cobrado pela Meta, conforme a tarifa da categoria."
+                        : "O cliente pode conectar pelos dois. O custo do plano assume o pior caso (oficial)."}
+                  </p>
+                </div>
+                <div className="space-y-1 col-span-2">
                   <Label className="text-xs text-muted-foreground">Conversas/mês</Label>
                   <Input
                     type="number"
@@ -349,6 +386,20 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
                       </span>
                       <span className="font-semibold text-foreground tabular-nums">{brl(realTokenCost)}</span>
                     </div>
+                    {realBaileysCost > 0 && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          Infraestrutura QR Code ({Math.max(1, Number(form.maxWhatsAppNumbers) || 1)} número(s))
+                        </span>
+                        <span className="font-semibold text-foreground tabular-nums">{brl(realBaileysCost)}</span>
+                      </div>
+                    )}
+                    {soQrCode && custoNumero === 0 && (
+                      <p className="rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
+                        O custo por número no QR Code está zerado em Configurações → Custo de disparo.
+                        Enquanto isso, este plano aparece como se não custasse nada.
+                      </p>
+                    )}
                     {realConversationCost > 0 && (
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">

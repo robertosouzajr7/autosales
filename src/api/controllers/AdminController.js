@@ -194,8 +194,14 @@ export const getPlans = async (req, res) => {
 
 /** Categoria de disparo válida — é ela que define a tarifa da franquia. */
 const CATEGORIAS_DISPARO = ["MARKETING", "UTILITY", "AUTHENTICATION"];
+const MODOS_WHATSAPP = ["OFFICIAL", "BAILEYS", "BOTH"];
 function normalizarPlano(body) {
   const data = { ...body };
+  if (data.whatsappMode !== undefined) {
+    const m = String(data.whatsappMode).toUpperCase();
+    if (!MODOS_WHATSAPP.includes(m)) delete data.whatsappMode;
+    else data.whatsappMode = m;
+  }
   if (data.campaignCategory !== undefined) {
     const cat = String(data.campaignCategory).toUpperCase();
     if (!CATEGORIAS_DISPARO.includes(cat)) delete data.campaignCategory;
@@ -293,6 +299,7 @@ export const getPlatformSettings = async (_req, res) => {
       // Tarifas do WhatsApp: devolve o efetivo (padrão + override do admin).
       waRates: waRatesOf(s),
       waMarkup: s.waMarkup ?? 2.0,
+      baileysNumberCost: s.baileysNumberCost ?? 0,
       // Motor de VOZ (global): provedor, chave mascarada e vozes liberadas
       voiceProvider: s.voiceProvider || "GEMINI",
       elevenLabsKeyMasked: maskSecret(s.elevenLabsApiKey || process.env.ELEVENLABS_API_KEY),
@@ -310,7 +317,7 @@ export const updatePlatformSettings = async (req, res) => {
       mpAccessToken, paymentWebhookSecret,
       stripeSecretKey, stripeWebhookSecret, stripePublishableKey,
       aiProvider, aiModel, geminiApiKey, openaiApiKey, anthropicApiKey,
-      usdToBrl, tokenMarkup, waRates, waMarkup,
+      usdToBrl, tokenMarkup, waRates, waMarkup, baileysNumberCost,
       voiceProvider, elevenLabsApiKey, enabledVoices,
     } = req.body;
     const data = {};
@@ -334,6 +341,9 @@ export const updatePlatformSettings = async (req, res) => {
     }
     if (waMarkup !== undefined && Number.isFinite(parseFloat(waMarkup)) && parseFloat(waMarkup) >= 1) {
       data.waMarkup = parseFloat(waMarkup);
+    }
+    if (baileysNumberCost !== undefined && Number.isFinite(parseFloat(baileysNumberCost)) && parseFloat(baileysNumberCost) >= 0) {
+      data.baileysNumberCost = parseFloat(baileysNumberCost);
     }
     if (waRates !== undefined) {
       // Guarda só as categorias conhecidas com número válido — evita gravar
@@ -430,6 +440,8 @@ export const getTokenPricing = async (_req, res) => {
       // Disparo em massa (WhatsApp): tarifa por categoria e margem aplicada.
       waMarkup: disparo.markup,
       waUnit: disparo.categorias,
+      // Canal QR Code: não tem custo por mensagem, tem custo por número.
+      baileysNumberCost: s?.baileysNumberCost ?? 0,
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
 };

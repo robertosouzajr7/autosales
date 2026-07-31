@@ -129,8 +129,11 @@ export const previewCampaign = async (req, res) => {
     if (!template) return res.status(404).json({ error: "Template não encontrado." });
 
     const recipients = await resolveRecipients(req.tenantId, { tagIds, stageId, leadIds });
-    const estimate = await estimateCampaign(recipients.length, template.category);
-    const quota = await checkCampaignQuota(req.tenantId, recipients.length);
+    const quotaPreview = await checkCampaignQuota(req.tenantId, recipients.length);
+    const estimate = await estimateCampaign(recipients.length, template.category, {
+      cobraPorMensagem: quotaPreview.cobraPorMensagem,
+    });
+    const quota = quotaPreview;
     // Só investiga quando deu zero — evita 4 counts a cada digitação.
     const publico = recipients.length === 0
       ? await diagnosticarPublico(req.tenantId, { stageId })
@@ -202,7 +205,9 @@ export const createCampaign = async (req, res) => {
     const quota = await checkCampaignQuota(req.tenantId, recipients.length);
     if (!quota.allowed) return res.status(403).json({ error: quota.reason, quota });
 
-    const estimate = await estimateCampaign(recipients.length, template.category);
+    const estimate = await estimateCampaign(recipients.length, template.category, {
+      cobraPorMensagem: quota.cobraPorMensagem,
+    });
 
     const campaign = await prisma.campaign.create({
       data: {
@@ -382,7 +387,8 @@ async function runCampaign(campaign, sender, recipients, tenantId) {
   // o relatório fechar com a fatura da Meta em vez de com a projeção.
   try {
     const { registrarEvento, USAGE_TYPES } = await import("../services/UsageService.js");
-    const real = await estimateCampaign(sent, campaign.template.category);
+    const { cobraPorMensagem } = await checkCampaignQuota(tenantId, 0);
+    const real = await estimateCampaign(sent, campaign.template.category, { cobraPorMensagem });
     await registrarEvento(tenantId, {
       type: USAGE_TYPES.CAMPAIGN,
       category: real.category,

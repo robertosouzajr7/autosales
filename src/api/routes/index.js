@@ -40,6 +40,7 @@ import {
   requireAutomations,
   requireWebhooks,
   requireWhatsAppSlot,
+  requireWhatsAppMode,
   requireUserSlot,
 } from "../middlewares/planLimits.js";
 
@@ -123,10 +124,10 @@ router.put("/settings", requirePermission("settings"), SettingsController.update
 
 // WhatsApp Connections — criação bloqueada quando maxWhatsAppNumbers estoura
 router.get("/whatsapp/accounts", requirePermission("connections"), WhatsAppController.getAccounts);
-router.post("/whatsapp/accounts", requirePermission("connections"), requireWhatsAppSlot, WhatsAppController.createAccount);
+router.post("/whatsapp/accounts", requirePermission("connections"), requireWhatsAppSlot, requireWhatsAppMode("BAILEYS"), WhatsAppController.createAccount);
 router.delete("/whatsapp/accounts/:id", requirePermission("connections"), WhatsAppController.deleteAccount);
 router.post("/whatsapp/accounts/:id/reconnect", requirePermission("connections"), WhatsAppController.reconnectAccount);
-router.post("/whatsapp/accounts/meta", requirePermission("connections"), requireWhatsAppSlot, WhatsAppController.createMetaAccount);
+router.post("/whatsapp/accounts/meta", requirePermission("connections"), requireWhatsAppSlot, requireWhatsAppMode("OFFICIAL"), WhatsAppController.createMetaAccount);
 // Conexão oficial (Cloud API): editar credenciais e testar — não há QR aqui.
 router.put("/whatsapp/accounts/:id/meta", requirePermission("connections"), WhatsAppController.updateMetaAccount);
 router.post("/whatsapp/accounts/:id/test", requirePermission("connections"), WhatsAppController.testMetaConnection);

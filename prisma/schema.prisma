@@ -465,6 +465,15 @@ model Plan {
   enableVoice        Boolean @default(false) // agente ouve (STT) e responde (TTS) em áudio
   enablePremiumVoice Boolean @default(false) // libera as vozes premium (ElevenLabs)
 
+  /// Canal de WhatsApp que este plano usa. É o que decide o custo: no
+  /// oficial a Meta cobra por mensagem; no QR Code (Baileys) não há custo
+  /// por mensagem, só a infraestrutura da sessão.
+  ///
+  /// OFFICIAL = só Cloud API · BAILEYS = só QR Code · BOTH = os dois.
+  /// BOTH é o padrão porque é o que as contas já existentes faziam — nenhuma
+  /// conexão em uso pode parar de funcionar por causa desta divisão.
+  whatsappMode String @default("BOTH")
+
   /// Categoria de referência da franquia de disparos. A Meta cobra tarifas
   /// diferentes por categoria, então o custo do plano só fecha quando se sabe
   /// que tipo de disparo ele inclui. MARKETING é a mais cara — é o padrão
@@ -873,6 +882,11 @@ model PlatformSettings {
 
   // Vozes LIBERADAS para as contas — JSON: [{ id, name }]. Vazio = todas.
   enabledVoices String?
+
+  /// Custo mensal de manter UM número no Baileys (sessão persistente,
+  /// armazenamento, o servidor que fica de pé). Sem isso um plano de QR Code
+  /// parece ter custo zero, e não tem.
+  baileysNumberCost Float @default(0)
 
   // ─── Precificação de tokens (planos e recargas) ───
   // Câmbio USD→BRL usado para converter o preço real dos provedores.
