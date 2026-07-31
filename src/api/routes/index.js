@@ -340,6 +340,12 @@ router.post("/admin/token-packages", adminMiddleware, AdminController.createToke
 router.put("/admin/token-packages/:id", adminMiddleware, AdminController.updateTokenPackage);
 router.delete("/admin/token-packages/:id", adminMiddleware, AdminController.deleteTokenPackage);
 
+// Leads do diagnóstico da landing (pertencem ao SaaS, não a um tenant).
+router.get("/admin/leads", adminMiddleware, AdminController.getPlatformLeads);
+router.put("/admin/leads/:id", adminMiddleware, AdminController.updatePlatformLead);
+router.post("/admin/leads/:id/import", adminMiddleware, AdminController.importPlatformLead);
+router.delete("/admin/leads/:id", adminMiddleware, AdminController.deletePlatformLead);
+
 router.get("/admin/plans", adminMiddleware, AdminController.getPlans);
 router.post("/admin/plans", adminMiddleware, AdminController.createPlan);
 router.put("/admin/plans/:id", adminMiddleware, AdminController.updatePlan);

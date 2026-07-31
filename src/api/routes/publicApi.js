@@ -12,6 +12,10 @@ router.post("/plan-advisor", PublicController.recommendPlan);
 router.get("/entry-plans", PublicController.getEntryPlans);
 router.get("/plans", PublicController.getAllPlans);
 
+// Lead do diagnóstico: nome/e-mail/telefone antes das perguntas.
+router.post("/leads", PublicController.captureLead);
+router.patch("/leads/:id", PublicController.saveLeadAnswers);
+
 router.get("/webchat/:id", PublicController.getWebchat);
 router.post("/chat", PublicController.submitChat);
 router.post("/book", PublicController.bookAppointment);

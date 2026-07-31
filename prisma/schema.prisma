@@ -1203,3 +1203,44 @@ model ConversationEvent {
 
   @@index([conversationId, createdAt])
 }
+
+/// Lead da PLATAFORMA: quem pediu o diagnóstico na landing e ainda não virou
+/// conta. Não confundir com Lead, que é o contato do cliente e vive dentro de
+/// um tenant — este aqui é do dono do SaaS, e por isso não tem tenantId.
+///
+/// O e-mail é único de propósito: refazer o diagnóstico atualiza o mesmo
+/// registro em vez de criar um segundo, pela mesma razão que a base de
+/// contatos não duplica.
+model PlatformLead {
+  id    String  @id @default(uuid())
+  name  String
+  email String  @unique
+  phone String?
+
+  origem    String  @default("QUIZ") // QUIZ | CHAT | OUTRO
+  respostas String? // JSON com o que ele respondeu no questionário
+
+  /// Planos que o diagnóstico recomendou, para o vendedor saber do que falar.
+  planoQrCode  String?
+  planoOficial String?
+
+  status String  @default("NOVO") // NOVO | EM_CONTATO | CONVERTIDO | DESCARTADO
+  notes  String?
+
+  /// Preenchido quando o mesmo e-mail abre conta: mede a conversão real do
+  /// diagnóstico, sem depender de planilha à parte.
+  convertedAt DateTime?
+
+  /// Import para a base de contatos do próprio SaaS (o Lead criado lá).
+  importedLeadId String?
+  importedAt     DateTime?
+
+  // Prova de origem do consentimento, exigida pela LGPD.
+  ip        String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+}

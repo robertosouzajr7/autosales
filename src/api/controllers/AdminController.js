@@ -227,6 +227,137 @@ export const updatePlan = async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 };
 
+// ── Leads da plataforma (quem pediu o diagnóstico na landing) ──────────
+
+const STATUS_LEAD = ["NOVO", "EM_CONTATO", "CONVERTIDO", "DESCARTADO"];
+
+export const getPlatformLeads = async (req, res) => {
+  try {
+    const { status, q } = req.query || {};
+    const where = {};
+    if (STATUS_LEAD.includes(String(status || "").toUpperCase())) {
+      where.status = String(status).toUpperCase();
+    }
+    if (q) {
+      const busca = String(q).trim();
+      where.OR = [
+        { name: { contains: busca, mode: "insensitive" } },
+        { email: { contains: busca, mode: "insensitive" } },
+        { phone: { contains: busca } },
+      ];
+    }
+
+    const leads = await prisma.platformLead.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: 500,
+    });
+
+    // O que ele respondeu vale mais que o registro cru: o vendedor abre a
+    // conversa sabendo o volume e a equipe do cliente.
+    const enriquecidos = leads.map((l) => ({
+      ...l,
+      respostas: (() => { try { return l.respostas ? JSON.parse(l.respostas) : null; } catch { return null; } })(),
+    }));
+
+    const porStatus = await prisma.platformLead.groupBy({ by: ["status"], _count: true });
+    res.json({
+      leads: enriquecidos,
+      total: leads.length,
+      resumo: Object.fromEntries(porStatus.map((r) => [r.status, r._count])),
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
+export const updatePlatformLead = async (req, res) => {
+  try {
+    const data = {};
+    if (req.body?.status !== undefined) {
+      const st = String(req.body.status).toUpperCase();
+      if (!STATUS_LEAD.includes(st)) return res.status(400).json({ error: "Status inválido." });
+      data.status = st;
+    }
+    if (req.body?.notes !== undefined) data.notes = String(req.body.notes).slice(0, 2000);
+
+    const lead = await prisma.platformLead.update({ where: { id: req.params.id }, data });
+    res.json(lead);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
+export const deletePlatformLead = async (req, res) => {
+  try {
+    await prisma.platformLead.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
+/**
+ * Leva o lead para a base de contatos do próprio SaaS — e, se vier um
+ * estágio, para o funil também.
+ *
+ * Passa pelo CDP (resolveContact) de propósito: se esse e-mail ou telefone já
+ * existe na base, ele atualiza em vez de criar um segundo contato, exatamente
+ * como qualquer outra entrada.
+ */
+export const importPlatformLead = async (req, res) => {
+  try {
+    const { resolveContact } = await import("../services/ContactIdentity.js");
+    const { stageId } = req.body || {};
+    const platformLead = await prisma.platformLead.findUnique({ where: { id: req.params.id } });
+    if (!platformLead) return res.status(404).json({ error: "Lead não encontrado." });
+
+    // O tenant vem do token, mas token antigo pode não trazê-lo; o usuário
+    // carregado sempre traz. Sem isto o import morria com "exige tenantId".
+    const tenantId = req.tenantId || req.user?.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ error: "Sua conta de administrador não está ligada a nenhum negócio — entre de novo para importar." });
+    }
+
+    const { lead, criado } = await resolveContact(tenantId, {
+      name: platformLead.name,
+      email: platformLead.email,
+      phone: platformLead.phone,
+      source: "LANDING_DIAGNOSTICO",
+    });
+
+    // O que ele respondeu vira anotação do contato: quem for atender já abre
+    // a conversa sabendo o volume, a equipe e o canal que ele usa.
+    // Reimportar não pode empilhar a mesma anotação: quem clica duas vezes
+    // (ou reimporta depois de atualizar o status) merece o mesmo resultado.
+    const anotacao = montarAnotacao(platformLead);
+    const dados = {};
+    if (!String(lead.notes || "").includes(anotacao)) {
+      dados.notes = [lead.notes, anotacao].filter(Boolean).join("\n\n").slice(0, 4000);
+    }
+    if (stageId) dados.stageId = stageId;
+    if (Object.keys(dados).length) await prisma.lead.update({ where: { id: lead.id }, data: dados });
+
+    await prisma.platformLead.update({
+      where: { id: platformLead.id },
+      data: { importedLeadId: lead.id, importedAt: new Date(), status: platformLead.status === "NOVO" ? "EM_CONTATO" : platformLead.status },
+    });
+
+    res.json({ success: true, leadId: lead.id, criado, noFunil: !!stageId });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
+function montarAnotacao(pl) {
+  const linhas = [`Veio do diagnóstico da landing em ${new Date(pl.createdAt).toLocaleDateString("pt-BR")}.`];
+  let r = null;
+  try { r = pl.respostas ? JSON.parse(pl.respostas) : null; } catch { /* sem respostas */ }
+  if (r) {
+    if (r.conversas) linhas.push(`Volume declarado: ~${Number(r.conversas).toLocaleString("pt-BR")} conversas/mês.`);
+    if (r.colaboradores) linhas.push(`Equipe: ${r.colaboradores} pessoa(s).`);
+    if (Array.isArray(r.canais) && r.canais.length) linhas.push(`Canais: ${r.canais.join(", ")}.`);
+    if (r.numeros) linhas.push(`Números: ${r.numeros}.`);
+    if (r.disparos) linhas.push(`Disparos: ${Number(r.disparos).toLocaleString("pt-BR")}/mês.`);
+  }
+  if (pl.planoQrCode || pl.planoOficial) {
+    linhas.push(`Recomendado: ${[pl.planoQrCode && `QR Code — ${pl.planoQrCode}`, pl.planoOficial && `oficial — ${pl.planoOficial}`].filter(Boolean).join(" | ")}.`);
+  }
+  return linhas.join("\n");
+}
+
 export const deletePlan = async (req, res) => {
   try {
     await prisma.plan.delete({ where: { id: req.params.id } });

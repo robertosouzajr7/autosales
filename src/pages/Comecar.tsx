@@ -33,6 +33,9 @@ export default function Comecar() {
   const [respostas, setRespostas] = useState<Record<string, any>>({});
   const [resultado, setResultado] = useState<any>(null);
   const [calculando, setCalculando] = useState(false);
+  // Identificação antes das perguntas: quem responde o diagnóstico é o lead
+  // mais quente do funil, e antes ele saía daqui sem deixar contato.
+  const [leadId, setLeadId] = useState<string | null>(() => sessionStorage.getItem("diagnosticoLeadId"));
 
   useEffect(() => {
     fetch("/api/public/plan-questions")
@@ -43,7 +46,7 @@ export default function Comecar() {
 
   const atual = perguntas[passo];
   const total = perguntas.length;
-  const progresso = total ? Math.round(((resultado ? total : passo) / total) * 100) : 0;
+  const progresso = !leadId ? 0 : total ? Math.round(((resultado ? total : passo) / total) * 100) : 0;
 
   const responder = (opcao: Opcao) => {
     if (!atual) return;
@@ -74,6 +77,19 @@ export default function Comecar() {
       // quando alguém escolhe um plano: quem chega sem plano publicado também
       // segue para o cadastro, e o negócio dele não pode se perder no caminho.
       sessionStorage.setItem("respostasOnboarding", JSON.stringify(finais));
+      if (leadId) {
+        // Silencioso de propósito: o vendedor perder o contexto é ruim, mas
+        // não é motivo para atrapalhar quem está vendo a recomendação.
+        fetch(`/api/public/leads/${leadId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            respostas: finais,
+            planoQrCode: r?.qrcode?.name,
+            planoOficial: r?.oficial?.name,
+          }),
+        }).catch(() => {});
+      }
       setResultado(r);
     } catch {
       setResultado({ erro: true });
@@ -117,7 +133,7 @@ export default function Comecar() {
             style={{ width: `${progresso}%` }}
           />
         </div>
-        {!resultado && total > 0 && (
+        {leadId && !resultado && total > 0 && (
           <p className="mt-3 text-xs text-slate-500">
             Pergunta {passo + 1} de {total} · leva menos de um minuto
           </p>
@@ -125,7 +141,11 @@ export default function Comecar() {
       </div>
 
       <main className="mx-auto max-w-3xl px-5 pb-24 pt-10">
-        {calculando ? (
+        {!leadId ? (
+          <Identificacao
+            onPronto={(id) => { sessionStorage.setItem("diagnosticoLeadId", id); setLeadId(id); }}
+          />
+        ) : calculando ? (
           <div className="space-y-4 py-24 text-center">
             <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
             <p className="text-sm text-slate-400">Montando o plano ideal para o seu volume…</p>
@@ -194,6 +214,122 @@ export default function Comecar() {
           <div className="py-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" /></div>
         )}
       </main>
+    </div>
+  );
+}
+
+/**
+ * Porta de entrada do diagnóstico.
+ *
+ * Pedir contato antes de entregar o resultado é troca justa e explícita: a
+ * pessoa sabe o que ganha (a recomendação) e o que dá (o contato). O aviso
+ * de privacidade fica na própria tela, não escondido num link de rodapé.
+ */
+function Identificacao({ onPronto }: { onPronto: (id: string) => void }) {
+  const [form, setForm] = useState({ name: "", email: "", phone: "" });
+  const [erro, setErro] = useState<{ campo?: string; texto: string } | null>(null);
+  const [enviando, setEnviando] = useState(false);
+
+  const enviar = async () => {
+    setErro(null);
+    if (form.name.trim().length < 2) return setErro({ campo: "name", texto: "Como podemos te chamar?" });
+    if (!/^[^\s@,;]+@[^\s@,;]+\.[a-z]{2,}$/i.test(form.email.trim())) {
+      return setErro({ campo: "email", texto: "Confira o e-mail — é para lá que vai o resultado." });
+    }
+    if (form.phone.replace(/\D/g, "").length < 10) {
+      return setErro({ campo: "phone", texto: "Informe o WhatsApp com DDD." });
+    }
+
+    setEnviando(true);
+    try {
+      const res = await fetch("/api/public/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, origem: "QUIZ" }),
+      });
+      const d = await res.json();
+      if (!res.ok) {
+        setErro({ campo: d.campo, texto: d.error || "Não consegui registrar seus dados." });
+        setEnviando(false);
+        return;
+      }
+      onPronto(d.id);
+    } catch {
+      setErro({ texto: "Sem conexão com o servidor. Tente de novo." });
+      setEnviando(false);
+    }
+  };
+
+  const campo = (nome: string) =>
+    cn(
+      "w-full rounded-xl border bg-white/[0.03] px-4 py-3 text-white outline-none transition-colors placeholder:text-slate-600",
+      erro?.campo === nome ? "border-rose-500/60" : "border-white/10 focus:border-primary"
+    );
+
+  return (
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <Badge className="mb-3 border-none bg-primary/15 text-primary">
+        <Sparkles className="mr-1 h-3 w-3" /> 5 perguntas · menos de um minuto
+      </Badge>
+      <h1 className="text-3xl font-semibold tracking-tight text-white lg:text-4xl">
+        Vamos achar o seu plano ideal
+      </h1>
+      <p className="mt-2 text-slate-400">
+        Antes de começar, com quem estamos falando? Mandamos a recomendação para o seu e-mail.
+      </p>
+
+      <div className="mt-8 space-y-3">
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold text-slate-400">Seu nome</label>
+          <input
+            className={campo("name")}
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            placeholder="Como podemos te chamar"
+            autoFocus
+          />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-400">E-mail</label>
+            <input
+              className={campo("email")}
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              placeholder="voce@empresa.com"
+              inputMode="email"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-400">WhatsApp</label>
+            <input
+              className={campo("phone")}
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              placeholder="11 99999-9999"
+              inputMode="tel"
+              onKeyDown={(e) => e.key === "Enter" && enviar()}
+            />
+          </div>
+        </div>
+
+        {erro && <p className="text-sm text-rose-400">{erro.texto}</p>}
+
+        <Button onClick={enviar} disabled={enviando} className="h-13 w-full gap-2 rounded-xl py-6 text-base font-semibold">
+          {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          Começar o diagnóstico <ArrowRight className="h-4 w-4" />
+        </Button>
+
+        <p className="text-center text-xs text-slate-500">
+          <ShieldCheck className="mr-1 inline h-3 w-3" />
+          Usamos seus dados só para te mostrar o plano certo e falar com você sobre ele. Nada de
+          lista de terceiros — veja a{" "}
+          <a href="/privacidade" target="_blank" className="underline underline-offset-2 hover:text-slate-300">
+            Política de Privacidade
+          </a>
+          .
+        </p>
+      </div>
     </div>
   );
 }

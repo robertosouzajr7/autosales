@@ -96,6 +96,74 @@ export const getAllPlans = async (_req, res) => {
   }
 };
 
+/**
+ * Captura do lead antes do diagnóstico.
+ *
+ * O questionário é a melhor isca que a landing tem: quem responde cinco
+ * perguntas sobre o próprio atendimento está comprando. Deixar essa pessoa
+ * sair sem nome nem contato é jogar fora o lead mais quente do funil — daí
+ * pedir os dados antes de começar.
+ *
+ * Refazer o diagnóstico atualiza o mesmo registro: o e-mail é a chave, do
+ * mesmo jeito que a base de contatos não duplica ninguém.
+ */
+export const captureLead = async (req, res) => {
+  try {
+    const { validarEmail } = await import("../services/SignupPolicy.js");
+    const { name, email, phone, origem } = req.body || {};
+
+    const nome = String(name || "").trim();
+    if (nome.length < 2) return res.status(400).json({ error: "Informe seu nome.", campo: "name" });
+
+    const conferido = validarEmail(email);
+    if (!conferido.ok) return res.status(400).json({ error: conferido.erro, campo: "email" });
+
+    // Telefone é opcional na entrada, mas se vier tem que ser telefone.
+    const telefone = normalizePhone(phone);
+    if (phone && !telefone) {
+      return res.status(400).json({ error: "Telefone inválido. Use DDD + número.", campo: "phone" });
+    }
+
+    const dados = {
+      name: nome,
+      phone: telefone,
+      origem: ["QUIZ", "CHAT", "OUTRO"].includes(origem) ? origem : "QUIZ",
+      ip: req.ip || null,
+      userAgent: String(req.get("user-agent") || "").slice(0, 300) || null,
+    };
+
+    const lead = await prisma.platformLead.upsert({
+      where: { email: conferido.email },
+      // Quem volta não perde o histórico: status e anotações do vendedor ficam.
+      update: { name: dados.name, phone: dados.phone || undefined },
+      create: { email: conferido.email, ...dados },
+    });
+
+    res.json({ id: lead.id });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/** Guarda o que ele respondeu e o que foi recomendado, ao fim do quiz. */
+export const saveLeadAnswers = async (req, res) => {
+  try {
+    const { respostas, planoQrCode, planoOficial } = req.body || {};
+    await prisma.platformLead.update({
+      where: { id: req.params.id },
+      data: {
+        respostas: respostas ? JSON.stringify(respostas) : undefined,
+        planoQrCode: planoQrCode || undefined,
+        planoOficial: planoOficial || undefined,
+      },
+    });
+    res.json({ success: true });
+  } catch {
+    // Lead sumido não pode derrubar o wizard do visitante.
+    res.json({ success: false });
+  }
+};
+
 export const getWebchat = async (req, res) => {
   const { id } = req.params; // tenantId
   try {
