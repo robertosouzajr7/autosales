@@ -74,11 +74,19 @@ async function main() {
 
   // ── 3. Cadastro pela API ────────────────────────────────────
   console.log("\n3. Cadastro");
-  const base = { name: "Ana Souza", companyName: "Clínica Teste", phone: "71988887777" };
+  const base = { name: "Ana Souza", companyName: "Clínica Teste", phone: "71988887777", acceptedTerms: true };
   let r = await post("/auth/register", { ...base, email: `a${Date.now()}@teste.local`, password: "12345678" });
   ok(r.status === 400 && r.corpo.campo === "password", `senha fraca barra o cadastro (${r.status})`);
   r = await post("/auth/register", { ...base, email: "invalido", password: "Girassol#2026" });
   ok(r.status === 400 && r.corpo.campo === "email", `e-mail inválido barra o cadastro (${r.status})`);
+
+  // Aceitar os Termos é obrigatório — e tem que ser um ato, não uma frase
+  // embaixo do botão.
+  r = await post("/auth/register", {
+    ...base, acceptedTerms: undefined,
+    email: `semtermo${Date.now()}@teste.local`, password: "Girassol#2026",
+  });
+  ok(r.status === 400 && r.corpo.campo === "terms", `sem aceite não cria conta (${r.status})`);
 
   const email = `nova${Date.now()}@teste.local`;
   r = await post("/auth/register", { ...base, email, password: "Girassol#2026" });
@@ -117,6 +125,8 @@ async function main() {
   const confirmado = await prisma.user.findUnique({ where: { id: user.id } });
   ok(confirmado.emailVerified === true, "o usuário fica marcado como confirmado");
   ok(confirmado.emailVerificationToken === null, "e o token é queimado");
+  ok(!!confirmado.termsAcceptedAt, "o aceite fica gravado com data");
+  ok(!!confirmado.termsVersion, `e com a versão do documento (${confirmado.termsVersion})`);
 
   // ── 5. Questionário e recomendação ──────────────────────────
   console.log("\n5. Plano ideal");

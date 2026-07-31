@@ -48,6 +48,7 @@ export default function Register() {
 
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
   const senha = avaliarSenha(formData.password, formData.name, formData.email);
+  const [aceitou, setAceitou] = useState(false);
   const emailValido = /^[^\s@,;]+@[^\s@,;]+\.[a-z]{2,}$/i.test(formData.email.trim());
 
   useEffect(() => {
@@ -82,12 +83,21 @@ export default function Register() {
       });
     }
 
+    if (!aceitou) {
+      return toast({
+        title: "Falta aceitar os termos",
+        description: "Leia e marque o aceite dos Termos de Uso e da Política de Privacidade.",
+        variant: "destructive",
+      });
+    }
+
     setLoading(true);
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
+          acceptedTerms: true,
           // Respostas do questionário de contratação, quando veio de lá.
           onboarding: (() => {
             try { return JSON.parse(sessionStorage.getItem("respostasOnboarding") || "null"); }
@@ -236,17 +246,35 @@ export default function Register() {
               </div>
             </div>
 
+            {/* Aceite explícito: marcar uma caixa é ato, ler uma frase abaixo
+                do botão não é. É isso que fica gravado como prova. */}
+            <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3.5 dark:border-white/10 dark:bg-white/[0.03]">
+              <input
+                type="checkbox"
+                checked={aceitou}
+                onChange={(e) => setAceitou(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 accent-[#2563EB] dark:border-white/20"
+              />
+              <span className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                Li e aceito os{" "}
+                <Link to="/termos" target="_blank" className="font-semibold text-[#2563EB] hover:underline">
+                  Termos de Uso
+                </Link>{" "}
+                e a{" "}
+                <Link to="/privacidade" target="_blank" className="font-semibold text-[#2563EB] hover:underline">
+                  Política de Privacidade
+                </Link>
+                , incluindo o tratamento dos meus dados como descrito nela.
+              </span>
+            </label>
+
             <Button
               onClick={handleRegister}
-              disabled={loading}
-              className="w-full h-14 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-2xl font-semibold text-base gap-2 shadow-[0_14px_34px_-8px_rgba(37,99,235,0.5)] border-none"
+              disabled={loading || !aceitou}
+              className="w-full h-14 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-2xl font-semibold text-base gap-2 shadow-[0_14px_34px_-8px_rgba(37,99,235,0.5)] border-none disabled:opacity-50"
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Começar teste grátis <ArrowRight className="w-4 h-4" /></>}
             </Button>
-
-            <p className="text-xs text-center text-slate-400 dark:text-slate-500 font-medium leading-relaxed">
-              Ao criar a conta você concorda com os Termos de Uso e a Política de Privacidade.
-            </p>
 
             <div className="text-center pt-1">
               <p className="text-sm font-medium text-slate-500 dark:text-slate-400">

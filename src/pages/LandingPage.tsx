@@ -506,7 +506,11 @@ export default function LandingPage() {
             <div>E-mail: contato@agentesvirtuais.com</div>
             <div>Suporte via WhatsApp: 71 99204-2802</div>
             <div>Rua Vereador Zezeu Ribeiro, 1117, Boca da Mata, Salvador - BA · CEP 41.345-100</div>
-            <div className="pt-2 text-slate-400 dark:text-slate-500">© 2026 Agentes Virtuais. Todos os direitos reservados.</div>
+            <div className="pt-2 flex gap-4 justify-center md:justify-end">
+              <Link to="/termos" className="hover:text-slate-700 dark:hover:text-slate-200 underline-offset-4 hover:underline">Termos de Uso</Link>
+              <Link to="/privacidade" className="hover:text-slate-700 dark:hover:text-slate-200 underline-offset-4 hover:underline">Política de Privacidade</Link>
+            </div>
+            <div className="pt-1 text-slate-400 dark:text-slate-500">© 2026 Agentes Virtuais. Todos os direitos reservados.</div>
           </div>
         </div>
       </footer>

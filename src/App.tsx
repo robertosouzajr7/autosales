@@ -28,6 +28,7 @@ import PublicWebchat from "@/pages/PublicWebchat";
 import Docs from "@/pages/Docs";
 import VerifyEmail from "@/pages/VerifyEmail";
 import Planos from "./pages/Planos";
+import Legal from "./pages/Legal";
 import Comecar from "./pages/Comecar";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
@@ -48,6 +49,9 @@ function App() {
         <Route path="/comecar" element={<Comecar />} />
         {/* Catálogo completo, para quem quer conferir além da recomendação. */}
         <Route path="/planos" element={<Planos />} />
+        {/* Jurídico: aceitos no cadastro, consultáveis a qualquer momento. */}
+        <Route path="/termos" element={<Legal slug="termos" />} />
+        <Route path="/privacidade" element={<Legal slug="privacidade" />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/b/:tenantId" element={<PublicBooking />} />

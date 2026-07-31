@@ -91,9 +91,10 @@ export const login = async (req, res) => {
 // ─── REGISTER ──────────────────────────────────────────────────
 export const register = async (req, res) => {
   try {
-    const { name, email, password, companyName, phone, planId, onboarding } = req.body;
+    const { name, email, password, companyName, phone, planId, onboarding, acceptedTerms } = req.body;
 
     const { validarEmail, validarSenha } = await import("../services/SignupPolicy.js");
+    const { VERSAO_DOCUMENTOS } = await import("../../content/legalVersion.js");
 
     const checagemEmail = validarEmail(email);
     if (!checagemEmail.ok) return res.status(400).json({ error: checagemEmail.erro, campo: "email" });
@@ -102,6 +103,15 @@ export const register = async (req, res) => {
     const checagemSenha = validarSenha(password, { nome: name, email: emailNormalized });
     if (!checagemSenha.ok) {
       return res.status(400).json({ error: checagemSenha.erro, campo: "password", forca: checagemSenha.forca });
+    }
+
+    // O aceite tem que ser um ato: antes disto o cadastro gravava
+    // acceptedTermsAt sozinho, sem nunca ter perguntado nada a ninguém.
+    if (acceptedTerms !== true) {
+      return res.status(400).json({
+        error: "É preciso aceitar os Termos de Uso e a Política de Privacidade para criar a conta.",
+        campo: "terms",
+      });
     }
 
     const existingUser = await prisma.user.findUnique({ where: { email: emailNormalized } });
@@ -124,6 +134,7 @@ export const register = async (req, res) => {
       });
     }
 
+    const agora = new Date();
     const trialEnd = new Date();
     trialEnd.setDate(trialEnd.getDate() + TRIAL_DAYS);
 
@@ -136,7 +147,7 @@ export const register = async (req, res) => {
         subscriptionStatus: "TRIAL",
         trialEnd,
         nextBillingDate: trialEnd,
-        acceptedTermsAt: new Date(),
+        acceptedTermsAt: agora,
         // Respostas do questionário de contratação: já entram no cadastro
         // para o painel abrir sabendo do que se trata.
         ...(onboarding?.businessType ? { businessType: String(onboarding.businessType) } : {}),
@@ -155,6 +166,10 @@ export const register = async (req, res) => {
         role: "OWNER",
         emailVerificationToken: verificationToken,
         emailVerificationExpiresAt: verificationExpires,
+        // Quando, qual versão e de onde: os três juntos é que provam o aceite.
+        termsAcceptedAt: agora,
+        termsVersion: VERSAO_DOCUMENTOS,
+        termsAcceptedIp: req.ip || null,
       },
     });
 

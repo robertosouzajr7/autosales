@@ -625,6 +625,12 @@ model User {
 
   // Verificação de e-mail
   emailVerified              Boolean   @default(false)
+
+  /// Prova do aceite dos Termos e da Política de Privacidade: quando, qual
+  /// versão do texto e de qual IP. Sem os três, "ele aceitou" é só afirmação.
+  termsAcceptedAt      DateTime?
+  termsVersion         String?
+  termsAcceptedIp      String?
   emailVerificationToken     String?   @unique
   emailVerificationExpiresAt DateTime?
 
