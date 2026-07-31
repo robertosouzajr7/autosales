@@ -40,13 +40,13 @@ async function seed() {
     data: { name: "Negócio Equipe", email: `eq${Date.now()}@teste.local`, planId: plan.id },
   });
   const dono = await prisma.user.create({
-    data: { name: "Dona Ana", email: `dona${Date.now()}@teste.local`, password: "x", role: "OWNER", tenantId: tenant.id },
+    data: { name: "Dona Ana", email: `dona${Date.now()}@teste.local`, password: "x", role: "OWNER", tenantId: tenant.id, emailVerified: true },
   });
   const atendente = await prisma.user.create({
-    data: { name: "Bruno Atendente", email: `bru${Date.now()}@teste.local`, password: "x", role: "AGENT", tenantId: tenant.id },
+    data: { name: "Bruno Atendente", email: `bru${Date.now()}@teste.local`, password: "x", role: "AGENT", tenantId: tenant.id, emailVerified: true },
   });
   const suporte = await prisma.user.create({
-    data: { name: "Suporte", email: `sup${Date.now()}@teste.local`, password: "x", role: "SUPERADMIN", tenantId: tenant.id },
+    data: { name: "Suporte", email: `sup${Date.now()}@teste.local`, password: "x", role: "SUPERADMIN", tenantId: tenant.id, emailVerified: true },
   });
   return { tenant, dono, atendente, suporte };
 }

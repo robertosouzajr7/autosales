@@ -207,7 +207,8 @@ export async function initDB() {
             email,
             password: hashedPassword,
             role: "SUPERADMIN",
-            tenantId: systemTenant.id
+            tenantId: systemTenant.id,
+            emailVerified: true
           }
         });
         console.log(`👑 SuperAdmin criado com sucesso (${email})`);

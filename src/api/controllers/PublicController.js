@@ -22,6 +22,45 @@ export const getLandingPage = async (req, res) => {
   }
 };
 
+/**
+ * Perguntas do questionário de contratação. Vêm do servidor para a landing
+ * e o wizard nunca discordarem sobre o que está sendo perguntado.
+ */
+export const getPlanQuestions = async (_req, res) => {
+  const { PERGUNTAS } = await import("../services/PlanAdvisor.js");
+  res.json({ perguntas: PERGUNTAS });
+};
+
+/** Recebe as respostas e devolve o plano ideal de cada canal. */
+export const recommendPlan = async (req, res) => {
+  try {
+    const { recomendar } = await import("../services/PlanAdvisor.js");
+    res.json(await recomendar(req.body?.respostas || req.body || {}));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Os planos de entrada para a página de preços: o mais barato de cada
+ * canal. Cinco colunas fazem o visitante virar analista de si mesmo antes
+ * de comprar — duas opções claras convertem mais.
+ */
+export const getEntryPlans = async (_req, res) => {
+  try {
+    const planos = await prisma.plan.findMany({
+      where: { active: true, priceMonthly: { gt: 0 } },
+      orderBy: { priceMonthly: "asc" },
+    });
+    const modo = (p) => String(p.whatsappMode || "BOTH").toUpperCase();
+    const oficial = planos.find((p) => ["OFFICIAL", "BOTH"].includes(modo(p))) || null;
+    const qrcode = planos.find((p) => ["BAILEYS", "BOTH"].includes(modo(p))) || null;
+    res.json({ oficial, qrcode, total: planos.length });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 export const getWebchat = async (req, res) => {
   const { id } = req.params; // tenantId
   try {

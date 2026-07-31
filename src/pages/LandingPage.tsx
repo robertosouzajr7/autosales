@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Check, MessageSquare, ArrowRight, Users, Star, Send, X, Clock, AlertCircle,
-  Sun, Moon, Bot, Instagram, Package, CalendarDays, LayoutGrid, Menu, Phone, Globe
+  Sun, Moon, Bot, Instagram, Package, CalendarDays, LayoutGrid, Menu, Phone, Globe,
+  Zap, Workflow, Megaphone, Mic, Users2, Plug, QrCode, BadgeCheck, Sparkles
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -14,9 +15,20 @@ import { Logo } from "@/components/Logo";
 
 const CHANNELS = ["no WhatsApp", "no Instagram", "no seu site"];
 
+function Limite({ k, v, destaque }: { k: string; v: string; destaque?: boolean }) {
+  return (
+    <div>
+      <p className={destaque ? "text-white/60" : "text-slate-400"}>{k}</p>
+      <p className="font-semibold">{v}</p>
+    </div>
+  );
+}
+
 export default function LandingPage() {
   const [settings, setSettings] = useState<any>(null);
   const [plans, setPlans] = useState<any[]>([]);
+  // Planos de entrada (um por canal) — é o que a seção de preços mostra.
+  const [entryPlans, setEntryPlans] = useState<any>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMessage, setChatMessage] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -37,6 +49,11 @@ export default function LandingPage() {
   const { toast } = useToast();
 
   useEffect(() => {
+    fetch("/api/public/entry-plans")
+      .then((r) => r.json())
+      .then((d) => setEntryPlans(d))
+      .catch(() => {});
+
     fetch("/api/public/landing")
       .then((res) => res.json())
       .then((data) => {
@@ -101,7 +118,6 @@ export default function LandingPage() {
     }
   };
 
-  const visiblePlans = plans.filter((p) => !settings?.visiblePlanIds || settings.visiblePlanIds.split(",").includes(p.id));
 
   const navLinks = [
     { href: "#problem", label: "O Problema" },
@@ -161,7 +177,7 @@ export default function LandingPage() {
           </button>
 
           <Link to="/login" className="hidden sm:block text-sm font-semibold px-2 text-slate-600 dark:text-slate-300 hover:text-[#2563EB] transition-colors">Entrar</Link>
-          <Link to="/register" className="hidden sm:block">
+          <Link to="/comecar" className="hidden sm:block">
             <Button className="font-semibold h-10 px-5 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white shadow-lg shadow-[#2563EB]/25 hover:scale-105 transition-transform border-none">Testar Grátis</Button>
           </Link>
 
@@ -203,7 +219,7 @@ export default function LandingPage() {
               <Link to="/login" onClick={() => setMenuOpen(false)}>
                 <Button variant="outline" className="w-full h-12 rounded-xl font-semibold border-slate-300 dark:border-white/15 bg-transparent">Entrar</Button>
               </Link>
-              <Link to="/register" onClick={() => setMenuOpen(false)}>
+              <Link to="/comecar" onClick={() => setMenuOpen(false)}>
                 <Button className="w-full h-12 rounded-xl font-semibold bg-[#2563EB] hover:bg-[#1D4ED8] text-white border-none">Testar 7 dias grátis</Button>
               </Link>
             </div>
@@ -228,36 +244,30 @@ export default function LandingPage() {
             </div>
 
             <h1 className="text-5xl lg:text-[64px] font-bold tracking-[-0.035em] leading-[0.98] text-balance">
-              Um agente de IA que{" "}
-              <span className="bg-gradient-to-r from-[#2563EB] via-[#7c5cff] to-[#22d3ee] bg-clip-text text-transparent">atende, vende e agenda</span>{" "}
-              pelo seu negócio.
+              Seu cliente chama.{" "}
+              <span className="bg-gradient-to-r from-[#2563EB] via-[#7c5cff] to-[#22d3ee] bg-clip-text text-transparent">A IA responde, agenda e vende.</span>
             </h1>
 
-            {/* Linha do canal que cicla */}
             <p className="mt-5 text-base lg:text-lg text-slate-500 dark:text-slate-400 font-medium">
-              Ele responde na hora e converte{" "}
+              24 horas por dia,{" "}
               <span key={channelIdx} className="an-up inline-block font-semibold text-[#2563EB]">{CHANNELS[channelIdx]}</span>.
             </p>
 
-            <p className="mt-4 text-[15.5px] lg:text-lg text-slate-600 dark:text-slate-400 leading-relaxed max-w-xl mx-auto lg:mx-0">
-              Tira dúvidas, apresenta seus produtos com foto e vídeo, qualifica com metodologia de vendas, agenda na sua agenda e organiza tudo no CRM. Para clínicas, salões, academias, restaurantes, lojas e escritórios.
-            </p>
-
             <div className="mt-9 flex flex-col sm:flex-row items-center lg:justify-start justify-center gap-3.5">
-              <Link to="/register">
+              <Link to="/comecar">
                 <Button className="h-14 px-8 text-base font-semibold bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-2xl shadow-[0_16px_40px_-8px_rgba(37,99,235,0.5)] hover:scale-105 transition-transform border-none">
-                  Criar meu agente de IA
+                  Descobrir meu plano ideal
                 </Button>
               </Link>
-              <a href="#how-it-works" className={`h-14 px-7 flex items-center justify-center text-sm font-semibold rounded-2xl ${glass} hover:scale-105 transition-transform`}>
-                Ver como funciona <ArrowRight className="ml-2 w-4 h-4" />
+              <a href="#features" className={`h-14 px-7 flex items-center justify-center text-sm font-semibold rounded-2xl ${glass} hover:scale-105 transition-transform`}>
+                Ver o que faz <ArrowRight className="ml-2 w-4 h-4" />
               </a>
             </div>
 
-            <div className="mt-8 flex items-center lg:justify-start justify-center gap-6 text-xs text-slate-500 dark:text-slate-400">
-              <span><b className="text-slate-800 dark:text-slate-100 font-semibold">+120</b> agendamentos/mês</span>
-              <span><b className="text-slate-800 dark:text-slate-100 font-semibold">−48%</b> de faltas</span>
+            <div className="mt-8 flex flex-wrap items-center lg:justify-start justify-center gap-x-6 gap-y-2 text-xs text-slate-500 dark:text-slate-400">
               <span><b className="text-slate-800 dark:text-slate-100 font-semibold">7 dias</b> grátis</span>
+              <span><b className="text-slate-800 dark:text-slate-100 font-semibold">Sem cartão</b> para testar</span>
+              <span><b className="text-slate-800 dark:text-slate-100 font-semibold">1 minuto</b> para conectar</span>
             </div>
           </div>
 
@@ -355,22 +365,28 @@ export default function LandingPage() {
       {/* ===================== FUNCIONALIDADES ===================== */}
       <section id="features" className="py-24 px-5 lg:px-16 border-t border-slate-200/70 dark:border-white/10">
         <div className="max-w-6xl mx-auto space-y-16">
-          <div className="text-center space-y-4 max-w-2xl mx-auto">
-            <h2 className="text-3xl lg:text-5xl font-bold tracking-[-0.03em] text-balance">Uma plataforma completa de <span className="font-serif italic font-medium text-[#2563EB]">agentes de IA</span></h2>
-            <p className="text-slate-500 dark:text-slate-400">Muito além de agendar: atendimento, vendas e organização — tudo num lugar só.</p>
+          <div className="text-center space-y-3 max-w-2xl mx-auto">
+            <h2 className="text-3xl lg:text-5xl font-bold tracking-[-0.03em] text-balance">Tudo que já vem pronto</h2>
+            <p className="text-slate-500 dark:text-slate-400">Sem plugin, sem integrador, sem mensalidade extra.</p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
-              { icon: Bot, t: "Agente de IA personalizável", d: "Escolha a função — Vendedor, Atendimento, Agendador, Consultor ou SDR — cada uma com skills próprias. Treine com seus documentos e ele fala com a identidade do seu negócio." },
-              { icon: Instagram, t: "Multicanal de verdade", d: "O mesmo agente atende no WhatsApp oficial, no Instagram Direct e num chat que você instala no site. Todas as conversas caem numa caixa de entrada só." },
-              { icon: Package, t: "Catálogo com mídia", d: "Cadastre produtos e serviços com foto, áudio e vídeo. Na conversa, o agente apresenta o item certo e envia a mídia automaticamente." },
-              { icon: CalendarDays, t: "Agenda + lembretes", d: "Marca direto no Google Calendar, sem conflito de horário, confirma na hora e dispara lembretes automáticos que reduzem as faltas." },
-              { icon: LayoutGrid, t: "CRM e funil de clientes", d: "Cada contato do primeiro \"oi\" ao fechamento, num quadro visual. Veja quem está sendo atendido, quem qualificou, quem agendou e quem comprou." },
-              { icon: MessageSquare, t: "Central de conversas + humano", d: "Inbox unificado dos seus canais. Sua equipe assume qualquer conversa a qualquer momento, com todo o histórico, exatamente onde a IA parou." },
+              { icon: Bot, t: "Agente que você treina", d: "Escolha a função e mande seus documentos. Ele fala como o seu negócio fala." },
+              { icon: Instagram, t: "WhatsApp, Instagram e site", d: "Três canais, uma caixa de entrada. O agente atende nos três." },
+              { icon: MessageSquare, t: "Fila e atendimento humano", d: "A IA transfere, o cliente vê a posição na fila e sua equipe assume de onde ela parou." },
+              { icon: CalendarDays, t: "Agenda com link do Meet", d: "Marca no Google Calendar sem conflito, confirma 24h antes e manda o link 10 minutos antes." },
+              { icon: Zap, t: "Lembretes que reduzem falta", d: "Confirmação, aviso de horário e retorno de quem não veio — no automático." },
+              { icon: Workflow, t: "Construtor de fluxos", d: "Monte a conversa arrastando blocos. Simulador embutido para testar antes de publicar." },
+              { icon: Package, t: "Catálogo com foto e vídeo", d: "O agente identifica o que o cliente quer e envia a mídia do produto na conversa." },
+              { icon: LayoutGrid, t: "Funil e base de contatos", d: "Sem contato duplicado: o mesmo cliente em canais diferentes vira uma ficha só." },
+              { icon: Megaphone, t: "Disparo em massa", d: "Campanha por template aprovado, com projeção de custo antes de enviar." },
+              { icon: Mic, t: "Ouve e responde em áudio", d: "Recebe o áudio do cliente, entende e responde falando." },
+              { icon: Users2, t: "Equipe com permissão", d: "Cada colaborador vê só o que o cargo dele precisa." },
+              { icon: Plug, t: "API e CRM conectados", d: "RD Station, HubSpot, Salesforce e Pipedrive — entrada e saída, sem duplicar." },
             ].map((f) => (
-              <Card key={f.t} className={`p-7 rounded-3xl ${glass} space-y-5 group hover:-translate-y-1.5 hover:border-[#2563EB]/40 transition-all`}>
-                <div className="w-12 h-12 rounded-2xl bg-[#2563EB]/10 text-[#2563EB] grid place-items-center group-hover:scale-110 transition-transform"><f.icon className="w-6 h-6" /></div>
-                <h3 className="text-lg font-semibold tracking-tight">{f.t}</h3>
+              <Card key={f.t} className={`p-6 rounded-3xl ${glass} space-y-3.5 group hover:-translate-y-1.5 hover:border-[#2563EB]/40 transition-all`}>
+                <div className="w-11 h-11 rounded-2xl bg-[#2563EB]/10 text-[#2563EB] grid place-items-center group-hover:scale-110 transition-transform"><f.icon className="w-5 h-5" /></div>
+                <h3 className="text-base font-semibold tracking-tight">{f.t}</h3>
                 <p className="text-[13px] text-slate-500 dark:text-slate-400 leading-relaxed">{f.d}</p>
               </Card>
             ))}
@@ -410,70 +426,106 @@ export default function LandingPage() {
       </section>
 
       {/* ===================== PLANOS ===================== */}
+      {/* Duas colunas, não cinco: a diferença que importa é o canal do
+          WhatsApp. Quem quer comparar tudo passa pelo questionário. */}
       <section id="pricing" className="py-24 px-5 lg:px-16 border-t border-slate-200/70 dark:border-white/10">
-        <div className="max-w-6xl mx-auto space-y-16">
-          <div className="text-center space-y-4 max-w-2xl mx-auto">
-            <h2 className="text-3xl lg:text-5xl font-bold tracking-[-0.03em] text-balance">Preço justo para <span className="font-serif italic font-medium text-[#2563EB]">vender mais</span></h2>
-            <p className="text-slate-500 dark:text-slate-400 text-lg">Sem taxas ocultas. Escolha o plano ideal para o tamanho do seu negócio. Teste 7 dias grátis.</p>
+        <div className="max-w-5xl mx-auto space-y-12">
+          <div className="text-center space-y-3 max-w-2xl mx-auto">
+            <h2 className="text-3xl lg:text-5xl font-bold tracking-[-0.03em] text-balance">Comece por aqui</h2>
+            <p className="text-slate-500 dark:text-slate-400 text-lg">
+              A diferença entre os dois é só como o WhatsApp conecta. 7 dias grátis nos dois.
+            </p>
           </div>
 
-          <div className={`grid grid-cols-1 ${visiblePlans.length === 2 ? "md:grid-cols-2" : visiblePlans.length >= 3 ? "md:grid-cols-3" : "md:grid-cols-1"} gap-8 max-w-5xl mx-auto items-end`}>
-            {visiblePlans.length > 0 ? (
-              [...visiblePlans].sort((a, b) => a.priceMonthly - b.priceMonthly).map((plan) => {
-                const isRecommended = plan.priceMonthly === 797;
-                let featuresData: any = {};
-                try { featuresData = JSON.parse(plan.features || "{}"); } catch (e) {}
-                return (
-                  <Card
-                    key={plan.id}
-                    className={`p-9 rounded-3xl space-y-7 relative overflow-hidden transition-transform hover:-translate-y-1 ${
-                      isRecommended
-                        ? "bg-[#2563EB] text-white border-none shadow-2xl shadow-[#2563EB]/30"
-                        : `${glass}`
-                    }`}
-                  >
-                    {isRecommended && <div className="absolute top-0 right-0 bg-white/20 px-6 py-2.5 rounded-bl-2xl font-bold text-[11px] tracking-wide">RECOMENDADO</div>}
-                    <div className="space-y-2">
-                      <Badge className={`${isRecommended ? "bg-white/20 text-white" : "bg-[#2563EB]/15 text-[#2563EB]"} border-none py-1 px-3.5 font-semibold text-[11px]`}>{plan.name}</Badge>
-                      <h3 className="text-5xl font-bold tracking-tight tabular-nums">
-                        R$ {plan.priceMonthly}
-                        <span className={`text-sm font-medium ${isRecommended ? "text-white/70" : "text-slate-400 dark:text-slate-500"}`}>/mês</span>
-                      </h3>
-                    </div>
+          <div className="grid gap-6 md:grid-cols-2">
+            {[
+              {
+                plano: entryPlans?.qrcode,
+                icone: QrCode,
+                titulo: "Por QR Code",
+                selo: "Mais econômico",
+                destaque: false,
+                bom: [
+                  "Conecta lendo o QR, em 1 minuto",
+                  "Usa o número que você já tem",
+                  "Sem cobrança por mensagem",
+                ],
+                nota: "Canal não oficial — a Meta pode bloquear o número.",
+              },
+              {
+                plano: entryPlans?.oficial,
+                icone: BadgeCheck,
+                titulo: "Com API oficial",
+                selo: "Mais robusto",
+                destaque: true,
+                bom: [
+                  "Conta verificada, com selo",
+                  "Número sem risco de bloqueio",
+                  "Disparo em massa liberado",
+                ],
+                nota: "A Meta cobra por mensagem de campanha.",
+              },
+            ].map((op) =>
+              op.plano ? (
+                <Card
+                  key={op.titulo}
+                  className={`p-8 rounded-3xl space-y-6 relative overflow-hidden transition-transform hover:-translate-y-1 ${
+                    op.destaque ? "bg-[#2563EB] text-white border-none shadow-2xl shadow-[#2563EB]/30" : glass
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      <op.icone className="w-4 h-4" /> {op.titulo}
+                    </span>
+                    <Badge className={`border-none text-[11px] font-semibold ${op.destaque ? "bg-white/20 text-white" : "bg-[#2563EB]/15 text-[#2563EB]"}`}>
+                      {op.selo}
+                    </Badge>
+                  </div>
 
-                    <ul className={`space-y-3 pt-5 border-t ${isRecommended ? "border-white/15" : "border-slate-200/70 dark:border-white/10"}`}>
-                      {["Agente de IA no WhatsApp oficial", "Agenda integrada (Google Calendar)", "Funil de Clientes (Kanban)", "Central de Conversas + atendimento humano", `Lembretes e automações ${featuresData.automations || "inclusos"}`].map((li) => (
-                        <li key={li} className="flex items-center gap-2 text-[12.5px] font-medium"><Check className="w-4 h-4 shrink-0" /><span>{li}</span></li>
-                      ))}
-                      {featuresData.webhooks && (
-                        <li className="flex items-center gap-2 text-[12.5px] font-medium"><Check className="w-4 h-4 shrink-0" /><span>Webhooks &amp; API de Integração</span></li>
-                      )}
-                    </ul>
+                  <div>
+                    <p className={`text-sm ${op.destaque ? "text-white/70" : "text-slate-400"}`}>{op.plano.name}</p>
+                    <h3 className="text-5xl font-bold tracking-tight tabular-nums">
+                      R$ {op.plano.priceMonthly}
+                      <span className={`text-sm font-medium ${op.destaque ? "text-white/70" : "text-slate-400"}`}>/mês</span>
+                    </h3>
+                  </div>
 
-                    <div className={`space-y-2.5 pt-5 border-t ${isRecommended ? "border-white/15" : "border-slate-200/70 dark:border-white/10"}`}>
-                      <p className={`text-[11px] font-semibold mb-3 ${isRecommended ? "text-white/70" : "text-slate-400 dark:text-slate-500"}`}>Limites do plano</p>
-                      {[
-                        { on: plan.enableSdr, k: "Agentes de IA ativos", v: plan.enableSdr ? `Até ${plan.maxSdrs}` : "Não disponível" },
-                        { on: plan.enableTokens, k: "Créditos de IA", v: plan.enableTokens ? `${(plan.maxTokens / 1000).toLocaleString()}k Tokens` : "Não disponível" },
-                        { on: plan.enableMessages, k: "Mensagens/mês", v: plan.enableMessages ? `${plan.maxMessages.toLocaleString()} Mensagens` : "Não disponível" },
-                      ].map((row) => (
-                        <div key={row.k} className={`flex justify-between items-center text-[12px] font-medium ${!row.on ? "opacity-40" : ""}`}>
-                          <span className={`${isRecommended ? "text-white/70" : "text-slate-400 dark:text-slate-500"} ${!row.on ? "line-through" : ""}`}>{row.k}</span>
-                          <span>{row.v}</span>
-                        </div>
-                      ))}
-                    </div>
+                  <ul className={`space-y-2.5 pt-5 border-t ${op.destaque ? "border-white/15" : "border-slate-200/70 dark:border-white/10"}`}>
+                    {op.bom.map((li) => (
+                      <li key={li} className="flex items-center gap-2 text-[13px] font-medium">
+                        <Check className="w-4 h-4 shrink-0" /> {li}
+                      </li>
+                    ))}
+                    <li className={`flex items-start gap-2 text-[12px] pt-1 ${op.destaque ? "text-white/60" : "text-slate-400"}`}>
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" /> {op.nota}
+                    </li>
+                  </ul>
 
-                    <Link to={`${localStorage.getItem("token") ? "/checkout" : "/register"}?plan=${plan.id}`} className="block w-full">
-                      <Button className={`w-full h-14 font-semibold rounded-2xl text-base border-none transition-transform active:scale-95 ${isRecommended ? "bg-white text-[#2563EB] hover:bg-slate-50 shadow-xl" : "bg-[#2563EB] text-white hover:bg-[#1D4ED8]"}`}>
-                        Testar 7 dias grátis
-                      </Button>
-                    </Link>
-                  </Card>
-                );
-              })
-            ) : (
-              <p className="text-slate-400 text-center col-span-full py-20 font-semibold">Nenhum plano disponível no momento.</p>
+                  <div className={`grid grid-cols-2 gap-3 pt-5 border-t text-[12px] ${op.destaque ? "border-white/15" : "border-slate-200/70 dark:border-white/10"}`}>
+                    <Limite destaque={op.destaque} k="Conversas/mês" v={op.plano.maxConversations ? op.plano.maxConversations.toLocaleString("pt-BR") : "Sem limite"} />
+                    <Limite destaque={op.destaque} k="Pessoas" v={String(op.plano.maxUsers)} />
+                    <Limite destaque={op.destaque} k="Números" v={String(op.plano.maxWhatsAppNumbers)} />
+                    <Limite destaque={op.destaque} k="Disparos/mês" v={op.plano.maxCampaignMessages ? op.plano.maxCampaignMessages.toLocaleString("pt-BR") : "—"} />
+                  </div>
+
+                  <Link to={`/comecar`} className="block w-full">
+                    <Button className={`w-full h-13 font-semibold rounded-2xl text-base border-none transition-transform active:scale-95 h-14 ${op.destaque ? "bg-white text-[#2563EB] hover:bg-slate-50 shadow-xl" : "bg-[#2563EB] text-white hover:bg-[#1D4ED8]"}`}>
+                      Testar 7 dias grátis
+                    </Button>
+                  </Link>
+                </Card>
+              ) : null
+            )}
+          </div>
+
+          <div className="text-center">
+            <Link to="/comecar" className="inline-flex items-center gap-2 text-sm font-medium text-[#2563EB] hover:underline underline-offset-4">
+              <Sparkles className="w-4 h-4" /> Precisa de mais? Responda 5 perguntas e veja o plano certo
+            </Link>
+            {entryPlans?.total > 2 && (
+              <p className="mt-2 text-xs text-slate-400">
+                Temos {entryPlans.total} planos — estes são os de entrada.
+              </p>
             )}
           </div>
         </div>
@@ -515,7 +567,7 @@ export default function LandingPage() {
             Pare de perder cliente por demora. Crie seu agente e veja ele atendendo, apresentando produtos, agendando e vendendo — no WhatsApp, no Instagram e no seu site.
           </p>
           <div className="pt-2">
-            <Link to="/register">
+            <Link to="/comecar">
               <Button className="h-15 px-10 py-4 text-base font-semibold bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-2xl shadow-[0_16px_40px_-8px_rgba(37,99,235,0.5)] hover:scale-105 transition-transform border-none">
                 Testar a plataforma grátis
               </Button>

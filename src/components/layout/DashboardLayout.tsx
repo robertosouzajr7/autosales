@@ -63,6 +63,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { LogoIcon } from "@/components/Logo";
 import { TrialBanner } from "@/components/billing/TrialBanner";
+import { VerifyEmailGate } from "@/components/billing/VerifyEmailGate";
 import { SubscriptionGate } from "@/components/billing/SubscriptionGate";
 
 interface NavItem {
@@ -758,6 +759,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </DropdownMenuContent>
           </DropdownMenu>
         </header>
+
+        {/* E-mail não confirmado: recursos travados na API */}
+        <VerifyEmailGate />
 
         {/* Aviso de trial / pagamento pendente */}
         <TrialBanner />

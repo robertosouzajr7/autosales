@@ -7,6 +7,31 @@ import { CheckCircle2, ArrowRight, Loader2, Sparkles, MessageSquare, Instagram, 
 import { useToast } from "@/hooks/use-toast";
 import { AuthShell, glass } from "@/components/auth/AuthShell";
 
+/**
+ * Mesma regra do servidor (SignupPolicy). Repetida aqui de propósito: a
+ * tela precisa reagir enquanto se digita, e o servidor precisa recusar
+ * mesmo que alguém pule a tela.
+ */
+function avaliarSenha(senha: string, nome: string, email: string) {
+  const s = senha || "";
+  const criterios = [
+    { ok: s.length >= 8, texto: "8 caracteres ou mais" },
+    { ok: /[a-z]/.test(s) && /[A-Z]/.test(s), texto: "maiúscula e minúscula" },
+    { ok: /\d/.test(s), texto: "pelo menos um número" },
+    { ok: /[^A-Za-z0-9]/.test(s), texto: "um símbolo (opcional, mas ajuda)", opcional: true },
+  ];
+  const local = String(email || "").split("@")[0].toLowerCase();
+  const primeiro = String(nome || "").trim().split(/\s+/)[0]?.toLowerCase();
+  const contemDados =
+    (local.length >= 4 && s.toLowerCase().includes(local)) ||
+    (primeiro && primeiro.length >= 4 && s.toLowerCase().includes(primeiro));
+
+  const obrigatorios = criterios.filter((c) => !c.opcional);
+  const ok = obrigatorios.every((c) => c.ok) && !contemDados;
+  const forca = criterios.filter((c) => c.ok).length;
+  return { ok, forca, criterios, contemDados };
+}
+
 const field =
   "h-13 rounded-2xl bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 font-medium h-14 focus-visible:ring-2 focus-visible:ring-[#2563EB]/30 transition";
 
@@ -22,6 +47,8 @@ export default function Register() {
   });
 
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
+  const senha = avaliarSenha(formData.password, formData.name, formData.email);
+  const emailValido = /^[^\s@,;]+@[^\s@,;]+\.[a-z]{2,}$/i.test(formData.email.trim());
 
   useEffect(() => {
     const planId = params.get("plan");
@@ -42,15 +69,31 @@ export default function Register() {
     if (!formData.name || !formData.email || !formData.password || !formData.companyName) {
       return toast({ title: "Erro", description: "Preencha todos os campos obrigatórios.", variant: "destructive" });
     }
-    if (formData.password.length < 8) {
-      return toast({ title: "Senha muito curta", description: "Use ao menos 8 caracteres.", variant: "destructive" });
+    if (!emailValido) {
+      return toast({ title: "E-mail inválido", description: "Confira o endereço — é por ele que você recebe o acesso.", variant: "destructive" });
+    }
+    if (!senha.ok) {
+      return toast({
+        title: "Senha fraca",
+        description: senha.contemDados
+          ? "A senha não pode conter seu nome ou e-mail."
+          : "Use ao menos 8 caracteres, com maiúscula, minúscula e número.",
+        variant: "destructive",
+      });
     }
 
     setLoading(true);
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          // Respostas do questionário de contratação, quando veio de lá.
+          onboarding: (() => {
+            try { return JSON.parse(sessionStorage.getItem("respostasOnboarding") || "null"); }
+            catch { return null; }
+          })(),
+        }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -62,9 +105,11 @@ export default function Register() {
         localStorage.setItem("userRole", data.user?.role || "OWNER");
         localStorage.setItem("tenantId", data.tenant.id);
         localStorage.setItem("userId", data.user.id);
-        // Com plano escolhido → checkout (cartão + 7 dias grátis). Senão, onboarding.
+        // O e-mail precisa ser confirmado antes de operar, então a próxima
+        // tela é a de confirmação — com o plano guardado para depois.
         const plan = formData.planId || params.get("plan");
-        navigate(plan ? `/checkout?plan=${plan}` : "/onboarding");
+        if (plan) sessionStorage.setItem("planoPendente", plan);
+        navigate(`/verify-email?aguardando=${encodeURIComponent(formData.email)}`);
       } else if (res.status === 409) {
         toast({
           title: "E-mail já cadastrado",
@@ -154,13 +199,40 @@ export default function Register() {
                   <Input placeholder="11 99999-9999" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className={field} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 pl-1">Senha</Label>
-                  <Input type="password" placeholder="mín. 8 caracteres" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} className={field} />
+                  <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 pl-1">E-mail</Label>
+                  <Input placeholder="seu@email.com" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className={field} />
                 </div>
               </div>
+              {/* Senha ocupa a linha inteira: a lista de critérios não cabe em meia coluna. */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 pl-1">E-mail</Label>
-                <Input placeholder="seu@email.com" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className={field} />
+                <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 pl-1">Senha</Label>
+                <Input type="password" placeholder="mín. 8 caracteres" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} className={field} />
+                {formData.password && (
+                  <div className="mt-2 space-y-1.5">
+                    <div className="flex gap-1">
+                      {[0, 1, 2, 3].map((i) => (
+                        <span
+                          key={i}
+                          className={`h-1 flex-1 rounded-full transition-colors ${
+                            i < senha.forca
+                              ? senha.forca <= 2 ? "bg-amber-500" : "bg-emerald-500"
+                              : "bg-slate-200 dark:bg-white/10"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <ul className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+                      {senha.criterios.map((c) => (
+                        <li key={c.texto} className={`text-[11px] ${c.ok ? "text-emerald-600" : "text-slate-400"}`}>
+                          {c.ok ? "✓" : "○"} {c.texto}
+                        </li>
+                      ))}
+                      {senha.contemDados && (
+                        <li className="col-span-2 text-[11px] text-rose-500">✗ não use seu nome nem seu e-mail na senha</li>
+                      )}
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
 

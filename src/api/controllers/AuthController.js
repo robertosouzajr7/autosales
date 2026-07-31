@@ -91,12 +91,18 @@ export const login = async (req, res) => {
 // ─── REGISTER ──────────────────────────────────────────────────
 export const register = async (req, res) => {
   try {
-    const { name, email, password, companyName, phone, planId } = req.body;
+    const { name, email, password, companyName, phone, planId, onboarding } = req.body;
 
-    if (!email || !password || password.length < 8) {
-      return res.status(400).json({ error: "Senha deve ter ao menos 8 caracteres." });
+    const { validarEmail, validarSenha } = await import("../services/SignupPolicy.js");
+
+    const checagemEmail = validarEmail(email);
+    if (!checagemEmail.ok) return res.status(400).json({ error: checagemEmail.erro, campo: "email" });
+    const emailNormalized = checagemEmail.email;
+
+    const checagemSenha = validarSenha(password, { nome: name, email: emailNormalized });
+    if (!checagemSenha.ok) {
+      return res.status(400).json({ error: checagemSenha.erro, campo: "password", forca: checagemSenha.forca });
     }
-    const emailNormalized = String(email).trim().toLowerCase();
 
     const existingUser = await prisma.user.findUnique({ where: { email: emailNormalized } });
     if (existingUser) {
@@ -131,6 +137,9 @@ export const register = async (req, res) => {
         trialEnd,
         nextBillingDate: trialEnd,
         acceptedTermsAt: new Date(),
+        // Respostas do questionário de contratação: já entram no cadastro
+        // para o painel abrir sabendo do que se trata.
+        ...(onboarding?.businessType ? { businessType: String(onboarding.businessType) } : {}),
       },
     });
 
@@ -164,6 +173,8 @@ export const register = async (req, res) => {
         emailVerified: false,
       },
       tenant,
+      // A tela precisa saber que o painel entra travado até a confirmação.
+      requiresEmailVerification: true,
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -193,6 +204,13 @@ export const verifyEmail = async (req, res) => {
         emailVerificationExpiresAt: null,
       },
     });
+
+    // O middleware guarda o usuário por 30s. Sem derrubar esse cache, quem
+    // acabou de confirmar continuaria tomando 403 por meio minuto — logo no
+    // momento em que a expectativa é justamente o painel destravar.
+    const { invalidateUserCache } = await import("../middlewares/permissions.js");
+    invalidateUserCache(user.id);
+
     res.json({ success: true, message: "E-mail confirmado." });
   } catch (e) {
     res.status(500).json({ error: e.message });

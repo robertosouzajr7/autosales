@@ -23,6 +23,7 @@
     "test:pricing": "node scripts/test-dispatch-pricing.mjs",
     "test:usage": "node scripts/test-usage-limits.mjs",
     "test:channel": "node scripts/test-whatsapp-mode.mjs",
+    "test:signup": "node scripts/test-signup-flow.mjs",
     "contacts:dedupe": "node scripts/dedupe-contacts.mjs"
   },
   "dependencies": {

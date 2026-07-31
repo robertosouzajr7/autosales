@@ -31,7 +31,7 @@ import * as BusinessController from "../controllers/BusinessController.js";
 import * as ProductController from "../controllers/ProductController.js";
 import { listVerticalTemplates } from "../services/VerticalTemplates.js";
 import { listFunctions, SKILLS } from "../services/AgentFunctions.js";
-import { loadUser, requirePermission, requireTenantAdmin } from "../middlewares/permissions.js";
+import { loadUser, requirePermission, requireTenantAdmin, requireVerifiedEmail } from "../middlewares/permissions.js";
 import * as PublicApiController from "../controllers/PublicApiController.js";
 import * as IntegrationController from "../controllers/IntegrationController.js";
 import { apiKeyMiddleware, requireScope } from "../middlewares/apiKey.js";
@@ -90,6 +90,8 @@ router.use("/v1", v1);
 router.use(authMiddleware);
 // Carrega o colaborador, barra quem foi desativado e resolve as permissões.
 router.use(loadUser);
+// E-mail não confirmado: navega e lê, mas não opera.
+router.use(requireVerifiedEmail);
 
 // Google Calendar (conexão da agenda)
 router.get("/google/status", GoogleCalendarController.getStatus);

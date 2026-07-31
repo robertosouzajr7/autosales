@@ -87,7 +87,9 @@ export const createTenant = async (req, res) => {
       if (dupUser) return res.status(409).json({ error: "Já existe um usuário com este e-mail." });
       const hashed = await bcrypt.hash(adminPassword, 10);
       owner = await prisma.user.create({
-        data: { name: adminName, email: emailNormalized, password: hashed, role: "OWNER", tenantId: tenant.id },
+        // Conta aberta pela equipe da plataforma: não há e-mail de
+        // confirmação neste caminho, então já nasce liberada.
+        data: { name: adminName, email: emailNormalized, password: hashed, role: "OWNER", tenantId: tenant.id, emailVerified: true },
       });
     }
 
@@ -173,7 +175,7 @@ export const createTenantUser = async (req, res) => {
     const safeRole = role === "OWNER" ? "OWNER" : "ADMIN";
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { name, email: emailNormalized, password: hashedPassword, role: safeRole, tenantId: req.params.id }
+      data: { name, email: emailNormalized, password: hashedPassword, role: safeRole, tenantId: req.params.id, emailVerified: true }
     });
     await audit({
       tenantId: req.params.id, actorId: req.userId,

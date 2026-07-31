@@ -81,6 +81,10 @@ export const createUser = async (req, res) => {
         // Sem escolha explícita, valem os módulos do perfil.
         permissions: normalizarPermissoes(permissions),
         tenantId,
+        // Colaborador cadastrado pelo dono da conta já entra liberado: quem
+        // respondeu pela identidade dele foi o titular, e este fluxo não
+        // dispara e-mail de confirmação — travar aqui só criaria conta morta.
+        emailVerified: true,
       },
     });
     await sincronizarFilas(user.id, tenantId, queueIds);

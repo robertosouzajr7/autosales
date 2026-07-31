@@ -28,7 +28,10 @@ async function carregarUsuario(userId) {
   const user = await prisma.user
     .findUnique({
       where: { id: userId },
-      select: { id: true, name: true, email: true, role: true, active: true, permissions: true, tenantId: true },
+      select: {
+        id: true, name: true, email: true, role: true, active: true,
+        permissions: true, tenantId: true, emailVerified: true,
+      },
     })
     .catch(() => null);
 
@@ -56,6 +59,7 @@ export async function loadUser(req, res, next) {
 
     req.user = user;
     req.userRole = user.role;
+    req.emailVerified = user.emailVerified !== false;
     req.permissions = resolvePermissions(user);
     req.isTenantAdmin = isAdminProfile(user.role);
     next();
@@ -83,4 +87,40 @@ export function requireTenantAdmin(req, res, next) {
   if (!req.user) return next();
   if (req.isTenantAdmin) return next();
   return res.status(403).json({ error: "Apenas administradores da conta podem fazer isso." });
+}
+
+/**
+ * Recursos só liberam depois que o e-mail é confirmado.
+ *
+ * Sem isso qualquer endereço inventado virava conta com acesso total ao
+ * painel — e o e-mail é justamente o canal de recuperação de senha e de
+ * aviso de cobrança. A trava é ampla de propósito: o que fica liberado é o
+ * mínimo para confirmar o e-mail, ver o próprio cadastro e sair.
+ */
+const LIVRE_SEM_VERIFICAR = [
+  "/users/me",
+  "/auth/",
+  "/settings",          // GET: o painel precisa saber o nome da conta
+  "/billing/",          // ver plano e regularizar pagamento
+  "/compliance/",
+];
+
+export function requireVerifiedEmail(req, res, next) {
+  if (!req.user) return next();
+  if (req.emailVerified) return next();
+  // SUPERADMIN opera a plataforma; travá-lo por e-mail deixaria o suporte
+  // de fora justamente quando alguém precisa de ajuda.
+  if (req.user.role === "SUPERADMIN") return next();
+
+  const caminho = req.path || "";
+  if (LIVRE_SEM_VERIFICAR.some((p) => caminho.startsWith(p))) return next();
+  // Leitura passa; o que muda dado, não. Assim o cliente até circula pelo
+  // painel e vê o que vai ter, mas não opera com um e-mail não confirmado.
+  if (req.method === "GET") return next();
+
+  return res.status(403).json({
+    error: "Confirme seu e-mail para liberar os recursos. Reenviamos o link se precisar.",
+    emailNotVerified: true,
+    email: req.user.email,
+  });
 }

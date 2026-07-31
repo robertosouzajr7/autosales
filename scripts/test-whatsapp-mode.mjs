@@ -48,7 +48,7 @@ async function conta(modo, extras = {}) {
   const dono = await prisma.user.create({
     data: {
       name: "Dono", email: `dwa${Date.now()}${Math.random()}@teste.local`.replace(/0\./g, ""),
-      password: "x", role: "OWNER", tenantId: tenant.id,
+      password: "x", role: "OWNER", tenantId: tenant.id, emailVerified: true,
     },
   });
   return { plan, tenant, dono };
@@ -145,7 +145,7 @@ async function main() {
     data: { name: "Sem plano", email: `sp${Date.now()}@teste.local` },
   });
   const donoSemPlano = await prisma.user.create({
-    data: { name: "Dono", email: `dsp${Date.now()}@teste.local`, password: "x", role: "OWNER", tenantId: semPlano.id },
+    data: { name: "Dono", email: `dsp${Date.now()}@teste.local`, password: "x", role: "OWNER", tenantId: semPlano.id, emailVerified: true },
   });
   r = await chamar("/whatsapp/accounts", donoSemPlano, { method: "POST", body: JSON.stringify({ name: "QR" }) });
   // Conta sem plano já era barrada antes, pelo limite de números. O que não
@@ -156,7 +156,7 @@ async function main() {
   // ── 6. Admin configura o canal do plano ─────────────────────
   console.log("\n6. Canal do plano pelo painel do SaaS");
   const suporte = await prisma.user.create({
-    data: { name: "Suporte", email: `swa${Date.now()}@teste.local`, password: "x", role: "SUPERADMIN", tenantId: oficial.tenant.id },
+    data: { name: "Suporte", email: `swa${Date.now()}@teste.local`, password: "x", role: "SUPERADMIN", tenantId: oficial.tenant.id, emailVerified: true },
   });
   r = await chamar(`/admin/plans/${qr.plan.id}`, suporte, {
     method: "PUT", body: JSON.stringify({ whatsappMode: "INVENTADO" }),

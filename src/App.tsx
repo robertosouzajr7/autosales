@@ -27,6 +27,7 @@ import PublicBooking from "@/pages/PublicBooking";
 import PublicWebchat from "@/pages/PublicWebchat";
 import Docs from "@/pages/Docs";
 import VerifyEmail from "@/pages/VerifyEmail";
+import Comecar from "./pages/Comecar";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import { Toaster } from "@/components/ui/toaster";
@@ -40,6 +41,10 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/verify-email/:token" element={<VerifyEmail />} />
+        {/* Sem token = tela de espera logo depois do cadastro. */}
+        <Route path="/verify-email" element={<VerifyEmail />} />
+        {/* Contratação guiada: perguntas → plano ideal → cadastro. */}
+        <Route path="/comecar" element={<Comecar />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/b/:tenantId" element={<PublicBooking />} />

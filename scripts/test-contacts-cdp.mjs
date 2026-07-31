@@ -50,7 +50,7 @@ async function seed() {
     data: { name: "Negócio CDP", email: `cdp${Date.now()}@teste.local`, planId: plan.id },
   });
   const dono = await prisma.user.create({
-    data: { name: "Dono CDP", email: `dcdp${Date.now()}@teste.local`, password: "x", role: "OWNER", tenantId: tenant.id },
+    data: { name: "Dono CDP", email: `dcdp${Date.now()}@teste.local`, password: "x", role: "OWNER", tenantId: tenant.id, emailVerified: true },
   });
   await prisma.pipelineStage.create({ data: { tenantId: tenant.id, name: "Novos", order: 0 } });
   return { tenant, dono };
