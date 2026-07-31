@@ -167,6 +167,43 @@ async function main() {
     "plano oficial entra só na coluna oficial"
   );
 
+  // ── 8. Descrição vinda dos campos do plano ──────────────────
+  console.log("\n8. Descrição dinâmica");
+  const doCatalogo = resp.corpo.planos.find((p) => p.id === grande.id);
+  ok(!!doCatalogo?.descricao?.limites?.length, `traz os limites (${doCatalogo?.descricao?.limites?.length})`);
+  ok(!!doCatalogo?.descricao?.recursos?.length, `traz os módulos (${doCatalogo?.descricao?.recursos?.length})`);
+  ok(
+    doCatalogo.descricao.limites.some((l) => l.rotulo === "Conversas por mês" && l.valor === "5.000"),
+    "o limite mostra o número que o admin cadastrou"
+  );
+  ok(
+    !Object.keys(doCatalogo).some((k) => /UnitCost|stripe/i.test(k)),
+    "custo unitário e Stripe não saem na rota pública"
+  );
+
+  // Módulo desligado não pode virar linha de limite: prometer "3 agentes de
+  // IA" num plano sem agente de IA é vender o que não existe.
+  const enxuto = await prisma.plan.create({
+    data: {
+      name: `Enxuto ${Date.now()}`, priceMonthly: 47, priceYearly: 470, whatsappMode: "BAILEYS",
+      maxConversations: 100, maxUsers: 1, maxWhatsAppNumbers: 1, maxCampaignMessages: 0, active: true,
+      enableSdr: false, enableTokens: false, enableMessages: false,
+      enableCalendar: false, enableAutomations: false, enableWebhooks: false,
+      enableVoice: false, enablePremiumVoice: true,
+    },
+  });
+  resp = await get("/public/plans");
+  const desligado = resp.corpo.planos.find((p) => p.id === enxuto.id);
+  const rotulos = desligado.descricao.limites.map((l) => l.rotulo);
+  ok(!rotulos.includes("Agentes de IA"), "sem módulo de IA, o limite de agentes some");
+  ok(!rotulos.includes("Créditos de IA por mês"), "sem créditos, a franquia de tokens some");
+  ok(!rotulos.includes("Disparos em massa por mês"), "disparo zerado não vira linha de limite");
+  const ligado = (c) => desligado.descricao.recursos.find((r) => r.chave === c)?.ativo;
+  ok(ligado("enableCalendar") === false, "módulo desligado aparece como ausente, não some da lista");
+  ok(ligado("enablePremiumVoice") === false, "voz premium sem voz não é anunciada");
+  ok(desligado.descricao.canal.modo === "BAILEYS", "o canal do plano vai junto");
+  await prisma.plan.delete({ where: { id: enxuto.id } }).catch(() => {});
+
   // A tela nasce vazia e precisa saber disso para não prometer preço que
   // ainda não existe — é o estado de quem acabou de subir a plataforma.
   const ativos = (await prisma.plan.findMany({ where: { active: true }, select: { id: true } })).map((p) => p.id);

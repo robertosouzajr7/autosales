@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { LogoIcon } from "@/components/Logo";
 import {
-  ArrowRight, ArrowLeft, Check, Loader2, Sparkles, QrCode, BadgeCheck,
+  ArrowRight, ArrowLeft, Check, X, Loader2, Sparkles, QrCode, BadgeCheck,
   AlertTriangle, ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -17,26 +17,25 @@ import { cn } from "@/lib/utils";
  * aparece aqui sem ninguém mexer no código.
  */
 
+type Limite = { rotulo: string; valor: string; detalhe?: string | null };
+type Recurso = { chave: string; rotulo: string; ativo: boolean };
+
 type Plano = {
   id: string;
   name: string;
   priceMonthly: number;
   priceYearly: number;
   whatsappMode?: string;
-  maxConversations: number;
-  maxUsers: number;
-  maxWhatsAppNumbers: number;
-  maxCampaignMessages: number;
-  enableVoice?: boolean;
-  enableWebhooks?: boolean;
-  enableCalendar?: boolean;
-  enableAutomations?: boolean;
+  /** Montada no servidor a partir dos campos do plano (PlanFeatures.js). */
+  descricao: {
+    canal: { modo: string; titulo: string; bom: string[]; considere: string[] };
+    limites: Limite[];
+    recursos: Recurso[];
+  };
 };
 
 const brl = (v: number) =>
   (Number(v) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
-
-const num = (v: number, vazio = "—") => (v ? v.toLocaleString("pt-BR") : vazio);
 
 const CANAIS: { id: string; rotulo: string; icone?: typeof QrCode }[] = [
   { id: "TODOS", rotulo: "Todos os planos" },
@@ -167,30 +166,17 @@ function Aviso({ titulo, texto, acao }: { titulo: string; texto: string; acao?: 
 }
 
 function PlanoCard({ plano }: { plano: Plano }) {
+  const d = plano.descricao;
   const modo = String(plano.whatsappMode || "BOTH").toUpperCase();
-  const canal =
-    modo === "OFFICIAL"
-      ? { rotulo: "API oficial", icone: BadgeCheck }
-      : modo === "BAILEYS"
-      ? { rotulo: "QR Code", icone: QrCode }
-      : { rotulo: "QR Code ou API oficial", icone: BadgeCheck };
-
-  // Só entra na lista o que o plano realmente libera: recurso desligado
-  // vira ausência, não promessa em letra miúda.
-  const extras = [
-    plano.enableCalendar && "Agenda com Google Calendar",
-    plano.enableAutomations && "Lembretes automáticos",
-    plano.enableVoice && "Agente responde em áudio",
-    plano.enableWebhooks && "API e webhooks",
-  ].filter(Boolean) as string[];
+  const Icone = modo === "BAILEYS" ? QrCode : BadgeCheck;
 
   return (
-    <Card className="flex flex-col gap-4 rounded-2xl border-white/10 bg-white/[0.03] p-6 text-white">
+    <Card className="flex flex-col gap-5 rounded-2xl border-white/10 bg-white/[0.03] p-6 text-white">
       <span className="flex items-center gap-2 text-xs text-slate-400">
         <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary/15 text-primary">
-          <canal.icone className="h-4 w-4" />
+          <Icone className="h-4 w-4" />
         </span>
-        {canal.rotulo}
+        {d.canal.titulo}
       </span>
 
       <div>
@@ -204,18 +190,43 @@ function PlanoCard({ plano }: { plano: Plano }) {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 border-t border-white/10 pt-4 text-xs">
-        <Limite k="Conversas/mês" v={num(plano.maxConversations, "Sem limite")} />
-        <Limite k="Pessoas" v={num(plano.maxUsers)} />
-        <Limite k="Números" v={num(plano.maxWhatsAppNumbers)} />
-        <Limite k="Disparos/mês" v={num(plano.maxCampaignMessages)} />
-      </div>
+      {/* Limites: cada linha é um campo do plano, com o número que o admin
+          cadastrou. Nada aqui é escrito à mão por plano. */}
+      <dl className="space-y-2 border-t border-white/10 pt-4 text-sm">
+        {d.limites.map((l) => (
+          <div key={l.rotulo} className="flex items-baseline justify-between gap-3">
+            <dt className="text-slate-400">
+              {l.rotulo}
+              {l.detalhe && <span className="block text-[11px] text-slate-600">{l.detalhe}</span>}
+            </dt>
+            <dd className="shrink-0 font-semibold tabular-nums text-slate-100">{l.valor}</dd>
+          </div>
+        ))}
+      </dl>
 
-      {extras.length > 0 && (
-        <ul className="space-y-1.5 border-t border-white/10 pt-4 text-sm">
-          {extras.map((e) => (
-            <li key={e} className="flex items-start gap-2 text-slate-300">
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" /> {e}
+      {/* Módulos ligados e desligados. Quem compara dois planos precisa ver
+          o que falta em cada um — recurso omitido vira surpresa depois. */}
+      <ul className="space-y-1.5 border-t border-white/10 pt-4 text-sm">
+        {d.recursos.map((r) => (
+          <li
+            key={r.chave}
+            className={cn("flex items-start gap-2", r.ativo ? "text-slate-200" : "text-slate-600")}
+          >
+            {r.ativo ? (
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+            ) : (
+              <X className="mt-0.5 h-4 w-4 shrink-0 text-slate-700" />
+            )}
+            <span className={r.ativo ? "" : "line-through decoration-slate-700"}>{r.rotulo}</span>
+          </li>
+        ))}
+      </ul>
+
+      {d.canal.considere.length > 0 && (
+        <ul className="space-y-1 border-t border-white/10 pt-4">
+          {d.canal.considere.map((c) => (
+            <li key={c} className="flex items-start gap-2 text-xs text-slate-500">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500/70" /> {c}
             </li>
           ))}
         </ul>
@@ -230,14 +241,5 @@ function PlanoCard({ plano }: { plano: Plano }) {
         <ShieldCheck className="mr-1 inline h-3 w-3" /> Sem cartão para testar
       </p>
     </Card>
-  );
-}
-
-function Limite({ k, v }: { k: string; v: string }) {
-  return (
-    <div>
-      <p className="text-slate-500">{k}</p>
-      <p className="font-semibold text-slate-200">{v}</p>
-    </div>
   );
 }

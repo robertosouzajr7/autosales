@@ -48,6 +48,7 @@ export const recommendPlan = async (req, res) => {
  */
 export const getEntryPlans = async (_req, res) => {
   try {
+    const { publicar } = await import("../services/PlanFeatures.js");
     const planos = await prisma.plan.findMany({
       where: { active: true, priceMonthly: { gt: 0 } },
       orderBy: { priceMonthly: "asc" },
@@ -55,7 +56,7 @@ export const getEntryPlans = async (_req, res) => {
     const modo = (p) => String(p.whatsappMode || "BOTH").toUpperCase();
     const oficial = planos.find((p) => ["OFFICIAL", "BOTH"].includes(modo(p))) || null;
     const qrcode = planos.find((p) => ["BAILEYS", "BOTH"].includes(modo(p))) || null;
-    res.json({ oficial, qrcode, total: planos.length });
+    res.json({ oficial: publicar(oficial), qrcode: publicar(qrcode), total: planos.length });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -71,10 +72,18 @@ export const getEntryPlans = async (_req, res) => {
  */
 export const getAllPlans = async (_req, res) => {
   try {
-    const planos = await prisma.plan.findMany({
+    const { publicar } = await import("../services/PlanFeatures.js");
+    const linhas = await prisma.plan.findMany({
       where: { active: true, priceMonthly: { gt: 0 } },
       orderBy: { priceMonthly: "asc" },
     });
+    // A descrição vem pronta do servidor: a página nunca inventa benefício
+    // que o plano não tem, e desligar um módulo no admin some da vitrine.
+    //
+    // Só o que a vitrine precisa atravessa: os custos unitários do plano
+    // (sdrUnitCost, tokenUnitCost, messageUnitCost) são a margem da operação
+    // e não têm por que sair numa rota pública.
+    const planos = linhas.map(publicar);
     const modo = (p) => String(p.whatsappMode || "BOTH").toUpperCase();
     res.json({
       planos,
