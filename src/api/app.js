@@ -4,6 +4,7 @@ dotenv.config();
 import express from "express";
 import cors from "cors";
 import prisma from "./config/prisma.js";
+import { avisarSeSchemaAtrasado, checarSchema } from "./config/schemaCheck.js";
 import path from "path";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
@@ -38,6 +39,17 @@ app.get("/healthz", (_req, res) => res.status(200).json({ status: "ok", uptime: 
 app.get("/readyz", async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
+    // Banco de pé mas atrasado é pior do que banco fora: o servidor aceita
+    // tráfego e quebra tela por tela. Melhor não receber tráfego assim.
+    const faltando = await checarSchema();
+    if (faltando.length) {
+      return res.status(503).json({
+        status: "not_ready",
+        error: "schema_desatualizado",
+        migrationsPendentes: faltando,
+        acao: "Rode `npm run migrate:deploy` e reinicie a API.",
+      });
+    }
     res.status(200).json({ status: "ready" });
   } catch (e) {
     res.status(503).json({ status: "not_ready", error: "database" });
@@ -155,6 +167,9 @@ app.use((err, req, res, _next) => {
 // Database Initialization
 export async function initDB() {
   try {
+    // Antes de qualquer coisa: o banco está na versão deste código?
+    await avisarSeSchemaAtrasado();
+
     const planCount = await prisma.plan.count();
     if (planCount === 0) {
       await prisma.plan.createMany({
