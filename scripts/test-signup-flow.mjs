@@ -187,7 +187,7 @@ async function main() {
     data: {
       name: `Enxuto ${Date.now()}`, priceMonthly: 47, priceYearly: 470, whatsappMode: "BAILEYS",
       maxConversations: 100, maxUsers: 1, maxWhatsAppNumbers: 1, maxCampaignMessages: 0, active: true,
-      enableSdr: false, enableTokens: false, enableMessages: false,
+      enableSdr: false, enableTokens: false,
       enableCalendar: false, enableAutomations: false, enableWebhooks: false,
       enableVoice: false, enablePremiumVoice: true,
     },

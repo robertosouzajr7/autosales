@@ -154,6 +154,10 @@ async function main() {
   ok(perto(resumo.precos.disparo, 0.9), `preço do disparo exposto (${resumo.precos.disparo})`);
   ok(perto(resumo.custoRealBrl, 30.4), `custo real do ciclo (${resumo.custoRealBrl})`);
 
+  // A cota de mensagens foi aposentada: quem limita volume é a conversa.
+  ok(resumo.mensagens === undefined, "não existe mais faixa de mensagens");
+  ok(typeof resumo.mensagensEnviadas === "number", `mensagens viram contador (${resumo.mensagensEnviadas})`);
+
   const semLimiteResumo = await resumoConsumo(semLimite.tenant.id);
   ok(semLimiteResumo.conversas.ilimitado === true, "plano sem limite aparece como ilimitado");
   ok(semLimiteResumo.conversas.restante === null, "e sem 'restante' para mostrar");

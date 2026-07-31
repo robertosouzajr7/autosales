@@ -77,7 +77,6 @@ export const getDashboardStats = async (req, res) => {
         maxTokens: tenant.plan?.maxTokens || 1000,
         maxSdrs: tenant.plan?.maxSdrs || 1,
         usedMessages: tenant.usedMessages || 0,
-        maxMessages: tenant.plan?.maxMessages || 1000,
         planName: tenant.plan?.name || "Básico",
         qualifiedLeadsCount: finalQualifiedCount,
         conversionRate,

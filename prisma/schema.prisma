@@ -389,7 +389,10 @@ model CampaignRecipient {
   name  String?
   phone String
 
-  status    String    @default("PENDING") // PENDING | SENT | FAILED
+  /// PENDING | SENT | DELIVERED | READ | FAILED. SENT é o que a nossa ponta
+  /// conseguiu enviar; DELIVERED e READ vêm dos recibos da Meta, e FAILED é
+  /// terminal (recibo atrasado não desfaz falha).
+  status    String    @default("PENDING")
   error     String?
   messageId String? // wamid, para cruzar com os webhooks de status
   sentAt    DateTime?
@@ -452,13 +455,11 @@ model Plan {
   maxKnowledgeBaseChars Int @default(50000) // tamanho do treino do agente
 
   // Usage Credits (renovam por mês)
-  maxTokens   Int @default(100000)
-  maxMessages Int @default(1000)
+  maxTokens Int @default(100000)
 
   // Feature toggles — ligam/desligam módulos inteiros
   enableSdr          Boolean @default(true)
   enableTokens       Boolean @default(true)
-  enableMessages     Boolean @default(true)
   enableCalendar     Boolean @default(true) // Google Calendar
   enableAutomations  Boolean @default(true) // Lembretes/no-show
   enableWebhooks     Boolean @default(false) // API pública/webhooks

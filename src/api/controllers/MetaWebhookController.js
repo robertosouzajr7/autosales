@@ -127,6 +127,18 @@ export const receiveMetaWebhook = async (req, res) => {
         const contacts = value.contacts || [];
         const messages = value.messages || [];
 
+        // Recibos de entrega/leitura. Chegam no mesmo webhook das mensagens e
+        // eram descartados: por isso deliveredCount e readCount de campanha
+        // nasciam zerados e "enviado" passava por "entregue" no relatório.
+        for (const st of value.statuses || []) {
+          try {
+            const { registrarStatusEntrega } = await import("../services/CampaignStatusService.js");
+            await registrarStatusEntrega(st.id, st.status);
+          } catch (e) {
+            console.warn("[Meta Webhook] Falha ao aplicar status de disparo:", e.message);
+          }
+        }
+
         for (const message of messages) {
           const from = message.from;
           const name = contacts.find(c => c.wa_id === from)?.profile?.name || null;

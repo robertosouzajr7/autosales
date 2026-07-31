@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import {
   CreditCard, Check, Loader2, Sparkles, CalendarClock, AlertTriangle,
-  Bot, MessageSquare, Cpu, RefreshCw, Receipt, Coins, Zap, MessagesSquare, Megaphone,
+  Bot, Cpu, RefreshCw, Receipt, Coins, Zap, MessagesSquare, Megaphone,
 } from "lucide-react";
 
 function authHeaders() {
@@ -151,7 +151,6 @@ export default function Assinatura() {
         : undefined,
     },
     { icon: Cpu, label: "Créditos de IA (tokens)", used: t?.usedTokens || 0, max: plan?.maxTokens || 0, on: plan?.enableTokens },
-    { icon: MessageSquare, label: "Mensagens", used: t?.usedMessages || 0, max: plan?.maxMessages || 0, on: plan?.enableMessages },
     { icon: Bot, label: "Agentes de IA ativos", used: t?.activeSdrs || 0, max: plan?.maxSdrs || 0, on: plan?.enableSdr },
   ];
 
@@ -331,7 +330,7 @@ export default function Assinatura() {
                       <ul className="mt-3 space-y-1.5 text-xs text-muted-foreground flex-1">
                         <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-primary" /> {p.enableSdr ? `Até ${p.maxSdrs} agente(s) de IA` : "Sem agentes"}</li>
                         <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-primary" /> {(p.maxTokens / 1000).toLocaleString("pt-BR")}k tokens/mês</li>
-                        <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-primary" /> {p.maxMessages.toLocaleString("pt-BR")} mensagens/mês</li>
+                        <li className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-primary" /> {p.maxConversations ? `${p.maxConversations.toLocaleString("pt-BR")} conversas/mês` : "Conversas sem limite"}</li>
                       </ul>
                       <Button
                         disabled={current}

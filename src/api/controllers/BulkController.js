@@ -1,5 +1,6 @@
 import prisma from "../config/prisma.js";
 import MessagingService from "../services/MessagingService.js";
+import { checkCampaignQuota, consumeCampaignQuota } from "../services/WhatsAppPricingService.js";
 import nodemailer from "nodemailer";
 import axios from "axios";
 
@@ -58,15 +59,11 @@ export const sendCampaign = async (req, res) => {
     // LGPD: nunca disparar para leads que pediram opt-out.
     const leads = await prisma.lead.findMany({ where: { id: { in: leadIds }, tenantId, optedOut: false } });
 
-    // 🛡️ VERIFICAÇÃO DE COTA (Limite por Plano)
-    const maxMessages = tenant.plan?.maxMessages || 1000;
-    const remainingQuota = maxMessages - (tenant.usedMessages || 0);
-
-    if (leads.length > remainingQuota) {
-      return res.status(403).json({
-        error: `Cota insuficiente. Seu plano permite ${maxMessages} envios/mês. Você já usou ${tenant.usedMessages || 0}.`
-      });
-    }
+    // Disparo consome a franquia de DISPAROS do plano — a única que tem custo
+    // real por trás (a Meta cobra cada template entregue). Antes isto cobrava
+    // da cota de mensagens, que media outra coisa e não custava nada.
+    const quota = await checkCampaignQuota(tenantId, leads.length);
+    if (!quota.allowed) return res.status(403).json({ error: quota.reason, quota });
 
     await prisma.campaign.update({
       where: { id: campaign.id },
@@ -175,18 +172,12 @@ export const sendCampaign = async (req, res) => {
           status: "COMPLETED",
           sentCount: sent,
           errorCount: errors,
-          deliveredCount: sent,
-          readCount: 0
+          // deliveredCount só cresce com recibo da Meta. Copiar o enviado
+          // aqui era dar por entregue o que ninguém confirmou.
         }
       });
 
-      // 📈 ATUALIZAR CONSUMO DO TENANT
-      await prisma.tenant.update({
-        where: { id: tenantId },
-        data: {
-          usedMessages: { increment: sent }
-        }
-      });
+      await consumeCampaignQuota(tenantId, sent);
     })();
 
     res.json({ success: true, message: "Campanha em processamento" });

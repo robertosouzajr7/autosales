@@ -63,9 +63,6 @@ export function descreverLimites(plan) {
   add("Contatos na base", plan.maxLeads ? milhar(plan.maxLeads) : "Sem limite");
 
   if (plan.enableSdr) add("Agentes de IA", milhar(plan.maxSdrs));
-  if (plan.enableMessages) {
-    add("Mensagens por mês", plan.maxMessages ? milhar(plan.maxMessages) : "Sem limite");
-  }
   if (plan.enableTokens) {
     add("Créditos de IA por mês", `${milhar(plan.maxTokens)} tokens`, "Renovam todo mês");
   }
@@ -90,7 +87,6 @@ export function descreverLimites(plan) {
 export function descreverRecursos(plan) {
   const recursos = [
     { chave: "enableSdr", rotulo: "Agente de IA que atende sozinho", ativo: !!plan.enableSdr },
-    { chave: "enableMessages", rotulo: "Atendimento por WhatsApp", ativo: !!plan.enableMessages },
     { chave: "enableCalendar", rotulo: "Agenda no Google Calendar", ativo: !!plan.enableCalendar },
     { chave: "enableAutomations", rotulo: "Lembretes e confirmação automáticos", ativo: !!plan.enableAutomations },
     { chave: "campanhas", rotulo: "Disparo em massa por template", ativo: plan.maxCampaignMessages > 0 },

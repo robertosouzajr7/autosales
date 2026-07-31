@@ -4,7 +4,6 @@ import { contactHandle } from "../services/ContactIdentity.js";
 import { countVariables } from "./TemplateController.js";
 import MessagingService from "../services/MessagingService.js";
 import { EventEmitter } from "events";
-import { messagesHeadroom } from "../middlewares/planLimits.js";
 
 export const messageEvents = new EventEmitter();
 
@@ -41,14 +40,6 @@ export const sendMessage = async (req, res) => {
 
     if (!lead || !lead.phone) {
       return res.status(400).json({ error: "Lead inválido ou sem telefone" });
-    }
-
-    // Gate: cota mensal de mensagens do plano.
-    const headroom = await messagesHeadroom(tenantId);
-    if (!headroom.ok) {
-      return res.status(403).json({
-        error: `Cota mensal de mensagens atingida (${headroom.used}/${headroom.max}). Faça upgrade do plano para continuar.`,
-      });
     }
 
     // Fora da janela de 24h o WhatsApp recusa texto livre — só template

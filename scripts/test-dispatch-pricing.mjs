@@ -152,6 +152,51 @@ async function main() {
   const emMinuscula = await prisma.plan.findUnique({ where: { id: plano.id } });
   ok(emMinuscula.campaignCategory === "UTILITY", `categoria em minúscula é normalizada (${emMinuscula.campaignCategory})`);
 
+  // ── 7. Recibos de entrega da Meta ───────────────────────────
+  console.log("\n7. Entrega confirmada pela Meta");
+  const { registrarStatusEntrega } = await import("../src/api/services/CampaignStatusService.js");
+  const { consumeCampaignQuota } = await import("../src/api/services/WhatsAppPricingService.js");
+
+  const modelo = await prisma.messageTemplate.create({
+    data: { tenantId: tenant.id, name: `t${Date.now()}`, content: "Olá", language: "pt_BR", category: "MARKETING" },
+  });
+  const campanha = await prisma.campaign.create({
+    data: { tenantId: tenant.id, name: "Disparo teste", templateId: modelo.id, status: "COMPLETED", sentCount: 3 },
+  });
+  const wamid = (n) => `wamid.TESTE${Date.now()}${n}`;
+  const ids = [wamid(1), wamid(2), wamid(3)];
+  for (const [i, mid] of ids.entries()) {
+    await prisma.campaignRecipient.create({
+      data: { campaignId: campanha.id, phone: `55719999900${i}`, status: "SENT", messageId: mid },
+    });
+  }
+  // O envio já consumiu a franquia dos três.
+  await consumeCampaignQuota(tenant.id, 3);
+  const antes = (await prisma.tenant.findUnique({ where: { id: tenant.id } })).usedCampaignMessages;
+
+  await registrarStatusEntrega(ids[0], "delivered");
+  await registrarStatusEntrega(ids[1], "read");
+  await registrarStatusEntrega(ids[2], "failed");
+  let c = await prisma.campaign.findUnique({ where: { id: campanha.id } });
+  ok(c.deliveredCount === 2, `entrega confirmada conta (${c.deliveredCount} de 3 — a terceira falhou)`);
+  ok(c.readCount === 1, `leitura conta separado (${c.readCount})`);
+  ok(c.errorCount === 1, `falha na entrega conta como erro (${c.errorCount})`);
+
+  const aposFalha = (await prisma.tenant.findUnique({ where: { id: tenant.id } })).usedCampaignMessages;
+  ok(aposFalha === antes - 1, `franquia devolvida no que a Meta não entregou (${antes} → ${aposFalha})`);
+
+  // A Meta reenvia webhook e não garante ordem.
+  await registrarStatusEntrega(ids[0], "delivered");
+  await registrarStatusEntrega(ids[1], "sent");
+  await registrarStatusEntrega(ids[2], "delivered");
+  c = await prisma.campaign.findUnique({ where: { id: campanha.id } });
+  ok(c.deliveredCount === 2, "recibo repetido não conta duas vezes");
+  ok(c.readCount === 1, "status atrasado não faz a leitura regredir");
+  const reprocessado = (await prisma.tenant.findUnique({ where: { id: tenant.id } })).usedCampaignMessages;
+  ok(reprocessado === aposFalha, "nem devolve franquia de novo");
+
+  ok((await registrarStatusEntrega("wamid.NAO_EXISTE", "delivered")) === null, "recibo de conversa normal é ignorado");
+
   console.log(`\n${falhas === 0 ? "✅ Todos os cenários passaram." : `❌ ${falhas} verificação(ões) falharam.`}`);
   await prisma.$disconnect();
   process.exit(falhas === 0 ? 0 : 1);

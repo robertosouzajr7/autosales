@@ -10,11 +10,11 @@ import prisma from "../config/prisma.js";
  * Limites hard (bloqueio):
  *   - maxSdrs, maxUsers, maxWhatsAppNumbers, maxLeads
  *   - maxKnowledgeBaseChars (tamanho do treino)
- *   - maxTokens, maxMessages (créditos mensais)
+ *   - maxTokens (créditos mensais de IA)
  *
  * Toggles (feature ON/OFF):
  *   - enableSdr, enableCalendar, enableAutomations, enableWebhooks
- *   - enableTokens, enableMessages (essencialmente parte do core)
+ *   - enableTokens (essencialmente parte do core)
  */
 
 async function loadTenantWithPlan(tenantId) {
@@ -136,18 +136,6 @@ export async function knowledgeBaseHeadroom(tenantId, extraChars = 0) {
     used,
     remaining,
   };
-}
-
-/** Verifica se o tenant ainda tem cota de mensagens/mês. */
-export async function messagesHeadroom(tenantId) {
-  const tenant = await loadTenantWithPlan(tenantId);
-  if (!tenant?.plan) return { ok: false, max: 0, used: 0, remaining: 0 };
-  if (tenant.plan.enableMessages === false) {
-    return { ok: false, max: 0, used: tenant.usedMessages || 0, remaining: 0 };
-  }
-  const max = Number(tenant.plan.maxMessages || 0);
-  const used = Number(tenant.usedMessages || 0);
-  return { ok: used < max, max, used, remaining: Math.max(0, max - used) };
 }
 
 /** Verifica se o tenant ainda tem cota de tokens/mês. */

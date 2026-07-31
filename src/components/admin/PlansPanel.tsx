@@ -22,14 +22,12 @@ const DEFAULT_PLAN = {
   maxWhatsAppNumbers: 1,
   maxKnowledgeBaseChars: 50000,
   maxTokens: 100000,
-  maxMessages: 1000,
   whatsappMode: "BOTH", // OFFICIAL | BAILEYS | BOTH
   maxConversations: 0, // 0 = sem limite de conversas
   maxCampaignMessages: 0, // 0 = plano sem disparo em massa
   campaignCategory: "MARKETING", // categoria de referência para custear a franquia
   enableSdr: true,
   enableTokens: true,
-  enableMessages: true,
   enableCalendar: true,
   enableAutomations: true,
   enableWebhooks: false,
@@ -127,14 +125,12 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
       maxWhatsAppNumbers: Number(form.maxWhatsAppNumbers),
       maxKnowledgeBaseChars: Number(form.maxKnowledgeBaseChars),
       maxTokens: Number(form.maxTokens),
-      maxMessages: Number(form.maxMessages),
       whatsappMode: form.whatsappMode || "BOTH",
       maxConversations: Number(form.maxConversations),
       maxCampaignMessages: Number(form.maxCampaignMessages),
       campaignCategory: form.campaignCategory || "MARKETING",
       enableSdr: !!form.enableSdr,
       enableTokens: !!form.enableTokens,
-      enableMessages: !!form.enableMessages,
       enableCalendar: !!form.enableCalendar,
       enableAutomations: !!form.enableAutomations,
       enableWebhooks: !!form.enableWebhooks,
@@ -210,7 +206,7 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
             </div>
             <ul className="text-xs text-muted-foreground space-y-1">
               <li>{p.maxSdrs} agente(s) · {(p.maxTokens / 1000).toLocaleString("pt-BR")}k tokens</li>
-              <li>{p.maxMessages?.toLocaleString("pt-BR")} msgs · {p.maxLeads?.toLocaleString("pt-BR")} contatos</li>
+              <li>{p.maxLeads?.toLocaleString("pt-BR")} contatos · {p.maxUsers} usuário(s)</li>
               <li>{p.maxWhatsAppNumbers ?? 1} nº WhatsApp · {p.maxUsers ?? 2} usuários</li>
               <li>
                 {p.whatsappMode === "BAILEYS"
@@ -286,7 +282,6 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
                 {[
                   ["enableSdr", "Agentes de IA (SDR)"],
                   ["enableTokens", "Créditos de IA (tokens)"],
-                  ["enableMessages", "Mensagens WhatsApp"],
                   ["enableCalendar", "Google Calendar"],
                   ["enableAutomations", "Automações / Lembretes"],
                   ["enableWebhooks", "Webhooks / API pública"],
@@ -310,7 +305,6 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
                 {[
                   ["maxSdrs", "Agentes de IA"],
                   ["maxTokens", "Tokens/mês"],
-                  ["maxMessages", "Mensagens/mês"],
                   ["maxLeads", "Contatos"],
                   ["maxUsers", "Usuários"],
                   ["maxWhatsAppNumbers", "Nºs WhatsApp"],

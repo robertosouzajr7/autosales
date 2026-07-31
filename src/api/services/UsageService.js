@@ -168,7 +168,7 @@ export async function resumoConsumo(tenantId) {
       plan: {
         select: {
           name: true, priceMonthly: true, maxConversations: true,
-          maxCampaignMessages: true, maxMessages: true, maxTokens: true,
+          maxCampaignMessages: true, maxTokens: true,
           campaignCategory: true,
         },
       },
@@ -192,7 +192,8 @@ export async function resumoConsumo(tenantId) {
     proximaCobranca: tenant.nextBillingDate,
     conversas: faixa(tenant.usedConversations || 0, p?.maxConversations || 0),
     disparos: faixa(tenant.usedCampaignMessages || 0, p?.maxCampaignMessages || 0),
-    mensagens: faixa(tenant.usedMessages || 0, p?.maxMessages || 0),
+    // Sem cota: é quanto o agente já respondeu no ciclo, para o relatório.
+    mensagensEnviadas: tenant.usedMessages || 0,
     tokens: faixa(tenant.usedTokens || 0, (p?.maxTokens || 0) + (tenant.extraTokens || 0)),
     mensagensDeServico: tenant.usedServiceMessages || 0,
     custoRealBrl: Number((tenant.usedCostBrl || 0).toFixed(4)),

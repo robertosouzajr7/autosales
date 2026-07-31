@@ -228,6 +228,25 @@ export async function checkCampaignQuota(tenantId, recipientCount) {
   return { allowed: true, limit, used, remaining, ...extras };
 }
 
+/**
+ * Devolve franquia de disparo. Usado quando a Meta confirma que a mensagem
+ * não foi entregue: ela não cobra o que não chegou, então o cliente também
+ * não pode pagar. O piso em zero evita que webhook repetido ou reprocessado
+ * deixe a conta com franquia negativa.
+ */
+export async function devolverCampaignQuota(tenantId, quantidade = 1) {
+  const qtd = Math.max(0, Number(quantidade) || 0);
+  if (!qtd) return;
+  try {
+    await prisma.tenant.updateMany({
+      where: { id: tenantId, usedCampaignMessages: { gte: qtd } },
+      data: { usedCampaignMessages: { decrement: qtd } },
+    });
+  } catch (e) {
+    console.warn("[Pricing] Não foi possível devolver franquia:", e.message);
+  }
+}
+
 /** Contabiliza o que foi efetivamente enviado. */
 export async function consumeCampaignQuota(tenantId, sent) {
   if (!sent) return;
@@ -244,5 +263,5 @@ export async function consumeCampaignQuota(tenantId, sent) {
 export default {
   DEFAULT_RATES_USD, WHATSAPP_MODES, resolvePricing, estimateCampaign, unitPricing,
   planCampaignCost, planWhatsappCost, baileysNumberCost, cobraPorMensagem,
-  checkCampaignQuota, consumeCampaignQuota,
+  checkCampaignQuota, consumeCampaignQuota, devolverCampaignQuota,
 };

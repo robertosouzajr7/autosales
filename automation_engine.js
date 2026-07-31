@@ -229,22 +229,14 @@ class AutomationEngine {
       this.rateLimiter.set(tenantId, bucket);
     }
 
-    // Check Plan Monthly Message Limit
-    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, include: { plan: true } });
-    if (tenant?.plan) {
-      if (!tenant.plan.enableMessages) {
-        console.log(`[AutoEngine] 🛑 Mensagens desabilitadas no plano para o tenant ${tenantId}`);
-        return { error: "FEATURE_DISABLED" };
-      }
-      if (tenant.usedMessages >= tenant.plan.maxMessages) {
-        console.log(`[AutoEngine] 🛑 Limite mensal de mensagens atingido para o tenant ${tenantId}`);
-        return { error: "LIMIT_REACHED" };
-      }
-    }
+    // Quem limita o volume aqui é a franquia de CONVERSAS do plano, aplicada
+    // na abertura da janela de atendimento. Contar mensagem uma a uma
+    // silenciava o agente no meio de um atendimento já em curso, sem custo
+    // nenhum por trás — resposta dentro da janela não é cobrada.
 
     bucket.count++;
-    
-    // Increment Usage
+
+    // Contador de uso, não cota: serve ao relatório de consumo do admin.
     await prisma.tenant.update({
       where: { id: tenantId },
       data: { usedMessages: { increment: 1 } }
