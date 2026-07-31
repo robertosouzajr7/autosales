@@ -1250,3 +1250,25 @@ model PlatformLead {
 
   @@index([status, createdAt])
 }
+
+/// Vídeo da área de membros (Academy). Fica no banco, e não no código, porque
+/// quem grava e publica os vídeos é o dono do SaaS — ele precisa cadastrar
+/// sem esperar deploy. O texto da base de conhecimento segue no código, que
+/// versiona junto com o produto.
+model AcademyVideo {
+  id          String  @id @default(uuid())
+  title       String
+  description String?
+  /// Link do YouTube ou Vimeo. A tela transforma em player.
+  url         String
+  /// Módulo/trilha a que pertence, para agrupar na tela.
+  modulo      String  @default("Primeiros passos")
+  duracao     String? // "8 min" — texto livre, só para exibir
+  order       Int     @default(0)
+  active      Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([modulo, order])
+}

@@ -6,12 +6,13 @@ import { adminApi } from "@/lib/adminApi";
 import { OverviewPanel } from "@/components/admin/OverviewPanel";
 import { ClientsPanel } from "@/components/admin/ClientsPanel";
 import { LeadsPanel } from "@/components/admin/LeadsPanel";
+import { AcademyPanel } from "@/components/admin/AcademyPanel";
 import { PlansPanel } from "@/components/admin/PlansPanel";
 import { FinancePanel } from "@/components/admin/FinancePanel";
 import { SettingsPanel } from "@/components/admin/SettingsPanel";
 import { TokenPackagesPanel } from "@/components/admin/TokenPackagesPanel";
 import {
-  ShieldCheck, LayoutDashboard, Building2, Package, Wallet, Settings2, Coins, Users,
+  ShieldCheck, LayoutDashboard, Building2, Package, Wallet, Settings2, Coins, Users, GraduationCap,
 } from "lucide-react";
 
 /**
@@ -66,6 +67,9 @@ export default function AdminDashboard() {
             <TabsTrigger value="finance" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm">
               <Wallet className="w-4 h-4 mr-2" /> Financeiro
             </TabsTrigger>
+            <TabsTrigger value="academy" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm">
+              <GraduationCap className="w-4 h-4 mr-2" /> Academy
+            </TabsTrigger>
             <TabsTrigger value="settings" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm">
               <Settings2 className="w-4 h-4 mr-2" /> Configurações
             </TabsTrigger>
@@ -77,6 +81,7 @@ export default function AdminDashboard() {
           <TabsContent value="plans"><PlansPanel plans={plans} reload={loadShared} /></TabsContent>
           <TabsContent value="tokens"><TokenPackagesPanel /></TabsContent>
           <TabsContent value="finance"><FinancePanel tenants={tenants} /></TabsContent>
+          <TabsContent value="academy"><AcademyPanel /></TabsContent>
           <TabsContent value="settings"><SettingsPanel sdrs={sdrs} plans={plans} /></TabsContent>
         </Tabs>
       </div>

@@ -21,6 +21,7 @@ import * as MessageController from "../controllers/MessageController.js";
 import * as AttendanceController from "../controllers/AttendanceController.js";
 import * as TemplateController from "../controllers/TemplateController.js";
 import * as CampaignController from "../controllers/CampaignController.js";
+import * as AcademyController from "../controllers/AcademyController.js";
 import * as ContactController from "../controllers/ContactController.js";
 import * as AnalyticsController from "../controllers/AnalyticsController.js";
 import * as FinancialController from "../controllers/FinancialController.js";
@@ -339,6 +340,13 @@ router.get("/admin/token-packages", adminMiddleware, AdminController.getTokenPac
 router.post("/admin/token-packages", adminMiddleware, AdminController.createTokenPackage);
 router.put("/admin/token-packages/:id", adminMiddleware, AdminController.updateTokenPackage);
 router.delete("/admin/token-packages/:id", adminMiddleware, AdminController.deleteTokenPackage);
+
+// Academy: qualquer cliente logado assiste; só o admin publica.
+router.get("/academy/videos", AcademyController.listVideos);
+router.get("/admin/academy/videos", adminMiddleware, AcademyController.adminListVideos);
+router.post("/admin/academy/videos", adminMiddleware, AcademyController.createVideo);
+router.put("/admin/academy/videos/:id", adminMiddleware, AcademyController.updateVideo);
+router.delete("/admin/academy/videos/:id", adminMiddleware, AcademyController.deleteVideo);
 
 // Leads do diagnóstico da landing (pertencem ao SaaS, não a um tenant).
 router.get("/admin/leads", adminMiddleware, AdminController.getPlatformLeads);

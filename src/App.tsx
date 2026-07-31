@@ -29,6 +29,8 @@ import Docs from "@/pages/Docs";
 import VerifyEmail from "@/pages/VerifyEmail";
 import Planos from "./pages/Planos";
 import Legal from "./pages/Legal";
+import Ajuda from "./pages/Ajuda";
+import Academy from "./pages/Academy";
 import Comecar from "./pages/Comecar";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
@@ -81,6 +83,9 @@ function App() {
         <Route path="/connections" element={<Connections />} />
         <Route path="/equipe" element={<Team />} />
         <Route path="/settings" element={<Settings />} />
+        {/* Ajuda: base de conhecimento (texto) e Academy (vídeos). */}
+        <Route path="/ajuda" element={<Ajuda />} />
+        <Route path="/academy" element={<Academy />} />
         <Route path="/assinatura" element={<Assinatura />} />
         <Route path="/analytics" element={<Analytics />} />
 

@@ -24,6 +24,7 @@ import {
   Smartphone,
   ShieldCheck,
   BookOpen,
+  GraduationCap,
   MessageCircle,
   Clock,
   Sparkles,
@@ -146,6 +147,13 @@ const navGroups: NavGroup[] = [
       { label: "Colaboradores", icon: Users, href: "/equipe", permission: "team" },
       { label: "Assinatura", icon: CreditCard, href: "/assinatura", permission: "billing" },
       { label: "Configurações", icon: Settings, href: "/settings", permission: "settings" },
+    ],
+  },
+  {
+    title: "Ajuda",
+    items: [
+      { label: "Base de conhecimento", icon: BookOpen, href: "/ajuda" },
+      { label: "Academy", icon: GraduationCap, href: "/academy" },
     ],
   },
   {
