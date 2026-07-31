@@ -215,6 +215,9 @@ export const createCampaign = async (req, res) => {
         variables: variables ? JSON.stringify(variables) : null,
         recipientCount: recipients.length,
         estimatedCost: estimate.priceBrl,
+        // O custo real vai junto com o preço: sem os dois, o relatório do
+        // SaaS não consegue dizer qual foi a margem do disparo.
+        realCost: estimate.costBrl,
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
         status: "DRAFT",
       },

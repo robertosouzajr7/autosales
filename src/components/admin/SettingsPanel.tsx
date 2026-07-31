@@ -7,7 +7,10 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { adminApi } from "@/lib/adminApi";
-import { Bot, CreditCard, Globe, Loader2, ShieldCheck, Save, Coins, Mic, RefreshCw } from "lucide-react";
+import { Bot, CreditCard, Globe, Loader2, ShieldCheck, Save, Coins, Mic, RefreshCw, Megaphone } from "lucide-react";
+
+const brl = (v: number) =>
+  (Number(v) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2, maximumFractionDigits: 4 });
 
 export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
   const { toast } = useToast();
@@ -45,6 +48,12 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
   const [pricing, setPricing] = useState<any>(null);
   const [savingPricing, setSavingPricing] = useState(false);
 
+  // Custo de disparo no WhatsApp: tarifa da Meta por categoria (USD) e a
+  // margem aplicada em cima. É o que define o preço da franquia dos planos.
+  const [waRates, setWaRates] = useState<any>({ MARKETING: 0.0625, UTILITY: 0.0068, AUTHENTICATION: 0.0068 });
+  const [waMarkup, setWaMarkup] = useState<number | string>(2);
+  const [savingWa, setSavingWa] = useState(false);
+
   // Landing CMS
   const [lp, setLp] = useState<any>({
     logoUrl: "", contactWhatsApp: "", contactEmail: "", contactInstagram: "",
@@ -66,6 +75,8 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
       setAiModel(gwRes.data.aiModel || "");
       setUsdToBrl(gwRes.data.usdToBrl ?? 5.5);
       setTokenMarkup(gwRes.data.tokenMarkup ?? 5);
+      if (gwRes.data.waRates) setWaRates(gwRes.data.waRates);
+      setWaMarkup(gwRes.data.waMarkup ?? 2);
       setVoiceProvider(gwRes.data.voiceProvider || "GEMINI");
       setEnabledVoices(gwRes.data.enabledVoices || []);
     }
@@ -119,6 +130,21 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
     });
     setSavingPricing(false);
     if (res.ok) { toast({ title: "Precificação atualizada" }); load(); }
+    else toast({ title: "Erro ao salvar", description: res.data?.error, variant: "destructive" });
+  };
+
+  const saveDispatch = async () => {
+    setSavingWa(true);
+    const res = await adminApi.put("/api/admin/platform-settings", {
+      waRates: {
+        MARKETING: Number(waRates.MARKETING),
+        UTILITY: Number(waRates.UTILITY),
+        AUTHENTICATION: Number(waRates.AUTHENTICATION),
+      },
+      waMarkup: Number(waMarkup),
+    });
+    setSavingWa(false);
+    if (res.ok) { toast({ title: "Precificação de disparo atualizada" }); load(); }
     else toast({ title: "Erro ao salvar", description: res.data?.error, variant: "destructive" });
   };
 
@@ -546,6 +572,105 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
           <Button onClick={savePricing} disabled={savingPricing} className="gap-2">
             {savingPricing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Salvar precificação
+          </Button>
+        </div>
+      </Card>
+
+      {/* CUSTO DE DISPARO (WHATSAPP) */}
+      <Card className="rounded-2xl border-border p-6 space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary grid place-items-center">
+            <Megaphone className="w-5 h-5" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold text-foreground">Custo de disparo (WhatsApp)</h3>
+            <p className="text-xs text-muted-foreground">
+              A Meta cobra por mensagem entregue, com tarifa diferente por categoria. Aqui você
+              informa o que ela cobra e a margem que quer aplicar — os planos e o módulo de disparo
+              passam a usar estes números.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          {[
+            { key: "MARKETING", label: "Marketing", hint: "Promoções e reengajamento" },
+            { key: "UTILITY", label: "Utilidade", hint: "Lembretes e confirmações" },
+            { key: "AUTHENTICATION", label: "Autenticação", hint: "Códigos de verificação" },
+          ].map(({ key, label, hint }) => (
+            <div key={key} className="space-y-1">
+              <Label className="text-xs text-muted-foreground">{label} — US$ por mensagem</Label>
+              <Input
+                type="number" step="0.0001" min={0}
+                value={waRates[key] ?? 0}
+                onChange={(e) => setWaRates({ ...waRates, [key]: e.target.value })}
+              />
+              <p className="text-[11px] text-muted-foreground">{hint}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Margem sobre o disparo (x)</Label>
+            <Input type="number" step="0.1" min={1} value={waMarkup} onChange={(e) => setWaMarkup(e.target.value)} />
+            <p className="text-[11px] text-muted-foreground">
+              Ex.: 2 = você cobra o dobro do que a Meta cobra. Mínimo 1 (vender pelo custo).
+            </p>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Câmbio em uso</Label>
+            <div className="h-10 rounded-md border border-border px-3 flex items-center text-sm text-muted-foreground">
+              US$ 1,00 = R$ {Number(usdToBrl).toFixed(2)}
+            </div>
+            <p className="text-[11px] text-muted-foreground">Editado no bloco de precificação de tokens.</p>
+          </div>
+        </div>
+
+        {/* Prévia: sem isso o admin ajusta números soltos sem ver o efeito. */}
+        <div className="rounded-xl border border-border overflow-hidden">
+          <div className="px-4 py-2.5 bg-muted">
+            <span className="text-xs font-semibold text-foreground">Quanto custa e por quanto você vende</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-border text-muted-foreground">
+                  <th className="px-4 py-2 font-medium">Categoria</th>
+                  <th className="px-4 py-2 font-medium text-right">Seu custo / msg</th>
+                  <th className="px-4 py-2 font-medium text-right">Preço / msg</th>
+                  <th className="px-4 py-2 font-medium text-right">1.000 disparos</th>
+                  <th className="px-4 py-2 font-medium text-right">Lucro em 1.000</th>
+                </tr>
+              </thead>
+              <tbody>
+                {["MARKETING", "UTILITY", "AUTHENTICATION"].map((cat) => {
+                  const custo = (Number(waRates[cat]) || 0) * Number(usdToBrl);
+                  const preco = custo * (Number(waMarkup) || 1);
+                  return (
+                    <tr key={cat} className="border-b border-border/60">
+                      <td className="px-4 py-2 font-medium text-foreground capitalize">{cat.toLowerCase()}</td>
+                      <td className="px-4 py-2 text-right tabular-nums text-muted-foreground">{brl(custo)}</td>
+                      <td className="px-4 py-2 text-right tabular-nums font-semibold text-foreground">{brl(preco)}</td>
+                      <td className="px-4 py-2 text-right tabular-nums text-muted-foreground">{brl(preco * 1000)}</td>
+                      <td className="px-4 py-2 text-right tabular-nums font-semibold text-emerald-600">
+                        {brl((preco - custo) * 1000)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[11px] text-muted-foreground">
+            A Meta reajusta as tarifas sem aviso — confira na tabela oficial de tempos em tempos.
+          </p>
+          <Button onClick={saveDispatch} disabled={savingWa} className="gap-2">
+            {savingWa ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            Salvar custo de disparo
           </Button>
         </div>
       </Card>

@@ -266,6 +266,9 @@ export default function Campaigns() {
                 <p className="text-xs text-slate-400 mt-2">
                   Restam <strong>{quota.remaining.toLocaleString("pt-BR")}</strong> disparos. Ao esgotar, novos envios
                   ficam bloqueados até a renovação.
+                  {quota.unitPriceBrl > 0 && (
+                    <> Cada disparo {String(quota.category || "").toLowerCase()} vale <strong>{brl(quota.unitPriceBrl)}</strong>.</>
+                  )}
                 </p>
               </>
             )}

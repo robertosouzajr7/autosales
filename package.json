@@ -20,6 +20,7 @@
     "test:ai-flows": "node scripts/test-ai-flow-awareness.mjs",
     "test:team-access": "node scripts/test-team-access.mjs",
     "test:cdp": "node scripts/test-contacts-cdp.mjs",
+    "test:pricing": "node scripts/test-dispatch-pricing.mjs",
     "contacts:dedupe": "node scripts/dedupe-contacts.mjs"
   },
   "dependencies": {

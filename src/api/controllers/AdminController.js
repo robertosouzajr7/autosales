@@ -1,5 +1,5 @@
 import prisma from "../config/prisma.js";
-import { DEFAULT_RATES_USD } from "../services/WhatsAppPricingService.js";
+import { DEFAULT_RATES_USD, unitPricing, planCampaignCost } from "../services/WhatsAppPricingService.js";
 
 function safeJson(v) { try { return JSON.parse(v); } catch { return null; } }
 
@@ -190,16 +190,28 @@ export const getPlans = async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 };
 
+/** Categoria de disparo válida — é ela que define a tarifa da franquia. */
+const CATEGORIAS_DISPARO = ["MARKETING", "UTILITY", "AUTHENTICATION"];
+function normalizarPlano(body) {
+  const data = { ...body };
+  if (data.campaignCategory !== undefined) {
+    const cat = String(data.campaignCategory).toUpperCase();
+    if (!CATEGORIAS_DISPARO.includes(cat)) delete data.campaignCategory;
+    else data.campaignCategory = cat;
+  }
+  return data;
+}
+
 export const createPlan = async (req, res) => {
   try {
-    const plan = await prisma.plan.create({ data: req.body });
+    const plan = await prisma.plan.create({ data: normalizarPlano(req.body) });
     res.json(plan);
   } catch (e) { res.status(500).json({ error: e.message }); }
 };
 
 export const updatePlan = async (req, res) => {
   try {
-    const plan = await prisma.plan.update({ where: { id: req.params.id }, data: req.body });
+    const plan = await prisma.plan.update({ where: { id: req.params.id }, data: normalizarPlano(req.body) });
     await audit({ actorId: req.userId, action: "PLAN_UPDATED", entity: "Plan", entityId: plan.id });
     res.json(plan);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -323,8 +335,14 @@ export const updatePlatformSettings = async (req, res) => {
     }
     if (waRates !== undefined) {
       // Guarda só as categorias conhecidas com número válido — evita gravar
-      // lixo que depois derrubaria a projeção de custo.
-      const limpo = {};
+      // lixo que depois derrubaria a projeção de custo. E parte do que já
+      // estava salvo: mandar só uma categoria não pode apagar as outras,
+      // que é o que acontecia e devolvia a tarifa padrão sem ninguém pedir.
+      const atual = safeJson((await prisma.platformSettings.findUnique({
+        where: { id: "singleton" }, select: { waRates: true },
+      }).catch(() => null))?.waRates) || {};
+
+      const limpo = { ...atual };
       const origem = typeof waRates === "string" ? safeJson(waRates) : waRates;
       for (const k of ["MARKETING", "UTILITY", "AUTHENTICATION"]) {
         const v = parseFloat(origem?.[k]);
@@ -396,6 +414,10 @@ export const getTokenPricing = async (_req, res) => {
     const usdToBrl = s?.usdToBrl ?? DEFAULT_USD_BRL;
     const tokenMarkup = s?.tokenMarkup ?? 5.0;
 
+    // O custo de disparo vai junto: a tela de planos precisa somar IA +
+    // WhatsApp para saber se o preço cobre o custo da franquia inteira.
+    const disparo = await unitPricing();
+
     res.json({
       activeProvider,
       activeModel,
@@ -403,6 +425,9 @@ export const getTokenPricing = async (_req, res) => {
       tokenMarkup,
       activeModelCostBRLPer1M: Number(modelCostBRLPer1M(activeModel, usdToBrl).toFixed(4)),
       catalog: buildPricingCatalog(usdToBrl),
+      // Disparo em massa (WhatsApp): tarifa por categoria e margem aplicada.
+      waMarkup: disparo.markup,
+      waUnit: disparo.categorias,
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
 };

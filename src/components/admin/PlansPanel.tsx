@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useToast } from "@/hooks/use-toast";
 import { adminApi } from "@/lib/adminApi";
 import { Plus, Pencil, Trash2, Loader2, Package } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const DEFAULT_PLAN = {
   id: null as string | null,
@@ -23,6 +24,7 @@ const DEFAULT_PLAN = {
   maxTokens: 100000,
   maxMessages: 1000,
   maxCampaignMessages: 0, // 0 = plano sem disparo em massa
+  campaignCategory: "MARKETING", // categoria de referência para custear a franquia
   enableSdr: true,
   enableTokens: true,
   enableMessages: true,
@@ -55,6 +57,15 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
   const realTokenCost = pricing
     ? ((Number(form.maxTokens) || 0) / 1_000_000) * pricing.activeModelCostBRLPer1M
     : 0;
+
+  // Custo real da franquia de DISPAROS: quantidade × tarifa da categoria que
+  // o plano promete. Este é o custo que antes passava batido — uma franquia
+  // grande de marketing pode custar mais que todos os tokens do plano.
+  const unidadeDisparo = pricing?.waUnit?.[form.campaignCategory || "MARKETING"];
+  const qtdDisparos = Number(form.maxCampaignMessages) || 0;
+  const realCampaignCost = unidadeDisparo ? unidadeDisparo.unitCostBrl * qtdDisparos : 0;
+  const campaignSalePrice = unidadeDisparo ? unidadeDisparo.unitPriceBrl * qtdDisparos : 0;
+
   const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   const openNew = () => { setForm(DEFAULT_PLAN); setOpen(true); };
@@ -66,6 +77,7 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
       maxWhatsAppNumbers: p.maxWhatsAppNumbers ?? 1,
       maxKnowledgeBaseChars: p.maxKnowledgeBaseChars ?? 50000,
       maxCampaignMessages: p.maxCampaignMessages ?? 0,
+      campaignCategory: p.campaignCategory || "MARKETING",
       enableCalendar: p.enableCalendar ?? true,
       enableAutomations: p.enableAutomations ?? true,
       enableWebhooks: p.enableWebhooks ?? false,
@@ -90,6 +102,7 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
       maxTokens: Number(form.maxTokens),
       maxMessages: Number(form.maxMessages),
       maxCampaignMessages: Number(form.maxCampaignMessages),
+      campaignCategory: form.campaignCategory || "MARKETING",
       enableSdr: !!form.enableSdr,
       enableTokens: !!form.enableTokens,
       enableMessages: !!form.enableMessages,
@@ -125,15 +138,18 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
     else toast({ title: "Erro ao excluir", description: res.data?.error, variant: "destructive" });
   };
 
-  // Simulador de margem. O ÚNICO custo variável do plano hoje é o consumo de
-  // tokens de IA (WhatsApp/agentes não têm custo por mensagem/agente). O custo
-  // é o da franquia de tokens no modelo global ativo, calculado automaticamente.
-  const simCost = realTokenCost;
+  // Simulador de margem: o plano tem DOIS custos variáveis — os tokens de IA
+  // e os disparos no WhatsApp. Considera o pior caso (cliente usa a franquia
+  // inteira), que é o cenário que o preço precisa cobrir.
+  const simCost = realTokenCost + realCampaignCost;
   const simPrice = Number(form.priceMonthly) || 0;
   const simProfit = simPrice - simCost;
   const simMargin = simPrice > 0 ? (simProfit / simPrice) * 100 : 0;
-  // Preço mínimo sugerido para o plano com base no markup padrão da plataforma.
-  const suggestedPlanPrice = pricing ? Number((realTokenCost * (pricing.tokenMarkup || 5)).toFixed(2)) : 0;
+  // Cada custo tem a sua margem, configurada na administração do SaaS.
+  const suggestedPlanPrice = pricing
+    ? Number((realTokenCost * (pricing.tokenMarkup || 5) + campaignSalePrice).toFixed(2))
+    : 0;
+  const precoAbaixoDoCusto = simPrice > 0 && simPrice < simCost;
 
   return (
     <div className="space-y-4">
@@ -162,9 +178,24 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
               <li>{p.maxWhatsAppNumbers ?? 1} nº WhatsApp · {p.maxUsers ?? 2} usuários</li>
               <li>
                 {(p.maxCampaignMessages ?? 0) > 0
-                  ? `${(p.maxCampaignMessages).toLocaleString("pt-BR")} disparos/mês`
+                  ? `${(p.maxCampaignMessages).toLocaleString("pt-BR")} disparos/mês · ${String(p.campaignCategory || "MARKETING").toLowerCase()}`
                   : "sem disparo em massa"}
               </li>
+              {/* Margem no card: dá para varrer a lista e achar plano no vermelho. */}
+              {pricing && (() => {
+                const unidade = pricing.waUnit?.[p.campaignCategory || "MARKETING"];
+                const custo =
+                  ((p.maxTokens || 0) / 1_000_000) * pricing.activeModelCostBRLPer1M +
+                  (unidade ? unidade.unitCostBrl * (p.maxCampaignMessages || 0) : 0);
+                const preco = Number(p.priceMonthly) || 0;
+                const negativo = preco > 0 && preco < custo;
+                return (
+                  <li className={negativo ? "text-rose-600 font-medium" : ""}>
+                    Custo máx. {brl(custo)}
+                    {preco > 0 && ` · margem ${(((preco - custo) / preco) * 100).toFixed(0)}%`}
+                  </li>
+                );
+              })()}
               <li>
                 {[p.enableCalendar && "Calendar", p.enableAutomations && "Automações", p.enableWebhooks && "Webhooks"].filter(Boolean).join(" · ") || "Sem extras"}
               </li>
@@ -245,6 +276,26 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
                 <p className="col-span-2 text-[11px] text-muted-foreground -mt-1">
                   Disparos em massa: <strong>0</strong> desliga o recurso no plano.
                 </p>
+                {qtdDisparos > 0 && (
+                  <div className="space-y-1 col-span-2">
+                    <Label className="text-xs text-muted-foreground">Categoria da franquia de disparo</Label>
+                    <Select
+                      value={form.campaignCategory || "MARKETING"}
+                      onValueChange={(v) => setForm({ ...form, campaignCategory: v })}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="MARKETING">Marketing — promoções (mais cara)</SelectItem>
+                        <SelectItem value="UTILITY">Utilidade — lembretes e confirmações</SelectItem>
+                        <SelectItem value="AUTHENTICATION">Autenticação — códigos</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[11px] text-muted-foreground">
+                      A Meta cobra tarifas diferentes por categoria. Escolha a que o plano promete —
+                      é ela que define o custo da franquia.
+                    </p>
+                  </div>
+                )}
                 <div className="space-y-1 col-span-2">
                   <Label className="text-xs text-muted-foreground">Treino do agente (caracteres máx.)</Label>
                   <Input type="number" value={form.maxKnowledgeBaseChars} onChange={(e) => setForm({ ...form, maxKnowledgeBaseChars: e.target.value })} />
@@ -268,8 +319,22 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
                       </span>
                       <span className="font-semibold text-foreground tabular-nums">{brl(realTokenCost)}</span>
                     </div>
+                    {qtdDisparos > 0 && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          Custo real dos disparos ({qtdDisparos.toLocaleString("pt-BR")} {String(form.campaignCategory || "marketing").toLowerCase()})
+                        </span>
+                        <span className="font-semibold text-foreground tabular-nums">{brl(realCampaignCost)}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between border-t border-border pt-2 text-sm">
+                      <span className="font-medium text-foreground">Custo total do plano</span>
+                      <span className="font-bold text-foreground tabular-nums">{brl(simCost)}</span>
+                    </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Preço sugerido (markup {pricing.tokenMarkup || 5}x)</span>
+                      <span className="text-muted-foreground">
+                        Preço sugerido (IA {pricing.tokenMarkup || 5}x{qtdDisparos > 0 ? ` · disparo ${pricing.waMarkup || 2}x` : ""})
+                      </span>
                       <button
                         type="button"
                         onClick={() => setForm({ ...form, priceMonthly: suggestedPlanPrice })}
@@ -278,8 +343,14 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
                         {brl(suggestedPlanPrice)} <span className="text-[11px] font-normal">· usar</span>
                       </button>
                     </div>
+                    {precoAbaixoDoCusto && (
+                      <p className="rounded-lg bg-rose-50 px-3 py-2 text-[11px] text-rose-700">
+                        O preço deste plano está <strong>abaixo do custo</strong>: se o cliente usar toda a
+                        franquia, cada mensalidade dá prejuízo de {brl(simCost - simPrice)}.
+                      </p>
+                    )}
                     <p className="text-[11px] text-muted-foreground">
-                      Só os tokens de IA têm custo variável — WhatsApp/agentes não são cobrados por mensagem nem por agente.
+                      As margens (IA e disparo) são definidas em Configurações → Precificação.
                     </p>
                   </>
                 ) : (
@@ -293,7 +364,7 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
                 <p className="text-[10px] uppercase text-slate-400 font-semibold mb-2">Margem do plano (uso máximo da franquia)</p>
                 <div className="grid grid-cols-3 text-center gap-2">
                   <div>
-                    <p className="text-[10px] text-slate-400 uppercase">Custo IA</p>
+                    <p className="text-[10px] text-slate-400 uppercase">Custo total</p>
                     <p className="text-sm font-bold text-rose-300">{brl(simCost)}</p>
                   </div>
                   <div>

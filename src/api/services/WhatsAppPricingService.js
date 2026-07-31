@@ -70,19 +70,72 @@ export async function estimateCampaign(recipientCount, category = "UTILITY") {
 }
 
 /**
+ * Preço unitário por categoria — a base que o admin usa para montar plano.
+ * @returns { MARKETING: { unitUsd, unitCostBrl, unitPriceBrl }, ... }
+ */
+export async function unitPricing() {
+  const { rates, usdToBrl, markup } = await resolvePricing();
+  const saida = {};
+  for (const [cat, unitUsd] of Object.entries(rates)) {
+    saida[cat] = {
+      unitUsd,
+      unitCostBrl: unitUsd * usdToBrl,
+      unitPriceBrl: unitUsd * usdToBrl * markup,
+    };
+  }
+  return { categorias: saida, usdToBrl, markup };
+}
+
+/**
+ * Quanto custa (e quanto deveria valer) a franquia de disparos de um plano.
+ *
+ * Sem isto o plano era precificado só pelo custo de IA, e uma franquia de
+ * 5.000 disparos de marketing — que custa caro na Meta — passava batida:
+ * dava para vender um plano abaixo do próprio custo sem perceber.
+ */
+export async function planCampaignCost(maxCampaignMessages, category = "MARKETING") {
+  const { categorias, usdToBrl, markup } = await unitPricing();
+  const cat = String(category || "MARKETING").toUpperCase();
+  const unit = categorias[cat] || categorias.MARKETING;
+  const qtd = Math.max(0, Number(maxCampaignMessages) || 0);
+
+  return {
+    category: cat,
+    quantidade: qtd,
+    unitCostBrl: unit.unitCostBrl,
+    unitPriceBrl: unit.unitPriceBrl,
+    // Custo se o cliente usar a franquia inteira — é o pior caso, e é o que
+    // precisa caber no preço do plano.
+    custoBrl: unit.unitCostBrl * qtd,
+    precoSugeridoBrl: unit.unitPriceBrl * qtd,
+    usdToBrl,
+    markup,
+  };
+}
+
+/**
  * A conta pode disparar essa quantidade? O plano define a franquia mensal e,
  * ao estourar, o envio é bloqueado (não há cobrança de excedente).
  */
 export async function checkCampaignQuota(tenantId, recipientCount) {
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
-    select: { usedCampaignMessages: true, plan: { select: { maxCampaignMessages: true, name: true } } },
+    select: {
+      usedCampaignMessages: true,
+      plan: { select: { maxCampaignMessages: true, name: true, campaignCategory: true } },
+    },
   });
   if (!tenant) return { allowed: false, reason: "Conta não encontrada." };
 
   const limit = tenant.plan?.maxCampaignMessages ?? 0;
   const used = tenant.usedCampaignMessages || 0;
   const remaining = Math.max(0, limit - used);
+  // A categoria da franquia e o preço unitário viajam junto: a tela mostra
+  // quanto vale cada disparo do plano sem precisar de outra chamada.
+  const categoria = tenant.plan?.campaignCategory || "MARKETING";
+  const { categorias } = await unitPricing();
+  const unitPriceBrl = categorias[categoria]?.unitPriceBrl ?? 0;
+  const extras = { category: categoria, unitPriceBrl, planName: tenant.plan?.name || null };
 
   if (limit <= 0) {
     return {
@@ -90,6 +143,7 @@ export async function checkCampaignQuota(tenantId, recipientCount) {
       limit,
       used,
       remaining: 0,
+      ...extras,
       reason: `O plano ${tenant.plan?.name || "atual"} não inclui disparos em massa. Faça upgrade para liberar.`,
     };
   }
@@ -99,10 +153,11 @@ export async function checkCampaignQuota(tenantId, recipientCount) {
       limit,
       used,
       remaining,
+      ...extras,
       reason: `Franquia insuficiente: restam ${remaining} disparos no ciclo e este envio precisa de ${recipientCount}.`,
     };
   }
-  return { allowed: true, limit, used, remaining };
+  return { allowed: true, limit, used, remaining, ...extras };
 }
 
 /** Contabiliza o que foi efetivamente enviado. */
@@ -118,4 +173,7 @@ export async function consumeCampaignQuota(tenantId, sent) {
   }
 }
 
-export default { DEFAULT_RATES_USD, resolvePricing, estimateCampaign, checkCampaignQuota, consumeCampaignQuota };
+export default {
+  DEFAULT_RATES_USD, resolvePricing, estimateCampaign, unitPricing, planCampaignCost,
+  checkCampaignQuota, consumeCampaignQuota,
+};
