@@ -14,6 +14,13 @@ export async function touchConversation(message) {
   if (!message?.conversationId) return;
   const isInbound = message.role === "USER";
   try {
+    // Estado ANTES da atualização: é ele que diz se esta mensagem abriu uma
+    // janela nova (= conversa nova para o plano) ou continuou uma em curso.
+    const antes = await prisma.conversation.findUnique({
+      where: { id: message.conversationId },
+      select: { lastInboundAt: true, tenantId: true, leadId: true },
+    });
+
     await prisma.conversation.update({
       where: { id: message.conversationId },
       data: {
@@ -26,6 +33,23 @@ export async function touchConversation(message) {
           : {}),
       },
     });
+
+    if (isInbound && antes?.tenantId) {
+      const { registrarConversa } = await import("./UsageService.js");
+      await registrarConversa(antes.tenantId, {
+        leadId: antes.leadId,
+        conversationId: message.conversationId,
+        janelaEstavaAberta: isWindowOpen(antes.lastInboundAt),
+      });
+    } else if (!isInbound && antes?.tenantId && isWindowOpen(antes.lastInboundAt)) {
+      // Resposta dentro da janela é mensagem de serviço — hoje grátis na
+      // Meta, cobrada a partir de outubro/2026.
+      const { registrarMensagemServico } = await import("./UsageService.js");
+      await registrarMensagemServico(antes.tenantId, 1, {
+        leadId: antes.leadId,
+        conversationId: message.conversationId,
+      });
+    }
   } catch (e) {
     console.warn("[Conversation] Não foi possível atualizar contadores:", e.message);
   }

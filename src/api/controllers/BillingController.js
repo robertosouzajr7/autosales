@@ -216,6 +216,10 @@ export const upgradePlan = async (req, res) => {
         // Reset usage stats for the new billing cycle
         usedTokens: 0,
         usedMessages: 0,
+        usedConversations: 0,
+        usedServiceMessages: 0,
+        usedCampaignMessages: 0,
+        usedCostBrl: 0,
         lastUsageReset: new Date()
       }
     });
@@ -281,5 +285,37 @@ export const resumeSubscription = async (req, res) => {
   } catch (error) {
     console.error("[Billing] Erro ao reativar:", error.message);
     res.status(500).json({ error: "Não foi possível reativar a assinatura." });
+  }
+};
+
+
+/**
+ * Consumo do ciclo: conversas, disparos, mensagens e tokens, com o quanto
+ * cada um vale. É o que a tela de Assinatura mostra e o que o cliente usa
+ * para decidir se precisa de upgrade antes de bater no limite.
+ */
+export const getUsage = async (req, res) => {
+  try {
+    const { resumoConsumo } = await import("../services/UsageService.js");
+    const resumo = await resumoConsumo(req.tenantId);
+    if (!resumo) return res.status(404).json({ error: "Conta não encontrada." });
+    res.json(resumo);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+};
+
+/** Últimos lançamentos de consumo — o extrato por trás dos números. */
+export const getUsageEvents = async (req, res) => {
+  try {
+    const take = Math.min(Number(req.query.limit) || 50, 200);
+    const eventos = await prisma.usageEvent.findMany({
+      where: { tenantId: req.tenantId },
+      orderBy: { createdAt: "desc" },
+      take,
+    });
+    res.json(eventos);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 };

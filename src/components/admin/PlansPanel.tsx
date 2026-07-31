@@ -23,6 +23,7 @@ const DEFAULT_PLAN = {
   maxKnowledgeBaseChars: 50000,
   maxTokens: 100000,
   maxMessages: 1000,
+  maxConversations: 0, // 0 = sem limite de conversas
   maxCampaignMessages: 0, // 0 = plano sem disparo em massa
   campaignCategory: "MARKETING", // categoria de referência para custear a franquia
   enableSdr: true,
@@ -61,6 +62,16 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
   // Custo real da franquia de DISPAROS: quantidade × tarifa da categoria que
   // o plano promete. Este é o custo que antes passava batido — uma franquia
   // grande de marketing pode custar mais que todos os tokens do plano.
+  // Conversa custa as mensagens de serviço trocadas dentro dela. Hoje a Meta
+  // não cobra serviço, então isto dá zero — e passa a somar sozinho quando a
+  // tarifa for preenchida (a cobrança começa em outubro/2026).
+  const MSGS_POR_CONVERSA = 8;
+  const unidadeServico = pricing?.waUnit?.SERVICE;
+  const qtdConversas = Number(form.maxConversations) || 0;
+  const realConversationCost = unidadeServico
+    ? unidadeServico.unitCostBrl * qtdConversas * MSGS_POR_CONVERSA
+    : 0;
+
   const unidadeDisparo = pricing?.waUnit?.[form.campaignCategory || "MARKETING"];
   const qtdDisparos = Number(form.maxCampaignMessages) || 0;
   const realCampaignCost = unidadeDisparo ? unidadeDisparo.unitCostBrl * qtdDisparos : 0;
@@ -76,6 +87,7 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
       maxUsers: p.maxUsers ?? 2,
       maxWhatsAppNumbers: p.maxWhatsAppNumbers ?? 1,
       maxKnowledgeBaseChars: p.maxKnowledgeBaseChars ?? 50000,
+      maxConversations: p.maxConversations ?? 0,
       maxCampaignMessages: p.maxCampaignMessages ?? 0,
       campaignCategory: p.campaignCategory || "MARKETING",
       enableCalendar: p.enableCalendar ?? true,
@@ -101,6 +113,7 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
       maxKnowledgeBaseChars: Number(form.maxKnowledgeBaseChars),
       maxTokens: Number(form.maxTokens),
       maxMessages: Number(form.maxMessages),
+      maxConversations: Number(form.maxConversations),
       maxCampaignMessages: Number(form.maxCampaignMessages),
       campaignCategory: form.campaignCategory || "MARKETING",
       enableSdr: !!form.enableSdr,
@@ -141,7 +154,7 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
   // Simulador de margem: o plano tem DOIS custos variáveis — os tokens de IA
   // e os disparos no WhatsApp. Considera o pior caso (cliente usa a franquia
   // inteira), que é o cenário que o preço precisa cobrir.
-  const simCost = realTokenCost + realCampaignCost;
+  const simCost = realTokenCost + realCampaignCost + realConversationCost;
   const simPrice = Number(form.priceMonthly) || 0;
   const simProfit = simPrice - simCost;
   const simMargin = simPrice > 0 ? (simProfit / simPrice) * 100 : 0;
@@ -176,6 +189,11 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
               <li>{p.maxSdrs} agente(s) · {(p.maxTokens / 1000).toLocaleString("pt-BR")}k tokens</li>
               <li>{p.maxMessages?.toLocaleString("pt-BR")} msgs · {p.maxLeads?.toLocaleString("pt-BR")} contatos</li>
               <li>{p.maxWhatsAppNumbers ?? 1} nº WhatsApp · {p.maxUsers ?? 2} usuários</li>
+              <li>
+                {(p.maxConversations ?? 0) > 0
+                  ? `${(p.maxConversations).toLocaleString("pt-BR")} conversas/mês`
+                  : "conversas ilimitadas"}
+              </li>
               <li>
                 {(p.maxCampaignMessages ?? 0) > 0
                   ? `${(p.maxCampaignMessages).toLocaleString("pt-BR")} disparos/mês · ${String(p.campaignCategory || "MARKETING").toLowerCase()}`
@@ -273,6 +291,18 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
                     <Input type="number" value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
                   </div>
                 ))}
+                <div className="space-y-1 col-span-2">
+                  <Label className="text-xs text-muted-foreground">Conversas/mês</Label>
+                  <Input
+                    type="number"
+                    value={form.maxConversations}
+                    onChange={(e) => setForm({ ...form, maxConversations: e.target.value })}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Janelas de atendimento de 24h abertas por clientes. <strong>0</strong> = sem limite.
+                    Ao esgotar, o agente para de abrir conversa nova e o contato vai para a fila humana.
+                  </p>
+                </div>
                 <p className="col-span-2 text-[11px] text-muted-foreground -mt-1">
                   Disparos em massa: <strong>0</strong> desliga o recurso no plano.
                 </p>
@@ -319,6 +349,14 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
                       </span>
                       <span className="font-semibold text-foreground tabular-nums">{brl(realTokenCost)}</span>
                     </div>
+                    {realConversationCost > 0 && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          Custo real das conversas ({qtdConversas.toLocaleString("pt-BR")} × ~{MSGS_POR_CONVERSA} msgs)
+                        </span>
+                        <span className="font-semibold text-foreground tabular-nums">{brl(realConversationCost)}</span>
+                      </div>
+                    )}
                     {qtdDisparos > 0 && (
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">

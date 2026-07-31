@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import {
   CreditCard, Check, Loader2, Sparkles, CalendarClock, AlertTriangle,
-  Bot, MessageSquare, Cpu, RefreshCw, Receipt, Coins, Zap,
+  Bot, MessageSquare, Cpu, RefreshCw, Receipt, Coins, Zap, MessagesSquare, Megaphone,
 } from "lucide-react";
 
 function authHeaders() {
@@ -44,20 +44,25 @@ export default function Assinatura() {
   const [plans, setPlans] = useState<any[]>([]);
   const [tokenPacks, setTokenPacks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  // Consumo do ciclo vem do backend já resolvido (limite, restante, preço
+  // unitário) — a tela não recalcula nada de cobrança por conta própria.
+  const [consumo, setConsumo] = useState<any>(null);
   const [busy, setBusy] = useState(false);
   const [buyingId, setBuyingId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [p, pl, tp] = await Promise.all([
+      const [p, pl, tp, uso] = await Promise.all([
         fetch("/api/billing/portal", { headers: authHeaders() }).then((r) => r.json()),
         fetch("/api/billing/plans", { headers: authHeaders() }).then((r) => r.json()),
         fetch("/api/billing/token-packages", { headers: authHeaders() }).then((r) => r.json()),
+        fetch("/api/billing/usage", { headers: authHeaders() }).then((r) => r.json()).catch(() => null),
       ]);
       setData(p);
       setPlans(Array.isArray(pl) ? pl : []);
       setTokenPacks(Array.isArray(tp) ? tp : []);
+      setConsumo(uso && !uso.error ? uso : null);
     } catch {
       toast({ title: "Erro ao carregar assinatura", variant: "destructive" });
     }
@@ -125,7 +130,26 @@ export default function Assinatura() {
     else toast({ title: "Erro ao abrir pagamento", description: d.error, variant: "destructive" });
   };
 
+  // Conversa é a unidade que o cliente entende e a que o plano limita —
+  // vem primeiro. `max: 0` quer dizer sem limite, não "zerado".
   const usage = [
+    {
+      icon: MessagesSquare, label: "Conversas",
+      used: consumo?.conversas?.usado ?? 0,
+      max: consumo?.conversas?.limite ?? 0,
+      on: true,
+      ilimitado: consumo?.conversas?.ilimitado,
+      ajuda: "Janela de 24h aberta por um cliente. Responder na mesma janela não abre outra.",
+    },
+    {
+      icon: Megaphone, label: "Disparos em massa",
+      used: consumo?.disparos?.usado ?? 0,
+      max: consumo?.disparos?.limite ?? 0,
+      on: (consumo?.disparos?.limite ?? 0) > 0,
+      ajuda: consumo?.precos?.disparo
+        ? `Cada disparo vale ${brl(consumo.precos.disparo)}.`
+        : undefined,
+    },
     { icon: Cpu, label: "Créditos de IA (tokens)", used: t?.usedTokens || 0, max: plan?.maxTokens || 0, on: plan?.enableTokens },
     { icon: MessageSquare, label: "Mensagens", used: t?.usedMessages || 0, max: plan?.maxMessages || 0, on: plan?.enableMessages },
     { icon: Bot, label: "Agentes de IA ativos", used: t?.activeSdrs || 0, max: plan?.maxSdrs || 0, on: plan?.enableSdr },
@@ -195,23 +219,43 @@ export default function Assinatura() {
             {/* Uso do ciclo */}
             <Card className="p-6 rounded-2xl">
               <h3 className="text-sm font-semibold mb-4">Uso do ciclo atual</h3>
-              <div className="grid sm:grid-cols-3 gap-5">
-                {usage.map((u) => {
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {usage.map((u: any) => {
                   const pct = u.on && u.max ? Math.min(100, Math.round((u.used / u.max) * 100)) : 0;
+                  const perto = pct >= 80;
                   return (
                     <div key={u.label} className="space-y-2">
                       <div className="flex items-center gap-2 text-sm">
                         <u.icon className="w-4 h-4 text-primary" />
                         <span className="text-muted-foreground">{u.label}</span>
                       </div>
-                      {u.on ? (
+                      {u.on && u.ilimitado ? (
                         <>
                           <div className="h-2 rounded-full bg-muted overflow-hidden">
-                            <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
+                            <div className="h-full w-full rounded-full bg-emerald-400/60" />
+                          </div>
+                          <p className="text-xs text-muted-foreground tabular-nums">
+                            {u.used.toLocaleString("pt-BR")} no ciclo · sem limite
+                          </p>
+                          {u.ajuda && <p className="text-[11px] text-muted-foreground">{u.ajuda}</p>}
+                        </>
+                      ) : u.on ? (
+                        <>
+                          <div className="h-2 rounded-full bg-muted overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${perto ? "bg-amber-500" : "bg-primary"}`}
+                              style={{ width: `${pct}%` }}
+                            />
                           </div>
                           <p className="text-xs text-muted-foreground tabular-nums">
                             {u.used.toLocaleString("pt-BR")} de {u.max.toLocaleString("pt-BR")} ({pct}%)
                           </p>
+                          {perto && (
+                            <p className="text-[11px] font-medium text-amber-600">
+                              Perto do limite. Ao esgotar, o agente para de abrir conversa nova.
+                            </p>
+                          )}
+                          {u.ajuda && <p className="text-[11px] text-muted-foreground">{u.ajuda}</p>}
                         </>
                       ) : (
                         <p className="text-xs text-muted-foreground">Não incluso neste plano</p>

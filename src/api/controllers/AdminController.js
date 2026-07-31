@@ -7,7 +7,9 @@ function safeJson(v) { try { return JSON.parse(v); } catch { return null; } }
 function waRatesOf(s) {
   const custom = safeJson(s?.waRates) || {};
   const out = {};
-  for (const k of ["MARKETING", "UTILITY", "AUTHENTICATION"]) {
+  // SERVICE entra na lista porque a Meta passa a cobrar a partir de
+  // outubro/2026: o campo já existe zerado, e no dia é só preencher.
+  for (const k of ["MARKETING", "UTILITY", "AUTHENTICATION", "SERVICE"]) {
     out[k] = typeof custom[k] === "number" ? custom[k] : DEFAULT_RATES_USD[k];
   }
   return out;
@@ -344,7 +346,7 @@ export const updatePlatformSettings = async (req, res) => {
 
       const limpo = { ...atual };
       const origem = typeof waRates === "string" ? safeJson(waRates) : waRates;
-      for (const k of ["MARKETING", "UTILITY", "AUTHENTICATION"]) {
+      for (const k of ["MARKETING", "UTILITY", "AUTHENTICATION", "SERVICE"]) {
         const v = parseFloat(origem?.[k]);
         if (Number.isFinite(v) && v >= 0) limpo[k] = v;
       }
@@ -492,7 +494,14 @@ export const getReports = async (_req, res) => {
           id: true, name: true, email: true, createdAt: true, active: true,
           subscriptionStatus: true, trialEnd: true,
           usedTokens: true, extraTokens: true, usedMessages: true,
-          plan: { select: { name: true, priceMonthly: true, maxTokens: true } },
+          usedConversations: true, usedCampaignMessages: true,
+          usedServiceMessages: true, usedCostBrl: true,
+          plan: {
+            select: {
+              name: true, priceMonthly: true, maxTokens: true,
+              maxConversations: true, maxCampaignMessages: true,
+            },
+          },
         },
       }),
       prisma.invoice.findMany({
@@ -559,9 +568,26 @@ export const getReports = async (_req, res) => {
         planTokens: t.plan?.maxTokens || 0,
         extraTokens: t.extraTokens || 0,
         usedMessages: t.usedMessages || 0,
-        costBRL: Number(tokenCost(t.usedTokens).toFixed(2)),
+        // Consumo que o plano limita, para ver quem está perto do teto.
+        usedConversations: t.usedConversations || 0,
+        planConversations: t.plan?.maxConversations || 0,
+        usedCampaignMessages: t.usedCampaignMessages || 0,
+        planCampaignMessages: t.plan?.maxCampaignMessages || 0,
+        usedServiceMessages: t.usedServiceMessages || 0,
+        // Custo total = IA (calculado dos tokens) + o que foi medido em
+        // disparo e serviço. Sem somar os dois, a margem por conta mentia.
+        costBRL: Number((tokenCost(t.usedTokens) + (t.usedCostBrl || 0)).toFixed(2)),
+        costAiBRL: Number(tokenCost(t.usedTokens).toFixed(2)),
+        costWhatsappBRL: Number((t.usedCostBrl || 0).toFixed(2)),
+        priceBRL: Number(t.plan?.priceMonthly || 0),
       }))
-      .sort((a, b) => b.usedTokens - a.usedTokens);
+      .map((a) => ({
+        ...a,
+        // Margem da conta no ciclo: o que ela paga menos o que ela custa.
+        marginBRL: Number((a.priceBRL - a.costBRL).toFixed(2)),
+        marginPct: a.priceBRL > 0 ? Math.round(((a.priceBRL - a.costBRL) / a.priceBRL) * 100) : 0,
+      }))
+      .sort((a, b) => b.costBRL - a.costBRL);
 
     const topUsage = accountsUsage.slice(0, 5);
     const totalTokenCostBRL = Number(

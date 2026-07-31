@@ -390,6 +390,9 @@ router.get("/compliance/leads/:id/export", ComplianceController.exportLeadData);
 router.delete("/compliance/leads/:id", ComplianceController.deleteLeadData);
 
 router.get("/billing/portal", BillingController.getBillingPortalData);
+// Consumo do ciclo e o extrato por trás dele.
+router.get("/billing/usage", BillingController.getUsage);
+router.get("/billing/usage/events", BillingController.getUsageEvents);
 router.get("/billing/plans", BillingController.getActivePlans);
 router.post("/billing/checkout/:invoiceId", requirePermission("billing"), BillingController.createCheckoutSession);
 router.post("/billing/subscribe", requirePermission("billing"), BillingController.createSubscriptionCheckout);

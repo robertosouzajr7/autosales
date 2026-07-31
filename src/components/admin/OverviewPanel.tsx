@@ -178,7 +178,7 @@ export function OverviewPanel() {
         <Card className="rounded-2xl border-border">
           <header className="px-5 py-4 border-b border-border">
             <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <Coins className="w-4 h-4 text-primary" /> Consumo de tokens por conta
+              <Coins className="w-4 h-4 text-primary" /> Consumo e margem por conta
             </h3>
           </header>
           <div className="overflow-x-auto">
@@ -187,10 +187,13 @@ export function OverviewPanel() {
                 <tr className="border-b border-border text-xs text-muted-foreground">
                   <th className="px-5 py-3 font-medium">Conta</th>
                   <th className="px-5 py-3 font-medium">Plano</th>
-                  <th className="px-5 py-3 font-medium text-right">Tokens usados</th>
-                  <th className="px-5 py-3 font-medium text-right">Franquia</th>
-                  <th className="px-5 py-3 font-medium text-right">Recarga</th>
-                  <th className="px-5 py-3 font-medium text-right">Custo estimado</th>
+                  <th className="px-5 py-3 font-medium text-right">Conversas</th>
+                  <th className="px-5 py-3 font-medium text-right">Disparos</th>
+                  <th className="px-5 py-3 font-medium text-right">Tokens</th>
+                  <th className="px-5 py-3 font-medium text-right">Custo IA</th>
+                  <th className="px-5 py-3 font-medium text-right">Custo WhatsApp</th>
+                  <th className="px-5 py-3 font-medium text-right">Mensalidade</th>
+                  <th className="px-5 py-3 font-medium text-right">Margem</th>
                 </tr>
               </thead>
               <tbody>
@@ -204,17 +207,34 @@ export function OverviewPanel() {
                         <p className="text-xs text-muted-foreground">{t.email}</p>
                       </td>
                       <td className="px-5 py-3 text-muted-foreground">{t.plan || "—"}</td>
-                      <td className={`px-5 py-3 text-right tabular-nums ${over ? "text-rose-600 font-semibold" : "text-foreground"}`}>
+                      <td className="px-5 py-3 text-right tabular-nums text-muted-foreground">
+                        {(t.usedConversations || 0).toLocaleString("pt-BR")}
+                        {t.planConversations > 0 && (
+                          <span className={t.usedConversations >= t.planConversations ? "text-rose-600 font-semibold" : ""}>
+                            {" "}/ {t.planConversations.toLocaleString("pt-BR")}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3 text-right tabular-nums text-muted-foreground">
+                        {(t.usedCampaignMessages || 0).toLocaleString("pt-BR")}
+                        {t.planCampaignMessages > 0 && ` / ${t.planCampaignMessages.toLocaleString("pt-BR")}`}
+                      </td>
+                      <td className={`px-5 py-3 text-right tabular-nums ${over ? "text-rose-600 font-semibold" : "text-muted-foreground"}`}>
                         {t.usedTokens.toLocaleString("pt-BR")}
+                        {planTokens ? ` / ${planTokens.toLocaleString("pt-BR")}` : ""}
                       </td>
                       <td className="px-5 py-3 text-right tabular-nums text-muted-foreground">
-                        {planTokens ? planTokens.toLocaleString("pt-BR") : "—"}
+                        {fmtBRL(t.costAiBRL ?? t.costBRL ?? 0)}
                       </td>
                       <td className="px-5 py-3 text-right tabular-nums text-muted-foreground">
-                        {t.extraTokens ? t.extraTokens.toLocaleString("pt-BR") : "—"}
+                        {fmtBRL(t.costWhatsappBRL || 0)}
                       </td>
-                      <td className="px-5 py-3 text-right tabular-nums font-semibold text-foreground">
-                        {fmtBRL(t.costBRL || 0)}
+                      <td className="px-5 py-3 text-right tabular-nums text-muted-foreground">
+                        {fmtBRL(t.priceBRL || 0)}
+                      </td>
+                      <td className={`px-5 py-3 text-right tabular-nums font-semibold ${(t.marginBRL ?? 0) < 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                        {fmtBRL(t.marginBRL || 0)}
+                        {t.priceBRL > 0 && <span className="ml-1 text-[11px] font-normal">({t.marginPct}%)</span>}
                       </td>
                     </tr>
                   );

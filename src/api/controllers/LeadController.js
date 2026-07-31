@@ -446,6 +446,20 @@ export const receiveWhatsappWebhook = async (req, res) => {
       })
       .catch(() => null);
 
+    // 5.9 Franquia de conversas do plano. Estourou: o agente para de abrir
+    // conversa nova, mas o lead não se perde — vai para a fila humana, que é
+    // o que o cliente esperaria de um limite de plano.
+    const { conversationsHeadroom } = await import("../services/UsageService.js");
+    const franquia = await conversationsHeadroom(tenantId);
+    if (!franquia.ilimitado && !franquia.ok) {
+      const { default: AttendanceService } = await import("../services/AttendanceService.js");
+      await AttendanceService.enqueue(conversation.id, {
+        reason: `Franquia de ${franquia.max} conversas do plano ${franquia.planName || ""} esgotada no ciclo.`,
+      }).catch(() => {});
+      console.log(`[Plano] 🛑 Franquia de conversas esgotada no tenant ${tenantId} — conversa foi para a fila humana.`);
+      return res.json({ success: true, quotaReached: true, quota: franquia });
+    }
+
     // 6. Aciona o SDR para gerar resposta via IA (texto transcrito, se áudio)
     const aiData = await AutomationEngine.handleIncomingMessage(lead, effectiveContent || content, tenantId, {
       replyId,

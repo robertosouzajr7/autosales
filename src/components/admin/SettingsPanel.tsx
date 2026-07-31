@@ -50,7 +50,7 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
 
   // Custo de disparo no WhatsApp: tarifa da Meta por categoria (USD) e a
   // margem aplicada em cima. É o que define o preço da franquia dos planos.
-  const [waRates, setWaRates] = useState<any>({ MARKETING: 0.0625, UTILITY: 0.0068, AUTHENTICATION: 0.0068 });
+  const [waRates, setWaRates] = useState<any>({ MARKETING: 0.0625, UTILITY: 0.0068, AUTHENTICATION: 0.0068, SERVICE: 0 });
   const [waMarkup, setWaMarkup] = useState<number | string>(2);
   const [savingWa, setSavingWa] = useState(false);
 
@@ -140,6 +140,7 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
         MARKETING: Number(waRates.MARKETING),
         UTILITY: Number(waRates.UTILITY),
         AUTHENTICATION: Number(waRates.AUTHENTICATION),
+        SERVICE: Number(waRates.SERVICE),
       },
       waMarkup: Number(waMarkup),
     });
@@ -592,11 +593,12 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { key: "MARKETING", label: "Marketing", hint: "Promoções e reengajamento" },
             { key: "UTILITY", label: "Utilidade", hint: "Lembretes e confirmações" },
             { key: "AUTHENTICATION", label: "Autenticação", hint: "Códigos de verificação" },
+            { key: "SERVICE", label: "Serviço", hint: "Resposta na janela de 24h — grátis até out/2026" },
           ].map(({ key, label, hint }) => (
             <div key={key} className="space-y-1">
               <Label className="text-xs text-muted-foreground">{label} — US$ por mensagem</Label>
@@ -644,7 +646,7 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
                 </tr>
               </thead>
               <tbody>
-                {["MARKETING", "UTILITY", "AUTHENTICATION"].map((cat) => {
+                {["MARKETING", "UTILITY", "AUTHENTICATION", "SERVICE"].map((cat) => {
                   const custo = (Number(waRates[cat]) || 0) * Number(usdToBrl);
                   const preco = custo * (Number(waMarkup) || 1);
                   return (
@@ -666,7 +668,8 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
 
         <div className="flex items-center justify-between gap-3">
           <p className="text-[11px] text-muted-foreground">
-            A Meta reajusta as tarifas sem aviso — confira na tabela oficial de tempos em tempos.
+            A Meta reajusta as tarifas sem aviso. Serviço é grátis hoje e passa a ser cobrado
+            em outubro de 2026 — deixe em 0 até a tabela sair.
           </p>
           <Button onClick={saveDispatch} disabled={savingWa} className="gap-2">
             {savingWa ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}

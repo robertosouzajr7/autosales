@@ -21,6 +21,7 @@
     "test:team-access": "node scripts/test-team-access.mjs",
     "test:cdp": "node scripts/test-contacts-cdp.mjs",
     "test:pricing": "node scripts/test-dispatch-pricing.mjs",
+    "test:usage": "node scripts/test-usage-limits.mjs",
     "contacts:dedupe": "node scripts/dedupe-contacts.mjs"
   },
   "dependencies": {

@@ -378,6 +378,24 @@ async function runCampaign(campaign, sender, recipients, tenantId) {
   // Contabiliza só o que saiu de fato — falha não consome franquia.
   await consumeCampaignQuota(tenantId, sent);
 
+  // Lança no razão de consumo com custo e preço do que realmente saiu, para
+  // o relatório fechar com a fatura da Meta em vez de com a projeção.
+  try {
+    const { registrarEvento, USAGE_TYPES } = await import("../services/UsageService.js");
+    const real = await estimateCampaign(sent, campaign.template.category);
+    await registrarEvento(tenantId, {
+      type: USAGE_TYPES.CAMPAIGN,
+      category: real.category,
+      quantity: sent,
+      costBrl: real.costBrl,
+      priceBrl: real.priceBrl,
+      campaignId: campaign.id,
+      note: `${campaign.name} · ${sent} enviada(s), ${failed} falha(s)`,
+    });
+  } catch (e) {
+    console.warn("[Campanha] Não foi possível lançar o consumo:", e.message);
+  }
+
   console.log(`[Campanha] ✅ "${campaign.name}" concluída: ${sent} enviada(s), ${failed} falha(s).`);
 }
 

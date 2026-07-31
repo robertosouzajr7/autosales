@@ -195,6 +195,12 @@ class PaymentService {
         nextBillingDate: periodEnd,
         usedTokens: 0,
         usedMessages: 0,
+        // O ciclo novo zera tudo que é medido por mês: conversas, disparos,
+        // mensagens de serviço e o custo acumulado.
+        usedConversations: 0,
+        usedServiceMessages: 0,
+        usedCampaignMessages: 0,
+        usedCostBrl: 0,
         lastUsageReset: new Date(),
       },
     });
@@ -333,6 +339,10 @@ class PaymentService {
         // Reinicia consumo no início do ciclo pago
         usedTokens: 0,
         usedMessages: 0,
+        usedConversations: 0,
+        usedServiceMessages: 0,
+        usedCampaignMessages: 0,
+        usedCostBrl: 0,
         lastUsageReset: new Date()
       },
       include: { plan: true }

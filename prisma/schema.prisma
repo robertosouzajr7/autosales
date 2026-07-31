@@ -55,6 +55,14 @@ model Tenant {
   extraTokens          Int      @default(0) // saldo de tokens comprados (recarga), consumido após a franquia do plano
   usedMessages         Int      @default(0)
   usedCampaignMessages Int      @default(0) // disparos em massa no ciclo atual
+  /// Janelas de atendimento de 24h abertas no ciclo — a unidade que o cliente
+  /// entende por "conversa" e a que o plano limita.
+  usedConversations    Int      @default(0)
+  /// Mensagens de serviço (resposta dentro da janela). Hoje a Meta não cobra,
+  /// mas o contador já existe: quando passar a cobrar, o custo sai daqui.
+  usedServiceMessages  Int      @default(0)
+  /// Custo real acumulado no ciclo (BRL) — o que a operação custou de fato.
+  usedCostBrl          Float    @default(0)
   qualifiedLeadsCount  Int      @default(0)
   lastUsageReset       DateTime @default(now())
 
@@ -90,6 +98,8 @@ model Tenant {
   businessHours  BusinessHour[]
   faqs           Faq[]
   serviceQueues  ServiceQueue[]
+
+  usageEvents UsageEvent[]
 
   // CDP e integrações
   contactIdentities ContactIdentity[]
@@ -183,6 +193,39 @@ model Lead {
   @@unique([phone, tenantId])
   @@index([tenantId, channel, externalId])
   @@index([tenantId, email])
+}
+
+/// Razão de consumo da conta.
+///
+/// Os contadores no Tenant respondem "quanto já usou neste ciclo", mas não
+/// respondem "usou quando, com quem e quanto custou" — e é isso que fecha
+/// com a fatura da Meta e sustenta uma cobrança de excedente. Cada evento
+/// guarda o custo real e o preço cobrado, congelados na hora: tarifa e
+/// margem mudam depois, o histórico não pode mudar junto.
+model UsageEvent {
+  id       String @id @default(uuid())
+  tenantId String
+
+  /// CONVERSATION | SERVICE_MSG | TEMPLATE_MSG | CAMPAIGN | AI_TOKENS
+  type     String
+  /// MARKETING | UTILITY | AUTHENTICATION | SERVICE — quando faz sentido.
+  category String?
+
+  quantity Int   @default(1)
+  costBrl  Float @default(0) // o que custou (Meta, provedor de IA)
+  priceBrl Float @default(0) // o que foi cobrado do cliente
+
+  leadId         String?
+  conversationId String?
+  campaignId     String?
+  note           String?
+
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, type, createdAt])
 }
 
 /// Chave de identidade do contato (CDP).
@@ -403,6 +446,9 @@ model Plan {
   maxUsers              Int @default(2) // usuários na equipe
   maxWhatsAppNumbers    Int @default(1) // números conectados
   maxCampaignMessages   Int @default(0) // disparos em massa/mês; 0 = recurso desligado
+  /// Conversas (janelas de atendimento de 24h) incluídas por mês.
+  /// 0 = sem limite — é o comportamento de quem já estava na base.
+  maxConversations      Int @default(0)
   maxKnowledgeBaseChars Int @default(50000) // tamanho do treino do agente
 
   // Usage Credits (renovam por mês)
