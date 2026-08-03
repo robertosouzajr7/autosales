@@ -189,11 +189,14 @@ class ReminderService {
         status: atrasado ? "SKIPPED" : "PENDING",
         error: atrasado ? "Horário do lembrete já tinha passado quando o agendamento foi criado." : null,
       };
-      const row = existente
-        ? await prisma.appointmentReminder.update({ where: { id: existente.id }, data: dados })
-        : await prisma.appointmentReminder.create({
-            data: { appointmentId: appt.id, tenantId: appt.tenantId, kind: item.kind, ...dados },
-          });
+      // Upsert, e não ler-depois-criar: a régua é montada na criação e de novo
+      // ao remarcar, e as duas podem se cruzar — quem agenda e remarca em
+      // seguida caía na trava de (appointmentId, kind) e recebia 500.
+      const row = await prisma.appointmentReminder.upsert({
+        where: { appointmentId_kind: { appointmentId: appt.id, kind: item.kind } },
+        update: dados,
+        create: { appointmentId: appt.id, tenantId: appt.tenantId, kind: item.kind, ...dados },
+      });
       criados.push(row);
     }
 

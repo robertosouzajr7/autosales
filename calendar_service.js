@@ -140,6 +140,104 @@ class CalendarService {
   }
 
   /**
+   * Cria o evento no Google Calendar. Best-effort: conta sem Google conectado
+   * ou API fora do ar devolve nulos, e o agendamento local segue de pé.
+   *
+   * Existe separado de createAppointment porque nem todo agendamento nasce do
+   * agente: o painel e as automações também criam, e antes disso cada um
+   * gravava só na tabela local — o cliente via o compromisso no sistema e não
+   * via nada no Google.
+   */
+  async criarEvento(tenantId, { titulo, inicio, fim, lead, descricao }) {
+    const auth = await this.getOAuth2Client(tenantId);
+    if (!auth) return { googleEventId: null, meetLink: null };
+
+    try {
+      const calendar = google.calendar({ version: "v3", auth });
+      const res = await calendar.events.insert({
+        calendarId: "primary",
+        resource: {
+          summary: titulo,
+          description: descricao || "Agendado via Agentes Virtuais.",
+          start: { dateTime: inicio.toISOString(), timeZone: TIMEZONE },
+          end: { dateTime: fim.toISOString(), timeZone: TIMEZONE },
+          attendees: lead?.email ? [{ email: lead.email }] : [],
+          reminders: { useDefault: true },
+          // Pede um Meet para o evento: é o link enviado 10 minutos antes.
+          conferenceData: {
+            createRequest: {
+              requestId: `av-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+              conferenceSolutionKey: { type: "hangoutsMeet" },
+            },
+          },
+        },
+        // Sem isso o Google ignora o conferenceData e devolve evento sem Meet.
+        conferenceDataVersion: 1,
+      });
+      return {
+        googleEventId: res.data.id,
+        meetLink:
+          res.data.hangoutLink ||
+          res.data.conferenceData?.entryPoints?.find((e) => e.entryPointType === "video")?.uri ||
+          null,
+      };
+    } catch (err) {
+      console.error(`[Calendar] Falha ao inserir no Google (tenant ${tenantId}):`, err.message);
+      return { googleEventId: null, meetLink: null };
+    }
+  }
+
+  /**
+   * Move (ou renomeia) o evento no Google. Remarcar só na tabela local deixava
+   * o horário antigo bloqueado na agenda do cliente para sempre.
+   */
+  async moverEvento(tenantId, googleEventId, { inicio, fim, titulo }) {
+    if (!googleEventId) return false;
+    const auth = await this.getOAuth2Client(tenantId);
+    if (!auth) return false;
+
+    try {
+      const calendar = google.calendar({ version: "v3", auth });
+      await calendar.events.patch({
+        calendarId: "primary",
+        eventId: googleEventId,
+        resource: {
+          ...(titulo ? { summary: titulo } : {}),
+          ...(inicio ? { start: { dateTime: inicio.toISOString(), timeZone: TIMEZONE } } : {}),
+          ...(fim ? { end: { dateTime: fim.toISOString(), timeZone: TIMEZONE } } : {}),
+        },
+      });
+      return true;
+    } catch (err) {
+      console.error(`[Calendar] Falha ao mover evento no Google (tenant ${tenantId}):`, err.message);
+      return false;
+    }
+  }
+
+  /**
+   * Apaga o evento no Google. Cancelar no painel sem isto deixava fantasma na
+   * agenda: o horário continuava ocupado para o cliente e para o detector de
+   * conflito, que lê o Google.
+   */
+  async removerEvento(tenantId, googleEventId) {
+    if (!googleEventId) return false;
+    const auth = await this.getOAuth2Client(tenantId);
+    if (!auth) return false;
+
+    try {
+      const calendar = google.calendar({ version: "v3", auth });
+      await calendar.events.delete({ calendarId: "primary", eventId: googleEventId });
+      return true;
+    } catch (err) {
+      // 404/410: já não existe lá. Não é falha — o objetivo era sumir com ele.
+      const status = err?.code || err?.response?.status;
+      if (status === 404 || status === 410) return true;
+      console.error(`[Calendar] Falha ao apagar evento no Google (tenant ${tenantId}):`, err.message);
+      return false;
+    }
+  }
+
+  /**
    * Cria um agendamento com detecção de conflito. Lança SlotConflictError se
    * o horário colidir com Google ou com um Appointment local existente.
    */
@@ -157,44 +255,14 @@ class CalendarService {
       throw new SlotConflictError();
     }
 
-    // Insere no Google Calendar se conectado (best-effort — não bloqueia o
-    // agendamento local se a API falhar).
-    let googleEventId = null;
-    let meetLink = null;
-    const auth = await this.getOAuth2Client(tenantId);
-    if (auth) {
-      try {
-        const calendar = google.calendar({ version: "v3", auth });
-        const event = {
-          summary: `${title}: ${lead.name}`,
-          description: `Agendado via Agentes Virtuais.\nLead: ${lead.phone}\nScore: ${lead.qualificationScore ?? "-"}`,
-          start: { dateTime: start.toISOString(), timeZone: TIMEZONE },
-          end: { dateTime: end.toISOString(), timeZone: TIMEZONE },
-          attendees: lead.email ? [{ email: lead.email }] : [],
-          reminders: { useDefault: true },
-          // Pede um Meet para o evento: é o link enviado 10 minutos antes.
-          conferenceData: {
-            createRequest: {
-              requestId: `av-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-              conferenceSolutionKey: { type: "hangoutsMeet" },
-            },
-          },
-        };
-        const res = await calendar.events.insert({
-          calendarId: "primary",
-          resource: event,
-          // Sem isso o Google ignora o conferenceData e devolve evento sem Meet.
-          conferenceDataVersion: 1,
-        });
-        googleEventId = res.data.id;
-        meetLink =
-          res.data.hangoutLink ||
-          res.data.conferenceData?.entryPoints?.find((e) => e.entryPointType === "video")?.uri ||
-          null;
-      } catch (err) {
-        console.error(`[Calendar] Falha ao inserir no Google (tenant ${tenantId}):`, err.message);
-      }
-    }
+    // Best-effort: não bloqueia o agendamento local se a API do Google falhar.
+    const { googleEventId, meetLink } = await this.criarEvento(tenantId, {
+      titulo: `${title}: ${lead.name}`,
+      descricao: `Agendado via Agentes Virtuais.\nLead: ${lead.phone}\nScore: ${lead.qualificationScore ?? "-"}`,
+      inicio: start,
+      fim: end,
+      lead,
+    });
 
     const appointment = await prisma.appointment.create({
       data: {

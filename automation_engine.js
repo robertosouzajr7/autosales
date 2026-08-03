@@ -4,7 +4,7 @@ import { WhatsAppManager } from "./whatsapp.js";
 // Envio unificado: escolhe Cloud API (Meta) ou Baileys conforme a conexão.
 import MessagingService from "./src/api/services/MessagingService.js";
 import { EmailService } from "./email_service.js";
-import CalendarService from "./calendar_service.js";
+import CalendarService, { parseBusinessDate } from "./calendar_service.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import AIProviderService from "./src/api/services/AIProviderService.js";
 import TTSService from "./src/api/services/TTSService.js";
@@ -657,16 +657,34 @@ class AutomationEngine {
           const title = this.resolveTemplate(config.title || "Agendamento automático", ctx);
           const dateStr = this.resolveTemplate(config.date || "", ctx);
           if (dateStr) {
+            // Data sem fuso vinda do fluxo vale como horário do negócio, e o
+            // evento vai para o Google junto — a automação criava só a linha
+            // local, então o compromisso não aparecia na agenda do cliente.
+            const inicio = parseBusinessDate(dateStr);
+            if (isNaN(inicio.getTime())) {
+              result.output = { error: "Data inválida" };
+              result.success = false;
+              break;
+            }
+            const { googleEventId, meetLink } = await CalendarService.criarEvento(lead.tenantId, {
+              titulo: `${title}: ${lead.name}`,
+              descricao: `Agendado por automação.\nContato: ${lead.phone || "-"}`,
+              inicio,
+              fim: new Date(inicio.getTime() + 60 * 60000),
+              lead,
+            });
             const appt = await prisma.appointment.create({
               data: {
                 leadId: lead.id,
                 tenantId: lead.tenantId,
                 title,
-                date: new Date(dateStr),
-                status: "SCHEDULED"
+                date: inicio,
+                status: "SCHEDULED",
+                googleEventId,
+                meetLink,
               }
             });
-            result.output = { appointmentId: appt.id, title, date: dateStr };
+            result.output = { appointmentId: appt.id, title, date: dateStr, googleEventId };
           } else {
             result.output = { error: "Data não fornecida" };
             result.success = false;
