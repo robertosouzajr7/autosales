@@ -399,6 +399,42 @@ class PaymentService {
   }
 
   /**
+   * Checkout de uma recarga de VALOR LIVRE, a partir de uma cotação já feita
+   * pelo RechargeService. O valor cobrado sai da cotação do servidor — nunca
+   * do corpo da requisição —, e os metadados carregam o que o webhook precisa
+   * para creditar no saldo certo.
+   */
+  async createRechargeCheckout(tenant, cotacao, frontend) {
+    const stripe = await this.getStripe();
+    if (!stripe) throw new Error("Stripe não está configurado (secret key ausente).");
+    const customerId = await this.ensureStripeCustomer(stripe, tenant);
+
+    const eDisparo = cotacao.tipo === "DISPARO";
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      customer: customerId,
+      line_items: [{
+        price_data: {
+          currency: "brl",
+          product_data: { name: `Recarga — ${cotacao.resumo}` },
+          unit_amount: Math.round(Number(cotacao.valorBrl) * 100),
+        },
+        quantity: 1,
+      }],
+      metadata: {
+        kind: "recarga",
+        tenantId: tenant.id,
+        tipo: cotacao.tipo,
+        tokens: String(cotacao.tokens || 0),
+        creditsBrl: String(cotacao.creditsBrl || 0),
+      },
+      success_url: `${frontend}/assinatura?recarga=sucesso`,
+      cancel_url: `${frontend}/assinatura?recarga=cancelada`,
+    });
+    return { checkoutUrl: session.url, gatewayId: session.id, eDisparo };
+  }
+
+  /**
    * Credita uma recarga de CRÉDITO DE DISPARO (BRL). Idempotente pela mesma
    * chave do gateway, como a de tokens — webhook do Stripe repete.
    */

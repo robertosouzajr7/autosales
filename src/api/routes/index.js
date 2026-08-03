@@ -417,6 +417,11 @@ router.post("/billing/cancel", requirePermission("billing"), BillingController.c
 router.post("/billing/resume", requirePermission("billing"), BillingController.resumeSubscription);
 router.post("/billing/upgrade", requirePermission("billing"), BillingController.upgradePlan);
 
+// Recarga de valor livre: o cliente digita quanto quer, confere o resumo e vai
+// para o checkout. A cota é refeita no servidor antes de cobrar.
+router.post("/billing/recharge/quote", requirePermission("billing"), BillingController.quoteRecharge);
+router.post("/billing/recharge/checkout", requirePermission("billing"), BillingController.createRechargeCheckout);
+
 // Recarga de tokens (pacotes definidos pelo admin) — cliente compra saldo extra
 router.get("/billing/token-packages", BillingController.getTokenPackages);
 router.post("/billing/token-packages/:id/checkout", BillingController.buyTokenPackage);

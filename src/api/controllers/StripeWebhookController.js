@@ -51,7 +51,10 @@ export const receiveStripeWebhook = async (req, res) => {
 
         // (0) Recarga avulsa (pagamento único): tokens de IA ou crédito de
         // disparo. O metadado diz qual saldo receber.
-        if (session.metadata?.kind === "token_pack") {
+        // "token_pack" é o nome antigo, de quando só existia pacote fechado.
+        // Continua aceito porque pode haver sessão criada antes deste deploy
+        // esperando pagamento — recusá-la cobraria o cliente sem creditar.
+        if (["recarga", "token_pack"].includes(session.metadata?.kind)) {
           if (session.payment_status && session.payment_status !== "paid") {
             return res.status(200).json({ received: true, unpaid: session.payment_status });
           }

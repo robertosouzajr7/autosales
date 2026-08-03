@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
+import { RechargeDialog } from "@/components/billing/RechargeDialog";
 import {
   CreditCard, Check, Loader2, Sparkles, CalendarClock, AlertTriangle,
-  Bot, Cpu, RefreshCw, Receipt, Coins, Zap, MessagesSquare, Megaphone,
+  Bot, Cpu, RefreshCw, Receipt, Coins, MessagesSquare, Megaphone,
 } from "lucide-react";
 
 function authHeaders() {
@@ -42,26 +43,24 @@ export default function Assinatura() {
   const { toast } = useToast();
   const [data, setData] = useState<any>(null);
   const [plans, setPlans] = useState<any[]>([]);
-  const [tokenPacks, setTokenPacks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   // Consumo do ciclo vem do backend já resolvido (limite, restante, preço
   // unitário) — a tela não recalcula nada de cobrança por conta própria.
   const [consumo, setConsumo] = useState<any>(null);
   const [busy, setBusy] = useState(false);
-  const [buyingId, setBuyingId] = useState<string | null>(null);
+  // Qual recarga está aberta no modal (null = fechado).
+  const [recarga, setRecarga] = useState<"DISPARO" | "TOKENS" | null>(null);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [p, pl, tp, uso] = await Promise.all([
+      const [p, pl, uso] = await Promise.all([
         fetch("/api/billing/portal", { headers: authHeaders() }).then((r) => r.json()),
         fetch("/api/billing/plans", { headers: authHeaders() }).then((r) => r.json()),
-        fetch("/api/billing/token-packages", { headers: authHeaders() }).then((r) => r.json()),
         fetch("/api/billing/usage", { headers: authHeaders() }).then((r) => r.json()).catch(() => null),
       ]);
       setData(p);
       setPlans(Array.isArray(pl) ? pl : []);
-      setTokenPacks(Array.isArray(tp) ? tp : []);
       setConsumo(uso && !uso.error ? uso : null);
     } catch {
       toast({ title: "Erro ao carregar assinatura", variant: "destructive" });
@@ -73,34 +72,18 @@ export default function Assinatura() {
   // Retorno do checkout de recarga (?recarga=sucesso|cancelada).
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const recarga = params.get("recarga");
-    if (recarga === "sucesso") {
-      toast({ title: "Recarga concluída!", description: "Seus tokens extras serão creditados em instantes." });
-    } else if (recarga === "cancelada") {
+    const retorno = params.get("recarga");
+    if (retorno === "sucesso") {
+      toast({ title: "Recarga concluída!", description: "Seu saldo será creditado em instantes." });
+    } else if (retorno === "cancelada") {
       toast({ title: "Recarga cancelada", description: "Nenhuma cobrança foi feita." });
     }
-    if (recarga) {
+    if (retorno) {
       params.delete("recarga");
       const qs = params.toString();
       window.history.replaceState({}, "", window.location.pathname + (qs ? `?${qs}` : ""));
     }
   }, []);
-
-  const buyTokens = async (packId: string) => {
-    setBuyingId(packId);
-    try {
-      const res = await fetch(`/api/billing/token-packages/${packId}/checkout`, {
-        method: "POST",
-        headers: authHeaders(),
-      });
-      const d = await res.json();
-      if (res.ok && d.checkoutUrl) window.location.href = d.checkoutUrl;
-      else toast({ title: "Erro ao iniciar recarga", description: d.error, variant: "destructive" });
-    } catch {
-      toast({ title: "Erro ao iniciar recarga", variant: "destructive" });
-    }
-    setBuyingId(null);
-  };
 
   const t = data?.tenant;
   const plan = data?.plan;
@@ -275,10 +258,16 @@ export default function Assinatura() {
                       <p className="text-sm font-semibold">{al.titulo}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">{al.texto}</p>
                     </div>
+                    {/* O alerta existe para virar ação: abre a recarga do
+                        saldo que está acabando, sem obrigar a procurar o card. */}
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => document.getElementById(al.acao === "recarga-tokens" ? "recarga-tokens" : "recarga-disparo")?.scrollIntoView({ behavior: "smooth" })}
+                      onClick={() => {
+                        if (al.acao === "recarga-tokens") setRecarga("TOKENS");
+                        else if (al.acao === "recarga-disparo") setRecarga("DISPARO");
+                        else document.getElementById("planos-disponiveis")?.scrollIntoView({ behavior: "smooth" });
+                      }}
                     >
                       {al.acao === "upgrade" ? "Ver planos" : "Recarregar"}
                     </Button>
@@ -299,11 +288,16 @@ export default function Assinatura() {
                       Use na categoria que quiser — cada mensagem é debitada pela tarifa dela.
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-[11px] uppercase text-muted-foreground">Saldo</p>
-                    <p className={`text-2xl font-bold tabular-nums ${consumo.disparo.baixo ? "text-amber-600" : ""}`}>
-                      {brl(consumo.disparo.saldo)}
-                    </p>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="text-[11px] uppercase text-muted-foreground">Saldo</p>
+                      <p className={`text-2xl font-bold tabular-nums ${consumo.disparo.baixo ? "text-amber-600" : ""}`}>
+                        {brl(consumo.disparo.saldo)}
+                      </p>
+                    </div>
+                    <Button onClick={() => setRecarga("DISPARO")} className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white gap-2">
+                      <Coins className="w-4 h-4" /> Fazer recarga
+                    </Button>
                   </div>
                 </div>
 
@@ -365,16 +359,16 @@ export default function Assinatura() {
               </Card>
             )}
 
-            {/* Recarga de tokens */}
+            {/* Recarga de IA */}
             <Card className="p-6 rounded-2xl" id="recarga-tokens">
-              <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
+              <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <h3 className="text-sm font-semibold flex items-center gap-2"><Coins className="w-4 h-4 text-primary" /> Recarga</h3>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Estourou a franquia do plano? Compre pacotes avulsos — o saldo extra não expira e é consumido só depois da franquia mensal.
+                  <h3 className="text-sm font-semibold flex items-center gap-2"><Cpu className="w-4 h-4 text-primary" /> Créditos de IA</h3>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-md">
+                    Estourou a franquia do plano? Recarregue o quanto quiser — o saldo extra não expira e só é consumido depois da franquia mensal.
                   </p>
                 </div>
-                <div className="flex gap-6">
+                <div className="flex items-center gap-6">
                   <div className="text-right">
                     <p className="text-[11px] uppercase text-muted-foreground">Custo de IA no ciclo</p>
                     <p className="text-lg font-bold tabular-nums">{brl(t?.tokenCostBRL || 0)}</p>
@@ -383,41 +377,15 @@ export default function Assinatura() {
                     <p className="text-[11px] uppercase text-muted-foreground">Saldo de recarga</p>
                     <p className="text-lg font-bold tabular-nums text-emerald-600">{(t?.extraTokens || 0).toLocaleString("pt-BR")} <span className="text-xs font-medium text-muted-foreground">tokens</span></p>
                   </div>
+                  <Button onClick={() => setRecarga("TOKENS")} className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white gap-2">
+                    <Coins className="w-4 h-4" /> Fazer recarga
+                  </Button>
                 </div>
               </div>
-
-              {tokenPacks.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhum pacote de recarga disponível no momento.</p>
-              ) : (
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {tokenPacks.map((pk) => (
-                    <Card key={pk.id} className="p-5 rounded-2xl flex flex-col border-border">
-                      <div className="flex items-center gap-2 text-primary">
-                        <Zap className="w-4 h-4" />
-                        <span className="font-semibold text-foreground">{pk.name}</span>
-                      </div>
-                      <p className="text-2xl font-bold tracking-tight mt-2">{brl(pk.price)}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {String(pk.tipo).toUpperCase() === "DISPARO"
-                          ? `${brl(pk.creditsBrl)} de crédito de disparo`
-                          : `${Number(pk.tokens).toLocaleString("pt-BR")} tokens`}
-                      </p>
-                      <Button
-                        onClick={() => buyTokens(pk.id)}
-                        disabled={buyingId === pk.id}
-                        className="mt-4 w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white gap-2"
-                      >
-                        {buyingId === pk.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Coins className="w-4 h-4" />}
-                        Comprar
-                      </Button>
-                    </Card>
-                  ))}
-                </div>
-              )}
             </Card>
 
             {/* Trocar de plano */}
-            <div>
+            <div id="planos-disponiveis">
               <h3 className="text-sm font-semibold mb-3 px-1">Planos disponíveis</h3>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {plans.map((p) => {
@@ -483,6 +451,13 @@ export default function Assinatura() {
             </Card>
           </div>
         )}
+
+        <RechargeDialog
+          open={recarga !== null}
+          onOpenChange={(v) => !v && setRecarga(null)}
+          tipo={recarga || "DISPARO"}
+          onErro={(msg) => toast({ title: "Erro ao iniciar recarga", description: msg, variant: "destructive" })}
+        />
       </div>
     </DashboardLayout>
   );

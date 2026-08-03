@@ -122,6 +122,49 @@ export const buyTokenPackage = async (req, res) => {
   }
 };
 
+// POST /api/billing/recharge/quote
+// Cotação de recarga com valor livre. A tela chama a cada tecla digitada, por
+// isso responde 200 mesmo quando o valor ainda é inválido: o motivo é para
+// mostrar, não para tratar como erro.
+export const quoteRecharge = async (req, res) => {
+  const tenantId = req.tenantId;
+  if (!tenantId) return res.status(401).json({ error: "Tenant ID ausente" });
+  try {
+    const { cotar } = await import("../services/RechargeService.js");
+    res.json(await cotar(tenantId, req.body || {}));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// POST /api/billing/recharge/checkout
+// Checkout da recarga. Cota de novo aqui: o preço que veio do navegador é
+// palpite do cliente, não contrato — quem define quanto se cobra é o servidor.
+export const createRechargeCheckout = async (req, res) => {
+  const tenantId = req.tenantId;
+  if (!tenantId) return res.status(401).json({ error: "Tenant ID ausente" });
+
+  try {
+    const { cotar } = await import("../services/RechargeService.js");
+    const cotacao = await cotar(tenantId, req.body || {});
+    if (!cotacao.ok) return res.status(400).json({ error: cotacao.motivo });
+
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    if (!tenant) return res.status(404).json({ error: "Tenant não localizado" });
+
+    const frontend = process.env.FRONTEND_URL || "http://localhost:8080";
+    const { checkoutUrl, gatewayId } = await PaymentService.createRechargeCheckout(
+      tenant,
+      cotacao,
+      frontend
+    );
+    res.json({ success: true, checkoutUrl, gatewayId, cotacao });
+  } catch (error) {
+    console.error("[Billing] Erro ao iniciar recarga:", error.message);
+    res.status(500).json({ error: error.message || "Não foi possível iniciar a recarga." });
+  }
+};
+
 // POST /api/billing/checkout/:invoiceId
 // Inicia o checkout HOSPEDADO do gateway e devolve a URL. O backend nunca
 // recebe dados de cartão; a fatura só vira PAID pelo webhook do gateway.
