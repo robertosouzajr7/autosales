@@ -188,20 +188,16 @@ class PaymentService {
       ? new Date(stripeInvoice.period_end * 1000)
       : tenant.nextBillingDate;
 
+    // O ciclo novo zera tudo que é medido por mês. A lista de contadores mora
+    // no UsageService: aqui só se diz "virou o mês".
+    const { reiniciarCiclo } = await import("./UsageService.js");
+    await reiniciarCiclo(tenant.id);
+
     await prisma.tenant.update({
       where: { id: tenant.id },
       data: {
         subscriptionStatus: "ACTIVE",
         nextBillingDate: periodEnd,
-        usedTokens: 0,
-        usedMessages: 0,
-        // O ciclo novo zera tudo que é medido por mês: conversas, disparos,
-        // mensagens de serviço e o custo acumulado.
-        usedConversations: 0,
-        usedServiceMessages: 0,
-        usedCampaignMessages: 0,
-        usedCostBrl: 0,
-        lastUsageReset: new Date(),
       },
     });
 
@@ -331,19 +327,15 @@ class PaymentService {
     const nextDate = new Date();
     nextDate.setDate(nextDate.getDate() + 30);
 
+    // Reinicia consumo no início do ciclo pago.
+    const { reiniciarCiclo } = await import("./UsageService.js");
+    await reiniciarCiclo(invoice.tenantId);
+
     const tenant = await prisma.tenant.update({
       where: { id: invoice.tenantId },
       data: {
         subscriptionStatus: "ACTIVE",
         nextBillingDate: nextDate,
-        // Reinicia consumo no início do ciclo pago
-        usedTokens: 0,
-        usedMessages: 0,
-        usedConversations: 0,
-        usedServiceMessages: 0,
-        usedCampaignMessages: 0,
-        usedCostBrl: 0,
-        lastUsageReset: new Date()
       },
       include: { plan: true }
     });

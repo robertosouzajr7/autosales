@@ -206,6 +206,12 @@ export const upgradePlan = async (req, res) => {
       });
     }
 
+    // Fecha o ciclo ANTES de trocar o plano: o que passou da franquia sai da
+    // recarga, e a franquia a comparar é a do plano que estava valendo — não a
+    // do plano novo, que o cliente ainda não usou.
+    const { reiniciarCiclo } = await import("../services/UsageService.js");
+    await reiniciarCiclo(tenantId);
+
     // Immediately change the plan
     const updatedTenant = await prisma.tenant.update({
       where: { id: tenantId },
@@ -213,14 +219,6 @@ export const upgradePlan = async (req, res) => {
         planId: plan.id,
         subscriptionStatus: "ACTIVE",
         nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-        // Reset usage stats for the new billing cycle
-        usedTokens: 0,
-        usedMessages: 0,
-        usedConversations: 0,
-        usedServiceMessages: 0,
-        usedCampaignMessages: 0,
-        usedCostBrl: 0,
-        lastUsageReset: new Date()
       }
     });
 

@@ -211,7 +211,17 @@ export async function resumoConsumo(tenantId) {
   };
 }
 
-/** Zera os contadores do ciclo. Chamado na renovação da assinatura. */
+/**
+ * Zera os contadores do ciclo. É o ÚNICO lugar que vira o mês de consumo —
+ * quem renova assinatura (webhook do gateway, upgrade de plano) chama daqui
+ * em vez de listar campos na mão. Cada lista inline era uma chance de
+ * esquecer um contador novo, e foi exatamente o que aconteceu: o crédito de
+ * disparo nasceu depois e nenhuma das listas o zerava, então a franquia nunca
+ * renovava para quem pagava a mensalidade.
+ *
+ * Em upgrade de plano, chame ANTES de trocar o planId: o fechamento compara o
+ * gasto com a franquia do plano que estava valendo.
+ */
 export async function reiniciarCiclo(tenantId) {
   // Antes de zerar o gasto: o que passou da franquia sai da recarga. Se isto
   // rodar depois, a recarga já consumida volta de graça.
@@ -226,6 +236,11 @@ export async function reiniciarCiclo(tenantId) {
       // Zera o gasto do ciclo, não a recarga: crédito comprado não expira.
       usedCampaignCreditsBrl: 0,
       usedCostBrl: 0,
+      // Tokens de IA não precisam de fechamento: o consumo já debita
+      // extraTokens assim que passa da franquia (AutomationEngine._chargeTokens).
+      // Descontar de novo aqui cobraria a mesma recarga duas vezes.
+      usedTokens: 0,
+      usedMessages: 0,
       alertasEnviados: null,
       lastUsageReset: new Date(),
     },

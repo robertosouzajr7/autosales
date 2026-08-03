@@ -145,7 +145,9 @@ export async function tokensHeadroom(tenantId) {
   if (tenant.plan.enableTokens === false) {
     return { ok: false, max: 0, used: tenant.usedTokens || 0, remaining: 0 };
   }
-  const max = Number(tenant.plan.maxTokens || 0);
+  // A recarga entra no limite: quem comprou tokens extras não pode ser
+  // barrado por ter estourado só a franquia do plano.
+  const max = Number(tenant.plan.maxTokens || 0) + Number(tenant.extraTokens || 0);
   const used = Number(tenant.usedTokens || 0);
   return { ok: used < max, max, used, remaining: Math.max(0, max - used) };
 }

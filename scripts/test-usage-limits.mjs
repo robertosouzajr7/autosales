@@ -199,6 +199,23 @@ async function main() {
   const sobraram = await prisma.usageEvent.count({ where: { tenantId: c.tenant.id } });
   ok(sobraram >= 2, `o histórico do razão NÃO é apagado (${sobraram} evento(s))`);
 
+  // A virada de verdade não acontece por chamada direta: acontece quando o
+  // gateway confirma a mensalidade. Zerar contador por lista escrita à mão em
+  // cada controller já deixou o crédito de disparo de fora uma vez — este
+  // teste existe para o caminho real ser o testado.
+  const { default: PaymentService } = await import("../src/api/services/PaymentService.js");
+  await prisma.tenant.update({ where: { id: c.tenant.id }, data: { usedTokens: 4000, usedConversations: 7 } });
+  await debitar(c.tenant.id, 60);
+  const fatura = await prisma.invoice.create({
+    data: { tenantId: c.tenant.id, amount: plan.priceMonthly, status: "PENDING", dueDate: new Date() },
+  });
+  await PaymentService.markInvoicePaid(fatura.id, `teste-${Date.now()}`);
+  const pago = await prisma.tenant.findUnique({ where: { id: c.tenant.id } });
+  ok(pago.usedTokens === 0 && pago.usedConversations === 0, "pagar a mensalidade zera os contadores do ciclo");
+  ok(perto(pago.usedCampaignCreditsBrl, 0), `e zera o gasto de disparo (R$ ${pago.usedCampaignCreditsBrl})`);
+  ok(perto((await saldoDisparo(c.tenant.id)).recarga, 20), "sem tirar da recarga o que coube na franquia");
+  ok(pago.subscriptionStatus === "ACTIVE", "e deixa a assinatura ativa");
+
   // ── 8. O SaaS enxerga custo e margem ────────────────────────
   console.log("\n8. Margem por conta no painel do SaaS");
   const suporte = await prisma.user.create({
