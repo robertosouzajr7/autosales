@@ -39,7 +39,7 @@ async function seed(maxConversations) {
   const plan = await prisma.plan.create({
     data: {
       name: `Uso ${Date.now()}-${maxConversations}`, priceMonthly: 300, priceYearly: 3000,
-      maxConversations, maxCampaignMessages: 500, campaignCategory: "MARKETING", maxTokens: 100000,
+      maxConversations, campaignCreditsBrl: 500, maxTokens: 100000,
     },
   });
   const tenant = await prisma.tenant.create({
@@ -150,8 +150,8 @@ async function main() {
   const resumo = await resumoConsumo(c.tenant.id);
   ok(resumo.conversas.limite === 100 && resumo.conversas.usado === 1, `conversas ${resumo.conversas.usado}/${resumo.conversas.limite}`);
   ok(resumo.conversas.restante === 99, `restante calculado (${resumo.conversas.restante})`);
-  ok(resumo.disparos.limite === 500, "franquia de disparo vem junto");
-  ok(perto(resumo.precos.disparo, 0.9), `preço do disparo exposto (${resumo.precos.disparo})`);
+  ok(resumo.disparo.total === 500, `saldo de disparo vem junto (${resumo.disparo.total})`);
+  ok(perto(resumo.precos.marketing, 0.9), `preço do disparo exposto (${resumo.precos.marketing})`);
   ok(perto(resumo.custoRealBrl, 30.4), `custo real do ciclo (${resumo.custoRealBrl})`);
 
   // A cota de mensagens foi aposentada: quem limita volume é a conversa.

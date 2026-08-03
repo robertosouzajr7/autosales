@@ -186,7 +186,7 @@ export default function Campaigns() {
     URL.revokeObjectURL(url);
   };
 
-  const semFranquia = quota && quota.limit <= 0;
+  const semFranquia = quota && quota.semDisparo;
 
   // A lista de /api/templates traz cabeçalho, rodapé e botões — o que a
   // prévia precisa para montar o balão inteiro.
@@ -213,7 +213,7 @@ export default function Campaigns() {
       if (p.semTelefone >= p.total) return `Nenhum dos ${p.total} contatos tem telefone cadastrado.`;
       return `Nenhum elegível: ${p.total} contato(s), ${p.semTelefone} sem telefone, ${p.optOut} em opt-out.`;
     }
-    if (!preview.quota?.allowed) return preview.quota?.reason || "Franquia de disparos insuficiente.";
+    if (!preview.quota?.allowed) return preview.quota?.reason || "Crédito de disparo insuficiente.";
     // {{1}} pode ficar em branco (vira o nome do contato); as demais, não.
     const faltando = variables.findIndex((v, i) => i > 0 && !v.trim());
     if (faltando > 0) return `Preencha o valor de {{${faltando + 1}}}.`;
@@ -257,22 +257,47 @@ export default function Campaigns() {
             ) : (
               <>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-slate-500 uppercase">Franquia de disparos do ciclo</span>
-                  <span className="text-sm font-bold text-slate-700">
-                    {quota.used.toLocaleString("pt-BR")} / {quota.limit.toLocaleString("pt-BR")}
+                  <span className="text-xs font-bold text-slate-500 uppercase">Crédito de disparo do ciclo</span>
+                  <span className={`text-sm font-bold ${quota.baixo ? "text-amber-600" : "text-slate-700"}`}>
+                    {brl(quota.saldo)} <span className="font-medium text-slate-400">de {brl(quota.total)}</span>
                   </span>
                 </div>
-                <Progress value={Math.min(100, (quota.used / quota.limit) * 100)} className="h-2" />
-                <p className="text-xs text-slate-400 mt-2">
-                  Restam <strong>{quota.remaining.toLocaleString("pt-BR")}</strong> disparos. Ao esgotar, novos envios
-                  ficam bloqueados até a renovação.
-                  {quota.cobraPorMensagem === false ? (
-                    <> Seu plano dispara por QR Code: <strong>sem cobrança por mensagem</strong> — a
-                    franquia existe para proteger o número de bloqueio por volume.</>
-                  ) : quota.unitPriceBrl > 0 ? (
-                    <> Cada disparo {String(quota.category || "").toLowerCase()} vale <strong>{brl(quota.unitPriceBrl)}</strong>.</>
-                  ) : null}
-                </p>
+                <Progress value={quota.percentualUsado} className="h-2" />
+
+                {/* O saldo em dinheiro só vira decisão com a equivalência ao lado. */}
+                {quota.cobraPorMensagem ? (
+                  <>
+                    <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                      {[["MARKETING", "Marketing"], ["UTILITY", "Utilidade"], ["AUTHENTICATION", "Autenticação"]].map(([k, r]) => (
+                        <div key={k} className="rounded-xl bg-slate-50 py-2">
+                          <p className="text-[10px] uppercase text-slate-400">{r}</p>
+                          <p className="text-base font-bold text-slate-700 tabular-nums">
+                            {(quota.equivale?.[k] ?? 0).toLocaleString("pt-BR")}
+                          </p>
+                          <p className="text-[10px] text-slate-400">{brl(quota.precos?.[k] || 0)} cada</p>
+                        </div>
+                      ))}
+                    </div>
+                    {quota.baixo && (
+                      <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-amber-50 px-3 py-2">
+                        <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                        <span className="flex-1 text-xs text-amber-900">
+                          {quota.esgotado
+                            ? "Crédito esgotado — as campanhas ficam bloqueadas até a renovação ou uma recarga."
+                            : "Resta menos de 20% do crédito. Vale recarregar antes da próxima campanha."}
+                        </span>
+                        <Button size="sm" variant="outline" onClick={() => navigate("/assinatura")} className="h-7 text-xs">
+                          Recarregar
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-xs text-slate-400 mt-2">
+                    Seu plano dispara por QR Code: <strong>sem cobrança por mensagem</strong>. O crédito
+                    não é debitado neste canal.
+                  </p>
+                )}
               </>
             )}
           </CardContent>
@@ -543,6 +568,24 @@ export default function Campaigns() {
                   <span className="text-slate-600 font-bold">Total estimado</span>
                   <span className="font-bold text-[#2563EB]">{brl(preview.estimate.priceBrl)}</span>
                 </div>
+
+                {/* Quanto sobra depois — decidir "mando ou não" exige saber o
+                    que fica no caixa, não só o que sai. */}
+                {preview.quota?.cobraPorMensagem && preview.quota?.total > 0 && (
+                  <div className="flex justify-between text-xs pt-1">
+                    <span className="text-slate-500">Saldo depois deste envio</span>
+                    <span className="font-bold text-slate-700">
+                      {brl(Math.max(0, (preview.quota.saldo || 0) - (preview.estimate.priceBrl || 0)))}
+                      <span className="font-medium text-slate-400"> de {brl(preview.quota.saldo || 0)}</span>
+                    </span>
+                  </div>
+                )}
+                {preview.canSend && preview.quota?.fatiaDoSaldo >= 0.5 && (
+                  <p className="flex items-start gap-1.5 rounded-xl bg-amber-50 px-2.5 py-2 text-xs font-medium text-amber-900">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                    Este envio consome {Math.round(preview.quota.fatiaDoSaldo * 100)}% do seu crédito de disparo.
+                  </p>
+                )}
                 {!preview.canSend && (
                   <p className="text-xs text-amber-800 font-medium flex items-start gap-1.5 pt-1">
                     <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />

@@ -88,7 +88,7 @@ function escolher(planos, precisa) {
       (p.maxConversations === 0 || p.maxConversations >= precisa.conversas) &&
       p.maxUsers >= precisa.colaboradores &&
       p.maxWhatsAppNumbers >= precisa.numeros &&
-      (precisa.disparos === 0 || p.maxCampaignMessages >= precisa.disparos)
+      (precisa.disparos === 0 || p.campaignCreditsBrl >= custoDisparos(precisa.disparos))
   );
 
   if (atendem.length) {
@@ -98,6 +98,17 @@ function escolher(planos, precisa) {
 
   const maior = [...planos].sort((a, b) => b.priceMonthly - a.priceMonthly)[0];
   return { plano: maior || null, cobreTudo: false };
+}
+
+/**
+ * Quanto custaria, em crédito, o volume de disparo que o cliente declarou.
+ * Usa a tarifa de UTILIDADE: é a categoria da maioria dos disparos de quem
+ * está começando (lembrete, confirmação), e superestimar por marketing
+ * empurraria todo mundo para o plano mais caro sem necessidade.
+ */
+function custoDisparos(quantidade) {
+  const TARIFA_UTILIDADE_BRL = 0.0748; // US$ 0,0068 × 5,5 × margem 2
+  return Math.ceil(quantidade * TARIFA_UTILIDADE_BRL);
 }
 
 /** Explica em uma frase por que este plano, com os números do cliente. */
@@ -114,8 +125,8 @@ function justificar(plano, precisa, cobreTudo) {
   );
   partes.push(`${plano.maxUsers} pessoa(s)`);
   partes.push(`${plano.maxWhatsAppNumbers} número(s)`);
-  if (precisa.disparos > 0 && plano.maxCampaignMessages > 0) {
-    partes.push(`${plano.maxCampaignMessages.toLocaleString("pt-BR")} disparos/mês`);
+  if (precisa.disparos > 0 && plano.campaignCreditsBrl > 0) {
+    partes.push(`R$ ${plano.campaignCreditsBrl.toFixed(0)} de crédito de disparo/mês`);
   }
   return `Cobre ${partes.join(", ")} — com folga para o que você respondeu.`;
 }
@@ -132,7 +143,7 @@ function apresentar(plano) {
     maxConversations: plano.maxConversations,
     maxUsers: plano.maxUsers,
     maxWhatsAppNumbers: plano.maxWhatsAppNumbers,
-    maxCampaignMessages: plano.maxCampaignMessages,
+    campaignCreditsBrl: plano.campaignCreditsBrl,
     maxTokens: plano.maxTokens,
     enableCalendar: plano.enableCalendar,
     enableAutomations: plano.enableAutomations,

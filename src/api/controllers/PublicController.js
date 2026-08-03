@@ -48,7 +48,8 @@ export const recommendPlan = async (req, res) => {
  */
 export const getEntryPlans = async (_req, res) => {
   try {
-    const { publicar } = await import("../services/PlanFeatures.js");
+    const { publicar, precosVigentes } = await import("../services/PlanFeatures.js");
+    const precos = await precosVigentes();
     const planos = await prisma.plan.findMany({
       where: { active: true, priceMonthly: { gt: 0 } },
       orderBy: { priceMonthly: "asc" },
@@ -56,7 +57,7 @@ export const getEntryPlans = async (_req, res) => {
     const modo = (p) => String(p.whatsappMode || "BOTH").toUpperCase();
     const oficial = planos.find((p) => ["OFFICIAL", "BOTH"].includes(modo(p))) || null;
     const qrcode = planos.find((p) => ["BAILEYS", "BOTH"].includes(modo(p))) || null;
-    res.json({ oficial: publicar(oficial), qrcode: publicar(qrcode), total: planos.length });
+    res.json({ oficial: publicar(oficial, precos), qrcode: publicar(qrcode, precos), total: planos.length });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -72,7 +73,8 @@ export const getEntryPlans = async (_req, res) => {
  */
 export const getAllPlans = async (_req, res) => {
   try {
-    const { publicar } = await import("../services/PlanFeatures.js");
+    const { publicar, precosVigentes } = await import("../services/PlanFeatures.js");
+    const precos = await precosVigentes();
     const linhas = await prisma.plan.findMany({
       where: { active: true, priceMonthly: { gt: 0 } },
       orderBy: { priceMonthly: "asc" },
@@ -83,7 +85,7 @@ export const getAllPlans = async (_req, res) => {
     // Só o que a vitrine precisa atravessa: os custos unitários do plano
     // (sdrUnitCost, tokenUnitCost, messageUnitCost) são a margem da operação
     // e não têm por que sair numa rota pública.
-    const planos = linhas.map(publicar);
+    const planos = linhas.map((p) => publicar(p, precos));
     const modo = (p) => String(p.whatsappMode || "BOTH").toUpperCase();
     res.json({
       planos,

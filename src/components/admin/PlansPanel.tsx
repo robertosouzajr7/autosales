@@ -24,8 +24,7 @@ const DEFAULT_PLAN = {
   maxTokens: 100000,
   whatsappMode: "BOTH", // OFFICIAL | BAILEYS | BOTH
   maxConversations: 0, // 0 = sem limite de conversas
-  maxCampaignMessages: 0, // 0 = plano sem disparo em massa
-  campaignCategory: "MARKETING", // categoria de referência para custear a franquia
+  campaignCreditsBrl: 0, // crédito de disparo (BRL) incluído; 0 = sem disparo
   enableSdr: true,
   enableTokens: true,
   enableCalendar: true,
@@ -84,10 +83,13 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
   const custoNumero = Number(pricing?.baileysNumberCost || 0);
   const realBaileysCost = soQrCode ? custoNumero * Math.max(1, Number(form.maxWhatsAppNumbers) || 1) : 0;
 
-  const unidadeDisparo = soQrCode ? null : pricing?.waUnit?.[form.campaignCategory || "MARKETING"];
-  const qtdDisparos = Number(form.maxCampaignMessages) || 0;
-  const realCampaignCost = unidadeDisparo ? unidadeDisparo.unitCostBrl * qtdDisparos : 0;
-  const campaignSalePrice = unidadeDisparo ? unidadeDisparo.unitPriceBrl * qtdDisparos : 0;
+  // Crédito de disparo é preço de VENDA. Como preço = custo × margem, o seu
+  // custo é o crédito dividido pela margem — não importa em que categoria o
+  // cliente vai gastar, porque cada mensagem é debitada pela tarifa dela.
+  const creditoDisparo = soQrCode ? 0 : Number(form.campaignCreditsBrl) || 0;
+  const margemWa = pricing?.waMarkup || 2;
+  const realCampaignCost = creditoDisparo / margemWa;
+  const campaignSalePrice = creditoDisparo;
 
   const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -101,8 +103,7 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
       maxKnowledgeBaseChars: p.maxKnowledgeBaseChars ?? 50000,
       whatsappMode: p.whatsappMode || "BOTH",
       maxConversations: p.maxConversations ?? 0,
-      maxCampaignMessages: p.maxCampaignMessages ?? 0,
-      campaignCategory: p.campaignCategory || "MARKETING",
+      campaignCreditsBrl: p.campaignCreditsBrl ?? 0,
       enableCalendar: p.enableCalendar ?? true,
       enableAutomations: p.enableAutomations ?? true,
       enableWebhooks: p.enableWebhooks ?? false,
@@ -127,8 +128,7 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
       maxTokens: Number(form.maxTokens),
       whatsappMode: form.whatsappMode || "BOTH",
       maxConversations: Number(form.maxConversations),
-      maxCampaignMessages: Number(form.maxCampaignMessages),
-      campaignCategory: form.campaignCategory || "MARKETING",
+      campaignCreditsBrl: Number(form.campaignCreditsBrl) || 0,
       enableSdr: !!form.enableSdr,
       enableTokens: !!form.enableTokens,
       enableCalendar: !!form.enableCalendar,
@@ -221,16 +221,16 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
                   : "conversas ilimitadas"}
               </li>
               <li>
-                {(p.maxCampaignMessages ?? 0) > 0
-                  ? `${(p.maxCampaignMessages).toLocaleString("pt-BR")} disparos/mês · ${String(p.campaignCategory || "MARKETING").toLowerCase()}`
+                {(p.campaignCreditsBrl ?? 0) > 0
+                  ? `${brl(p.campaignCreditsBrl)} de crédito de disparo/mês`
                   : "sem disparo em massa"}
               </li>
               {/* Margem no card: dá para varrer a lista e achar plano no vermelho. */}
               {pricing && (() => {
-                const unidade = pricing.waUnit?.[p.campaignCategory || "MARKETING"];
+                const margem = pricing.waMarkup || 2;
                 const custo =
                   ((p.maxTokens || 0) / 1_000_000) * pricing.activeModelCostBRLPer1M +
-                  (unidade ? unidade.unitCostBrl * (p.maxCampaignMessages || 0) : 0);
+                  ((p.campaignCreditsBrl || 0) / margem);
                 const preco = Number(p.priceMonthly) || 0;
                 const negativo = preco > 0 && preco < custo;
                 return (
@@ -308,7 +308,6 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
                   ["maxLeads", "Contatos"],
                   ["maxUsers", "Usuários"],
                   ["maxWhatsAppNumbers", "Nºs WhatsApp"],
-                  ["maxCampaignMessages", "Disparos em massa/mês"],
                 ].map(([key, label]) => (
                   <div key={key} className="space-y-1">
                     <Label className="text-xs text-muted-foreground">{label}</Label>
@@ -348,29 +347,28 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
                     Ao esgotar, o agente para de abrir conversa nova e o contato vai para a fila humana.
                   </p>
                 </div>
-                <p className="col-span-2 text-[11px] text-muted-foreground -mt-1">
-                  Disparos em massa: <strong>0</strong> desliga o recurso no plano.
-                </p>
-                {qtdDisparos > 0 && (
-                  <div className="space-y-1 col-span-2">
-                    <Label className="text-xs text-muted-foreground">Categoria da franquia de disparo</Label>
-                    <Select
-                      value={form.campaignCategory || "MARKETING"}
-                      onValueChange={(v) => setForm({ ...form, campaignCategory: v })}
-                    >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="MARKETING">Marketing — promoções (mais cara)</SelectItem>
-                        <SelectItem value="UTILITY">Utilidade — lembretes e confirmações</SelectItem>
-                        <SelectItem value="AUTHENTICATION">Autenticação — códigos</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-[11px] text-muted-foreground">
-                      A Meta cobra tarifas diferentes por categoria. Escolha a que o plano promete —
-                      é ela que define o custo da franquia.
-                    </p>
-                  </div>
-                )}
+                <div className="space-y-1 col-span-2">
+                  <Label className="text-xs text-muted-foreground">Crédito de disparo incluído (R$/mês)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={form.campaignCreditsBrl}
+                    onChange={(e) => setForm({ ...form, campaignCreditsBrl: e.target.value })}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    <strong>0</strong> desliga o disparo em massa no plano. O cliente gasta esse
+                    crédito na categoria que quiser — cada mensagem é debitada pela tarifa dela.
+                    {creditoDisparo > 0 && pricing?.waUnit && (
+                      <>
+                        {" "}Dá para cerca de{" "}
+                        <strong>{Math.floor(creditoDisparo / (pricing.waUnit.MARKETING?.unitPriceBrl || 1)).toLocaleString("pt-BR")}</strong>{" "}
+                        mensagens de marketing ou{" "}
+                        <strong>{Math.floor(creditoDisparo / (pricing.waUnit.UTILITY?.unitPriceBrl || 1)).toLocaleString("pt-BR")}</strong>{" "}
+                        de utilidade.
+                      </>
+                    )}
+                  </p>
+                </div>
                 <div className="space-y-1 col-span-2">
                   <Label className="text-xs text-muted-foreground">Treino do agente (caracteres máx.)</Label>
                   <Input type="number" value={form.maxKnowledgeBaseChars} onChange={(e) => setForm({ ...form, maxKnowledgeBaseChars: e.target.value })} />
@@ -416,10 +414,10 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
                         <span className="font-semibold text-foreground tabular-nums">{brl(realConversationCost)}</span>
                       </div>
                     )}
-                    {qtdDisparos > 0 && (
+                    {creditoDisparo > 0 && (
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">
-                          Custo real dos disparos ({qtdDisparos.toLocaleString("pt-BR")} {String(form.campaignCategory || "marketing").toLowerCase()})
+                          Custo do crédito de disparo ({brl(creditoDisparo)} ÷ margem {margemWa}x)
                         </span>
                         <span className="font-semibold text-foreground tabular-nums">{brl(realCampaignCost)}</span>
                       </div>
@@ -433,7 +431,7 @@ export function PlansPanel({ plans, reload }: { plans: any[]; reload: () => void
                         Preço sugerido ({[
                           `IA ${pricing.tokenMarkup || 5}x`,
                           realConversationCost > 0 && `conversa ${pricing.waMarkup || 2}x`,
-                          qtdDisparos > 0 && `disparo ${pricing.waMarkup || 2}x`,
+                          creditoDisparo > 0 && `disparo ${pricing.waMarkup || 2}x`,
                           realBaileysCost > 0 && `número ${pricing.waMarkup || 2}x`,
                         ].filter(Boolean).join(" · ")})
                       </span>

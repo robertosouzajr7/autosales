@@ -370,9 +370,11 @@ class PaymentService {
   }
 
   /**
-   * Checkout hospedado (pagamento único) para COMPRAR um pacote de tokens.
-   * Os metadados carregam tenantId, packageId e a quantidade de tokens, que
-   * o webhook usa para creditar o saldo (extraTokens). Requer Stripe.
+   * Checkout hospedado (pagamento único) para COMPRAR uma recarga.
+   *
+   * Serve aos dois saldos que o cliente pode esgotar — tokens de IA e crédito
+   * de disparo. Os metadados carregam o que o webhook precisa para creditar
+   * no lugar certo. Requer Stripe.
    */
   async createTokenPackageCheckout(tenant, pack, frontend) {
     const stripe = await this.getStripe();
@@ -385,16 +387,50 @@ class PaymentService {
       line_items: [{
         price_data: {
           currency: "brl",
-          product_data: { name: `Recarga de tokens — ${pack.name} (${pack.tokens.toLocaleString("pt-BR")} tokens)` },
+          product_data: { name: `Recarga — ${pack.name} (${descricaoPacote(pack)})` },
           unit_amount: Math.round(Number(pack.price) * 100),
         },
         quantity: 1,
       }],
-      metadata: { kind: "token_pack", tenantId: tenant.id, packageId: pack.id, tokens: String(pack.tokens) },
+      metadata: {
+        kind: "token_pack",
+        tenantId: tenant.id,
+        packageId: pack.id,
+        tipo: eDisparo(pack) ? "DISPARO" : "TOKENS",
+        tokens: String(pack.tokens || 0),
+        creditsBrl: String(pack.creditsBrl || 0),
+      },
       success_url: `${frontend}/assinatura?recarga=sucesso`,
       cancel_url: `${frontend}/assinatura?recarga=cancelada`,
     });
     return { checkoutUrl: session.url, gatewayId: session.id };
+  }
+
+  /**
+   * Credita uma recarga de CRÉDITO DE DISPARO (BRL). Idempotente pela mesma
+   * chave do gateway, como a de tokens — webhook do Stripe repete.
+   */
+  async creditCampaignCredits(tenantId, creditsBrl, gatewayId = null) {
+    const valor = Number(creditsBrl);
+    if (!tenantId || !Number.isFinite(valor) || valor <= 0) return { credited: false };
+
+    if (gatewayId) {
+      const already = await prisma.auditLog.findFirst({
+        where: { tenantId, action: "CAMPAIGN_CREDIT_RECHARGE", entityId: gatewayId },
+      });
+      if (already) return { credited: false, alreadyCredited: true };
+    }
+
+    const { creditar } = await import("./CampaignCreditService.js");
+    await creditar(tenantId, valor);
+    await prisma.auditLog.create({
+      data: {
+        tenantId, action: "CAMPAIGN_CREDIT_RECHARGE", entity: "Tenant",
+        entityId: gatewayId || "manual",
+        metadata: JSON.stringify({ creditsBrl: valor }),
+      },
+    }).catch(() => {});
+    return { credited: true, creditsBrl: valor };
   }
 
   /**
@@ -424,6 +460,17 @@ class PaymentService {
     }).catch(() => {});
     return { credited: true, tokens: amount };
   }
+}
+
+/** Pacote de recarga de disparo? O tipo manda; creditsBrl é o reforço. */
+function eDisparo(pack) {
+  return String(pack?.tipo || "TOKENS").toUpperCase() === "DISPARO" || Number(pack?.creditsBrl) > 0;
+}
+
+function descricaoPacote(pack) {
+  return eDisparo(pack)
+    ? `R$ ${Number(pack.creditsBrl || 0).toFixed(2)} de crédito de disparo`
+    : `${Number(pack.tokens || 0).toLocaleString("pt-BR")} tokens`;
 }
 
 export default new PaymentService();

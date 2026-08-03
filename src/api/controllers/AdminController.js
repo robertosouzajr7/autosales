@@ -204,11 +204,6 @@ function normalizarPlano(body) {
     if (!MODOS_WHATSAPP.includes(m)) delete data.whatsappMode;
     else data.whatsappMode = m;
   }
-  if (data.campaignCategory !== undefined) {
-    const cat = String(data.campaignCategory).toUpperCase();
-    if (!CATEGORIAS_DISPARO.includes(cat)) delete data.campaignCategory;
-    else data.campaignCategory = cat;
-  }
   return data;
 }
 
@@ -588,16 +583,33 @@ export const getTokenPackages = async (_req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 };
 
+const TIPOS_PACOTE = ["TOKENS", "DISPARO"];
+
 export const createTokenPackage = async (req, res) => {
   try {
-    const { name, tokens, price, active } = req.body;
-    if (!name || !Number.isFinite(parseInt(tokens)) || !Number.isFinite(parseFloat(price))) {
-      return res.status(400).json({ error: "Nome, tokens e preço são obrigatórios." });
+    const { name, tokens, creditsBrl, price, active } = req.body;
+    const tipo = TIPOS_PACOTE.includes(String(req.body?.tipo).toUpperCase())
+      ? String(req.body.tipo).toUpperCase()
+      : "TOKENS";
+    if (!name || !Number.isFinite(parseFloat(price))) {
+      return res.status(400).json({ error: "Nome e preço são obrigatórios." });
     }
+    // Pacote que não concede nada é pacote que o cliente compra e não recebe.
+    const qtdTokens = parseInt(tokens) || 0;
+    const qtdCredito = parseFloat(creditsBrl) || 0;
+    if (tipo === "TOKENS" && qtdTokens <= 0) {
+      return res.status(400).json({ error: "Informe quantos tokens o pacote concede." });
+    }
+    if (tipo === "DISPARO" && qtdCredito <= 0) {
+      return res.status(400).json({ error: "Informe quanto de crédito de disparo o pacote concede." });
+    }
+
     const pack = await prisma.tokenPackage.create({
       data: {
         name: String(name).trim(),
-        tokens: parseInt(tokens),
+        tipo,
+        tokens: tipo === "TOKENS" ? qtdTokens : 0,
+        creditsBrl: tipo === "DISPARO" ? qtdCredito : 0,
         price: parseFloat(price),
         active: active !== false,
       },
@@ -609,10 +621,14 @@ export const createTokenPackage = async (req, res) => {
 export const updateTokenPackage = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, tokens, price, active } = req.body;
+    const { name, tokens, creditsBrl, price, active } = req.body;
     const data = {};
     if (typeof name === "string" && name.trim()) data.name = name.trim();
+    if (TIPOS_PACOTE.includes(String(req.body?.tipo).toUpperCase())) {
+      data.tipo = String(req.body.tipo).toUpperCase();
+    }
     if (Number.isFinite(parseInt(tokens))) data.tokens = parseInt(tokens);
+    if (Number.isFinite(parseFloat(creditsBrl))) data.creditsBrl = parseFloat(creditsBrl);
     if (Number.isFinite(parseFloat(price))) data.price = parseFloat(price);
     if (typeof active === "boolean") data.active = active;
     const pack = await prisma.tokenPackage.update({ where: { id }, data });
@@ -644,7 +660,7 @@ export const getReports = async (_req, res) => {
           plan: {
             select: {
               name: true, priceMonthly: true, maxTokens: true,
-              maxConversations: true, maxCampaignMessages: true,
+              maxConversations: true, campaignCreditsBrl: true,
             },
           },
         },
@@ -717,7 +733,7 @@ export const getReports = async (_req, res) => {
         usedConversations: t.usedConversations || 0,
         planConversations: t.plan?.maxConversations || 0,
         usedCampaignMessages: t.usedCampaignMessages || 0,
-        planCampaignMessages: t.plan?.maxCampaignMessages || 0,
+        planCampaignCreditsBrl: t.plan?.campaignCreditsBrl || 0,
         usedServiceMessages: t.usedServiceMessages || 0,
         // Custo total = IA (calculado dos tokens) + o que foi medido em
         // disparo e serviço. Sem somar os dois, a margem por conta mentia.

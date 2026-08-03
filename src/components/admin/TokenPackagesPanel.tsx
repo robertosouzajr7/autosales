@@ -13,7 +13,9 @@ import { Plus, Pencil, Trash2, Loader2, Coins } from "lucide-react";
 const DEFAULT_PACK = {
   id: null as string | null,
   name: "",
+  tipo: "TOKENS", // TOKENS | DISPARO
   tokens: 100000,
+  creditsBrl: 50,
   price: 49.9,
   active: true,
 };
@@ -57,15 +59,23 @@ export function TokenPackagesPanel() {
   };
   const openEdit = (p: any) => { setForm({ ...DEFAULT_PACK, ...p }); setOpen(true); };
 
+  const eDisparo = String(form.tipo).toUpperCase() === "DISPARO";
+
   const save = async () => {
     if (!form.name) return toast({ title: "Dê um nome ao pacote", variant: "destructive" });
-    if (!Number(form.tokens) || !Number(form.price)) {
-      return toast({ title: "Informe tokens e preço válidos", variant: "destructive" });
+    if (!Number(form.price)) return toast({ title: "Informe um preço válido", variant: "destructive" });
+    if (eDisparo && !Number(form.creditsBrl)) {
+      return toast({ title: "Informe quanto de crédito o pacote concede", variant: "destructive" });
+    }
+    if (!eDisparo && !Number(form.tokens)) {
+      return toast({ title: "Informe quantos tokens o pacote concede", variant: "destructive" });
     }
     setSaving(true);
     const payload = {
       name: form.name,
-      tokens: Number(form.tokens),
+      tipo: eDisparo ? "DISPARO" : "TOKENS",
+      tokens: eDisparo ? 0 : Number(form.tokens),
+      creditsBrl: eDisparo ? Number(form.creditsBrl) : 0,
       price: Number(form.price),
       active: form.active !== false,
     };
@@ -90,8 +100,14 @@ export function TokenPackagesPanel() {
   };
 
   // Cálculo automático: custo real, preço sugerido (markup) e margem.
-  const cost = costOf(Number(form.tokens));
-  const markup = pricing?.tokenMarkup || 5;
+  //
+  // Em pacote de disparo o crédito JÁ é preço de venda (é o que o cliente
+  // gasta), então o custo é ele dividido pela margem do WhatsApp — a mesma
+  // conta que a calculadora do plano faz.
+  const cost = eDisparo
+    ? Number(form.creditsBrl || 0) / (pricing?.waMarkup || 2)
+    : costOf(Number(form.tokens));
+  const markup = eDisparo ? (pricing?.waMarkup || 2) : (pricing?.tokenMarkup || 5);
   const suggestedPrice = Number((cost * markup).toFixed(2));
   const salePrice = Number(form.price) || 0;
   const margin = salePrice - cost;
@@ -124,7 +140,12 @@ export function TokenPackagesPanel() {
                     <Coins className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-foreground">{p.name}</p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {p.name}
+                      <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        {String(p.tipo).toUpperCase() === "DISPARO" ? "disparo" : "tokens"}
+                      </span>
+                    </p>
                     <p className="text-lg font-bold text-foreground">
                       R$ {Number(p.price).toFixed(2)}
                     </p>
@@ -158,16 +179,45 @@ export function TokenPackagesPanel() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="rounded-2xl max-w-md">
-          <DialogHeader><DialogTitle>{form.id ? `Editar pacote: ${form.name}` : "Novo pacote de tokens"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{form.id ? `Editar pacote: ${form.name}` : "Novo pacote de recarga"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Nome do pacote</Label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex.: Recarga Essencial" />
             </div>
+
+            {/* O que o pacote recarrega. São os dois saldos que o cliente
+                pode esgotar antes do fim do ciclo. */}
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Recarrega o quê</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {[["TOKENS", "Créditos de IA"], ["DISPARO", "Crédito de disparo"]].map(([id, rot]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setForm({ ...form, tipo: id })}
+                    className={`rounded-xl border px-3 py-2 text-xs font-medium transition-colors ${
+                      String(form.tipo).toUpperCase() === id
+                        ? "border-primary bg-primary/10 text-foreground"
+                        : "border-border text-muted-foreground hover:border-primary/40"
+                    }`}
+                  >
+                    {rot}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Tokens</Label>
-                <Input type="number" value={form.tokens} onChange={(e) => setForm({ ...form, tokens: e.target.value })} />
+                <Label className="text-xs text-muted-foreground">
+                  {eDisparo ? "Crédito concedido (R$)" : "Tokens"}
+                </Label>
+                {eDisparo ? (
+                  <Input type="number" step="0.01" value={form.creditsBrl} onChange={(e) => setForm({ ...form, creditsBrl: e.target.value })} />
+                ) : (
+                  <Input type="number" value={form.tokens} onChange={(e) => setForm({ ...form, tokens: e.target.value })} />
+                )}
               </div>
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Preço de venda (R$)</Label>

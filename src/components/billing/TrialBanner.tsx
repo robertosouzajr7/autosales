@@ -46,6 +46,9 @@ export function TrialBanner() {
   if (sessionStorage.getItem(dismissKey)) return null;
 
   const left = daysLeft(info.trialEnd);
+  // Sem data de fim não dá para dizer quantos dias faltam — e "Faltam null
+  // dias" é pior que não avisar nada.
+  if (!isPastDue && left === null) return null;
   const goCheckout = () => navigate(info.planId ? `/checkout?plan=${info.planId}` : "/settings");
 
   const past = isPastDue;

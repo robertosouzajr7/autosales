@@ -11,7 +11,7 @@
 import prisma from "../src/api/config/prisma.js";
 import jwt from "jsonwebtoken";
 import {
-  planWhatsappCost, cobraPorMensagem, estimateCampaign, checkCampaignQuota,
+  planWhatsappCost, cobraPorMensagem, estimateCampaign,
   WHATSAPP_MODES,
 } from "../src/api/services/WhatsAppPricingService.js";
 
@@ -38,7 +38,7 @@ async function conta(modo, extras = {}) {
   const plan = await prisma.plan.create({
     data: {
       name: `${modo} ${Date.now()}${Math.random()}`, priceMonthly: 200, priceYearly: 2000,
-      whatsappMode: modo, maxCampaignMessages: 1000, campaignCategory: "MARKETING",
+      whatsappMode: modo, campaignCreditsBrl: 500,
       maxWhatsAppNumbers: 2, maxTokens: 100000, ...extras,
     },
   });
@@ -80,7 +80,8 @@ async function main() {
   const qr = await conta(WHATSAPP_MODES.BAILEYS);
 
   const custoOficial = await planWhatsappCost(oficial.plan);
-  ok(perto(custoOficial.custoBrl, 300), `plano oficial: 1.000 disparos marketing = R$ 300 (${custoOficial.custoBrl})`);
+  // R$ 500 de crédito com margem 3x custam R$ 166,67 ao SaaS.
+  ok(perto(custoOficial.custoBrl, 166.67), `plano oficial: R$ 500 de crédito custam R$ 166,67 (${custoOficial.custoBrl})`);
   ok(custoOficial.porMensagem === true, "e o custo é por mensagem");
 
   const custoQr = await planWhatsappCost(qr.plan);
@@ -105,12 +106,16 @@ async function main() {
 
   // ── 3. Franquia informa o canal para a tela ─────────────────
   console.log("\n3. Franquia e canal na tela do cliente");
-  const qOficial = await checkCampaignQuota(oficial.tenant.id, 10);
-  ok(qOficial.cobraPorMensagem === true && qOficial.unitPriceBrl > 0, `oficial mostra preço por disparo (${qOficial.unitPriceBrl})`);
-  const qQr = await checkCampaignQuota(qr.tenant.id, 10);
+  const { podeDisparar } = await import("../src/api/services/CampaignCreditService.js");
+  const qOficial = await podeDisparar(oficial.tenant.id, 10, "MARKETING");
+  ok(
+    qOficial.cobraPorMensagem === true && qOficial.custo.unitPriceBrl > 0,
+    `oficial mostra preço por disparo (${qOficial.custo.unitPriceBrl})`
+  );
+  const qQr = await podeDisparar(qr.tenant.id, 10, "MARKETING");
   ok(qQr.cobraPorMensagem === false, "QR Code avisa que não cobra por mensagem");
-  ok(qQr.unitPriceBrl === 0, "e não inventa preço unitário");
-  ok(qQr.allowed === true, "mas a franquia continua valendo como limite de volume");
+  ok(qQr.custo.total === 0, "e não debita crédito neste canal");
+  ok(qQr.allowed === true, "o disparo por QR Code passa sem consumir saldo");
   ok(qQr.whatsappMode === "BAILEYS", `o canal viaja junto (${qQr.whatsappMode})`);
 
   // ── 4. O cliente não conecta fora do que contratou ──────────

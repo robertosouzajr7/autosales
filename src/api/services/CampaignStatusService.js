@@ -1,5 +1,5 @@
 import prisma from "../config/prisma.js";
-import { devolverCampaignQuota } from "./WhatsAppPricingService.js";
+import { custoEstimado, devolver as devolverCredito } from "./CampaignCreditService.js";
 
 /**
  * Recibos de entrega da Meta aplicados ao disparo.
@@ -47,7 +47,7 @@ export async function registrarStatusEntrega(messageId, statusBruto) {
 
   const campanha = await prisma.campaign.findUnique({
     where: { id: destinatario.campaignId },
-    select: { id: true, tenantId: true },
+    select: { id: true, tenantId: true, template: { select: { category: true } } },
   });
   if (!campanha) return null;
 
@@ -69,8 +69,11 @@ export async function registrarStatusEntrega(messageId, statusBruto) {
   await prisma.campaign.update({ where: { id: campanha.id }, data: contadores });
 
   if (novo === "FAILED") {
-    // Devolve a franquia: a Meta não cobra o que não entregou.
-    await devolverCampaignQuota(campanha.tenantId, 1);
+    // Devolve o crédito: a Meta não cobra o que não entregou, e o valor tem
+    // de ser o da categoria daquele template — devolver tarifa de marketing
+    // por uma mensagem de utilidade daria crédito de graça.
+    const { total } = await custoEstimado(1, campanha.template?.category || "MARKETING");
+    await devolverCredito(campanha.tenantId, total);
   }
 
   return { campaignId: campanha.id, de: atual, para: novo };

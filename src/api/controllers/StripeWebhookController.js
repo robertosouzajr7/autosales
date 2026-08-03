@@ -49,17 +49,18 @@ export const receiveStripeWebhook = async (req, res) => {
       case "checkout.session.completed": {
         const session = event.data.object;
 
-        // (0) Recarga de tokens (pagamento único). Credita o saldo do tenant.
+        // (0) Recarga avulsa (pagamento único): tokens de IA ou crédito de
+        // disparo. O metadado diz qual saldo receber.
         if (session.metadata?.kind === "token_pack") {
           if (session.payment_status && session.payment_status !== "paid") {
             return res.status(200).json({ received: true, unpaid: session.payment_status });
           }
-          const r = await PaymentService.creditTokens(
-            session.metadata.tenantId,
-            session.metadata.tokens,
-            session.id
-          );
-          console.log(`[Stripe Webhook] Recarga de tokens tenant ${session.metadata.tenantId}: ${JSON.stringify(r)}`);
+          const tenantId = session.metadata.tenantId;
+          const eDisparo = String(session.metadata.tipo || "TOKENS").toUpperCase() === "DISPARO";
+          const r = eDisparo
+            ? await PaymentService.creditCampaignCredits(tenantId, session.metadata.creditsBrl, session.id)
+            : await PaymentService.creditTokens(tenantId, session.metadata.tokens, session.id);
+          console.log(`[Stripe Webhook] Recarga (${eDisparo ? "disparo" : "tokens"}) tenant ${tenantId}: ${JSON.stringify(r)}`);
           return res.status(200).json({ received: true, tokenRecharge: r });
         }
 

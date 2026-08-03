@@ -1,6 +1,6 @@
 import prisma from "../config/prisma.js";
 import MessagingService from "../services/MessagingService.js";
-import { checkCampaignQuota, consumeCampaignQuota } from "../services/WhatsAppPricingService.js";
+import { podeDisparar, custoEstimado, debitar as debitarCredito } from "../services/CampaignCreditService.js";
 import nodemailer from "nodemailer";
 import axios from "axios";
 
@@ -62,7 +62,7 @@ export const sendCampaign = async (req, res) => {
     // Disparo consome a franquia de DISPAROS do plano — a única que tem custo
     // real por trás (a Meta cobra cada template entregue). Antes isto cobrava
     // da cota de mensagens, que media outra coisa e não custava nada.
-    const quota = await checkCampaignQuota(tenantId, leads.length);
+    const quota = await podeDisparar(tenantId, leads.length, campaign.template?.category || "MARKETING");
     if (!quota.allowed) return res.status(403).json({ error: quota.reason, quota });
 
     await prisma.campaign.update({
@@ -177,7 +177,8 @@ export const sendCampaign = async (req, res) => {
         }
       });
 
-      await consumeCampaignQuota(tenantId, sent);
+      const gasto = await custoEstimado(sent, campaign.template?.category || "MARKETING");
+      await debitarCredito(tenantId, gasto.total);
     })();
 
     res.json({ success: true, message: "Campanha em processamento" });

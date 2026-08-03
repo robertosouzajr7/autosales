@@ -141,15 +141,7 @@ export default function Assinatura() {
       ilimitado: consumo?.conversas?.ilimitado,
       ajuda: "Janela de 24h aberta por um cliente. Responder na mesma janela não abre outra.",
     },
-    {
-      icon: Megaphone, label: "Disparos em massa",
-      used: consumo?.disparos?.usado ?? 0,
-      max: consumo?.disparos?.limite ?? 0,
-      on: (consumo?.disparos?.limite ?? 0) > 0,
-      ajuda: consumo?.precos?.disparo
-        ? `Cada disparo vale ${brl(consumo.precos.disparo)}.`
-        : undefined,
-    },
+
     { icon: Cpu, label: "Créditos de IA (tokens)", used: t?.usedTokens || 0, max: plan?.maxTokens || 0, on: plan?.enableTokens },
     { icon: Bot, label: "Agentes de IA ativos", used: t?.activeSdrs || 0, max: plan?.maxSdrs || 0, on: plan?.enableSdr },
   ];
@@ -265,11 +257,119 @@ export default function Assinatura() {
               </div>
             </Card>
 
+            {/* Alertas de saldo: aparecem antes de tudo porque é a única coisa
+                da tela que pede ação hoje. */}
+            {(consumo?.alertas || []).length > 0 && (
+              <div className="space-y-2">
+                {consumo.alertas.map((al: any) => (
+                  <div
+                    key={al.chave}
+                    className={`flex flex-wrap items-start gap-3 rounded-2xl border p-4 ${
+                      al.nivel === "critico"
+                        ? "border-rose-500/25 bg-rose-500/[0.07]"
+                        : "border-amber-500/25 bg-amber-500/[0.07]"
+                    }`}
+                  >
+                    <AlertTriangle className={`mt-0.5 w-4 h-4 shrink-0 ${al.nivel === "critico" ? "text-rose-600" : "text-amber-600"}`} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold">{al.titulo}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{al.texto}</p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => document.getElementById(al.acao === "recarga-tokens" ? "recarga-tokens" : "recarga-disparo")?.scrollIntoView({ behavior: "smooth" })}
+                    >
+                      {al.acao === "upgrade" ? "Ver planos" : "Recarregar"}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Saldo de disparo */}
+            {consumo?.disparo && !consumo.disparo.semDisparo && (
+              <Card className="p-6 rounded-2xl" id="recarga-disparo">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
+                      <Megaphone className="w-4 h-4 text-primary" /> Crédito de disparo
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Use na categoria que quiser — cada mensagem é debitada pela tarifa dela.
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[11px] uppercase text-muted-foreground">Saldo</p>
+                    <p className={`text-2xl font-bold tabular-nums ${consumo.disparo.baixo ? "text-amber-600" : ""}`}>
+                      {brl(consumo.disparo.saldo)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 h-2 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${consumo.disparo.baixo ? "bg-amber-500" : "bg-primary"}`}
+                    style={{ width: `${consumo.disparo.percentualUsado}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {brl(consumo.disparo.usado)} usados de {brl(consumo.disparo.total)}
+                  {consumo.disparo.recarga > 0 && ` (inclui ${brl(consumo.disparo.recarga)} de recarga)`}
+                  {" · "}{consumo.disparosEnviados?.toLocaleString("pt-BR")} mensagem(ns) enviada(s)
+                </p>
+
+                {/* Equivalência: é o que torna o saldo decidível. */}
+                <div className="mt-4 grid grid-cols-3 gap-3 border-t pt-4 text-center">
+                  {[
+                    { k: "MARKETING", r: "Marketing" },
+                    { k: "UTILITY", r: "Utilidade" },
+                    { k: "AUTHENTICATION", r: "Autenticação" },
+                  ].map((c) => (
+                    <div key={c.k}>
+                      <p className="text-[11px] uppercase text-muted-foreground">{c.r}</p>
+                      <p className="text-lg font-bold tabular-nums">
+                        {(consumo.disparo.equivale?.[c.k] ?? 0).toLocaleString("pt-BR")}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {brl(consumo.disparo.precos?.[c.k] || 0)} cada
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {/* Para onde o dinheiro foi */}
+            {(consumo?.porAcao || []).length > 0 && (
+              <Card className="p-6 rounded-2xl">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-primary" /> Consumo do ciclo por ação
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  De onde veio o gasto desde {consumo.cicloDesde ? new Date(consumo.cicloDesde).toLocaleDateString("pt-BR") : "o início do ciclo"}.
+                </p>
+                <div className="mt-4 space-y-2">
+                  {consumo.porAcao.map((a: any) => (
+                    <div key={a.tipo} className="flex items-center justify-between gap-3 border-b pb-2 last:border-0">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{a.rotulo}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {a.quantidade.toLocaleString("pt-BR")} unidade(s) · {a.eventos} registro(s)
+                        </p>
+                      </div>
+                      <p className="text-sm font-semibold tabular-nums shrink-0">{brl(a.precoBrl)}</p>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
             {/* Recarga de tokens */}
-            <Card className="p-6 rounded-2xl">
+            <Card className="p-6 rounded-2xl" id="recarga-tokens">
               <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
                 <div>
-                  <h3 className="text-sm font-semibold flex items-center gap-2"><Coins className="w-4 h-4 text-primary" /> Recarga de tokens</h3>
+                  <h3 className="text-sm font-semibold flex items-center gap-2"><Coins className="w-4 h-4 text-primary" /> Recarga</h3>
                   <p className="text-xs text-muted-foreground mt-1">
                     Estourou a franquia do plano? Compre pacotes avulsos — o saldo extra não expira e é consumido só depois da franquia mensal.
                   </p>
@@ -298,7 +398,9 @@ export default function Assinatura() {
                       </div>
                       <p className="text-2xl font-bold tracking-tight mt-2">{brl(pk.price)}</p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {Number(pk.tokens).toLocaleString("pt-BR")} tokens
+                        {String(pk.tipo).toUpperCase() === "DISPARO"
+                          ? `${brl(pk.creditsBrl)} de crédito de disparo`
+                          : `${Number(pk.tokens).toLocaleString("pt-BR")} tokens`}
                       </p>
                       <Button
                         onClick={() => buyTokens(pk.id)}
@@ -306,7 +408,7 @@ export default function Assinatura() {
                         className="mt-4 w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white gap-2"
                       >
                         {buyingId === pk.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Coins className="w-4 h-4" />}
-                        Comprar tokens
+                        Comprar
                       </Button>
                     </Card>
                   ))}

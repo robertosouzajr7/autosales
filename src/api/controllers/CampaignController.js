@@ -2,11 +2,10 @@ import prisma from "../config/prisma.js";
 import { MetaManager } from "../../../meta.js";
 import { normalizePhone } from "../services/ContactIdentity.js";
 import { countVariables } from "./TemplateController.js";
+import { estimateCampaign } from "../services/WhatsAppPricingService.js";
 import {
-  estimateCampaign,
-  checkCampaignQuota,
-  consumeCampaignQuota,
-} from "../services/WhatsAppPricingService.js";
+  podeDisparar, custoEstimado, debitar as debitarCredito, saldoDisparo,
+} from "../services/CampaignCreditService.js";
 
 /**
  * Disparo em massa pela API oficial.
@@ -129,11 +128,12 @@ export const previewCampaign = async (req, res) => {
     if (!template) return res.status(404).json({ error: "Template não encontrado." });
 
     const recipients = await resolveRecipients(req.tenantId, { tagIds, stageId, leadIds });
-    const quotaPreview = await checkCampaignQuota(req.tenantId, recipients.length);
+    // A prévia usa a categoria DO TEMPLATE: é ela que define a tarifa, e é
+    // isso que o cliente precisa ver antes de confirmar.
+    const quota = await podeDisparar(req.tenantId, recipients.length, template.category);
     const estimate = await estimateCampaign(recipients.length, template.category, {
-      cobraPorMensagem: quotaPreview.cobraPorMensagem,
+      cobraPorMensagem: quota.cobraPorMensagem,
     });
-    const quota = quotaPreview;
     // Só investiga quando deu zero — evita 4 counts a cada digitação.
     const publico = recipients.length === 0
       ? await diagnosticarPublico(req.tenantId, { stageId })
@@ -202,7 +202,7 @@ export const createCampaign = async (req, res) => {
     const recipients = await resolveRecipients(req.tenantId, { tagIds, stageId, leadIds });
     if (recipients.length === 0) return res.status(400).json({ error: "Nenhum destinatário elegível." });
 
-    const quota = await checkCampaignQuota(req.tenantId, recipients.length);
+    const quota = await podeDisparar(req.tenantId, recipients.length, template.category);
     if (!quota.allowed) return res.status(403).json({ error: quota.reason, quota });
 
     const estimate = await estimateCampaign(recipients.length, template.category, {
@@ -266,8 +266,9 @@ export const startCampaign = async (req, res) => {
     const recipients = await resolveRecipients(req.tenantId, { tagIds, leadIds });
     if (recipients.length === 0) return res.status(400).json({ error: "Nenhum destinatário elegível." });
 
-    // Revalida a franquia: o público pode ter crescido desde a criação.
-    const quota = await checkCampaignQuota(req.tenantId, recipients.length);
+    // Revalida o saldo: o público pode ter crescido desde a criação, e outro
+    // disparo pode ter consumido crédito nesse meio-tempo.
+    const quota = await podeDisparar(req.tenantId, recipients.length, campaign.template.category);
     if (!quota.allowed) return res.status(403).json({ error: quota.reason, quota });
 
     // Recria a lista de destinatários: é a base do relatório final e permite
@@ -380,14 +381,20 @@ async function runCampaign(campaign, sender, recipients, tenantId) {
     },
   }).catch(() => {});
 
-  // Contabiliza só o que saiu de fato — falha não consome franquia.
-  await consumeCampaignQuota(tenantId, sent);
+  // Debita só o que saiu de fato — falha de envio não consome crédito. O que
+  // a Meta depois marcar como não entregue volta pelo webhook de status.
+  const gasto = await custoEstimado(sent, campaign.template.category);
+  await debitarCredito(tenantId, gasto.total);
+  await prisma.tenant.update({
+    where: { id: tenantId },
+    data: { usedCampaignMessages: { increment: sent } },
+  }).catch(() => {});
 
   // Lança no razão de consumo com custo e preço do que realmente saiu, para
   // o relatório fechar com a fatura da Meta em vez de com a projeção.
   try {
     const { registrarEvento, USAGE_TYPES } = await import("../services/UsageService.js");
-    const { cobraPorMensagem } = await checkCampaignQuota(tenantId, 0);
+    const { cobraPorMensagem } = await saldoDisparo(tenantId);
     const real = await estimateCampaign(sent, campaign.template.category, { cobraPorMensagem });
     await registrarEvento(tenantId, {
       type: USAGE_TYPES.CAMPAIGN,
@@ -436,11 +443,10 @@ export const deleteCampaign = async (req, res) => {
   }
 };
 
-/** Consumo do ciclo, para a tela mostrar quanto resta da franquia. */
+/** Saldo de disparo do ciclo, para a tela mostrar quanto ainda dá. */
 export const getCampaignQuota = async (req, res) => {
   try {
-    const quota = await checkCampaignQuota(req.tenantId, 0);
-    res.json(quota);
+    res.json(await saldoDisparo(req.tenantId));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -129,139 +129,44 @@ export async function planWhatsappCost(plano) {
     };
   }
 
-  const disparo = await planCampaignCost(plano?.maxCampaignMessages, plano?.campaignCategory);
+  const disparo = await planCampaignCost(plano?.campaignCreditsBrl);
   return {
     modo,
     porMensagem: true,
     custoBrl: disparo.custoBrl,
-    detalhe: `${disparo.quantidade} disparo(s) ${String(disparo.category).toLowerCase()}`,
+    detalhe: disparo.detalhe,
   };
 }
 
 /**
- * Quanto custa (e quanto deveria valer) a franquia de disparos de um plano.
+ * Quanto custa a você o crédito de disparo que o plano dá de graça.
  *
- * Sem isto o plano era precificado só pelo custo de IA, e uma franquia de
- * 5.000 disparos de marketing — que custa caro na Meta — passava batida:
- * dava para vender um plano abaixo do próprio custo sem perceber.
+ * Com franquia em dinheiro a conta fica direta: o crédito é preço de venda,
+ * e preço de venda é custo × margem — logo o seu custo é o crédito dividido
+ * pela margem. Não importa mais em que categoria o cliente vai gastar, porque
+ * cada mensagem é debitada pelo preço da própria categoria.
  */
-export async function planCampaignCost(maxCampaignMessages, category = "MARKETING") {
-  const { categorias, usdToBrl, markup } = await unitPricing();
-  const cat = String(category || "MARKETING").toUpperCase();
-  const unit = categorias[cat] || categorias.MARKETING;
-  const qtd = Math.max(0, Number(maxCampaignMessages) || 0);
+export async function planCampaignCost(campaignCreditsBrl) {
+  const { usdToBrl, markup } = await unitPricing();
+  const credito = Math.max(0, Number(campaignCreditsBrl) || 0);
+  const custoBrl = markup > 0 ? credito / markup : credito;
 
   return {
-    category: cat,
-    quantidade: qtd,
-    unitCostBrl: unit.unitCostBrl,
-    unitPriceBrl: unit.unitPriceBrl,
-    // Custo se o cliente usar a franquia inteira — é o pior caso, e é o que
-    // precisa caber no preço do plano.
-    custoBrl: unit.unitCostBrl * qtd,
-    precoSugeridoBrl: unit.unitPriceBrl * qtd,
+    creditoBrl: credito,
+    custoBrl,
+    precoSugeridoBrl: credito,
+    detalhe: credito > 0
+      ? `R$ ${credito.toFixed(2)} de crédito (margem ${markup}x)`
+      : "sem crédito de disparo",
     usdToBrl,
     markup,
   };
 }
 
-/**
- * A conta pode disparar essa quantidade? O plano define a franquia mensal e,
- * ao estourar, o envio é bloqueado (não há cobrança de excedente).
- */
-export async function checkCampaignQuota(tenantId, recipientCount) {
-  const tenant = await prisma.tenant.findUnique({
-    where: { id: tenantId },
-    select: {
-      usedCampaignMessages: true,
-      plan: {
-        select: {
-          maxCampaignMessages: true, name: true, campaignCategory: true,
-          whatsappMode: true,
-        },
-      },
-    },
-  });
-  if (!tenant) return { allowed: false, reason: "Conta não encontrada." };
 
-  const limit = tenant.plan?.maxCampaignMessages ?? 0;
-  const used = tenant.usedCampaignMessages || 0;
-  const remaining = Math.max(0, limit - used);
-  // A categoria da franquia e o preço unitário viajam junto: a tela mostra
-  // quanto vale cada disparo do plano sem precisar de outra chamada.
-  const categoria = tenant.plan?.campaignCategory || "MARKETING";
-  const { categorias } = await unitPricing();
-  const unitPriceBrl = categorias[categoria]?.unitPriceBrl ?? 0;
-  // Em plano de QR Code a Meta não cobra: o preço unitário é zero e a
-  // franquia vira limite de volume, não de custo. A tela precisa saber a
-  // diferença, senão mostra "R$ 0,00" sem explicar por quê.
-  const modo = String(tenant.plan?.whatsappMode || "BOTH").toUpperCase();
-  const cobra = modo !== "BAILEYS";
-  const extras = {
-    category: categoria,
-    unitPriceBrl: cobra ? unitPriceBrl : 0,
-    whatsappMode: modo,
-    cobraPorMensagem: cobra,
-    planName: tenant.plan?.name || null,
-  };
 
-  if (limit <= 0) {
-    return {
-      allowed: false,
-      limit,
-      used,
-      remaining: 0,
-      ...extras,
-      reason: `O plano ${tenant.plan?.name || "atual"} não inclui disparos em massa. Faça upgrade para liberar.`,
-    };
-  }
-  if (recipientCount > remaining) {
-    return {
-      allowed: false,
-      limit,
-      used,
-      remaining,
-      ...extras,
-      reason: `Franquia insuficiente: restam ${remaining} disparos no ciclo e este envio precisa de ${recipientCount}.`,
-    };
-  }
-  return { allowed: true, limit, used, remaining, ...extras };
-}
-
-/**
- * Devolve franquia de disparo. Usado quando a Meta confirma que a mensagem
- * não foi entregue: ela não cobra o que não chegou, então o cliente também
- * não pode pagar. O piso em zero evita que webhook repetido ou reprocessado
- * deixe a conta com franquia negativa.
- */
-export async function devolverCampaignQuota(tenantId, quantidade = 1) {
-  const qtd = Math.max(0, Number(quantidade) || 0);
-  if (!qtd) return;
-  try {
-    await prisma.tenant.updateMany({
-      where: { id: tenantId, usedCampaignMessages: { gte: qtd } },
-      data: { usedCampaignMessages: { decrement: qtd } },
-    });
-  } catch (e) {
-    console.warn("[Pricing] Não foi possível devolver franquia:", e.message);
-  }
-}
-
-/** Contabiliza o que foi efetivamente enviado. */
-export async function consumeCampaignQuota(tenantId, sent) {
-  if (!sent) return;
-  try {
-    await prisma.tenant.update({
-      where: { id: tenantId },
-      data: { usedCampaignMessages: { increment: sent } },
-    });
-  } catch (e) {
-    console.warn("[Pricing] Não foi possível contabilizar disparos:", e.message);
-  }
-}
 
 export default {
   DEFAULT_RATES_USD, WHATSAPP_MODES, resolvePricing, estimateCampaign, unitPricing,
   planCampaignCost, planWhatsappCost, baileysNumberCost, cobraPorMensagem,
-  checkCampaignQuota, consumeCampaignQuota, devolverCampaignQuota,
 };

@@ -54,7 +54,16 @@ model Tenant {
   usedTokens           Int      @default(0)
   extraTokens          Int      @default(0) // saldo de tokens comprados (recarga), consumido após a franquia do plano
   usedMessages         Int      @default(0)
-  usedCampaignMessages Int      @default(0) // disparos em massa no ciclo atual
+  usedCampaignMessages Int      @default(0) // quantas mensagens de campanha saíram no ciclo
+  /// Crédito de disparo já gasto no ciclo (BRL). É contra ele que a franquia
+  /// do plano e a recarga são comparadas.
+  usedCampaignCreditsBrl  Float @default(0)
+  /// Recarga avulsa de disparo (BRL). Não expira e só é consumida depois de
+  /// acabar a franquia do plano — mesma regra dos tokens de IA.
+  extraCampaignCreditsBrl Float @default(0)
+  /// Quais avisos de saldo baixo já foram enviados neste ciclo (JSON), para
+  /// o cliente não receber o mesmo e-mail toda vez que dispara.
+  alertasEnviados         String?
   /// Janelas de atendimento de 24h abertas no ciclo — a unidade que o cliente
   /// entende por "conversa" e a que o plano limita.
   usedConversations    Int      @default(0)
@@ -448,7 +457,13 @@ model Plan {
   maxSdrs               Int @default(1)
   maxUsers              Int @default(2) // usuários na equipe
   maxWhatsAppNumbers    Int @default(1) // números conectados
-  maxCampaignMessages   Int @default(0) // disparos em massa/mês; 0 = recurso desligado
+  /// Crédito de disparo (BRL) incluído por mês. 0 = plano sem disparo.
+  ///
+  /// Substituiu a franquia por quantidade: a tarifa da Meta varia 9x entre
+  /// marketing e utilidade, então "1.000 disparos" obrigava a precificar pelo
+  /// pior caso e cobrava de quem só manda lembrete como se mandasse promoção.
+  /// Em dinheiro, o cliente escolhe a categoria e o custo está sempre coberto.
+  campaignCreditsBrl    Float @default(0)
   /// Conversas (janelas de atendimento de 24h) incluídas por mês.
   /// 0 = sem limite — é o comportamento de quem já estava na base.
   maxConversations      Int @default(0)
@@ -475,11 +490,6 @@ model Plan {
   /// conexão em uso pode parar de funcionar por causa desta divisão.
   whatsappMode String @default("BOTH")
 
-  /// Categoria de referência da franquia de disparos. A Meta cobra tarifas
-  /// diferentes por categoria, então o custo do plano só fecha quando se sabe
-  /// que tipo de disparo ele inclui. MARKETING é a mais cara — é o padrão
-  /// para o plano nunca ser vendido abaixo do custo.
-  campaignCategory String @default("MARKETING")
 
   // Custos operacionais unitários (para cálculo de margem no admin)
   sdrUnitCost     Float @default(15.0)
@@ -906,10 +916,16 @@ model PlatformSettings {
 }
 
 // Pacotes de tokens avulsos (recarga) — definidos pelo admin do SaaS.
+/// Pacote de recarga avulsa. Serve para os dois saldos que o cliente pode
+/// esgotar antes do fim do ciclo — tokens de IA e crédito de disparo —
+/// reaproveitando o mesmo fluxo de compra.
 model TokenPackage {
   id        String   @id @default(uuid())
   name      String
-  tokens    Int // quantos tokens de IA o pacote concede
+  /// TOKENS | DISPARO
+  tipo      String   @default("TOKENS")
+  tokens    Int      @default(0) // tokens de IA concedidos (tipo TOKENS)
+  creditsBrl Float   @default(0) // crédito de disparo em BRL (tipo DISPARO)
   price     Float // preço em BRL
   active    Boolean  @default(true)
   createdAt DateTime @default(now())

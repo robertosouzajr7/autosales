@@ -138,13 +138,13 @@ async function main() {
   const pequeno = await prisma.plan.create({
     data: {
       name: `QR pequeno ${Date.now()}`, priceMonthly: 97, priceYearly: 970, whatsappMode: "BAILEYS",
-      maxConversations: 300, maxUsers: 2, maxWhatsAppNumbers: 1, maxCampaignMessages: 0, active: true,
+      maxConversations: 300, maxUsers: 2, maxWhatsAppNumbers: 1, campaignCreditsBrl: 0, active: true,
     },
   });
   const grande = await prisma.plan.create({
     data: {
       name: `Oficial grande ${Date.now()}`, priceMonthly: 897, priceYearly: 8970, whatsappMode: "OFFICIAL",
-      maxConversations: 5000, maxUsers: 20, maxWhatsAppNumbers: 5, maxCampaignMessages: 10000, active: true,
+      maxConversations: 5000, maxUsers: 20, maxWhatsAppNumbers: 5, campaignCreditsBrl: 750, active: true,
     },
   });
 
@@ -212,7 +212,7 @@ async function main() {
   const enxuto = await prisma.plan.create({
     data: {
       name: `Enxuto ${Date.now()}`, priceMonthly: 47, priceYearly: 470, whatsappMode: "BAILEYS",
-      maxConversations: 100, maxUsers: 1, maxWhatsAppNumbers: 1, maxCampaignMessages: 0, active: true,
+      maxConversations: 100, maxUsers: 1, maxWhatsAppNumbers: 1, campaignCreditsBrl: 0, active: true,
       enableSdr: false, enableTokens: false,
       enableCalendar: false, enableAutomations: false, enableWebhooks: false,
       enableVoice: false, enablePremiumVoice: true,
@@ -223,7 +223,7 @@ async function main() {
   const rotulos = desligado.descricao.limites.map((l) => l.rotulo);
   ok(!rotulos.includes("Agentes de IA"), "sem módulo de IA, o limite de agentes some");
   ok(!rotulos.includes("Créditos de IA por mês"), "sem créditos, a franquia de tokens some");
-  ok(!rotulos.includes("Disparos em massa por mês"), "disparo zerado não vira linha de limite");
+  ok(!rotulos.includes("Crédito de disparo por mês"), "plano sem crédito de disparo não vira linha de limite");
   const ligado = (c) => desligado.descricao.recursos.find((r) => r.chave === c)?.ativo;
   ok(ligado("enableCalendar") === false, "módulo desligado aparece como ausente, não some da lista");
   ok(ligado("enablePremiumVoice") === false, "voz premium sem voz não é anunciada");

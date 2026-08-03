@@ -1,5 +1,6 @@
 import prisma from "../config/prisma.js";
 import { unitPricing } from "./WhatsAppPricingService.js";
+import { saldoDisparo, LIMIAR_ALERTA } from "./CampaignCreditService.js";
 
 /**
  * Medição de consumo da conta.
@@ -166,17 +167,14 @@ export async function resumoConsumo(tenantId) {
       usedCampaignMessages: true, usedTokens: true, extraTokens: true,
       usedCostBrl: true, lastUsageReset: true, nextBillingDate: true,
       plan: {
-        select: {
-          name: true, priceMonthly: true, maxConversations: true,
-          maxCampaignMessages: true, maxTokens: true,
-          campaignCategory: true,
-        },
+        select: { name: true, priceMonthly: true, maxConversations: true, maxTokens: true },
       },
     },
   });
   if (!tenant) return null;
 
   const { categorias } = await unitPricing();
+  const credito = await saldoDisparo(tenantId);
   const p = tenant.plan;
   const faixa = (usado, limite) => ({
     usado,
@@ -191,17 +189,25 @@ export async function resumoConsumo(tenantId) {
     cicloDesde: tenant.lastUsageReset,
     proximaCobranca: tenant.nextBillingDate,
     conversas: faixa(tenant.usedConversations || 0, p?.maxConversations || 0),
-    disparos: faixa(tenant.usedCampaignMessages || 0, p?.maxCampaignMessages || 0),
+    // Disparo virou saldo em dinheiro: quantidade sozinha não diz nada quando
+    // uma mensagem custa 9x a outra.
+    disparo: credito,
+    disparosEnviados: tenant.usedCampaignMessages || 0,
     // Sem cota: é quanto o agente já respondeu no ciclo, para o relatório.
     mensagensEnviadas: tenant.usedMessages || 0,
     tokens: faixa(tenant.usedTokens || 0, (p?.maxTokens || 0) + (tenant.extraTokens || 0)),
     mensagensDeServico: tenant.usedServiceMessages || 0,
     custoRealBrl: Number((tenant.usedCostBrl || 0).toFixed(4)),
+    // Onde o dinheiro foi parar, por ação. É a pergunta que o cliente faz.
+    porAcao: await gastoPorAcao(tenantId),
     // Ajuda o cliente a entender o que consome: preço por unidade.
     precos: {
-      disparo: categorias[p?.campaignCategory || "MARKETING"]?.unitPriceBrl ?? 0,
+      marketing: categorias.MARKETING?.unitPriceBrl ?? 0,
+      utilidade: categorias.UTILITY?.unitPriceBrl ?? 0,
+      autenticacao: categorias.AUTHENTICATION?.unitPriceBrl ?? 0,
       servico: categorias.SERVICE?.unitPriceBrl ?? 0,
     },
+    alertas: montarAlertas({ credito, conversas: faixa(tenant.usedConversations || 0, p?.maxConversations || 0), tokens: faixa(tenant.usedTokens || 0, (p?.maxTokens || 0) + (tenant.extraTokens || 0)) }),
   };
 }
 
@@ -213,13 +219,112 @@ export async function reiniciarCiclo(tenantId) {
       usedConversations: 0,
       usedServiceMessages: 0,
       usedCampaignMessages: 0,
+      // Zera o gasto do ciclo, não a recarga: crédito comprado não expira.
+      usedCampaignCreditsBrl: 0,
       usedCostBrl: 0,
+      alertasEnviados: null,
       lastUsageReset: new Date(),
     },
   }).catch(() => {});
 }
 
+/**
+ * Quanto foi gasto em cada tipo de ação no ciclo.
+ *
+ * "Consumi R$ 47" não ajuda ninguém a decidir nada; "R$ 44 em disparo e R$ 3
+ * em IA" ajuda. Sai do razão, então bate com o extrato linha a linha.
+ */
+export async function gastoPorAcao(tenantId) {
+  const desde = await inicioDoCiclo(tenantId);
+  const linhas = await prisma.usageEvent.groupBy({
+    by: ["type"],
+    where: { tenantId, createdAt: { gte: desde } },
+    _sum: { priceBrl: true, costBrl: true, quantity: true },
+    _count: true,
+  });
+
+  const rotulos = {
+    CAMPAIGN: "Disparo em massa",
+    TEMPLATE_MSG: "Mensagem por template",
+    CONVERSATION: "Conversas atendidas",
+    SERVICE_MSG: "Mensagens do atendimento",
+    AI_TOKENS: "Inteligência artificial",
+  };
+
+  return linhas
+    .map((l) => ({
+      tipo: l.type,
+      rotulo: rotulos[l.type] || l.type,
+      eventos: l._count,
+      quantidade: l._sum.quantity || 0,
+      precoBrl: Number((l._sum.priceBrl || 0).toFixed(2)),
+      custoBrl: Number((l._sum.costBrl || 0).toFixed(4)),
+    }))
+    .sort((a, b) => b.precoBrl - a.precoBrl);
+}
+
+/** Início do ciclo vigente — tudo que a tela mostra é contado a partir daqui. */
+async function inicioDoCiclo(tenantId) {
+  const t = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { lastUsageReset: true },
+  });
+  return t?.lastUsageReset || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+}
+
+/**
+ * Avisos de saldo baixo. Um alerta que só aparece quando já acabou chega
+ * tarde: o corte é em 20% restantes, tempo de comprar recarga antes de o
+ * disparo travar no meio de uma campanha.
+ */
+function montarAlertas({ credito, conversas, tokens }) {
+  const lista = [];
+  const brl = (v) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  if (credito && !credito.semDisparo && credito.cobraPorMensagem) {
+    if (credito.esgotado) {
+      lista.push({
+        chave: "disparo", nivel: "critico",
+        titulo: "Crédito de disparo esgotado",
+        texto: "Suas campanhas estão bloqueadas até a virada do ciclo ou até você comprar uma recarga.",
+        acao: "recarga-disparo",
+      });
+    } else if (credito.baixo) {
+      lista.push({
+        chave: "disparo", nivel: "atencao",
+        titulo: `Resta ${brl(credito.saldo)} de crédito de disparo`,
+        texto: `Isso dá cerca de ${credito.equivale.UTILITY ?? 0} mensagem(ns) de utilidade ou ${credito.equivale.MARKETING ?? 0} de marketing. Vale recarregar antes da próxima campanha.`,
+        acao: "recarga-disparo",
+      });
+    }
+  }
+
+  const perto = (f) => !f.ilimitado && f.limite > 0 && f.restante / f.limite <= LIMIAR_ALERTA;
+  if (conversas && perto(conversas)) {
+    lista.push({
+      chave: "conversas", nivel: conversas.restante === 0 ? "critico" : "atencao",
+      titulo: conversas.restante === 0
+        ? "Franquia de conversas esgotada"
+        : `Restam ${conversas.restante} conversas no ciclo`,
+      texto: "Ao esgotar, o agente para de abrir conversa nova e o contato vai para a fila humana.",
+      acao: "upgrade",
+    });
+  }
+  if (tokens && perto(tokens)) {
+    lista.push({
+      chave: "tokens", nivel: tokens.restante === 0 ? "critico" : "atencao",
+      titulo: tokens.restante === 0
+        ? "Créditos de IA esgotados"
+        : `Restam ${tokens.restante.toLocaleString("pt-BR")} créditos de IA`,
+      texto: "Sem crédito o agente para de responder. A recarga não expira.",
+      acao: "recarga-tokens",
+    });
+  }
+
+  return lista;
+}
+
 export default {
   USAGE_TYPES, registrarEvento, conversationsHeadroom, registrarConversa,
-  registrarMensagemServico, resumoConsumo, reiniciarCiclo,
+  registrarMensagemServico, resumoConsumo, reiniciarCiclo, gastoPorAcao,
 };
