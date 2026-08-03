@@ -1601,6 +1601,10 @@ class AutomationEngine {
             note: "Não invente link. Ofereça marcar um horário.",
           };
         }
+        // Pode ter ficado sem link porque a sala do Google ainda estava sendo
+        // criada quando o evento nasceu. Busca antes de dizer que não existe.
+        if (!appt.meetLink) appt.meetLink = await CalendarService.garantirLink(appt);
+
         if (!appt.meetLink) {
           const quando = appt.date.toLocaleString("pt-BR", {
             timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short",

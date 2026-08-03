@@ -57,6 +57,15 @@ function overlaps(startA, endA, startB, endB) {
   return startA < endB && startB < endA;
 }
 
+/** O link do Meet de um evento do Google, venha ele por onde vier. */
+function extrairLink(evento) {
+  return (
+    evento?.hangoutLink ||
+    evento?.conferenceData?.entryPoints?.find((e) => e.entryPointType === "video")?.uri ||
+    null
+  );
+}
+
 class CalendarService {
   async getOAuth2Client(tenantId) {
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
@@ -174,17 +183,73 @@ class CalendarService {
         // Sem isso o Google ignora o conferenceData e devolve evento sem Meet.
         conferenceDataVersion: 1,
       });
-      return {
-        googleEventId: res.data.id,
-        meetLink:
-          res.data.hangoutLink ||
-          res.data.conferenceData?.entryPoints?.find((e) => e.entryPointType === "video")?.uri ||
-          null,
-      };
+
+      const googleEventId = res.data.id;
+      let meetLink = extrairLink(res.data);
+
+      // O Google cria a sala DEPOIS de responder: é comum o insert voltar com
+      // createRequest.status = "pending", sem hangoutLink e sem entryPoints.
+      // Ler só a resposta do insert gravava meetLink nulo numa reunião que
+      // ganhava link segundos depois — e ninguém nunca ia buscá-lo.
+      const pendente = res.data.conferenceData?.createRequest?.status?.statusCode === "pending";
+      if (!meetLink && googleEventId && pendente) {
+        meetLink = await this.buscarLink(tenantId, googleEventId, { tentativas: 3 });
+      }
+
+      return { googleEventId, meetLink: meetLink || null };
     } catch (err) {
       console.error(`[Calendar] Falha ao inserir no Google (tenant ${tenantId}):`, err.message);
       return { googleEventId: null, meetLink: null };
     }
+  }
+
+  /**
+   * Lê o link do Meet de um evento que já existe.
+   *
+   * Serve para os dois casos em que o link não veio junto: a sala ainda estava
+   * sendo criada no insert, e os agendamentos gravados antes disso. Repete
+   * poucas vezes com espera curta — se em ~3s o Google não resolveu, quem
+   * chamou segue sem link em vez de segurar a requisição.
+   */
+  async buscarLink(tenantId, googleEventId, { tentativas = 1 } = {}) {
+    if (!googleEventId) return null;
+    const auth = await this.getOAuth2Client(tenantId);
+    if (!auth) return null;
+
+    const calendar = google.calendar({ version: "v3", auth });
+    for (let i = 0; i < tentativas; i++) {
+      if (i > 0) await new Promise((r) => setTimeout(r, 1000 * i));
+      try {
+        const res = await calendar.events.get({ calendarId: "primary", eventId: googleEventId });
+        const link = extrairLink(res.data);
+        if (link) return link;
+      } catch (err) {
+        console.error(`[Calendar] Falha ao ler evento ${googleEventId}:`, err.message);
+        return null;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Garante o link no agendamento local, buscando no Google quando falta.
+   *
+   * Chamado por quem precisa do link de fato (o lembrete e o agente quando o
+   * cliente pede). Assim o compromisso que ficou sem link se conserta sozinho
+   * na primeira vez que alguém precisa dele, sem varrer a base inteira.
+   */
+  async garantirLink(appointment) {
+    if (!appointment) return null;
+    if (appointment.meetLink) return appointment.meetLink;
+    if (!appointment.googleEventId) return null;
+
+    const link = await this.buscarLink(appointment.tenantId, appointment.googleEventId);
+    if (!link) return null;
+
+    await prisma.appointment
+      .update({ where: { id: appointment.id }, data: { meetLink: link } })
+      .catch(() => {});
+    return link;
   }
 
   /**

@@ -372,6 +372,12 @@ class ReminderService {
   /** 10 minutos antes: link da call no WhatsApp e no e-mail. */
   async enviarLinkDaCall(appt, lead, config) {
     if (!appt.meetLink) {
+      // A sala pode ter ficado pronta depois da criação do evento. Antes de
+      // desistir, busca no Google e grava — é o momento em que o link importa.
+      const { default: CalendarService } = await import("../../../calendar_service.js");
+      appt.meetLink = await CalendarService.garantirLink(appt);
+    }
+    if (!appt.meetLink) {
       return { skip: "Agendamento sem link de reunião (conecte o Google Calendar para gerar o Meet)." };
     }
     const minutes = config.meetLinkMinutes ?? 10;
