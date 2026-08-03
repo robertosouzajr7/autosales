@@ -159,6 +159,43 @@ export async function devolver(tenantId, valorBrl) {
   }
 }
 
+/**
+ * Fecha o ciclo do crédito.
+ *
+ * "Franquia primeiro, depois recarga" só é verdade se o que passou da franquia
+ * sair da recarga ao virar o mês. Sem isto, zerar o gasto devolvia a recarga
+ * já consumida: quem tinha R$ 100 de franquia e R$ 50 de recarga e gastava
+ * R$ 120 acordava no mês seguinte com os R$ 50 intactos — R$ 20 de crédito de
+ * graça, todo mês, para sempre.
+ *
+ * Deve ser chamado ANTES de zerar usedCampaignCreditsBrl.
+ */
+export async function fecharCiclo(tenantId) {
+  const t = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: {
+      usedCampaignCreditsBrl: true,
+      extraCampaignCreditsBrl: true,
+      plan: { select: { campaignCreditsBrl: true } },
+    },
+  });
+  if (!t) return { consumidoDaRecarga: 0 };
+
+  const incluido = Number(t.plan?.campaignCreditsBrl || 0);
+  const usado = Number(t.usedCampaignCreditsBrl || 0);
+  // O que passou da franquia do mês veio da recarga.
+  const excedente = Math.max(0, usado - incluido);
+  const consumido = Math.min(excedente, Number(t.extraCampaignCreditsBrl || 0));
+
+  if (consumido > 0) {
+    await prisma.tenant.update({
+      where: { id: tenantId },
+      data: { extraCampaignCreditsBrl: { decrement: arred(consumido) } },
+    }).catch(() => {});
+  }
+  return { consumidoDaRecarga: arred(consumido) };
+}
+
 /** Recarga comprada cai aqui. Não expira e não zera na virada do ciclo. */
 export async function creditar(tenantId, valorBrl) {
   const v = arred(valorBrl);
@@ -170,5 +207,5 @@ export async function creditar(tenantId, valorBrl) {
 }
 
 export default {
-  LIMIAR_ALERTA, saldoDisparo, custoEstimado, podeDisparar, debitar, devolver, creditar,
+  LIMIAR_ALERTA, saldoDisparo, custoEstimado, podeDisparar, debitar, devolver, creditar, fecharCiclo,
 };

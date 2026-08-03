@@ -1,6 +1,6 @@
 import prisma from "../config/prisma.js";
 import { unitPricing } from "./WhatsAppPricingService.js";
-import { saldoDisparo, LIMIAR_ALERTA } from "./CampaignCreditService.js";
+import { saldoDisparo, fecharCiclo, LIMIAR_ALERTA } from "./CampaignCreditService.js";
 
 /**
  * Medição de consumo da conta.
@@ -213,6 +213,10 @@ export async function resumoConsumo(tenantId) {
 
 /** Zera os contadores do ciclo. Chamado na renovação da assinatura. */
 export async function reiniciarCiclo(tenantId) {
+  // Antes de zerar o gasto: o que passou da franquia sai da recarga. Se isto
+  // rodar depois, a recarga já consumida volta de graça.
+  await fecharCiclo(tenantId);
+
   await prisma.tenant.update({
     where: { id: tenantId },
     data: {

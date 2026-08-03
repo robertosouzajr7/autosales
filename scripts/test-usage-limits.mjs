@@ -177,6 +177,25 @@ async function main() {
   tc = await prisma.tenant.findUnique({ where: { id: c.tenant.id } });
   ok(tc.usedConversations === 0 && tc.usedServiceMessages === 0, "contadores zerados");
   ok(tc.usedCostBrl === 0, "custo do ciclo zerado");
+
+  // A recarga não expira, mas o que passou da franquia SAI dela na virada —
+  // senão o crédito já consumido voltava de graça todo mês.
+  const { saldoDisparo, creditar, debitar } = await import("../src/api/services/CampaignCreditService.js");
+  await creditar(c.tenant.id, 50);
+  await debitar(c.tenant.id, 530); // 500 de franquia + 30 da recarga
+  const antesDaVirada = await saldoDisparo(c.tenant.id);
+  ok(perto(antesDaVirada.saldo, 20), `dentro do ciclo o saldo é 550 − 530 = 20 (${antesDaVirada.saldo})`);
+
+  await reiniciarCiclo(c.tenant.id);
+  const depoisDaVirada = await saldoDisparo(c.tenant.id);
+  ok(perto(depoisDaVirada.recarga, 20), `a recarga perde o que foi consumido (R$ ${depoisDaVirada.recarga})`);
+  ok(perto(depoisDaVirada.saldo, 520), `e o saldo novo é franquia + o que sobrou (R$ ${depoisDaVirada.saldo})`);
+
+  // Quem ficou dentro da franquia não perde recarga nenhuma.
+  await debitar(c.tenant.id, 100);
+  await reiniciarCiclo(c.tenant.id);
+  const intacta = await saldoDisparo(c.tenant.id);
+  ok(perto(intacta.recarga, 20), "gasto dentro da franquia não toca na recarga");
   const sobraram = await prisma.usageEvent.count({ where: { tenantId: c.tenant.id } });
   ok(sobraram >= 2, `o histórico do razão NÃO é apagado (${sobraram} evento(s))`);
 
