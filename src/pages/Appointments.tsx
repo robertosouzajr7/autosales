@@ -9,7 +9,7 @@ import {
   Trash2, Plus, ArrowRight, User, 
   Search, Filter, Smartphone, MoreHorizontal,
   ChevronRight, CalendarDays, Save, LayoutGrid, List,
-  Calendar as LucideCalendar
+  Calendar as LucideCalendar, Video, Copy, Check, ExternalLink
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -30,11 +30,64 @@ interface Appointment {
   notes?: string;
   status: string;
   leadId: string;
+  meetLink?: string | null;
   lead?: {
     id: string;
     name: string;
     phone: string;
   };
+}
+
+/**
+ * Link da reunião com copiar num clique.
+ *
+ * A URL do Meet é longa e ninguém decora: quem precisa mandar por outro canal
+ * (e-mail, outro grupo) tem que conseguir levar o link inteiro sem selecionar
+ * texto de um card. O "Entrar" abre; o botão ao lado copia.
+ */
+function MeetLink({ url }: { url: string }) {
+  const [copiado, setCopiado] = useState(false);
+
+  const copiar = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      // clipboard exige contexto seguro (https); no HTTP a cópia manual salva.
+      const campo = document.createElement("textarea");
+      campo.value = url;
+      document.body.appendChild(campo);
+      campo.select();
+      document.execCommand("copy");
+      campo.remove();
+    }
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2000);
+  };
+
+  return (
+    <div className="flex items-center gap-2 min-w-0">
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 hover:bg-emerald-100 transition-colors min-w-0"
+        title={url}
+      >
+        <Video className="w-3 h-3 shrink-0" />
+        <span className="text-xs font-bold uppercase">Entrar</span>
+        <ExternalLink className="w-3 h-3 shrink-0 opacity-60" />
+      </a>
+      <button
+        type="button"
+        onClick={copiar}
+        className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 border border-slate-100 text-slate-500 hover:bg-slate-100 transition-colors"
+        title="Copiar o link da reunião"
+      >
+        {copiado ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+        <span className="text-xs font-bold uppercase">{copiado ? "Copiado" : "Copiar link"}</span>
+      </button>
+    </div>
+  );
 }
 
 export default function Appointments() {
@@ -301,6 +354,13 @@ export default function Appointments() {
                                                      appt.status === "NOSHOW" ? "No-Show" : "Pendente"}
                                                   </Badge>
                                                </div>
+                                               {/* O link fica no card, ao lado de quem e quando: é onde
+                                                   se olha na hora de entrar ou de repassar para alguém. */}
+                                               {appt.meetLink && (
+                                                 <div className="pt-1.5">
+                                                   <MeetLink url={appt.meetLink} />
+                                                 </div>
+                                               )}
                                             </div>
                                          </div>
 

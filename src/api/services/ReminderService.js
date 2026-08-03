@@ -39,13 +39,23 @@ export const KIND_LABEL = {
 const PADROES = {
   bookedMsgTemplate:
     "Obrigado, {name}! 🙌 Seu agendamento está confirmado.\n\n📅 {date}\n🕒 {time}{link_block}\n\nPosso te ajudar com mais alguma coisa?",
+  // CUIDADO: confirmMsgTemplate, lateMsgTemplate e postServiceMsgTemplate têm
+  // DEFAULT na coluna do banco (ver AutomationConfig no schema). Como a linha
+  // de config nasce preenchida, o valor do banco vence estes padrões para todo
+  // tenant que tenha config salva — mudar só aqui não muda nada em produção.
+  // Os outros três (booked/meet/final) são nulos no banco e usam estes textos.
+  //
+  // {link_block} só rende uma linha quando existe link, então o texto continua
+  // limpo em agendamento presencial ou sem Google conectado.
   confirmMsgTemplate:
-    "Oi {name}! Passando para confirmar nosso compromisso de {date} às {time}. Podemos confirmar?",
+    "Oi {name}! Passando para confirmar nosso compromisso de {date} às {time}. Podemos confirmar?{link_block}",
   meetMsgTemplate:
     "Oi {name}! Sua reunião começa em {minutes} minutos.\n\nEntre por aqui: {link}",
   finalMsgTemplate: "{name}, sua reunião é agora! 🚀{link_block}",
+  // Quem está atrasado muitas vezes é quem não achou o link: mandar de novo
+  // resolve mais do que perguntar o que houve.
   lateMsgTemplate:
-    "Olá {name}, não conseguimos te encontrar no horário das {time}. Aconteceu algo? Se quiser remarcar, é só me chamar.",
+    "Olá {name}, não conseguimos te encontrar no horário das {time}. Aconteceu algo? Se quiser entrar agora ou remarcar, é só me avisar.{link_block}",
   postServiceMsgTemplate:
     "Oi {name}! Como foi nosso atendimento? Seu retorno ajuda demais. ✨",
 };

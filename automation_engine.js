@@ -43,7 +43,7 @@ export function pickAgentForAccount(agents, accountId) {
 
 // Traduz skills (ids amigáveis) em nomes de tools que o modelo entende.
 const SKILL_TO_TOOLS = {
-  schedule: ["create_appointment", "get_availability", "send_booking_link"],
+  schedule: ["create_appointment", "get_availability", "send_booking_link", "send_meeting_link"],
   qualify: [], // comportamento de persona, sem tool
   send_catalog: ["list_catalog", "send_catalog_item"],
   move_pipeline: ["move_lead_stage"],
@@ -1392,6 +1392,19 @@ class AutomationEngine {
           },
         },
         {
+          name: "send_meeting_link",
+          description:
+            "Envia ao cliente o link da reunião (Meet) do compromisso que ele já tem marcado. " +
+            "Use sempre que ele pedir o link, perguntar por onde entrar, ou disser que não achou/perdeu o link. " +
+            "Nunca escreva um link de reunião de memória: chame esta ferramenta.",
+          parameters: {
+            type: "object",
+            properties: {
+              message: { type: "string", description: "Frase curta que acompanha o link (opcional)" },
+            },
+          },
+        },
+        {
           name: "move_lead_stage",
           description: "Move o lead para outra etapa do pipeline de vendas.",
           parameters: {
@@ -1563,6 +1576,58 @@ class AutomationEngine {
           }
           return { success: false, error: e.message };
         }
+      }
+      case "send_meeting_link": {
+        // O link vive no agendamento, não no prompt: pedir para o modelo
+        // repetir o que leu no contexto é o caminho mais curto para ele
+        // inventar uma URL de Meet que não existe.
+        const agora = new Date();
+        const appt = await prisma.appointment.findFirst({
+          where: {
+            leadId: lead.id,
+            tenantId: lead.tenantId,
+            status: "SCHEDULED",
+            // Tolera a reunião que acabou de começar: quem pergunta "cadê o
+            // link?" às 14h05 quer o da reunião das 14h.
+            date: { gte: new Date(agora.getTime() - 60 * 60 * 1000) },
+          },
+          orderBy: { date: "asc" },
+        });
+
+        if (!appt) {
+          return {
+            success: false,
+            error: "Este cliente não tem reunião marcada.",
+            note: "Não invente link. Ofereça marcar um horário.",
+          };
+        }
+        if (!appt.meetLink) {
+          const quando = appt.date.toLocaleString("pt-BR", {
+            timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short",
+          });
+          return {
+            success: false,
+            error: "O compromisso existe, mas não tem link de reunião.",
+            quando,
+            note:
+              `Confirme o compromisso de ${quando} e diga que o link será enviado antes do horário. ` +
+              "NÃO invente um link.",
+          };
+        }
+
+        const texto = `${args.message ? `${args.message}\n\n` : ""}🔗 ${appt.meetLink}`;
+        const enviado = lead.phone
+          ? await MessagingService.sendText(lead.tenantId, lead.phone, texto)
+          : false;
+        return enviado
+          ? { success: true, link: appt.meetLink, note: "Link enviado ao cliente. Não repita o link em texto." }
+          : {
+              // O link existe: escrevê-lo na resposta é melhor que empurrar
+              // o cliente para o atendimento humano por uma falha de envio.
+              success: false,
+              link: appt.meetLink,
+              note: `Não consegui enviar automaticamente. Escreva o link na sua resposta: ${appt.meetLink}`,
+            };
       }
       case "send_booking_link": {
         // PUBLIC_URL é a variável oficial; FRONTEND_URL fica como alternativa

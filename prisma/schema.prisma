@@ -565,8 +565,12 @@ model AutomationConfig {
   edges String? // JSON string
 
   // Templates de Mensagens (Universalização)
-  confirmMsgTemplate     String? @default("Olá {name}! 👋 Passando para confirmar seu atendimento de amanhã às {time}. Podemos confirmar? ✅")
-  lateMsgTemplate        String? @default("Oi {name}! 😊 Notamos que você ainda não chegou para o seu horário das {time}. Está tudo bem?")
+  // ATENÇÃO: estes três têm default no banco e por isso VENCEM os PADROES do
+  // ReminderService — a linha de AutomationConfig já nasce preenchida. Mudar só
+  // lá não muda nada para quem tem config salva. Mexeu aqui, mexa lá também.
+  // {link_block} vira a linha do Meet e some sozinho quando não há link.
+  confirmMsgTemplate     String? @default("Olá {name}! 👋 Passando para confirmar seu atendimento de amanhã às {time}. Podemos confirmar? ✅{link_block}")
+  lateMsgTemplate        String? @default("Oi {name}! 😊 Notamos que você ainda não chegou para o seu horário das {time}. Está tudo bem?{link_block}")
   postServiceMsgTemplate String? @default("Oi {name}! Esperamos que tenha gostado do atendimento! ✨ Como foi sua experiência?")
 
   // Régua do agendamento: cada momento pode ser ligado/desligado sozinho.
