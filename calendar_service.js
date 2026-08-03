@@ -66,10 +66,55 @@ function extrairLink(evento) {
   );
 }
 
+/**
+ * Registra (ou limpa) o motivo da última falha com o Google.
+ *
+ * Sem isto o modo de falha é o pior possível: o painel diz "conectado", o
+ * agendamento aparece, nenhum erro sobe para a tela, e o link simplesmente
+ * não existe. O motivo real morria num console.error do servidor.
+ */
+async function anotarErroGoogle(tenantId, mensagem) {
+  if (!tenantId) return;
+  await prisma.tenant
+    .update({
+      where: { id: tenantId },
+      data: { googleLastError: mensagem ? String(mensagem).slice(0, 500) : null, googleCheckedAt: new Date() },
+    })
+    .catch(() => {});
+}
+
+/** Traduz o erro do Google para algo acionável por quem usa o sistema. */
+export function explicarErroGoogle(err) {
+  const bruto = String(err?.response?.data?.error_description || err?.message || err || "");
+  if (/invalid_grant/i.test(bruto)) {
+    return (
+      "A autorização do Google expirou ou foi revogada. Reconecte em Conexões → Google Agenda. " +
+      "Se o projeto no Google Cloud estiver como 'Testing', o acesso cai a cada 7 dias — publique o app para parar de repetir."
+    );
+  }
+  if (/insufficient|insufficientPermissions|forbidden|403/i.test(bruto)) {
+    return "A conta conectada não tem permissão para gravar nesta agenda. Reconecte aceitando todas as permissões pedidas.";
+  }
+  if (/invalid_client|unauthorized_client/i.test(bruto)) {
+    return "As credenciais do servidor (GOOGLE_CLIENT_ID/SECRET) não batem com o projeto do Google Cloud.";
+  }
+  if (/Calendar API has not been used|accessNotConfigured/i.test(bruto)) {
+    return "A Google Calendar API não está habilitada no projeto do Google Cloud.";
+  }
+  return bruto || "Falha desconhecida ao falar com o Google.";
+}
+
 class CalendarService {
   async getOAuth2Client(tenantId) {
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
     if (!tenant?.googleRefreshToken) return null;
+
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+      // Token salvo mas servidor sem credenciais: a conta parece conectada e
+      // nada funciona. Sem esta anotação a causa é invisível.
+      await anotarErroGoogle(tenantId, "Servidor sem GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET configurados.");
+      return null;
+    }
 
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
@@ -79,6 +124,112 @@ class CalendarService {
 
     oauth2Client.setCredentials({ refresh_token: tenant.googleRefreshToken });
     return oauth2Client;
+  }
+
+  /**
+   * Testa a corrente inteira e diz onde ela quebra.
+   *
+   * O teste decisivo é criar um evento de verdade, ver se o Google devolve
+   * sala de Meet e apagá-lo em seguida: é a única resposta que não depende de
+   * suposição sobre o tipo de conta, escopo ou configuração da agenda.
+   */
+  async diagnosticar(tenantId, { criarEventoTeste = true } = {}) {
+    const r = {
+      configurado: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REDIRECT_URI),
+      tokenSalvo: false,
+      tokenValido: false,
+      escreveNaAgenda: false,
+      geraMeet: false,
+      erro: null,
+      detalhe: null,
+    };
+
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { googleRefreshToken: true },
+    });
+    r.tokenSalvo = !!tenant?.googleRefreshToken;
+
+    if (!r.configurado) {
+      r.erro = "O servidor não tem GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET e GOOGLE_REDIRECT_URI configurados.";
+      return r;
+    }
+    if (!r.tokenSalvo) {
+      r.erro = "Nenhuma conta Google conectada. Conecte em Conexões → Google Agenda.";
+      return r;
+    }
+
+    const auth = await this.getOAuth2Client(tenantId);
+    if (!auth) {
+      r.erro = "Não foi possível montar o cliente do Google.";
+      return r;
+    }
+
+    // 1. O refresh token ainda vale? É aqui que aparece o invalid_grant de
+    //    token revogado ou de projeto OAuth em modo Testing (expira em 7 dias).
+    try {
+      const { token } = await auth.getAccessToken();
+      r.tokenValido = !!token;
+    } catch (err) {
+      r.erro = explicarErroGoogle(err);
+      r.detalhe = String(err?.message || err).slice(0, 300);
+      await anotarErroGoogle(tenantId, r.erro);
+      return r;
+    }
+
+    if (!criarEventoTeste) {
+      await anotarErroGoogle(tenantId, null);
+      return r;
+    }
+
+    // 2. Cria um evento descartável daqui a um ano, confere se veio Meet e
+    //    apaga. Único jeito honesto de saber se ESTA conta gera link.
+    const calendar = google.calendar({ version: "v3", auth });
+    const inicio = new Date(Date.now() + 365 * 24 * 3600e3);
+    const fim = new Date(inicio.getTime() + 30 * 60000);
+    let eventoId = null;
+    try {
+      const res = await calendar.events.insert({
+        calendarId: "primary",
+        resource: {
+          summary: "[teste] Agentes Virtuais — pode apagar",
+          description: "Evento de diagnóstico criado pelo sistema. É apagado automaticamente.",
+          start: { dateTime: inicio.toISOString(), timeZone: TIMEZONE },
+          end: { dateTime: fim.toISOString(), timeZone: TIMEZONE },
+          conferenceData: {
+            createRequest: {
+              requestId: `diag-${Date.now()}`,
+              conferenceSolutionKey: { type: "hangoutsMeet" },
+            },
+          },
+        },
+        conferenceDataVersion: 1,
+      });
+      eventoId = res.data.id;
+      r.escreveNaAgenda = !!eventoId;
+
+      let link = extrairLink(res.data);
+      if (!link && eventoId) link = await this.buscarLink(tenantId, eventoId, { tentativas: 3 });
+      r.geraMeet = !!link;
+
+      if (!r.geraMeet) {
+        const status = res.data.conferenceData?.createRequest?.status?.statusCode;
+        r.erro =
+          "A agenda aceita eventos, mas o Google não criou sala do Meet" +
+          (status ? ` (status: ${status})` : " (nenhum conferenceData na resposta)") +
+          ". Contas do Google Workspace com Meet desativado, ou agendas que não permitem videoconferência, se comportam assim.";
+      }
+    } catch (err) {
+      r.erro = explicarErroGoogle(err);
+      r.detalhe = String(err?.message || err).slice(0, 300);
+    } finally {
+      if (eventoId) {
+        await calendar.events.delete({ calendarId: "primary", eventId: eventoId }).catch(() => {});
+      }
+    }
+
+    await anotarErroGoogle(tenantId, r.erro);
+    return r;
   }
 
   /**
@@ -191,14 +342,30 @@ class CalendarService {
       // createRequest.status = "pending", sem hangoutLink e sem entryPoints.
       // Ler só a resposta do insert gravava meetLink nulo numa reunião que
       // ganhava link segundos depois — e ninguém nunca ia buscá-lo.
-      const pendente = res.data.conferenceData?.createRequest?.status?.statusCode === "pending";
-      if (!meetLink && googleEventId && pendente) {
+      //
+      // Tenta sempre que faltar, e não só quando o status disser "pending":
+      // quando a conta não gera Meet, a resposta vem sem conferenceData nenhum,
+      // e condicionar ao "pending" deixava esse caso sem tentativa e sem aviso.
+      if (!meetLink && googleEventId) {
         meetLink = await this.buscarLink(tenantId, googleEventId, { tentativas: 3 });
+      }
+
+      if (googleEventId && !meetLink) {
+        const status = res.data.conferenceData?.createRequest?.status?.statusCode || "sem conferenceData";
+        await anotarErroGoogle(
+          tenantId,
+          `O evento foi criado na agenda, mas o Google não gerou sala do Meet (${status}). ` +
+            "Rode o diagnóstico em Conexões → Google Agenda."
+        );
+      } else if (googleEventId) {
+        await anotarErroGoogle(tenantId, null);
       }
 
       return { googleEventId, meetLink: meetLink || null };
     } catch (err) {
-      console.error(`[Calendar] Falha ao inserir no Google (tenant ${tenantId}):`, err.message);
+      const motivo = explicarErroGoogle(err);
+      console.error(`[Calendar] Falha ao inserir no Google (tenant ${tenantId}):`, motivo);
+      await anotarErroGoogle(tenantId, motivo);
       return { googleEventId: null, meetLink: null };
     }
   }

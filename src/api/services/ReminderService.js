@@ -332,8 +332,16 @@ class ReminderService {
 
   // ── Momentos da régua ──────────────────────────────────────────
 
-  /** Agradece, manda o resumo e oferece encerrar o atendimento. */
+  /** Agradece, manda o resumo com o link e oferece encerrar o atendimento. */
   async enviarBooked(appt, lead, config) {
+    // Esta é a primeira mensagem depois de marcar, e é a que o cliente guarda.
+    // Ela sai no mesmo instante da criação do agendamento — e a sala do Meet
+    // costuma ficar pronta um pouco depois. Buscar aqui é o que evita mandar
+    // o resumo sem link e nunca mais mandar link nenhum.
+    if (!appt.meetLink) {
+      const { default: CalendarService } = await import("../../../calendar_service.js");
+      appt.meetLink = await CalendarService.garantirLink(appt);
+    }
     const body = preencher(config.bookedMsgTemplate || PADROES.bookedMsgTemplate, { lead, appointment: appt });
     return enviarComBotoes(appt.tenantId, lead, body, [
       { id: `appt:more:${appt.id}`, title: "Tenho uma dúvida" },

@@ -17,7 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Plus, Smartphone, CheckCircle2, RefreshCw, Trash2, Code2,
   Globe, Instagram, Copy, ExternalLink, ShieldCheck, CalendarClock,
-  Eye, EyeOff, Wifi, Pencil, X, Plug,
+  Eye, EyeOff, Wifi, Pencil, X, Plug, AlertTriangle,
 } from "lucide-react";
 
 interface Connection {
@@ -183,7 +183,11 @@ export default function Connections() {
   };
 
   // Google Calendar
-  const [gcal, setGcal] = useState<{ configured: boolean; connected: boolean }>({ configured: false, connected: false });
+  const [gcal, setGcal] = useState<{ configured: boolean; connected: boolean; lastError?: string | null }>({
+    configured: false, connected: false, lastError: null,
+  });
+  const [gcalDiag, setGcalDiag] = useState<any>(null);
+  const [gcalTesting, setGcalTesting] = useState(false);
   // Canal liberado pelo plano: OFFICIAL | BAILEYS | BOTH.
   const [whatsappMode, setWhatsappMode] = useState<string>("BOTH");
   const [gcalLoading, setGcalLoading] = useState(false);
@@ -192,10 +196,31 @@ export default function Connections() {
     try {
       const res = await fetch("/api/google/status", { headers: authHeaders() });
       const data = await res.json();
-      if (res.ok) setGcal({ configured: !!data.configured, connected: !!data.connected });
+      if (res.ok) setGcal({ configured: !!data.configured, connected: !!data.connected, lastError: data.lastError || null });
     } catch {
       /* silent */
     }
+  };
+
+  /**
+   * Testa a conexão de ponta a ponta: cria um evento descartável na agenda,
+   * confere se o Google gerou sala do Meet e apaga. É o que separa "o token
+   * morreu" de "esta conta não gera link" — duas causas com a mesma cara.
+   */
+  const testGoogle = async () => {
+    setGcalTesting(true);
+    setGcalDiag(null);
+    try {
+      const res = await fetch("/api/google/diagnose", { method: "POST", headers: authHeaders() });
+      const d = await res.json();
+      setGcalDiag(d);
+      if (d.geraMeet) toast({ title: "Tudo certo", description: "A agenda responde e o link do Meet é gerado." });
+      else toast({ title: "Encontrei um problema", description: d.erro, variant: "destructive" });
+    } catch (e: any) {
+      toast({ title: "Erro no teste", description: e.message, variant: "destructive" });
+    }
+    setGcalTesting(false);
+    fetchGcal();
   };
 
   const connectGoogle = async () => {
@@ -896,11 +921,50 @@ export default function Connections() {
                 </div>
               ) : gcal.connected ? (
                 <div className="space-y-4">
-                  <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 flex items-start gap-3 text-sm text-emerald-800">
-                    <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
-                    <span>Sua agenda está conectada. Novos agendamentos feitos pelo agente aparecem no seu Google Calendar, e horários já ocupados no calendário não são oferecidos aos clientes.</span>
-                  </div>
-                  <div className="flex justify-end">
+                  {/* Estar conectado é ter um token salvo — não é garantia de
+                      que ele ainda vale. Quando a última chamada falhou, o
+                      motivo aparece aqui em vez de morrer no log do servidor. */}
+                  {gcal.lastError ? (
+                    <div className="rounded-xl bg-rose-50 border border-rose-200 p-4 flex items-start gap-3 text-sm text-rose-800">
+                      <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold">A agenda está conectada, mas a última tentativa falhou</p>
+                        <p className="mt-1">{gcal.lastError}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 flex items-start gap-3 text-sm text-emerald-800">
+                      <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
+                      <span>Sua agenda está conectada. Novos agendamentos feitos pelo agente aparecem no seu Google Calendar, e horários já ocupados no calendário não são oferecidos aos clientes.</span>
+                    </div>
+                  )}
+
+                  {gcalDiag && (
+                    <div className="rounded-xl border border-border p-4 space-y-2 text-sm">
+                      <p className="font-semibold text-foreground">Resultado do teste</p>
+                      {[
+                        ["Credenciais no servidor", gcalDiag.configurado],
+                        ["Conta autorizada", gcalDiag.tokenSalvo],
+                        ["Autorização ainda válida", gcalDiag.tokenValido],
+                        ["Consegue gravar na agenda", gcalDiag.escreveNaAgenda],
+                        ["Gera link do Meet", gcalDiag.geraMeet],
+                      ].map(([rotulo, valor]) => (
+                        <div key={String(rotulo)} className="flex items-center gap-2">
+                          {valor
+                            ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                            : <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />}
+                          <span className={valor ? "text-muted-foreground" : "font-medium text-foreground"}>{rotulo}</span>
+                        </div>
+                      ))}
+                      {gcalDiag.erro && <p className="pt-1 text-rose-700">{gcalDiag.erro}</p>}
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={testGoogle} disabled={gcalTesting} className="gap-2">
+                      {gcalTesting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                      Testar conexão
+                    </Button>
                     <Button variant="outline" onClick={disconnectGoogle} disabled={gcalLoading} className="gap-2 text-rose-600 border-rose-200 hover:bg-rose-50">
                       {gcalLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                       Desconectar

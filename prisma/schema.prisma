@@ -38,6 +38,11 @@ model Tenant {
   openAiKey          String?
   systemPrompt       String?
   googleRefreshToken String?
+  /// Último erro do Google (ex.: invalid_grant). Guardado porque "conectado"
+  /// era só a existência do token: revogado ou expirado, o painel continuava
+  /// dizendo que estava tudo bem e as falhas morriam no console do servidor.
+  googleLastError    String?
+  googleCheckedAt    DateTime?
   aiProvider         String? @default("GEMINI")
   aiApiKey           String?
   elevenLabsKey      String?

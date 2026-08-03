@@ -98,6 +98,7 @@ router.use(requireVerifiedEmail);
 router.get("/google/status", GoogleCalendarController.getStatus);
 router.get("/google/auth-url", GoogleCalendarController.getAuthUrl);
 router.post("/google/disconnect", GoogleCalendarController.disconnect);
+router.post("/google/diagnose", GoogleCalendarController.diagnose);
 
 // Leads
 router.get("/leads", requirePermission("contacts"), LeadController.getLeads);

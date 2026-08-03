@@ -48,6 +48,12 @@ google.calendar = () => ({
 });
 
 async function main() {
+  // Sem credenciais no ambiente o serviço nem monta o cliente OAuth — e é isso
+  // que se quer em produção. Aqui elas precisam existir para o dublê ser usado.
+  process.env.GOOGLE_CLIENT_ID = "id-de-teste";
+  process.env.GOOGLE_CLIENT_SECRET = "segredo-de-teste";
+  process.env.GOOGLE_REDIRECT_URI = "https://exemplo.local/api/auth/google/callback";
+
   const plan = await prisma.plan.create({
     data: { name: `Pend ${Date.now()}`, priceMonthly: 0, priceYearly: 0, enableCalendar: true },
   });

@@ -43,9 +43,29 @@ export const getStatus = async (req, res) => {
   try {
     const tenant = await prisma.tenant.findUnique({
       where: { id: req.tenantId },
-      select: { googleRefreshToken: true },
+      select: { googleRefreshToken: true, googleLastError: true, googleCheckedAt: true },
     });
-    res.json({ configured: isConfigured(), connected: !!tenant?.googleRefreshToken });
+    res.json({
+      configured: isConfigured(),
+      connected: !!tenant?.googleRefreshToken,
+      // "Conectado" era só ter a string salva. O último erro vem junto porque
+      // token revogado ou expirado continua salvo — e a tela precisa dizer
+      // isso em vez de garantir que está tudo bem enquanto nada funciona.
+      lastError: tenant?.googleLastError || null,
+      checkedAt: tenant?.googleCheckedAt || null,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+};
+
+// POST /google/diagnose — testa a corrente inteira e diz onde ela quebra.
+// Cria um evento descartável daqui a um ano e o apaga em seguida: é a única
+// forma de saber se ESTA conta gera link do Meet sem depender de suposição.
+export const diagnose = async (req, res) => {
+  try {
+    const { default: CalendarService } = await import("../../../calendar_service.js");
+    res.json(await CalendarService.diagnosticar(req.tenantId));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
