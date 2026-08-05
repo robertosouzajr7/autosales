@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#05070F;color:#F1F5F9;font-family:Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:-0.011em;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+a:hover{color:#fff}
+@keyframes drift{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(50px,40px) scale(1.1)}66%{transform:translate(-40px,25px) scale(.94)}}
+@keyframes floaty{50%{transform:translateY(-14px)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</helmet>
+<div style="min-height:100vh;background:#05070F;color:#F1F5F9;overflow-x:hidden">
+
+  <header style="position:sticky;top:0;z-index:50;background:rgba(255,255,255,0.05);backdrop-filter:blur(24px);border-bottom:1px solid rgba(255,255,255,0.1);padding:0 20px;height:68px;display:flex;align-items:center;justify-content:space-between">
+    <a href="#" style="display:inline-flex;align-items:center;gap:10px">
+      <svg viewBox="0 0 64 64" width="28" height="28" fill="#2563EB" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M32 6 L58 56 L6 56 Z M32 30 L45.5 56 L18.5 56 Z"></path></svg>
+      <span style="font-size:18px;font-weight:700;letter-spacing:-0.02em">Agentes <span style="color:#2563EB">Virtuais</span></span>
+    </a>
+    <nav style="display:flex;align-items:center;gap:32px;font-size:13.5px;font-weight:500;color:#94A3B8">
+      <a href="#problem">O Problema</a>
+      <a href="#how-it-works">Como Funciona</a>
+      <a href="#painel">O Painel</a>
+      <a href="#features">Funcionalidades</a>
+      <a href="#pricing">Planos</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div style="display:flex;align-items:center;gap:10px">
+      <button style="padding:10px;border-radius:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);display:grid;place-items:center;cursor:pointer">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FBBF24" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>
+      </button>
+      <a href="#" style="font-size:14px;font-weight:600;padding:0 8px;color:#CBD5E1">Entrar</a>
+      <a href="#" style="display:inline-flex;align-items:center;height:40px;padding:0 20px;border-radius:12px;background:#2563EB;color:#fff;font-size:14px;font-weight:600;box-shadow:0 10px 15px -3px rgba(37,99,235,0.25)">Testar Grátis</a>
+    </div>
+  </header>
+
+  <section style="position:relative;overflow:hidden;padding:96px 64px 128px">
+    <div aria-hidden="true" style="pointer-events:none;position:absolute;inset:0;overflow:hidden">
+      <div style="position:absolute;top:-160px;left:-128px;width:620px;height:620px;border-radius:50%;filter:blur(150px);background:rgba(59,108,255,0.25);animation:drift 24s ease-in-out infinite"></div>
+      <div style="position:absolute;top:-80px;right:-80px;width:520px;height:520px;border-radius:50%;filter:blur(150px);background:rgba(168,85,247,0.2);animation:drift 24s ease-in-out -8s infinite"></div>
+      <div style="position:absolute;top:256px;left:33%;width:460px;height:460px;border-radius:50%;filter:blur(150px);background:rgba(34,211,238,0.15);animation:drift 24s ease-in-out -14s infinite"></div>
+    </div>
+    <div style="position:relative;z-index:10;max-width:1280px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center">
+      <div style="animation:fadeUp .6s cubic-bezier(.22,1,.36,1) both">
+        <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(24px);font-size:11.5px;font-weight:500;letter-spacing:0.02em;margin-bottom:28px">
+          <span style="width:6px;height:6px;border-radius:50%;background:#34D399;box-shadow:0 0 8px #34D399"></span>
+          Agente de IA multicanal · online 24h
+        </div>
+        <h1 style="font-size:64px;font-weight:700;letter-spacing:-0.035em;line-height:0.98;margin:0;text-wrap:balance">Seu cliente chama. <span style="background:linear-gradient(90deg,#2563EB,#7c5cff,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent">A IA responde, agenda e vende.</span></h1>
+        <p style="margin:20px 0 0;font-size:18px;color:#94A3B8;font-weight:500">24 horas por dia, <span style="font-weight:600;color:#2563EB">no WhatsApp</span>.</p>
+        <div style="margin-top:36px;display:flex;gap:14px;align-items:center">
+          <a href="#" style="display:inline-flex;align-items:center;height:56px;padding:0 32px;font-size:16px;font-weight:600;background:#2563EB;color:#fff;border-radius:16px;box-shadow:0 16px 40px -8px rgba(37,99,235,0.5)">Descobrir meu plano ideal</a>
+          <a href="#features" style="display:inline-flex;align-items:center;height:56px;padding:0 28px;font-size:14px;font-weight:600;border-radius:16px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(24px)">Ver o que faz
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:8px"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
+          </a>
+        </div>
+        <div style="margin-top:32px;display:flex;flex-wrap:wrap;gap:8px 24px;font-size:12px;color:#94A3B8">
+          <span><b style="color:#F1F5F9;font-weight:600">7 dias</b> grátis</span>
+          <span><b style="color:#F1F5F9;font-weight:600">Sem cartão</b> para testar</span>
+          <span><b style="color:#F1F5F9;font-weight:600">1 minuto</b> para conectar</span>
+        </div>
+      </div>
+
+      <div style="position:relative;display:flex;justify-content:flex-end;animation:floaty 7s ease-in-out infinite">
+        <div aria-hidden="true" style="position:absolute;inset:0;z-index:-1;filter:blur(80px);background:linear-gradient(135deg,rgba(37,99,235,0.3),rgba(124,92,255,0.2));border-radius:50%;transform:scale(0.9)"></div>
+        <div style="position:relative;width:340px;border-radius:40px;border:8px solid #1E293B;background:#0F172A;box-shadow:0 30px 60px -15px rgba(37,99,235,0.35);overflow:hidden">
+          <div style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:128px;height:24px;background:#0F172A;border-radius:0 0 16px 16px;z-index:20"></div>
+          <div style="background:#2563EB;color:#fff;padding:32px 16px 12px;display:flex;align-items:center;gap:12px">
+            <div style="height:36px;width:36px;border-radius:50%;background:rgba(255,255,255,0.2);display:grid;place-items:center;font-weight:700;font-size:14px">AV</div>
+            <div style="flex:1;min-width:0">
+              <p style="margin:0;font-size:14px;font-weight:600;line-height:1.2">Sofia · Agente de IA</p>
+              <p style="margin:0;font-size:10px;color:rgba(255,255,255,0.7)">online agora</p>
+            </div>
+            <div style="height:24px;width:24px;border-radius:50%;background:rgba(255,255,255,0.15);display:grid;place-items:center">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17.5" cy="6.5" r="1"></circle></svg>
+            </div>
+          </div>
+          <div style="background:#020617;padding:16px 12px;display:flex;flex-direction:column;gap:10px;height:440px;overflow:hidden">
+            <div style="margin-right:auto;width:fit-content;max-width:80%;background:#1E293B;color:#F1F5F9;border-radius:16px;border-bottom-left-radius:4px;padding:8px 12px;font-size:12px;line-height:1.35">Oi! Vi o clareamento de vocês, quanto fica? 😃</div>
+            <div style="margin-left:auto;width:fit-content;max-width:80%;background:#2563EB;color:#fff;border-radius:16px;border-bottom-right-radius:4px;padding:8px 12px;font-size:12px;line-height:1.35">Oi! Que bom que chamou 💙 O clareamento a laser sai R$ 1.400 em 3 sessões. Posso te mostrar?</div>
+            <div style="margin-left:auto;width:78%;border-radius:16px;overflow:hidden;background:#1E293B">
+              <div style="height:96px;background:linear-gradient(135deg,#2563EB,#60A5FA);display:grid;place-items:center;position:relative">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8L20 10.7l-5.1 3.3L16 20l-4-3-4 3 1.1-6L4 10.7l6.1-1.9z"></path></svg>
+                <span style="position:absolute;bottom:6px;left:8px;font-size:9px;color:rgba(255,255,255,0.8);font-weight:500">clareamento-laser.jpg</span>
+              </div>
+              <div style="padding:10px">
+                <p style="margin:0;font-size:12px;font-weight:600;color:#F1F5F9">Clareamento a Laser</p>
+                <p style="margin:0;font-size:12px;font-weight:700;color:#2563EB">R$ 1.400 · 3 sessões</p>
+              </div>
+            </div>
+            <div style="margin-right:auto;width:fit-content;max-width:80%;background:#1E293B;color:#F1F5F9;border-radius:16px;border-bottom-left-radius:4px;padding:8px 12px;font-size:12px">Adorei! Consigo essa semana?</div>
+            <div style="margin-left:auto;width:fit-content;max-width:80%;background:#2563EB;color:#fff;border-radius:16px;border-bottom-right-radius:4px;padding:8px 12px;font-size:12px;line-height:1.35">Consigo sim! Tenho <b>quinta 10h</b> ou <b>sexta 15h30</b>. Qual fica melhor?</div>
+            <div style="margin-right:auto;width:fit-content;max-width:80%;background:#1E293B;color:#F1F5F9;border-radius:16px;border-bottom-left-radius:4px;padding:8px 12px;font-size:12px">Quinta 10h 🙌</div>
+            <div style="margin-left:auto;width:78%;border-radius:16px;background:#10B981;color:#fff;padding:10px;display:flex;align-items:center;gap:8px">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
+              <div>
+                <p style="margin:0;font-size:11px;font-weight:600;line-height:1.2">Agendado ✓</p>
+                <p style="margin:0;font-size:10px;color:rgba(255,255,255,0.85)">Quinta, 10h · Google Calendar</p>
+              </div>
+            </div>
+          </div>
+          <div style="background:#0F172A;padding:10px 12px;display:flex;align-items:center;gap:8px;border-top:1px solid #1E293B">
+            <div style="flex:1;height:32px;border-radius:999px;background:#1E293B;padding:0 12px;display:flex;align-items:center;font-size:11px;color:#64748B">Mensagem…</div>
+            <div style="height:32px;width:32px;border-radius:50%;background:#2563EB;display:grid;place-items:center;color:#fff">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding:0 64px;border-top:1px solid rgba(255,255,255,0.1);border-bottom:1px solid rgba(255,255,255,0.1)">
+    <div style="max-width:1152px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)">
+      <div style="padding:44px 32px;border-right:1px solid rgba(255,255,255,0.1)"><div style="font-size:42px;font-weight:700;letter-spacing:-0.02em;font-variant-numeric:tabular-nums">24/7</div><div style="font-size:13px;color:#94A3B8;margin-top:6px">Atendendo sem pausa</div></div>
+      <div style="padding:44px 32px;border-right:1px solid rgba(255,255,255,0.1)"><div style="font-size:42px;font-weight:700;letter-spacing:-0.02em;font-variant-numeric:tabular-nums">3</div><div style="font-size:13px;color:#94A3B8;margin-top:6px">Canais, uma caixa de entrada</div></div>
+      <div style="padding:44px 32px;border-right:1px solid rgba(255,255,255,0.1)"><div style="font-size:42px;font-weight:700;letter-spacing:-0.02em;font-variant-numeric:tabular-nums">−48%</div><div style="font-size:13px;color:#94A3B8;margin-top:6px">Menos faltas com lembretes</div></div>
+      <div style="padding:44px 32px"><div style="font-size:42px;font-weight:700;letter-spacing:-0.02em;font-variant-numeric:tabular-nums">&lt;5s</div><div style="font-size:13px;color:#94A3B8;margin-top:6px">Tempo médio de resposta</div></div>
+    </div>
+  </section>
+
+  <section id="problem" style="padding:96px 64px">
+    <div style="max-width:1152px;margin:0 auto;display:flex;flex-direction:column;gap:56px">
+      <div style="text-align:center;max-width:672px;margin:0 auto;display:flex;flex-direction:column;gap:16px">
+        <h2 style="margin:0;font-size:48px;font-weight:700;letter-spacing:-0.03em;text-wrap:balance">Por que seu negócio perde vendas <span style="color:#EF4444;font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-weight:500">todos os dias</span>?</h2>
+        <p style="margin:0;color:#94A3B8">Três gargalos silenciosos deixam dinheiro na mesa sem que ninguém perceba.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px">
+        <sc-for list="{{ problemas }}" as="p" hint-placeholder-count="3">
+          <div style="padding:28px;border-radius:24px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(24px);display:flex;flex-direction:column;gap:16px">
+            <div style="width:44px;height:44px;border-radius:12px;background:rgba(239,68,68,0.1);color:#EF4444;display:grid;place-items:center">{{ p.icon }}</div>
+            <h3 style="margin:0;font-size:18px;font-weight:600;letter-spacing:-0.02em">{{ p.t }}</h3>
+            <p style="margin:0;font-size:14px;color:#94A3B8;line-height:1.65">{{ p.d }}</p>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section id="how-it-works" style="padding:96px 64px;border-top:1px solid rgba(255,255,255,0.1)">
+    <div style="max-width:1152px;margin:0 auto;display:flex;flex-direction:column;gap:64px">
+      <div style="text-align:center;max-width:672px;margin:0 auto;display:flex;flex-direction:column;gap:16px">
+        <h2 style="margin:0;font-size:48px;font-weight:700;letter-spacing:-0.03em;text-wrap:balance">Do primeiro "oi" ao <span style="font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-weight:500;color:#2563EB">cliente fechado</span></h2>
+        <p style="margin:0;color:#94A3B8">Seus agentes de IA cuidam de todos os canais enquanto você cuida do que importa.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:32px">
+        <sc-for list="{{ passos }}" as="s" hint-placeholder-count="3">
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div style="font-size:60px;font-weight:700;color:rgba(255,255,255,0.06);line-height:1;font-variant-numeric:tabular-nums">{{ s.n }}</div>
+            <div style="color:#2563EB;font-weight:600;font-size:11px;letter-spacing:0.15em;text-transform:uppercase">{{ s.k }}</div>
+            <h3 style="margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em">{{ s.t }}</h3>
+            <p style="margin:0;font-size:14px;color:#94A3B8;line-height:1.65">{{ s.d }}</p>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section id="painel" style="position:relative;padding:96px 64px;overflow:hidden;border-top:1px solid rgba(255,255,255,0.1)">
+    <div aria-hidden="true" style="pointer-events:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:700px;height:380px;border-radius:50%;filter:blur(160px);background:rgba(59,108,255,0.15)"></div>
+    <div style="position:relative;z-index:10;max-width:1152px;margin:0 auto;display:flex;flex-direction:column;gap:48px">
+      <div style="text-align:center;max-width:672px;margin:0 auto;display:flex;flex-direction:column;gap:16px">
+        <div style="align-self:center;display:inline-flex;padding:6px 14px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);font-size:11px;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:#2563EB">Um painel, todos os canais</div>
+        <h2 style="margin:0;font-size:48px;font-weight:700;letter-spacing:-0.03em;text-wrap:balance">Tudo o que acontece, <span style="font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-weight:500;color:#2563EB">num lugar só</span></h2>
+        <p style="margin:0;color:#94A3B8">WhatsApp, Instagram e site na mesma caixa de entrada, com o funil de clientes atualizado em tempo real.</p>
+      </div>
+      <div style="max-width:1024px;margin:0 auto;width:100%">
+        <div style="width:100%;border-radius:16px;border:1px solid #1E293B;background:#0F172A;box-shadow:0 30px 60px -20px rgba(15,23,42,0.35);overflow:hidden">
+          <div style="background:#020617;padding:8px 12px;display:flex;align-items:center;gap:8px">
+            <div style="display:flex;gap:6px"><span style="height:10px;width:10px;border-radius:50%;background:#F87171"></span><span style="height:10px;width:10px;border-radius:50%;background:#FBBF24"></span><span style="height:10px;width:10px;border-radius:50%;background:#34D399"></span></div>
+            <div style="margin-left:8px;flex:1;height:20px;border-radius:6px;background:#1E293B;display:flex;align-items:center;padding:0 8px;font-size:9px;color:#64748B">app.agentesvirtuais.com/conversations</div>
+          </div>
+          <div style="display:flex;height:360px">
+            <div style="width:160px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid #1E293B;background:#020617;padding:12px 0">
+              <div style="padding:0 12px;margin-bottom:12px"><span style="font-size:14px;font-weight:700;color:#E2E8F0">Agentes <span style="color:#2563EB">Virtuais</span></span></div>
+              <div style="display:flex;flex-direction:column;gap:2px;padding:0 8px">
+                <sc-for list="{{ mockNav }}" as="n" hint-placeholder-count="6">
+                  <div style="display:flex;align-items:center;gap:8px;border-radius:8px;padding:6px 8px;font-size:11px;font-weight:500;color:{{ n.color }};background:{{ n.bg }}">{{ n.icon }} {{ n.label }}</div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="width:176px;flex-shrink:0;border-right:1px solid #1E293B;background:#0F172A">
+              <div style="padding:8px 12px;border-bottom:1px solid #1E293B;display:flex;align-items:center;gap:8px">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="M21 21l-4.3-4.3"></path></svg>
+                <span style="font-size:10px;color:#64748B">Buscar conversa…</span>
+              </div>
+              <sc-for list="{{ mockChats }}" as="c" hint-placeholder-count="4">
+                <div style="padding:8px 12px;border-bottom:1px solid rgba(30,41,59,0.6);display:flex;align-items:center;gap:8px">
+                  <div style="position:relative">
+                    <div style="height:28px;width:28px;border-radius:50%;background:#334155;display:grid;place-items:center;font-size:9px;font-weight:700;color:#E2E8F0">{{ c.ini }}</div>
+                    <div style="position:absolute;bottom:-2px;right:-2px;height:12px;width:12px;border-radius:50%;background:#2563EB;display:grid;place-items:center">{{ c.icon }}</div>
+                  </div>
+                  <div style="min-width:0;flex:1">
+                    <p style="margin:0;font-size:10px;font-weight:600;color:#E2E8F0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.name }}</p>
+                    <p style="margin:0;font-size:9px;color:#64748B;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.msg }}</p>
+                  </div>
+                  {{ c.dot }}
+                </div>
+              </sc-for>
+            </div>
+            <div style="flex:1;background:#0F172A;padding:12px">
+              <p style="margin:0 0 8px;font-size:11px;font-weight:600;color:#E2E8F0">Funil de Clientes</p>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+                <sc-for list="{{ mockCols }}" as="col" hint-placeholder-count="3">
+                  <div style="display:flex;flex-direction:column;gap:6px">
+                    <div style="display:flex;align-items:center;gap:6px">
+                      <span style="height:6px;width:6px;border-radius:50%;background:{{ col.color }}"></span>
+                      <span style="font-size:9px;font-weight:600;color:#64748B;text-transform:uppercase">{{ col.title }}</span>
+                    </div>
+                    <sc-for list="{{ col.cards }}" as="name" hint-placeholder-count="2">
+                      <div style="border-radius:8px;border:1px solid #334155;background:#1E293B;padding:6px">
+                        <p style="margin:0;font-size:9px;font-weight:500;color:#E2E8F0">{{ name }}</p>
+                        <div style="margin-top:4px;height:4px;width:40px;border-radius:999px;background:#334155"></div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" style="padding:96px 64px;border-top:1px solid rgba(255,255,255,0.1)">
+    <div style="max-width:1152px;margin:0 auto;display:flex;flex-direction:column;gap:64px">
+      <div style="text-align:center;max-width:672px;margin:0 auto;display:flex;flex-direction:column;gap:12px">
+        <h2 style="margin:0;font-size:48px;font-weight:700;letter-spacing:-0.03em">Tudo que já vem pronto</h2>
+        <p style="margin:0;color:#94A3B8">Sem plugin, sem integrador, sem mensalidade extra.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px">
+        <sc-for list="{{ features }}" as="f" hint-placeholder-count="12">
+          <div style="padding:24px;border-radius:24px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(24px);display:flex;flex-direction:column;gap:14px">
+            <div style="width:44px;height:44px;border-radius:16px;background:rgba(37,99,235,0.1);color:#2563EB;display:grid;place-items:center">{{ f.icon }}</div>
+            <h3 style="margin:0;font-size:16px;font-weight:600;letter-spacing:-0.02em">{{ f.t }}</h3>
+            <p style="margin:0;font-size:13px;color:#94A3B8;line-height:1.65">{{ f.d }}</p>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section id="testimonials" style="padding:96px 64px;border-top:1px solid rgba(255,255,255,0.1)">
+    <div style="max-width:1152px;margin:0 auto;display:flex;flex-direction:column;gap:56px">
+      <div style="text-align:center;max-width:672px;margin:0 auto;display:flex;flex-direction:column;gap:16px">
+        <h2 style="margin:0;font-size:48px;font-weight:700;letter-spacing:-0.03em;text-wrap:balance">Negócios que pararam de <span style="font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-weight:500;color:#2563EB">perder clientes</span></h2>
+        <p style="margin:0;color:#94A3B8">Histórias de quem atende, vende e agenda no automático — sem sobrecarregar a equipe.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px">
+        <sc-for list="{{ depoimentos }}" as="t" hint-placeholder-count="3">
+          <div style="padding:28px;border-radius:24px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(24px);display:flex;flex-direction:column;justify-content:space-between;gap:24px">
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <div style="display:flex;gap:2px;color:#FBBF24">{{ t.stars }}</div>
+              <p style="margin:0;font-size:14px;font-style:italic;line-height:1.65;color:#E2E8F0">"{{ t.q }}"</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.1)">
+              <div style="width:40px;height:40px;border-radius:50%;background:rgba(37,99,235,0.15);color:#2563EB;display:grid;place-items:center;font-weight:700;font-size:14px">{{ t.i }}</div>
+              <div>
+                <p style="margin:0;font-size:14px;font-weight:600">{{ t.a }}</p>
+                <p style="margin:0;font-size:11px;text-transform:uppercase;letter-spacing:0.02em;font-weight:600;color:#64748B">{{ t.r }}</p>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section id="pricing" style="padding:96px 64px;border-top:1px solid rgba(255,255,255,0.1)">
+    <div style="max-width:768px;margin:0 auto;text-align:center;display:flex;flex-direction:column;gap:32px">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div style="align-self:center;display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:8px;background:rgba(37,99,235,0.15);color:#2563EB;font-size:12px;font-weight:600">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8L20 10.7l-5.1 3.3L16 20l-4-3-4 3 1.1-6L4 10.7l6.1-1.9z"></path></svg>
+          Leva menos de um minuto
+        </div>
+        <h2 style="margin:0;font-size:48px;font-weight:700;letter-spacing:-0.03em">Qual plano é o seu?</h2>
+        <p style="margin:0;color:#94A3B8;font-size:18px;text-wrap:balance">Responda 5 perguntas sobre o seu atendimento e mostramos os dois planos que servem — um por QR Code e um com API oficial. Sem tabela para decifrar.</p>
+      </div>
+      <div style="display:flex;gap:12px;justify-content:center">
+        <a href="#" style="display:inline-flex;align-items:center;gap:8px;height:56px;padding:0 32px;border-radius:16px;font-size:16px;font-weight:600;background:#2563EB;color:#fff">Descobrir meu plano ideal
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
+        </a>
+        <a href="#" style="display:inline-flex;align-items:center;height:56px;padding:0 32px;border-radius:16px;font-size:16px;font-weight:600;border:1px solid rgba(255,255,255,0.15)">Ver todos os planos</a>
+      </div>
+      <p style="margin:0;font-size:14px;color:#94A3B8;display:flex;flex-wrap:wrap;justify-content:center;gap:4px 20px">
+        <span><strong style="color:#CBD5E1">7 dias grátis</strong> em qualquer plano</span>
+        <span><strong style="color:#CBD5E1">Sem cartão</strong> para testar</span>
+        <span><strong style="color:#CBD5E1">Cancele</strong> em um clique</span>
+      </p>
+    </div>
+  </section>
+
+  <section id="faq" style="padding:96px 64px;border-top:1px solid rgba(255,255,255,0.1)">
+    <div style="max-width:896px;margin:0 auto;display:flex;flex-direction:column;gap:56px">
+      <div style="text-align:center;display:flex;flex-direction:column;gap:16px">
+        <h2 style="margin:0;font-size:48px;font-weight:700;letter-spacing:-0.03em">Perguntas <span style="font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-weight:500;color:#2563EB">frequentes</span></h2>
+        <p style="margin:0;color:#94A3B8">Esclareça suas dúvidas e ative sua operação com segurança.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <sc-for list="{{ faq }}" as="f" hint-placeholder-count="6">
+          <div style="padding:24px;border-radius:16px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(24px);display:flex;flex-direction:column;gap:8px">
+            <h4 style="margin:0;font-weight:600;font-size:16px">{{ f.q }}</h4>
+            <p style="margin:0;font-size:14px;color:#94A3B8;line-height:1.65">{{ f.a }}</p>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section style="position:relative;padding:112px 64px;overflow:hidden;border-top:1px solid rgba(255,255,255,0.1);text-align:center">
+    <div aria-hidden="true" style="pointer-events:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:600px;height:600px;border-radius:50%;filter:blur(160px);background:rgba(59,108,255,0.2)"></div>
+    <div style="position:relative;z-index:10;max-width:768px;margin:0 auto;display:flex;flex-direction:column;gap:28px">
+      <h2 style="margin:0;font-size:60px;font-weight:700;letter-spacing:-0.035em;line-height:0.98;text-wrap:balance">Chegou a hora de ter um time de IA <span style="background:linear-gradient(90deg,#2563EB,#7c5cff,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent">trabalhando por você.</span></h2>
+      <p style="margin:0;font-size:18px;color:#94A3B8;max-width:672px;margin-left:auto;margin-right:auto;line-height:1.65">Pare de perder cliente por demora. Crie seu agente e veja ele atendendo, apresentando produtos, agendando e vendendo — no WhatsApp, no Instagram e no seu site.</p>
+      <div>
+        <a href="#" style="display:inline-flex;align-items:center;padding:16px 40px;font-size:16px;font-weight:600;background:#2563EB;color:#fff;border-radius:16px;box-shadow:0 16px 40px -8px rgba(37,99,235,0.5)">Testar a plataforma grátis</a>
+        <p style="margin:16px 0 0;font-size:12px;color:#64748B;font-weight:500">Teste grátis • Sem cartão de crédito • Cancele quando quiser</p>
+      </div>
+    </div>
+  </section>
+
+  <footer style="padding:56px 64px;border-top:1px solid rgba(255,255,255,0.1)">
+    <div style="max-width:1152px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:32px">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <span style="display:inline-flex;align-items:center;gap:10px">
+          <svg viewBox="0 0 64 64" width="28" height="28" fill="#2563EB"><path fill-rule="evenodd" clip-rule="evenodd" d="M32 6 L58 56 L6 56 Z M32 30 L45.5 56 L18.5 56 Z"></path></svg>
+          <span style="font-size:18px;font-weight:700;letter-spacing:-0.02em">Agentes <span style="color:#2563EB">Virtuais</span></span>
+        </span>
+        <p style="margin:0;font-size:12px;color:#94A3B8;max-width:320px">Agentes de IA multicanal — atendimento, vendas e agendamento no WhatsApp, Instagram e site.</p>
+      </div>
+      <div style="font-size:12px;font-weight:500;color:#94A3B8;text-align:right;display:flex;flex-direction:column;gap:6px">
+        <div>E-mail: contato@agentesvirtuais.com</div>
+        <div>Suporte via WhatsApp: 71 99204-2802</div>
+        <div>Rua Vereador Zezeu Ribeiro, 1117, Boca da Mata, Salvador - BA · CEP 41.345-100</div>
+        <div style="padding-top:8px;display:flex;gap:16px;justify-content:flex-end"><a href="#">Termos de Uso</a><a href="#">Política de Privacidade</a></div>
+        <div style="padding-top:4px;color:#64748B">© 2026 Agentes Virtuais. Todos os direitos reservados.</div>
+      </div>
+    </div>
+  </footer>
+
+  <div style="position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;gap:12px;z-index:9999">
+    <a href="#" style="width:56px;height:56px;background:#10B981;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5)">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+    </a>
+    <button style="width:56px;height:56px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(24px);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);cursor:pointer">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+    </button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const h = React.createElement;
+function svg(paths, size, opts) {
+  return h('svg', Object.assign({ width: size || 20, height: size || 20, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }, opts || {}),
+    paths.map((d, i) => h('path', { key: i, d })));
+}
+const P = {
+  clock: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M12 6v6l4 2'],
+  users: ['M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2', 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M23 21v-2a4 4 0 0 0-3-3.87', 'M16 3.13a4 4 0 0 1 0 7.75'],
+  alert: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M12 8v4', 'M12 16h.01'],
+  bot: ['M12 8V4H8', 'M4 8h16v12H4z', 'M2 14h2', 'M20 14h2', 'M15 13v2', 'M9 13v2'],
+  instagram: ['M2 7a5 5 0 0 1 5-5h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5z', 'M16 11.4A4 4 0 1 1 12.6 8a4 4 0 0 1 3.4 3.4z', 'M17.5 6.5h.01'],
+  message: ['M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'],
+  calendar: ['M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', 'M16 2v4', 'M8 2v4', 'M3 10h18'],
+  zap: ['M13 2L3 14h9l-1 8 10-12h-9z'],
+  workflow: ['M3 3h6v6H3z', 'M15 15h6v6h-6z', 'M9 6h4a2 2 0 0 1 2 2v7'],
+  package: ['M21 8l-9-5-9 5 9 5 9-5z', 'M3 8v8l9 5 9-5V8', 'M12 13v8'],
+  grid: ['M3 3h7v7H3z', 'M14 3h7v7h-7z', 'M14 14h7v7h-7z', 'M3 14h7v7H3z'],
+  megaphone: ['M3 11v2a1 1 0 0 0 1 1h3l7 4V6L7 10H4a1 1 0 0 0-1 1z', 'M18 8a4 4 0 0 1 0 8'],
+  mic: ['M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z', 'M19 10v1a7 7 0 0 1-14 0v-1', 'M12 19v3'],
+  users2: ['M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2', 'M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M22 21v-2a4 4 0 0 0-3-3.87'],
+  plug: ['M9 2v6', 'M15 2v6', 'M6 8h12v3a6 6 0 0 1-12 0z', 'M12 17v5'],
+  dashboard: ['M3 3h8v8H3z', 'M13 3h8v5h-8z', 'M13 12h8v9h-8z', 'M3 15h8v6H3z'],
+  target: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z', 'M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z'],
+  phone: ['M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.2 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z'],
+  globe: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M2 12h20', 'M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z'],
+};
+const star = h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'currentColor' }, h('path', { d: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01z' }));
+
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      problemas: [
+        { icon: svg(P.clock), t: 'Resposta que demora', d: 'Cliente sem resposta em minutos vira cliente do concorrente. Quem responde primeiro fecha — e uma equipe não dá conta de WhatsApp, Instagram e site ao mesmo tempo, 24h por dia.' },
+        { icon: svg(P.users), t: 'Equipe sobrecarregada', d: 'Mensagem no WhatsApp, DM no Instagram, dúvida no site — tudo junto. As conversas acumulam, as respostas atrasam e o cliente desiste no meio do caminho.' },
+        { icon: svg(P.alert), t: 'Fora do horário', d: 'Boa parte das mensagens chega à noite e nos fins de semana. Sem ninguém para responder e apresentar o produto, o interesse esfria e a venda não acontece.' },
+      ],
+      passos: [
+        { n: '01', k: 'O cliente chama', t: 'Responde na hora, em qualquer canal', d: 'WhatsApp, Instagram ou o chat do seu site — com o tom e a identidade do seu negócio. Tira dúvidas de serviços, valores, endereço e pagamento sem deixar ninguém esperando.' },
+        { n: '02', k: 'Entende e apresenta', t: 'Qualifica e mostra o produto certo', d: 'Com metodologia de vendas (SPIN Selling, escuta ativa, objeções), entende a necessidade, recomenda a solução ideal e envia foto, áudio e vídeo do seu catálogo na conversa.' },
+        { n: '03', k: 'Converte', t: 'Agenda, vende ou passa pra equipe', d: 'Marca na sua agenda sem conflito, encaminha pro fechamento ou passa a conversa a um humano — e organiza cada contato no CRM, com lembretes que reduzem as faltas.' },
+      ],
+      features: [
+        { icon: svg(P.bot), t: 'Agente que você treina', d: 'Escolha a função e mande seus documentos. Ele fala como o seu negócio fala.' },
+        { icon: svg(P.instagram), t: 'WhatsApp, Instagram e site', d: 'Três canais, uma caixa de entrada. O agente atende nos três.' },
+        { icon: svg(P.message), t: 'Fila e atendimento humano', d: 'A IA transfere, o cliente vê a posição na fila e sua equipe assume de onde ela parou.' },
+        { icon: svg(P.calendar), t: 'Agenda com link do Meet', d: 'Marca no Google Calendar sem conflito, confirma 24h antes e manda o link 10 minutos antes.' },
+        { icon: svg(P.zap), t: 'Lembretes que reduzem falta', d: 'Confirmação, aviso de horário e retorno de quem não veio — no automático.' },
+        { icon: svg(P.workflow), t: 'Construtor de fluxos', d: 'Monte a conversa arrastando blocos. Simulador embutido para testar antes de publicar.' },
+        { icon: svg(P.package), t: 'Catálogo com foto e vídeo', d: 'O agente identifica o que o cliente quer e envia a mídia do produto na conversa.' },
+        { icon: svg(P.grid), t: 'Funil e base de contatos', d: 'Sem contato duplicado: o mesmo cliente em canais diferentes vira uma ficha só.' },
+        { icon: svg(P.megaphone), t: 'Disparo em massa', d: 'Campanha por template aprovado, com projeção de custo antes de enviar.' },
+        { icon: svg(P.mic), t: 'Ouve e responde em áudio', d: 'Recebe o áudio do cliente, entende e responde falando.' },
+        { icon: svg(P.users2), t: 'Equipe com permissão', d: 'Cada colaborador vê só o que o cargo dele precisa.' },
+        { icon: svg(P.plug), t: 'API e CRM conectados', d: 'RD Station, HubSpot, Salesforce e Pipedrive — entrada e saída, sem duplicar.' },
+      ],
+      depoimentos: [
+        { stars: [0,1,2,3,4].map(k => h('span', { key: k }, star)), q: 'O agente responde os clientes na hora, mesmo de madrugada. A equipe parou de viver apagando incêndio no WhatsApp e a agenda encheu — mais de 120 horários marcados sozinhos no primeiro mês.', a: 'Thiago Fonseca', r: 'Gestor · Vida Plena Studio', i: 'TF' },
+        { stars: [0,1,2,3,4].map(k => h('span', { key: k }, star)), q: 'Ligamos o agente no WhatsApp e no Instagram. Ele responde na hora, manda a foto do procedimento, tira as dúvidas e já agenda. Vendeu mais no primeiro mês do que a gente respondendo na mão.', a: 'Aline Mendes', r: 'Fundadora · Odonto Sorriso', i: 'AM' },
+        { stars: [0,1,2,3,4].map(k => h('span', { key: k }, star)), q: 'Reduzimos as faltas quase pela metade com os lembretes automáticos. E a equipe, que vivia presa no celular, voltou a focar no cliente que está no local.', a: 'Ricardo Cruz', r: 'Gestor · Fisio Movimento', i: 'RC' },
+      ],
+      faq: [
+        { q: 'Os clientes percebem que estão falando com uma IA?', a: 'A conversa é natural e humanizada, com o tom e as informações do seu negócio. E, sempre que o cliente pedir ou o assunto exigir, a conversa passa para a sua equipe com todo o histórico.' },
+        { q: 'Em quais canais o agente atende?', a: 'WhatsApp oficial (Meta), Instagram Direct e um chat que você instala no seu site com uma linha de código. O mesmo agente atende os três, e todas as conversas chegam numa caixa de entrada só.' },
+        { q: 'Serve para qualquer tipo de negócio?', a: 'Sim. Clínicas, salões, academias, restaurantes, lojas, escritórios — qualquer negócio que atende e vende por mensagem. Templates prontos por segmento aceleram a configuração, e você personaliza a função do agente e a base de conhecimento.' },
+        { q: 'O agente consegue apresentar meus produtos?', a: 'Sim. Você cadastra produtos e serviços com foto, áudio e vídeo no catálogo, e na conversa o agente apresenta o item certo e envia a mídia automaticamente.' },
+        { q: 'Uso o WhatsApp oficial? Meu número corre risco?', a: 'Trabalhamos com a API oficial do WhatsApp (Meta), o canal aprovado para empresas — sem gambiarras que arriscam o seu número. Sua equipe pode intervir na conversa a qualquer momento.' },
+        { q: 'E a LGPD? Como ficam os dados dos clientes?', a: 'A plataforma nasce adequada à LGPD: consentimento registrado, descadastro imediato quando o cliente pede ("PARAR"), e exportação ou exclusão definitiva dos dados direto no painel.' },
+      ],
+      mockNav: [
+        { icon: svg(P.dashboard, 14), label: 'Dashboard', color: '#64748B', bg: 'transparent' },
+        { icon: svg(P.message, 14), label: 'Conversas', color: '#fff', bg: '#2563EB' },
+        { icon: svg(P.users, 14), label: 'Funil de Clientes', color: '#64748B', bg: 'transparent' },
+        { icon: svg(P.calendar, 14), label: 'Agendamentos', color: '#64748B', bg: 'transparent' },
+        { icon: svg(P.package, 14), label: 'Catálogo', color: '#64748B', bg: 'transparent' },
+        { icon: svg(P.bot, 14), label: 'Agente de IA', color: '#64748B', bg: 'transparent' },
+      ],
+      mockChats: [
+        { ini: 'MA', name: 'Marina Costa', msg: 'Quinta 10h 🙌', icon: svg(P.phone, 8, { stroke: '#fff' }), dot: h('span', { style: { height: 6, width: 6, borderRadius: '50%', background: '#2563EB' } }) },
+        { ini: '@L', name: '@lucas.fit', msg: 'Manda o valor do plano?', icon: svg(P.instagram, 8, { stroke: '#fff' }), dot: h('span', { style: { height: 6, width: 6, borderRadius: '50%', background: '#2563EB' } }) },
+        { ini: 'VI', name: 'Visitante do site', msg: 'Vocês atendem sábado?', icon: svg(P.globe, 8, { stroke: '#fff' }), dot: null },
+        { ini: 'RO', name: 'Roberto Alves', msg: 'Perfeito, obrigado!', icon: svg(P.phone, 8, { stroke: '#fff' }), dot: null },
+      ],
+      mockCols: [
+        { title: 'Novos', color: '#94A3B8', cards: ['Marina Costa', 'João P.'] },
+        { title: 'Qualificando', color: '#3B82F6', cards: ['@lucas.fit'] },
+        { title: 'Agendado', color: '#10B981', cards: ['Roberto Alves', 'Ana M.'] },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

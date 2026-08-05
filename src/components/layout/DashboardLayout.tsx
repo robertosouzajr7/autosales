@@ -512,8 +512,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [notifications, setNotifications] = useState<any[]>([]);
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  // O painel é sempre claro (algumas telas têm cores fixas que quebrariam no
-  // escuro). O tema escuro fica restrito à landing/login/onboarding.
+  // O painel ainda é sempre claro. Não é escolha de design: 1.227 utilitários
+  // slate-* fixos ignoram o tema, então ligar o escuro aqui hoje entregaria
+  // texto slate-900 sobre card branco no fundo escuro.
+  //
+  // O handoff pede um botão de tema no header. Ele entra junto com a migração
+  // das telas para os tokens — enquanto isso, forçar claro é o comportamento
+  // honesto, e não um bug.
   useEffect(() => {
     document.documentElement.classList.remove("dark");
   }, []);

@@ -35,6 +35,32 @@
 
     --radius: 0.9rem;
 
+    /* ── Tokens do redesign (handoff) ───────────────────────────────
+       Camada nova em cima dos tokens shadcn, não no lugar deles: os 22
+       primitivos dependem dos de cima. Aqui entram os papéis que o painel
+       redesenhado precisa e que não existiam. */
+
+    /* Segunda superfície: input, chip, cabeçalho de tabela. Antes cada tela
+       escolhia um slate-50/100 diferente para isso. */
+    --surface-2: 210 40% 98%;
+    /* Divisor interno de lista — mais leve que a borda do card. */
+    --border-soft: 216 42% 95%;
+    /* Terceiro nível de texto: rótulo e placeholder, abaixo do secundário. */
+    --faint: 215 20% 65%;
+
+    /* Azul de AÇÃO (fundo de botão) e azul de TEXTO são tokens distintos.
+       #2563EB sobre fundo escuro não passa contraste, então no tema escuro o
+       texto/ícone azul clareia — mas o fundo do botão continua o mesmo, com
+       texto branco. Um token só forçaria a escolher entre botão feio e link
+       ilegível. */
+    --accent-text: 217 91% 53%;
+    --accent-soft: 214 100% 97%;
+
+    /* Sidebar: fundo escuro nos dois temas, com brilho radial no topo. */
+    --rail: 222 47% 11%;
+    --rail-glow: rgba(37, 99, 235, 0.24);
+    --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.05);
+
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222 47% 11%;
     --sidebar-primary: 217 91% 53%;
@@ -48,7 +74,8 @@
   .dark {
     /* Clean Dark Palette — slate profundo + azul */
     --background: 222 47% 6%;          /* slate-950 */
-    --foreground: 210 40% 98%;
+    --foreground: 210 40% 96%;         /* #F1F5F9 — o handoff pede um branco
+                                          menos duro que o do fundo claro */
 
     --card: 222 47% 10%;               /* slate-900 */
     --card-foreground: 210 40% 98%;
@@ -75,6 +102,17 @@
     --input: 217 33% 17%;
     --ring: 217 91% 60%;
 
+    /* Contrapartes escuras dos tokens do redesign. */
+    --surface-2: 220 42% 13%;
+    --border-soft: 217 33% 14%;
+    --faint: 215 16% 47%;
+    /* O texto azul clareia; o fundo de ação NÃO — ver a nota no tema claro. */
+    --accent-text: 213 94% 68%;
+    --accent-soft: 217 60% 16%;
+    --rail: 222 50% 4%;
+    --rail-glow: rgba(37, 99, 235, 0.3);
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+
     --sidebar-background: 222 47% 6%;
     --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 217 91% 60%;
@@ -99,7 +137,7 @@
     @apply bg-background text-foreground antialiased;
     font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-    letter-spacing: -0.011em;
+    letter-spacing: -0.014em;
   }
 
   /* Títulos com peso e tracking sóbrios (padrão SaaS moderno) */
@@ -120,4 +158,24 @@
   }
   .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
   .scrollbar-thin::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 9999px; }
+
+  /**
+   * Regra crítica do handoff: elemento de altura fixa com rótulo de uma linha
+   * precisa de nowrap. Sem isso o texto quebra e transborda em vez de reflowir
+   * — no primeiro paint (antes da Inter carregar), em zoom ≠ 100% e com fonte
+   * de fallback. Vale para botão, pílula, chip, item de navegação e a marca.
+   */
+  .linha-unica {
+    white-space: nowrap;
+  }
+  /* Quando o texto pode ser longo demais para o espaço. */
+  .linha-unica-elipse {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* Todo número que muda — KPI, valor, hora, contador — alinha por coluna. */
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
 }

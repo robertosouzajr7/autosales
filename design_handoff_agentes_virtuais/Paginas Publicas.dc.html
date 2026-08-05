@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F5F8FC; --surface:#FFFFFF; --surface-2:#F8FAFC; --border:#E4EAF3; --border-soft:#EEF2F8;
+  --text:#0F172A; --muted:#64748B; --faint:#94A3B8;
+  --accent:#2563EB; --accent-text:#2563EB; --accent-soft:#EFF6FF;
+  --shadow:0 1px 2px rgba(15,23,42,0.05);
+}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:-0.014em;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+a:hover{color:var(--accent-text)}
+@keyframes pulseDot{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+</helmet>
+<div style="min-height:100vh;background:var(--bg);display:flex;flex-direction:column">
+
+  <div style="height:56px;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 20px">
+    <span style="font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint);margin-right:6px">Telas públicas</span>
+    <div style="display:flex;gap:4px;padding:4px;border-radius:11px;background:var(--surface-2);border:1px solid var(--border)">
+      <sc-for list="{{ abas }}" as="a" hint-placeholder-count="4">
+        <button onClick="{{ a.go }}" style="height:32px;padding:0 15px;border-radius:8px;border:none;background:{{ a.bg }};color:{{ a.color }};font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;box-shadow:{{ a.shadow }}">{{ a.label }}</button>
+      </sc-for>
+    </div>
+  </div>
+
+  <sc-if value="{{ ehLogin }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;min-height:0">
+      <div style="display:flex;flex-direction:column;justify-content:center;padding:56px;background:var(--surface)">
+        <div style="width:100%;max-width:380px;margin:0 auto">
+          <a href="#" style="display:inline-flex;align-items:center;gap:10px;margin-bottom:40px;white-space:nowrap">
+            <svg viewBox="0 0 64 64" width="26" height="26" fill="#2563EB" style="flex-shrink:0"><path fill-rule="evenodd" clip-rule="evenodd" d="M32 6 L58 56 L6 56 Z M32 30 L45.5 56 L18.5 56 Z"></path></svg>
+            <span style="font-size:17px;font-weight:700;letter-spacing:-0.03em;white-space:nowrap">Agentes <span style="color:#2563EB">Virtuais</span></span>
+          </a>
+          <h1 style="margin:0;font-size:28px;font-weight:700;letter-spacing:-0.04em">Entrar no painel</h1>
+          <p style="margin:8px 0 0;font-size:14px;color:var(--muted)">Suas conversas, agendamentos e o funil continuam de onde pararam.</p>
+
+          <div style="margin-top:32px;display:flex;flex-direction:column;gap:16px">
+            <div>
+              <label style="display:block;margin-bottom:7px;font-size:12px;font-weight:600;color:var(--muted)">E-mail</label>
+              <div style="height:46px;border-radius:11px;border:1px solid var(--border);background:var(--surface-2);display:flex;align-items:center;padding:0 14px;font-size:14px;font-weight:500">roberto@vidaplena.com.br</div>
+            </div>
+            <div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px">
+                <label style="font-size:12px;font-weight:600;color:var(--muted)">Senha</label>
+                <a href="#" style="font-size:12px;font-weight:600;color:var(--accent-text);white-space:nowrap">Esqueci a senha</a>
+              </div>
+              <div style="height:46px;border-radius:11px;border:1px solid var(--border);background:var(--surface-2);display:flex;align-items:center;padding:0 14px;gap:10px">
+                <span style="flex:1;font-size:16px;letter-spacing:0.2em;color:var(--muted)">••••••••••</span>
+                <span style="color:var(--faint);display:grid;place-items:center;cursor:pointer">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </span>
+              </div>
+            </div>
+            <label style="display:flex;align-items:center;gap:9px;font-size:13px;color:var(--muted);cursor:pointer">
+              <span style="width:17px;height:17px;border-radius:5px;background:var(--accent);display:grid;place-items:center;flex-shrink:0">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>
+              </span>
+              Manter conectado neste computador
+            </label>
+            <button style="height:48px;border-radius:11px;border:none;background:var(--accent);color:#fff;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 12px 26px -12px rgba(37,99,235,0.8)">Entrar</button>
+            <div style="display:flex;align-items:center;gap:12px;margin:4px 0">
+              <span style="flex:1;height:1px;background:var(--border)"></span>
+              <span style="font-size:11.5px;color:var(--faint)">ou</span>
+              <span style="flex:1;height:1px;background:var(--border)"></span>
+            </div>
+            <button style="height:48px;border-radius:11px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px">
+              <span style="width:18px;height:18px;border-radius:50%;background:var(--surface-2);border:1px solid var(--border);display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--muted)">G</span>
+              Continuar com Google
+            </button>
+            <p style="margin:8px 0 0;font-size:13px;color:var(--muted);text-align:center">Ainda não tem conta? <a href="#" style="font-weight:600;color:var(--accent-text)">Testar 7 dias grátis</a></p>
+          </div>
+        </div>
+      </div>
+
+      <div style="position:relative;overflow:hidden;background:#080C16;background-image:radial-gradient(120% 80% at 80% 0%,rgba(37,99,235,0.35),transparent 60%);display:flex;flex-direction:column;justify-content:center;padding:56px;color:#F1F5F9">
+        <div style="max-width:420px">
+          <p style="margin:0;font-size:11.5px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#60A5FA">Enquanto você esteve fora</p>
+          <h2 style="margin:16px 0 0;font-size:32px;font-weight:700;letter-spacing:-0.04em;line-height:1.15">O agente atendeu 47 clientes e marcou 9 horários.</h2>
+          <div style="margin-top:32px;display:flex;flex-direction:column;gap:12px">
+            <sc-for list="{{ resumoLogin }}" as="r" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:13px;padding:14px 16px;border-radius:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08)">
+                <span style="width:34px;height:34px;flex-shrink:0;border-radius:10px;background:rgba(37,99,235,0.2);color:#60A5FA;display:grid;place-items:center">{{ r.icon }}</span>
+                <div style="flex:1;min-width:0">
+                  <p style="margin:0;font-size:13.5px;font-weight:600">{{ r.t }}</p>
+                  <p style="margin:2px 0 0;font-size:12px;color:#94A3B8">{{ r.d }}</p>
+                </div>
+                <span style="font-size:17px;font-weight:700;letter-spacing:-0.03em;flex-shrink:0">{{ r.v }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <p style="margin:28px 0 0;font-size:13px;color:#64748B;line-height:1.6">Dados da última madrugada, das 0h às 8h, sem ninguém da equipe online.</p>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ehCadastro }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;display:flex;align-items:flex-start;justify-content:center;padding:48px 24px 64px;overflow-y:auto">
+      <div style="width:100%;max-width:940px">
+        <div style="text-align:center;margin-bottom:32px">
+          <a href="#" style="display:inline-flex;align-items:center;gap:10px;margin-bottom:24px;white-space:nowrap">
+            <svg viewBox="0 0 64 64" width="26" height="26" fill="#2563EB" style="flex-shrink:0"><path fill-rule="evenodd" clip-rule="evenodd" d="M32 6 L58 56 L6 56 Z M32 30 L45.5 56 L18.5 56 Z"></path></svg>
+            <span style="font-size:17px;font-weight:700;letter-spacing:-0.03em;white-space:nowrap">Agentes <span style="color:#2563EB">Virtuais</span></span>
+          </a>
+          <h1 style="margin:0;font-size:30px;font-weight:700;letter-spacing:-0.04em">Comece seu teste de 7 dias</h1>
+          <p style="margin:10px 0 0;font-size:15px;color:var(--muted)">Sem cartão de crédito. O agente começa a responder no mesmo dia.</p>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1.35fr 1fr;gap:20px;align-items:start">
+          <section style="border-radius:16px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);padding:28px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:24px">
+              <sc-for list="{{ passosCadastro }}" as="p" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:8px;flex:1">
+                  <span style="width:24px;height:24px;flex-shrink:0;border-radius:50%;background:{{ p.bg }};color:{{ p.color }};display:grid;place-items:center;font-size:11.5px;font-weight:700">{{ p.n }}</span>
+                  <span style="font-size:12.5px;font-weight:600;color:{{ p.textColor }};white-space:nowrap">{{ p.label }}</span>
+                  {{ p.linha }}
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                <div>
+                  <label style="display:block;margin-bottom:7px;font-size:12px;font-weight:600;color:var(--muted)">Seu nome</label>
+                  <div style="height:44px;border-radius:11px;border:1px solid var(--border);background:var(--surface-2);display:flex;align-items:center;padding:0 14px;font-size:14px;font-weight:500">Roberto Souza</div>
+                </div>
+                <div>
+                  <label style="display:block;margin-bottom:7px;font-size:12px;font-weight:600;color:var(--muted)">WhatsApp</label>
+                  <div style="height:44px;border-radius:11px;border:1px solid var(--border);background:var(--surface-2);display:flex;align-items:center;padding:0 14px;font-size:14px;font-weight:500">+55 71 99204-2802</div>
+                </div>
+              </div>
+              <div>
+                <label style="display:block;margin-bottom:7px;font-size:12px;font-weight:600;color:var(--muted)">E-mail de trabalho</label>
+                <div style="height:44px;border-radius:11px;border:1px solid var(--border);background:var(--surface-2);display:flex;align-items:center;padding:0 14px;font-size:14px;font-weight:500">roberto@vidaplena.com.br</div>
+              </div>
+              <div>
+                <label style="display:block;margin-bottom:7px;font-size:12px;font-weight:600;color:var(--muted)">Nome do negócio</label>
+                <div style="height:44px;border-radius:11px;border:1px solid var(--border);background:var(--surface-2);display:flex;align-items:center;padding:0 14px;font-size:14px;font-weight:500">Clínica Vida Plena</div>
+              </div>
+              <div>
+                <label style="display:block;margin-bottom:9px;font-size:12px;font-weight:600;color:var(--muted)">Qual é o seu segmento?</label>
+                <div style="display:flex;flex-wrap:wrap;gap:8px">
+                  <sc-for list="{{ segmentos }}" as="s" hint-placeholder-count="7">
+                    <span style="height:34px;display:inline-flex;align-items:center;padding:0 13px;border-radius:9px;border:1px solid {{ s.border }};background:{{ s.bg }};color:{{ s.color }};font-size:12.5px;font-weight:600;cursor:pointer">{{ s.label }}</span>
+                  </sc-for>
+                </div>
+              </div>
+              <div>
+                <label style="display:block;margin-bottom:7px;font-size:12px;font-weight:600;color:var(--muted)">Criar senha</label>
+                <div style="height:44px;border-radius:11px;border:1px solid var(--border);background:var(--surface-2);display:flex;align-items:center;padding:0 14px;font-size:16px;letter-spacing:0.2em;color:var(--muted)">••••••••••</div>
+                <div style="margin-top:9px;display:flex;align-items:center;gap:9px">
+                  <div style="flex:1;height:5px;border-radius:999px;background:var(--surface-2);overflow:hidden;display:flex;gap:3px">
+                    <span style="flex:1;background:#22A06B;border-radius:999px"></span>
+                    <span style="flex:1;background:#22A06B;border-radius:999px"></span>
+                    <span style="flex:1;background:#22A06B;border-radius:999px"></span>
+                    <span style="flex:1;background:var(--border);border-radius:999px"></span>
+                  </div>
+                  <span style="font-size:11.5px;font-weight:600;color:#15803D">Senha forte</span>
+                </div>
+              </div>
+              <label style="display:flex;align-items:flex-start;gap:10px;font-size:12.5px;line-height:1.6;color:var(--muted);cursor:pointer">
+                <span style="width:17px;height:17px;margin-top:1px;border-radius:5px;background:var(--accent);display:grid;place-items:center;flex-shrink:0">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>
+                </span>
+                <span>Aceito os <a href="#" style="font-weight:600;color:var(--accent-text)">Termos de Uso</a> e a <a href="#" style="font-weight:600;color:var(--accent-text)">Política de Privacidade</a>, incluindo o tratamento de dados conforme a LGPD.</span>
+              </label>
+              <button style="height:48px;border-radius:11px;border:none;background:var(--accent);color:#fff;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 12px 26px -12px rgba(37,99,235,0.8)">Criar conta e conectar o WhatsApp</button>
+              <p style="margin:0;font-size:13px;color:var(--muted);text-align:center">Já tem conta? <a href="#" style="font-weight:600;color:var(--accent-text)">Entrar</a></p>
+            </div>
+          </section>
+
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <section style="border-radius:16px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);padding:24px">
+              <h3 style="margin:0 0 16px;font-size:14px;font-weight:600">O que já vem no teste</h3>
+              <div style="display:flex;flex-direction:column;gap:12px">
+                <sc-for list="{{ incluso }}" as="i" hint-placeholder-count="5">
+                  <div style="display:flex;gap:11px;align-items:flex-start;font-size:13px;line-height:1.55;color:var(--text)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22A06B" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><path d="M20 6L9 17l-5-5"></path></svg>
+                    {{ i }}
+                  </div>
+                </sc-for>
+              </div>
+            </section>
+            <section style="border-radius:16px;border:1px solid var(--border);background:#080C16;background-image:radial-gradient(120% 70% at 100% 0%,rgba(37,99,235,0.3),transparent 60%);padding:24px;color:#F1F5F9">
+              <div style="display:flex;gap:3px;color:#FBBF24;margin-bottom:14px">{{ estrelas }}</div>
+              <p style="margin:0;font-size:13.5px;line-height:1.65;color:#CBD5E1">"Ligamos o agente no WhatsApp e no Instagram. Ele responde na hora, manda a foto do procedimento e já agenda. Vendeu mais no primeiro mês do que a gente respondendo na mão."</p>
+              <div style="margin-top:18px;display:flex;align-items:center;gap:11px">
+                <span style="width:36px;height:36px;border-radius:50%;background:rgba(37,99,235,0.25);color:#60A5FA;display:grid;place-items:center;font-size:12.5px;font-weight:700">AM</span>
+                <div>
+                  <p style="margin:0;font-size:13px;font-weight:600;color:#fff">Aline Mendes</p>
+                  <p style="margin:1px 0 0;font-size:11.5px;color:#64748B">Fundadora · Odonto Sorriso</p>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ehOnboarding }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;display:flex;align-items:flex-start;justify-content:center;padding:48px 24px 64px;overflow-y:auto">
+      <div style="width:100%;max-width:820px">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:28px">
+          <div style="flex:1">
+            <p style="margin:0;font-size:11.5px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint)">Passo 2 de 4</p>
+            <h1 style="margin:8px 0 0;font-size:28px;font-weight:700;letter-spacing:-0.04em">Conecte seu WhatsApp</h1>
+            <p style="margin:8px 0 0;font-size:14.5px;color:var(--muted)">Escaneie o QR Code com o celular do negócio. Leva menos de um minuto.</p>
+          </div>
+          <button style="flex-shrink:0;height:38px;padding:0 15px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">Fazer isso depois</button>
+        </div>
+
+        <div style="height:6px;border-radius:999px;background:var(--surface);border:1px solid var(--border);overflow:hidden;margin-bottom:28px">
+          <div style="height:100%;width:50%;background:var(--accent)"></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
+          <section style="border-radius:16px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);padding:28px;display:flex;flex-direction:column;align-items:center;gap:20px">
+            <div style="width:200px;height:200px;border-radius:16px;border:1px solid var(--border);background:var(--surface-2);display:grid;grid-template-columns:repeat(9,1fr);grid-template-rows:repeat(9,1fr);gap:3px;padding:14px;box-sizing:border-box">
+              <sc-for list="{{ qr }}" as="c" hint-placeholder-count="81">
+                <span style="border-radius:2px;background:{{ c }}"></span>
+              </sc-for>
+            </div>
+            <div style="text-align:center">
+              <p style="margin:0;font-size:13.5px;font-weight:600;display:inline-flex;align-items:center;gap:7px"><span style="width:7px;height:7px;border-radius:50%;background:#22A06B;animation:pulseDot 1.6s infinite"></span>Aguardando leitura</p>
+              <p style="margin:8px 0 0;font-size:12.5px;color:var(--muted)">O código expira em 1:42 e é renovado automaticamente.</p>
+            </div>
+            <div style="width:100%;padding-top:18px;border-top:1px solid var(--border-soft);text-align:center">
+              <p style="margin:0;font-size:12.5px;color:var(--muted);line-height:1.6">Tem volume alto ou não quer usar o celular? <a href="#" style="font-weight:600;color:var(--accent-text)">Conecte pela API oficial da Meta</a>.</p>
+            </div>
+          </section>
+
+          <div style="display:flex;flex-direction:column;gap:20px">
+            <section style="border-radius:16px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);padding:24px">
+              <h3 style="margin:0 0 16px;font-size:14px;font-weight:600">Como escanear</h3>
+              <div style="display:flex;flex-direction:column;gap:16px">
+                <sc-for list="{{ instrucoes }}" as="i" hint-placeholder-count="4">
+                  <div style="display:flex;gap:13px;align-items:flex-start">
+                    <span style="width:24px;height:24px;flex-shrink:0;border-radius:50%;background:var(--accent-soft);color:var(--accent-text);display:grid;place-items:center;font-size:11.5px;font-weight:700">{{ i.n }}</span>
+                    <p style="margin:0;font-size:13px;line-height:1.6;color:var(--muted)">{{ i.t }}</p>
+                  </div>
+                </sc-for>
+              </div>
+            </section>
+
+            <section style="border-radius:16px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);overflow:hidden">
+              <div style="padding:16px 20px;border-bottom:1px solid var(--border-soft)">
+                <h3 style="margin:0;font-size:14px;font-weight:600">Seu progresso</h3>
+              </div>
+              <sc-for list="{{ etapasOnboarding }}" as="e" hint-placeholder-count="4">
+                <div style="padding:14px 20px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;gap:12px">
+                  <span style="width:26px;height:26px;flex-shrink:0;border-radius:50%;background:{{ e.bg }};color:{{ e.iconColor }};display:grid;place-items:center;border:{{ e.borda }}">{{ e.icon }}</span>
+                  <div style="min-width:0;flex:1">
+                    <p style="margin:0;font-size:13.5px;font-weight:600;color:{{ e.textColor }};text-decoration:{{ e.deco }}">{{ e.t }}</p>
+                    <p style="margin:2px 0 0;font-size:11.5px;color:var(--muted)">{{ e.d }}</p>
+                  </div>
+                </div>
+              </sc-for>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ehErro }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:48px 24px">
+      <div style="width:100%;max-width:520px;text-align:center">
+        <div style="width:64px;height:64px;margin:0 auto;border-radius:18px;background:var(--accent-soft);color:var(--accent-text);display:grid;place-items:center">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M9 10h.01M15 10h.01M9.5 14a3.5 3.5 0 0 0 5 0"></path></svg>
+        </div>
+        <h1 style="margin:24px 0 0;font-size:30px;font-weight:700;letter-spacing:-0.04em">Essa página não existe</h1>
+        <p style="margin:12px 0 0;font-size:15px;line-height:1.65;color:var(--muted)">O endereço mudou ou o link está incompleto. Se você chegou aqui por um link nosso, o agente do site pode te levar ao lugar certo.</p>
+        <div style="margin-top:28px;display:flex;gap:11px;justify-content:center">
+          <a href="#" style="display:inline-flex;align-items:center;height:46px;padding:0 22px;border-radius:11px;background:var(--accent);color:#fff;font-size:14.5px;font-weight:600;white-space:nowrap">Ir para o painel</a>
+          <a href="#" style="display:inline-flex;align-items:center;height:46px;padding:0 22px;border-radius:11px;border:1px solid var(--border);background:var(--surface);font-size:14.5px;font-weight:600;white-space:nowrap">Falar com suporte</a>
+        </div>
+        <div style="margin-top:36px;padding-top:24px;border-top:1px solid var(--border);display:flex;gap:24px;justify-content:center;font-size:13px">
+          <a href="#" style="color:var(--muted)">Conversas</a>
+          <a href="#" style="color:var(--muted)">Agendamentos</a>
+          <a href="#" style="color:var(--muted)">Funil</a>
+          <a href="#" style="color:var(--muted)">Base de conhecimento</a>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900}}">
+const h = React.createElement;
+function svg(paths, size, opts) {
+  return h('svg', Object.assign({ width: size || 17, height: size || 17, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }, opts || {}),
+    paths.map((d, i) => h('path', { key: i, d })));
+}
+const P = {
+  message: ['M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'],
+  calendar: ['M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', 'M16 2v4', 'M8 2v4', 'M3 10h18'],
+  target: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z', 'M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z'],
+  timer: ['M12 22a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 'M12 9v4l2 2', 'M9 2h6'],
+  check: ['M20 6L9 17l-5-5'],
+  building: ['M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18z', 'M10 6h4', 'M10 10h4', 'M10 14h4', 'M2 22h20'],
+  phone: ['M5 2h14a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z', 'M12 18h.01'],
+  bot: ['M12 8V4H8', 'M4 8h16v12H4z', 'M2 14h2', 'M20 14h2', 'M15 13v2', 'M9 13v2'],
+  rocket: ['M4.5 16.5c-1.5 1.3-2 5-2 5s3.7-.5 5-2a2.1 2.1 0 0 0-3-3z', 'M12 15l-3-3a12 12 0 0 1 7-8l4-1-1 4a12 12 0 0 1-8 7z', 'M9 12H5s.5-2.2 2-3c1.7-.9 3 0 3 0', 'M12 15v4s2.2-.5 3-2c.9-1.7 0-3 0-3'],
+};
+const star = h('svg', { width: 15, height: 15, viewBox: '0 0 24 24', fill: 'currentColor' }, h('path', { d: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01z' }));
+const ABAS = { login: 'Login', cadastro: 'Cadastro', onboarding: 'Onboarding', erro: 'Página 404' };
+const QR_ON = '#0F172A';
+const QR_OFF = 'transparent';
+const QR_MAPA = [
+  '111011101', '101010001', '111000111', '000110100', '101011011',
+  '011001010', '111010111', '100110001', '111001101',
+];
+
+class Component extends DCLogic {
+  state = { tela: 'login' };
+  renderVals() {
+    const tela = this.state.tela;
+    const passo = (n, label, estado, ultimo) => {
+      const feito = estado === 'feito', ativo = estado === 'ativo';
+      return {
+        n: feito ? svg(P.check, 12, { stroke: '#fff', strokeWidth: 3.2 }) : String(n),
+        label,
+        bg: feito ? '#22A06B' : (ativo ? 'var(--accent)' : 'var(--surface-2)'),
+        color: feito || ativo ? '#fff' : 'var(--faint)',
+        textColor: ativo ? 'var(--text)' : 'var(--muted)',
+        linha: ultimo ? null : h('span', { style: { flex: 1, height: 1, background: 'var(--border)', minWidth: 12 } }),
+      };
+    };
+    const etapa = (t, d, estado) => {
+      const feito = estado === 'feito', ativo = estado === 'ativo';
+      return {
+        t, d,
+        icon: feito ? svg(P.check, 14, { stroke: '#fff', strokeWidth: 3 }) : (ativo ? h('span', { style: { width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)' } }) : null),
+        bg: feito ? '#22A06B' : 'transparent',
+        borda: feito ? 'none' : '1.5px solid var(--border)',
+        iconColor: '#fff',
+        textColor: feito ? 'var(--muted)' : 'var(--text)',
+        deco: feito ? 'line-through' : 'none',
+      };
+    };
+    const qr = [];
+    QR_MAPA.forEach((linha) => linha.split('').forEach((c) => qr.push(c === '1' ? QR_ON : QR_OFF)));
+    return {
+      abas: Object.keys(ABAS).map((k) => ({
+        label: ABAS[k], go: () => this.setState({ tela: k }),
+        bg: tela === k ? 'var(--surface)' : 'transparent',
+        color: tela === k ? 'var(--text)' : 'var(--muted)',
+        shadow: tela === k ? 'var(--shadow)' : 'none',
+      })),
+      ehLogin: tela === 'login', ehCadastro: tela === 'cadastro',
+      ehOnboarding: tela === 'onboarding', ehErro: tela === 'erro',
+      resumoLogin: [
+        { icon: svg(P.message, 16), t: 'Conversas atendidas', d: 'sem ninguém da equipe online', v: '47' },
+        { icon: svg(P.calendar, 16), t: 'Horários marcados', d: 'já no Google Calendar', v: '9' },
+        { icon: svg(P.target, 16), t: 'Leads movidos no funil', d: 'da entrada até proposta', v: '14' },
+        { icon: svg(P.timer, 16), t: 'Resposta média', d: 'do primeiro "oi" à resposta', v: '4s' },
+      ],
+      passosCadastro: [passo(1, 'Seus dados', 'ativo'), passo(2, 'WhatsApp', 'pendente'), passo(3, 'Agente', 'pendente', true)],
+      segmentos: ['Clínica ou consultório', 'Salão e estética', 'Comércio local', 'Academia', 'Agência ou revenda', 'Infoproduto', 'Outro'].map((label, i) => ({
+        label,
+        bg: i === 0 ? 'var(--accent-soft)' : 'var(--surface-2)',
+        border: i === 0 ? 'var(--accent)' : 'var(--border)',
+        color: i === 0 ? 'var(--accent-text)' : 'var(--muted)',
+      })),
+      incluso: [
+        'Um agente de IA treinado com os seus documentos',
+        'WhatsApp, Instagram e chat do site na mesma caixa de entrada',
+        'Funil Kanban que a IA atualiza sozinha',
+        'Agendamento no Google Calendar com lembretes automáticos',
+        'Catálogo com foto, áudio e vídeo dos seus serviços',
+      ],
+      estrelas: [0, 1, 2, 3, 4].map((k) => h('span', { key: k }, star)),
+      qr,
+      instrucoes: [
+        { n: '1', t: 'Abra o WhatsApp no celular que atende o seu negócio.' },
+        { n: '2', t: 'Toque nos três pontos e escolha "Dispositivos conectados".' },
+        { n: '3', t: 'Toque em "Conectar dispositivo" e aponte a câmera para o código ao lado.' },
+        { n: '4', t: 'Pronto: as conversas passam a aparecer no painel em tempo real.' },
+      ],
+      etapasOnboarding: [
+        etapa('Criar a conta', 'Feito há 2 minutos', 'feito'),
+        etapa('Cadastrar o negócio', 'Nome, endereço e horários', 'feito'),
+        etapa('Conectar o WhatsApp', 'Escaneando o QR Code agora', 'ativo'),
+        etapa('Criar o agente de IA', 'Função, tom de voz e documentos', 'pendente'),
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

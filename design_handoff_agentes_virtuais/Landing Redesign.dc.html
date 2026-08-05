@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#fff;color:#0F172A;font-family:Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:-0.014em;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+a:hover{color:#2563EB}
+@keyframes floaty{50%{transform:translateY(-10px)}}
+@keyframes pulseDot{0%,100%{opacity:1}50%{opacity:.35}}
+</style>
+</helmet>
+<div style="overflow-x:hidden;background:#fff">
+
+  <header style="position:sticky;top:0;z-index:60;background:rgba(255,255,255,0.82);backdrop-filter:blur(20px);border-bottom:1px solid #E9EEF5">
+    <div style="max-width:1240px;margin:0 auto;height:70px;padding:0 28px;display:flex;align-items:center;justify-content:space-between">
+      <a href="#" style="display:inline-flex;align-items:center;gap:10px">
+        <svg viewBox="0 0 64 64" width="26" height="26" fill="#2563EB"><path fill-rule="evenodd" clip-rule="evenodd" d="M32 6 L58 56 L6 56 Z M32 30 L45.5 56 L18.5 56 Z"></path></svg>
+        <span style="font-size:17px;font-weight:700;letter-spacing:-0.03em">Agentes <span style="color:#2563EB">Virtuais</span></span>
+      </a>
+      <nav style="display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:500;color:#475569">
+        <a href="#resultados" style="padding:8px 12px;border-radius:8px" style-hover="background:#F1F5F9">Resultados</a>
+        <a href="#recursos" style="padding:8px 12px;border-radius:8px" style-hover="background:#F1F5F9">Recursos</a>
+        <a href="#funil" style="padding:8px 12px;border-radius:8px" style-hover="background:#F1F5F9">Funil</a>
+        <a href="#integracoes" style="padding:8px 12px;border-radius:8px" style-hover="background:#F1F5F9">Integrações</a>
+        <a href="#planos" style="padding:8px 12px;border-radius:8px" style-hover="background:#F1F5F9">Planos</a>
+        <a href="#faq" style="padding:8px 12px;border-radius:8px" style-hover="background:#F1F5F9">FAQ</a>
+      </nav>
+      <div style="display:flex;align-items:center;gap:12px">
+        <a href="#" style="font-size:14px;font-weight:600;color:#475569">Entrar</a>
+        <a href="#" style="display:inline-flex;align-items:center;height:40px;padding:0 18px;border-radius:10px;background:#2563EB;color:#fff;font-size:14px;font-weight:600;box-shadow:0 8px 20px -6px rgba(37,99,235,0.5)">Testar 7 dias grátis</a>
+      </div>
+    </div>
+  </header>
+
+  <section style="position:relative;padding:72px 28px 0;background:radial-gradient(120% 80% at 50% -10%,#EEF4FF 0%,#F8FAFF 42%,#FFFFFF 78%);overflow:hidden">
+    <div aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(#E2E8F0 1px,transparent 1px),linear-gradient(90deg,#E2E8F0 1px,transparent 1px);background-size:64px 64px;opacity:.35;mask-image:radial-gradient(70% 55% at 50% 30%,#000,transparent)"></div>
+    <div style="position:relative;max-width:1240px;margin:0 auto;text-align:center">
+      <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 14px 6px 8px;border-radius:999px;background:#fff;border:1px solid #DBE4F0;box-shadow:0 1px 2px rgba(15,23,42,0.04);font-size:12.5px;font-weight:500;color:#334155">
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#EFF6FF;color:#2563EB;font-weight:600;padding:3px 9px;border-radius:999px;font-size:11.5px">Novo</span>
+        Funil Kanban com IA que move o lead sozinho
+      </div>
+
+      <h1 style="margin:26px auto 0;max-width:900px;font-size:68px;line-height:1.02;font-weight:700;letter-spacing:-0.045em;text-wrap:balance">Automatize seus chats do WhatsApp com <span style="color:#2563EB">Assistentes de IA</span></h1>
+
+      <p style="margin:22px auto 0;max-width:620px;font-size:18px;line-height:1.6;color:#475569">Seu agente responde em segundos, apresenta o produto, agenda e organiza cada contato no funil. No WhatsApp, no Instagram e no seu site — 24 horas por dia.</p>
+
+      <div style="margin-top:32px;display:flex;justify-content:center;align-items:center;gap:12px">
+        <a href="#" style="display:inline-flex;align-items:center;gap:8px;height:54px;padding:0 30px;border-radius:12px;background:#2563EB;color:#fff;font-size:16px;font-weight:600;box-shadow:0 18px 40px -12px rgba(37,99,235,0.6)">Testar 7 dias grátis
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
+        </a>
+        <a href="#demo" style="display:inline-flex;align-items:center;gap:9px;height:54px;padding:0 26px;border-radius:12px;background:#fff;border:1px solid #DBE4F0;color:#0F172A;font-size:15px;font-weight:600">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#2563EB"><path d="M8 5v14l11-7z"></path></svg>
+          Ver demonstração
+        </a>
+      </div>
+
+      <div style="margin-top:22px;display:flex;justify-content:center;flex-wrap:wrap;gap:10px 26px;font-size:13px;color:#64748B">
+        <span style="display:inline-flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#22A06B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg> Sem cartão de crédito</span>
+        <span style="display:inline-flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#22A06B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg> Conecta em 1 minuto</span>
+        <span style="display:inline-flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#22A06B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg> Cancele em um clique</span>
+      </div>
+
+      <div style="margin-top:56px;position:relative">
+        <div aria-hidden="true" style="position:absolute;left:50%;top:8%;transform:translateX(-50%);width:70%;height:70%;background:rgba(37,99,235,0.22);filter:blur(90px);border-radius:50%"></div>
+        <div style="position:relative;border-radius:18px 18px 0 0;border:1px solid #DBE4F0;border-bottom:none;background:#fff;box-shadow:0 40px 80px -30px rgba(15,23,42,0.35);overflow:hidden;max-width:1140px;margin:0 auto">
+          <div style="height:38px;background:#F1F5F9;border-bottom:1px solid #E2E8F0;display:flex;align-items:center;gap:8px;padding:0 14px">
+            <div style="display:flex;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#F87171"></span><span style="width:10px;height:10px;border-radius:50%;background:#FBBF24"></span><span style="width:10px;height:10px;border-radius:50%;background:#34D399"></span></div>
+            <div style="margin-left:10px;flex:1;max-width:340px;height:22px;border-radius:6px;background:#fff;border:1px solid #E2E8F0;display:flex;align-items:center;padding:0 10px;font-size:10.5px;color:#94A3B8">app.agentesvirtuais.com/conversations</div>
+          </div>
+          <div style="display:flex;height:520px;background:#F8FAFC">
+            <div style="width:64px;flex-shrink:0;background:#0F172A;background-image:radial-gradient(130% 55% at 0% 0%,rgba(37,99,235,0.24),transparent 58%);display:flex;flex-direction:column;align-items:center;padding-top:14px;gap:6px">
+              <span style="display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#2563EB,#7C5CFF);margin-bottom:8px">
+                <svg viewBox="0 0 64 64" width="16" height="16" fill="#fff"><path fill-rule="evenodd" clip-rule="evenodd" d="M32 6 L58 56 L6 56 Z M32 30 L45.5 56 L18.5 56 Z"></path></svg>
+              </span>
+              <sc-for list="{{ railIcons }}" as="r" hint-placeholder-count="7">
+                <span style="display:grid;place-items:center;width:34px;height:34px;border-radius:9px;background:{{ r.bg }}">{{ r.icon }}</span>
+              </sc-for>
+            </div>
+            <div style="width:264px;flex-shrink:0;background:#fff;border-right:1px solid #E2E8F0;display:flex;flex-direction:column">
+              <div style="padding:14px 16px;border-bottom:1px solid #E2E8F0">
+                <div style="height:32px;border-radius:8px;background:#F1F5F9;display:flex;align-items:center;gap:8px;padding:0 10px">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="M21 21l-4.3-4.3"></path></svg>
+                  <span style="font-size:12px;color:#94A3B8">Buscar conversa…</span>
+                </div>
+              </div>
+              <sc-for list="{{ inbox }}" as="c" hint-placeholder-count="6">
+                <div style="padding:12px 16px;border-bottom:1px solid #F1F5F9;display:flex;gap:10px;align-items:flex-start;background:{{ c.bg }}">
+                  <div style="position:relative;flex-shrink:0">
+                    <div style="width:34px;height:34px;border-radius:50%;background:#E2E8F0;display:grid;place-items:center;font-size:11px;font-weight:700;color:#475569">{{ c.ini }}</div>
+                    <div style="position:absolute;bottom:-2px;right:-2px;width:14px;height:14px;border-radius:50%;background:{{ c.chBg }};display:grid;place-items:center;border:2px solid #fff">{{ c.chIcon }}</div>
+                  </div>
+                  <div style="min-width:0;flex:1">
+                    <div style="display:flex;justify-content:space-between;gap:6px;align-items:baseline">
+                      <p style="margin:0;font-size:13px;font-weight:600;color:#0F172A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.name }}</p>
+                      <span style="font-size:10.5px;color:#94A3B8;flex-shrink:0">{{ c.time }}</span>
+                    </div>
+                    <p style="margin:2px 0 0;font-size:12px;color:#64748B;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.msg }}</p>
+                    <span style="display:inline-flex;margin-top:6px;font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:{{ c.tagBg }};color:{{ c.tagColor }}">{{ c.tag }}</span>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;background:#F8FAFC">
+              <div style="height:56px;flex-shrink:0;background:#fff;border-bottom:1px solid #E2E8F0;display:flex;align-items:center;gap:12px;padding:0 20px">
+                <div style="width:34px;height:34px;border-radius:50%;background:#DBEAFE;display:grid;place-items:center;font-size:12px;font-weight:700;color:#2563EB">MC</div>
+                <div style="flex:1">
+                  <p style="margin:0;font-size:13.5px;font-weight:600">Marina Costa</p>
+                  <p style="margin:0;font-size:11px;color:#22A06B;display:flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:#22A06B;animation:pulseDot 2s infinite"></span> IA atendendo · WhatsApp</p>
+                </div>
+                <span style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:8px;background:#EFF6FF;color:#2563EB;font-size:12px;font-weight:600">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8V4H8"></path><rect x="4" y="8" width="16" height="12" rx="2"></rect><path d="M2 14h2M20 14h2M15 13v2M9 13v2"></path></svg>
+                  Assumir conversa
+                </span>
+              </div>
+              <div style="flex:1;padding:20px;display:flex;flex-direction:column;gap:10px;overflow:hidden">
+                <div style="margin-right:auto;max-width:70%;background:#fff;border:1px solid #E2E8F0;border-radius:14px 14px 14px 4px;padding:10px 14px;font-size:13px;color:#334155">Oi! Vi o clareamento de vocês, quanto fica?</div>
+                <div style="margin-left:auto;max-width:70%;background:#2563EB;color:#fff;border-radius:14px 14px 4px 14px;padding:10px 14px;font-size:13px;line-height:1.5">Oi, Marina! O clareamento a laser sai R$ 1.400 em 3 sessões. Posso te mostrar como fica?</div>
+                <div style="margin-left:auto;width:250px;border-radius:14px;overflow:hidden;background:#fff;border:1px solid #E2E8F0;box-shadow:0 4px 12px -6px rgba(15,23,42,0.2)">
+                  <div style="height:104px;background:linear-gradient(135deg,#2563EB,#60A5FA);display:grid;place-items:center;color:rgba(255,255,255,0.85);font-size:11px;font-weight:500">imagem do catálogo</div>
+                  <div style="padding:10px 12px">
+                    <p style="margin:0;font-size:12.5px;font-weight:600">Clareamento a Laser</p>
+                    <p style="margin:2px 0 0;font-size:12.5px;font-weight:700;color:#2563EB">R$ 1.400 · 3 sessões</p>
+                  </div>
+                </div>
+                <div style="margin-right:auto;max-width:70%;background:#fff;border:1px solid #E2E8F0;border-radius:14px 14px 14px 4px;padding:10px 14px;font-size:13px;color:#334155">Adorei! Consigo essa semana?</div>
+                <div style="margin-left:auto;max-width:70%;background:#2563EB;color:#fff;border-radius:14px 14px 4px 14px;padding:10px 14px;font-size:13px">Tenho <b>quinta 10h</b> ou <b>sexta 15h30</b>. Qual fica melhor?</div>
+                <div style="margin-left:auto;display:inline-flex;align-items:center;gap:9px;background:#ECFDF5;border:1px solid #A7F3D0;color:#047857;border-radius:12px;padding:9px 14px;font-size:12.5px;font-weight:600">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
+                  Agendado · quinta, 10h · Google Calendar
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="max-width:1240px;margin:56px auto 0;padding-bottom:40px;text-align:center">
+      <p style="margin:0 0 22px;font-size:12px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#94A3B8">Negócios que já atendem no automático</p>
+      <div style="display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:20px 52px;opacity:.55">
+        <sc-for list="{{ logos }}" as="l" hint-placeholder-count="6">
+          <span style="font-size:19px;font-weight:700;letter-spacing:-0.03em;color:#475569">{{ l }}</span>
+        </sc-for>
+      </div>
+    </div>
+    <svg viewBox="0 0 1440 110" preserveAspectRatio="none" style="display:block;width:calc(100% + 56px);margin:0 -28px;height:96px"><path d="M0,10 C340,110 1100,110 1440,10 L1440,110 L0,110 Z" fill="#080C16"></path></svg>
+  </section>
+
+  <section id="resultados" style="background:#080C16;color:#F1F5F9;padding:40px 28px 96px">
+    <div style="max-width:1240px;margin:0 auto">
+      <div style="text-align:center;max-width:660px;margin:0 auto 52px">
+        <h2 style="margin:0;font-size:44px;font-weight:700;letter-spacing:-0.04em;line-height:1.08">Resultados reais dos nossos clientes</h2>
+        <p style="margin:16px 0 0;font-size:16px;line-height:1.65;color:#94A3B8">Clínicas, lojas e agências que trocaram o celular no balcão por um agente que nunca deixa mensagem sem resposta.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px">
+        <sc-for list="{{ depoimentos }}" as="d" hint-placeholder-count="4">
+          <div style="border-radius:20px;padding:26px;background:{{ d.bg }};border:1px solid {{ d.border }};display:flex;flex-direction:column;justify-content:space-between;gap:22px;min-height:290px">
+            <div>
+              <div style="display:flex;gap:3px;margin-bottom:16px;color:{{ d.star }}">{{ d.stars }}</div>
+              <p style="margin:0;font-size:14px;line-height:1.6;color:{{ d.quote }}">{{ d.q }}</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:11px">
+              <div style="width:38px;height:38px;border-radius:50%;background:{{ d.avatarBg }};display:grid;place-items:center;font-size:13px;font-weight:700;color:{{ d.avatarColor }}">{{ d.i }}</div>
+              <div>
+                <p style="margin:0;font-size:13.5px;font-weight:600;color:{{ d.name }}">{{ d.a }}</p>
+                <p style="margin:1px 0 0;font-size:11.5px;color:{{ d.role }}">{{ d.r }}</p>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="margin-top:22px;display:grid;grid-template-columns:repeat(4,1fr);gap:20px">
+        <sc-for list="{{ numeros }}" as="n" hint-placeholder-count="4">
+          <div style="border-radius:16px;border:1px solid rgba(255,255,255,0.08);background:#0E1525;padding:22px 24px">
+            <div style="font-size:34px;font-weight:700;letter-spacing:-0.035em;font-variant-numeric:tabular-nums;color:#fff">{{ n.v }}</div>
+            <div style="margin-top:6px;font-size:13px;color:#94A3B8">{{ n.l }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section id="recursos" style="background:#080C16;color:#F1F5F9;padding:20px 28px 96px">
+    <div style="max-width:1240px;margin:0 auto">
+      <div style="text-align:center;max-width:640px;margin:0 auto 52px">
+        <span style="display:inline-block;font-size:12px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#60A5FA">Recursos</span>
+        <h2 style="margin:14px 0 0;font-size:44px;font-weight:700;letter-spacing:-0.04em;line-height:1.08">Tudo o que você precisa para escalar <span style="font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-weight:400;color:#60A5FA">sem contratar</span></h2>
+        <p style="margin:16px 0 0;font-size:16px;color:#94A3B8">Já vem pronto: sem plugin, sem integrador, sem mensalidade extra.</p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.35fr 1fr 1fr;gap:20px;margin-bottom:20px">
+        <div style="border-radius:20px;border:1px solid rgba(255,255,255,0.08);background:#0E1525;padding:30px;display:flex;flex-direction:column;gap:20px">
+          <div>
+            <div style="width:42px;height:42px;border-radius:12px;background:rgba(37,99,235,0.15);color:#60A5FA;display:grid;place-items:center;margin-bottom:16px">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 8V4H8"></path><rect x="4" y="8" width="16" height="12" rx="2"></rect><path d="M2 14h2M20 14h2M15 13v2M9 13v2"></path></svg>
+            </div>
+            <h3 style="margin:0;font-size:20px;font-weight:600;letter-spacing:-0.025em">Um agente que fala como o seu negócio</h3>
+            <p style="margin:10px 0 0;font-size:14px;line-height:1.65;color:#94A3B8">Escolha a função, mande seus documentos e defina o tom. Ele aprende preços, endereço, horários e objeções — e responde com metodologia de vendas, não com script decorado.</p>
+          </div>
+          <div style="margin-top:auto;border-radius:14px;background:#080C16;border:1px solid rgba(255,255,255,0.06);padding:16px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:8px;font-size:11.5px;color:#64748B"><span style="width:6px;height:6px;border-radius:50%;background:#22A06B"></span> Base de conhecimento · 14 documentos</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <span style="font-size:11.5px;padding:5px 10px;border-radius:8px;background:rgba(255,255,255,0.05);color:#CBD5E1">tabela-precos.pdf</span>
+              <span style="font-size:11.5px;padding:5px 10px;border-radius:8px;background:rgba(255,255,255,0.05);color:#CBD5E1">politica-cancelamento.docx</span>
+              <span style="font-size:11.5px;padding:5px 10px;border-radius:8px;background:rgba(255,255,255,0.05);color:#CBD5E1">faq-clientes.txt</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="border-radius:20px;border:1px solid rgba(255,255,255,0.08);background:#0E1525;padding:30px;display:flex;flex-direction:column;gap:16px">
+          <div style="width:42px;height:42px;border-radius:12px;background:rgba(37,99,235,0.15);color:#60A5FA;display:grid;place-items:center">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17.5" cy="6.5" r="1"></circle></svg>
+          </div>
+          <h3 style="margin:0;font-size:19px;font-weight:600;letter-spacing:-0.025em">Três canais, uma caixa de entrada</h3>
+          <p style="margin:0;font-size:14px;line-height:1.65;color:#94A3B8">WhatsApp oficial, Instagram Direct e o chat do site. O mesmo agente atende os três e o histórico fica junto.</p>
+          <div style="margin-top:auto;display:flex;gap:8px">
+            <span style="flex:1;height:38px;border-radius:10px;background:rgba(34,160,107,0.12);color:#4ADE80;display:grid;place-items:center;font-size:11.5px;font-weight:600">WhatsApp</span>
+            <span style="flex:1;height:38px;border-radius:10px;background:rgba(219,39,119,0.12);color:#F472B6;display:grid;place-items:center;font-size:11.5px;font-weight:600">Instagram</span>
+            <span style="flex:1;height:38px;border-radius:10px;background:rgba(37,99,235,0.15);color:#60A5FA;display:grid;place-items:center;font-size:11.5px;font-weight:600">Site</span>
+          </div>
+        </div>
+
+        <div style="border-radius:20px;border:1px solid rgba(255,255,255,0.08);background:linear-gradient(160deg,#1D4ED8,#2563EB 55%,#1E40AF);padding:30px;display:flex;flex-direction:column;gap:16px">
+          <div style="width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,0.18);color:#fff;display:grid;place-items:center">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
+          </div>
+          <h3 style="margin:0;font-size:19px;font-weight:600;letter-spacing:-0.025em;color:#fff">Agenda cheia, menos faltas</h3>
+          <p style="margin:0;font-size:14px;line-height:1.65;color:rgba(255,255,255,0.82)">Marca no Google Calendar sem conflito, confirma 24h antes e envia o link 10 minutos antes.</p>
+          <div style="margin-top:auto;background:rgba(255,255,255,0.12);border-radius:12px;padding:14px">
+            <div style="font-size:30px;font-weight:700;color:#fff;letter-spacing:-0.03em">−48%</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.8)">de faltas com lembrete automático</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px">
+        <sc-for list="{{ recursosMenores }}" as="f" hint-placeholder-count="8">
+          <div style="border-radius:16px;border:1px solid rgba(255,255,255,0.08);background:#0E1525;padding:22px;display:flex;flex-direction:column;gap:11px">
+            <div style="width:36px;height:36px;border-radius:10px;background:rgba(37,99,235,0.15);color:#60A5FA;display:grid;place-items:center">{{ f.icon }}</div>
+            <h4 style="margin:0;font-size:14.5px;font-weight:600;letter-spacing:-0.02em">{{ f.t }}</h4>
+            <p style="margin:0;font-size:13px;line-height:1.6;color:#94A3B8">{{ f.d }}</p>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section id="funil" style="background:#080C16;color:#F1F5F9;padding:20px 28px 96px">
+    <div style="max-width:1240px;margin:0 auto">
+      <div style="text-align:center;max-width:660px;margin:0 auto 44px">
+        <h2 style="margin:0;font-size:44px;font-weight:700;letter-spacing:-0.04em;line-height:1.08">Apresentando o <span style="color:#60A5FA">Funil Kanban</span></h2>
+        <p style="margin:16px 0 0;font-size:16px;color:#94A3B8">Cada conversa vira um card. O agente move o lead de etapa sozinho conforme a conversa avança.</p>
+      </div>
+
+      <div style="border-radius:22px;border:1px solid rgba(255,255,255,0.08);background:#0E1525;padding:24px;box-shadow:0 40px 90px -40px rgba(37,99,235,0.5)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <h3 style="margin:0;font-size:15px;font-weight:600">Funil de clientes</h3>
+            <span style="font-size:11.5px;padding:3px 9px;border-radius:999px;background:rgba(37,99,235,0.15);color:#60A5FA;font-weight:600">42 leads ativos</span>
+          </div>
+          <div style="display:flex;gap:8px">
+            <span style="font-size:12px;padding:6px 12px;border-radius:8px;background:rgba(255,255,255,0.05);color:#94A3B8">Este mês</span>
+            <span style="font-size:12px;padding:6px 12px;border-radius:8px;background:rgba(255,255,255,0.05);color:#94A3B8">Todos os canais</span>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px">
+          <sc-for list="{{ kanban }}" as="col" hint-placeholder-count="5">
+            <div style="background:#080C16;border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;min-height:330px">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <span style="display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#94A3B8">
+                  <span style="width:7px;height:7px;border-radius:50%;background:{{ col.color }}"></span>{{ col.title }}
+                </span>
+                <span style="font-size:11px;color:#64748B;font-variant-numeric:tabular-nums">{{ col.count }}</span>
+              </div>
+              <sc-for list="{{ col.cards }}" as="c" hint-placeholder-count="3">
+                <div style="border-radius:11px;border:1px solid rgba(255,255,255,0.07);background:#0E1525;padding:12px">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <div style="width:24px;height:24px;border-radius:50%;background:rgba(37,99,235,0.2);color:#60A5FA;display:grid;place-items:center;font-size:10px;font-weight:700">{{ c.ini }}</div>
+                    <p style="margin:0;font-size:12.5px;font-weight:600;color:#E2E8F0">{{ c.name }}</p>
+                  </div>
+                  <p style="margin:9px 0 0;font-size:11.5px;color:#64748B;line-height:1.5">{{ c.note }}</p>
+                  <div style="margin-top:10px;display:flex;align-items:center;justify-content:space-between">
+                    <span style="font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:6px;background:{{ c.tagBg }};color:{{ c.tagColor }}">{{ c.tag }}</span>
+                    <span style="font-size:10.5px;color:#475569">{{ c.time }}</span>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="margin-top:26px;display:grid;grid-template-columns:repeat(4,1fr);gap:20px">
+        <sc-for list="{{ funilBeneficios }}" as="b" hint-placeholder-count="4">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="color:#60A5FA">{{ b.icon }}</div>
+            <h4 style="margin:0;font-size:14.5px;font-weight:600">{{ b.t }}</h4>
+            <p style="margin:0;font-size:13px;line-height:1.6;color:#94A3B8">{{ b.d }}</p>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section id="integracoes" style="background:#080C16;color:#F1F5F9;padding:20px 28px 96px">
+    <div style="max-width:1240px;margin:0 auto">
+      <div style="text-align:center;max-width:620px;margin:0 auto 44px">
+        <h2 style="margin:0;font-size:44px;font-weight:700;letter-spacing:-0.04em;line-height:1.08">Conectado com o que você já usa</h2>
+        <p style="margin:16px 0 0;font-size:16px;color:#94A3B8">Entrada e saída de dados sem duplicar contato — e uma API aberta para o resto.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:14px">
+        <sc-for list="{{ integracoes }}" as="i" hint-placeholder-count="12">
+          <div style="height:84px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:#0E1525;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
+            <span style="font-size:13px;font-weight:600;color:#CBD5E1">{{ i.n }}</span>
+            <span style="font-size:10.5px;color:#64748B">{{ i.c }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section style="background:#080C16;color:#F1F5F9;padding:20px 28px 0">
+    <div style="max-width:1080px;margin:0 auto">
+      <div style="text-align:center;max-width:620px;margin:0 auto 44px">
+        <h2 style="margin:0;font-size:44px;font-weight:700;letter-spacing:-0.04em;line-height:1.08">A diferença no dia a dia</h2>
+        <p style="margin:16px 0 0;font-size:16px;color:#94A3B8">O mesmo volume de mensagens, dois desfechos diferentes.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div style="border-radius:20px;border:1px solid rgba(255,255,255,0.08);background:#0E1525;padding:30px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:22px">
+            <span style="width:32px;height:32px;border-radius:9px;background:rgba(239,68,68,0.12);color:#F87171;display:grid;place-items:center">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+            </span>
+            <h3 style="margin:0;font-size:18px;font-weight:600;color:#E2E8F0">Sem Agentes Virtuais</h3>
+          </div>
+          <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:14px">
+            <sc-for list="{{ semSolucao }}" as="s" hint-placeholder-count="5">
+              <li style="display:flex;gap:11px;align-items:flex-start;font-size:14px;line-height:1.55;color:#94A3B8">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="2.2" stroke-linecap="round" style="flex-shrink:0;margin-top:2px"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+                {{ s }}
+              </li>
+            </sc-for>
+          </ul>
+        </div>
+        <div style="border-radius:20px;border:1px solid rgba(37,99,235,0.5);background:linear-gradient(165deg,rgba(37,99,235,0.14),#0E1525 60%);padding:30px;box-shadow:0 30px 70px -40px rgba(37,99,235,0.8)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:22px">
+            <span style="width:32px;height:32px;border-radius:9px;background:#2563EB;color:#fff;display:grid;place-items:center">
+              <svg viewBox="0 0 64 64" width="16" height="16" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M32 6 L58 56 L6 56 Z M32 30 L45.5 56 L18.5 56 Z"></path></svg>
+            </span>
+            <h3 style="margin:0;font-size:18px;font-weight:600;color:#fff">Com Agentes Virtuais</h3>
+          </div>
+          <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:14px">
+            <sc-for list="{{ comSolucao }}" as="s" hint-placeholder-count="5">
+              <li style="display:flex;gap:11px;align-items:flex-start;font-size:14px;line-height:1.55;color:#E2E8F0">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><path d="M20 6L9 17l-5-5"></path></svg>
+                {{ s }}
+              </li>
+            </sc-for>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <svg viewBox="0 0 1440 110" preserveAspectRatio="none" style="display:block;width:calc(100% + 56px);margin:60px -28px 0;height:96px"><path d="M0,100 C340,0 1100,0 1440,100 L1440,110 L0,110 Z" fill="#F8FAFF"></path></svg>
+  </section>
+
+  <section id="planos" style="background:#F8FAFF;padding:0 28px 96px;margin-top:-1px">
+    <div style="max-width:1080px;margin:0 auto">
+      <div style="text-align:center;max-width:620px;margin:0 auto 44px">
+        <h2 style="margin:0;font-size:44px;font-weight:700;letter-spacing:-0.04em;line-height:1.08;color:#0F172A">Planos &amp; preços</h2>
+        <p style="margin:16px 0 0;font-size:16px;color:#475569">A diferença que pesa no preço é como o WhatsApp conecta. Os dois têm 7 dias grátis.</p>
+        <div style="margin-top:24px;display:inline-flex;padding:4px;border-radius:999px;background:#E8EEF8;gap:4px">
+          <span style="padding:8px 18px;border-radius:999px;background:#fff;font-size:13px;font-weight:600;color:#0F172A;box-shadow:0 1px 2px rgba(15,23,42,0.08)">Mensal</span>
+          <span style="padding:8px 18px;border-radius:999px;font-size:13px;font-weight:600;color:#64748B">Anual <span style="color:#2563EB">−20%</span></span>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+        <div style="border-radius:22px;border:1px solid #DBE4F0;background:#fff;padding:32px;display:flex;flex-direction:column;gap:24px">
+          <div>
+            <div style="display:flex;align-items:center;gap:9px;font-size:12.5px;font-weight:600;color:#64748B">
+              <span style="width:28px;height:28px;border-radius:8px;background:#F1F5F9;color:#475569;display:grid;place-items:center">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><path d="M14 14h3v3h-3zM18 18h3v3h-3z"></path></svg>
+              </span>
+              Conexão por QR Code
+            </div>
+            <p style="margin:18px 0 0;font-size:15px;font-weight:600;color:#0F172A">Essencial</p>
+            <p style="margin:6px 0 0;display:flex;align-items:baseline;gap:6px">
+              <span style="font-size:44px;font-weight:700;letter-spacing:-0.04em;color:#0F172A">R$ 189</span>
+              <span style="font-size:15px;color:#64748B">/mês</span>
+            </p>
+            <p style="margin:6px 0 0;font-size:13px;color:#94A3B8">ou R$ 1.814/ano</p>
+            <p style="margin:14px 0 0;font-size:14px;line-height:1.6;color:#475569">Para quem está começando a automatizar o WhatsApp e quer resultado na primeira semana.</p>
+          </div>
+          <dl style="margin:0;border-top:1px solid #E9EEF5;padding-top:18px;display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ limitesEssencial }}" as="l" hint-placeholder-count="4">
+              <div style="display:flex;justify-content:space-between;gap:12px;font-size:14px">
+                <dt style="color:#64748B;margin:0">{{ l.k }}</dt>
+                <dd style="margin:0;font-weight:600;color:#0F172A;font-variant-numeric:tabular-nums">{{ l.v }}</dd>
+              </div>
+            </sc-for>
+          </dl>
+          <ul style="margin:0;padding:18px 0 0;border-top:1px solid #E9EEF5;list-style:none;display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ recursosEssencial }}" as="r" hint-placeholder-count="6">
+              <li style="display:flex;gap:10px;align-items:flex-start;font-size:14px;color:{{ r.color }}">
+                {{ r.icon }}<span style="text-decoration:{{ r.deco }}">{{ r.t }}</span>
+              </li>
+            </sc-for>
+          </ul>
+          <a href="#" style="margin-top:auto;display:flex;align-items:center;justify-content:center;height:50px;border-radius:12px;border:1px solid #2563EB;color:#2563EB;font-size:15px;font-weight:600">Assinar agora</a>
+          <p style="margin:0;text-align:center;font-size:12.5px;color:#94A3B8">Sem cartão para testar</p>
+        </div>
+
+        <div style="position:relative;border-radius:22px;border:1px solid #2563EB;background:#0F172A;background-image:radial-gradient(120% 70% at 50% 0%,rgba(37,99,235,0.35),transparent 60%);padding:32px;display:flex;flex-direction:column;gap:24px;box-shadow:0 34px 70px -34px rgba(37,99,235,0.7)">
+          <span style="position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:#2563EB;color:#fff;font-size:11.5px;font-weight:700;letter-spacing:0.04em;padding:6px 16px;border-radius:999px;white-space:nowrap">MAIS ESCOLHIDO</span>
+          <div>
+            <div style="display:flex;align-items:center;gap:9px;font-size:12.5px;font-weight:600;color:#94A3B8">
+              <span style="width:28px;height:28px;border-radius:8px;background:rgba(37,99,235,0.2);color:#60A5FA;display:grid;place-items:center">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4L4.2 7.7l5.4-.8z"></path></svg>
+              </span>
+              API oficial do WhatsApp (Meta)
+            </div>
+            <p style="margin:18px 0 0;font-size:15px;font-weight:600;color:#fff">Profissional</p>
+            <p style="margin:6px 0 0;display:flex;align-items:baseline;gap:6px">
+              <span style="font-size:44px;font-weight:700;letter-spacing:-0.04em;color:#fff">R$ 399</span>
+              <span style="font-size:15px;color:#94A3B8">/mês</span>
+            </p>
+            <p style="margin:6px 0 0;font-size:13px;color:#64748B">ou R$ 3.830/ano</p>
+            <p style="margin:14px 0 0;font-size:14px;line-height:1.6;color:#CBD5E1">Para quem já tem volume e não pode arriscar o número: canal aprovado pela Meta, equipe e disparos.</p>
+          </div>
+          <dl style="margin:0;border-top:1px solid rgba(255,255,255,0.1);padding-top:18px;display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ limitesPro }}" as="l" hint-placeholder-count="4">
+              <div style="display:flex;justify-content:space-between;gap:12px;font-size:14px">
+                <dt style="color:#94A3B8;margin:0">{{ l.k }}</dt>
+                <dd style="margin:0;font-weight:600;color:#fff;font-variant-numeric:tabular-nums">{{ l.v }}</dd>
+              </div>
+            </sc-for>
+          </dl>
+          <ul style="margin:0;padding:18px 0 0;border-top:1px solid rgba(255,255,255,0.1);list-style:none;display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ recursosPro }}" as="r" hint-placeholder-count="7">
+              <li style="display:flex;gap:10px;align-items:flex-start;font-size:14px;color:#E2E8F0">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><path d="M20 6L9 17l-5-5"></path></svg>
+                <span>{{ r }}</span>
+              </li>
+            </sc-for>
+          </ul>
+          <a href="#" style="margin-top:auto;display:flex;align-items:center;justify-content:center;height:50px;border-radius:12px;background:#2563EB;color:#fff;font-size:15px;font-weight:600;box-shadow:0 14px 30px -12px rgba(37,99,235,0.9)">Assinar agora</a>
+          <p style="margin:0;text-align:center;font-size:12.5px;color:#64748B">Sem cartão para testar</p>
+        </div>
+      </div>
+
+      <div style="margin-top:26px;border-radius:18px;border:1px solid #DBE4F0;background:#fff;padding:26px 30px;display:flex;align-items:center;gap:24px">
+        <div style="width:56px;height:56px;flex-shrink:0;border-radius:16px;background:#EFF6FF;color:#2563EB;display:grid;place-items:center">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-4"></path></svg>
+        </div>
+        <div style="flex:1">
+          <h3 style="margin:0;font-size:18px;font-weight:600;letter-spacing:-0.025em">Teste 7 dias sem compromisso</h3>
+          <p style="margin:6px 0 0;font-size:14px;line-height:1.6;color:#475569">Conecte o WhatsApp, treine o agente e veja as conversas acontecendo. Se não fizer sentido, é só não continuar — nenhuma cobrança acontece durante o teste.</p>
+        </div>
+        <a href="#" style="flex-shrink:0;display:inline-flex;align-items:center;height:46px;padding:0 22px;border-radius:11px;background:#0F172A;color:#fff;font-size:14px;font-weight:600">Começar teste</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq" style="background:#fff;padding:96px 28px">
+    <div style="max-width:840px;margin:0 auto">
+      <div style="text-align:center;margin-bottom:44px">
+        <h2 style="margin:0;font-size:44px;font-weight:700;letter-spacing:-0.04em;line-height:1.08">Restou alguma dúvida?</h2>
+        <p style="margin:16px 0 0;font-size:16px;color:#475569">Se a sua não estiver aqui, o próprio agente do site responde.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <sc-for list="{{ faq }}" as="f" hint-placeholder-count="7">
+          <div style="border-radius:14px;border:1px solid #E4EAF3;background:#fff;overflow:hidden">
+            <button onClick="{{ f.toggle }}" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 24px;background:none;border:none;cursor:pointer;text-align:left;font-family:inherit">
+              <span style="font-size:15.5px;font-weight:600;color:#0F172A;letter-spacing:-0.02em">{{ f.q }}</span>
+              <span style="flex-shrink:0;color:#94A3B8">{{ f.chevron }}</span>
+            </button>
+            <sc-if value="{{ f.open }}" hint-placeholder-val="{{ false }}">
+              <p style="margin:0;padding:0 24px 22px;font-size:14.5px;line-height:1.7;color:#475569">{{ f.a }}</p>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section style="position:relative;background:#EEF4FF;padding:96px 28px;text-align:center;overflow:hidden">
+    <div aria-hidden="true" style="position:absolute;left:50%;top:0;transform:translateX(-50%);width:900px;height:420px;background:radial-gradient(closest-side,rgba(37,99,235,0.22),transparent);filter:blur(20px)"></div>
+    <div style="position:relative;max-width:760px;margin:0 auto">
+      <h2 style="margin:0;font-size:52px;font-weight:700;letter-spacing:-0.045em;line-height:1.04;text-wrap:balance">Transforme conversas em <span style="color:#2563EB">vendas ainda hoje</span></h2>
+      <p style="margin:20px auto 0;max-width:560px;font-size:17px;line-height:1.6;color:#475569">Sete dias para ver o agente atendendo, agendando e vendendo no seu WhatsApp. Sem cartão, sem instalação, sem contrato.</p>
+      <div style="margin-top:32px;display:flex;justify-content:center;gap:12px">
+        <a href="#" style="display:inline-flex;align-items:center;gap:8px;height:54px;padding:0 32px;border-radius:12px;background:#2563EB;color:#fff;font-size:16px;font-weight:600;box-shadow:0 18px 40px -12px rgba(37,99,235,0.6)">Testar 7 dias grátis
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
+        </a>
+        <a href="#" style="display:inline-flex;align-items:center;height:54px;padding:0 28px;border-radius:12px;background:#fff;border:1px solid #DBE4F0;font-size:15px;font-weight:600">Falar com especialista</a>
+      </div>
+    </div>
+  </section>
+
+  <footer style="background:#080C16;color:#94A3B8;padding:64px 28px 32px">
+    <div style="max-width:1240px;margin:0 auto;display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:40px">
+      <div>
+        <span style="display:inline-flex;align-items:center;gap:10px">
+          <svg viewBox="0 0 64 64" width="26" height="26" fill="#2563EB"><path fill-rule="evenodd" clip-rule="evenodd" d="M32 6 L58 56 L6 56 Z M32 30 L45.5 56 L18.5 56 Z"></path></svg>
+          <span style="font-size:17px;font-weight:700;letter-spacing:-0.03em;color:#fff">Agentes <span style="color:#2563EB">Virtuais</span></span>
+        </span>
+        <p style="margin:16px 0 0;font-size:13.5px;line-height:1.65;max-width:300px">Agentes de IA multicanal — atendimento, vendas e agendamento no WhatsApp, Instagram e site.</p>
+        <p style="margin:18px 0 0;font-size:13px;line-height:1.7">contato@agentesvirtuais.com<br>Suporte via WhatsApp: 71 99204-2802<br>Rua Vereador Zezeu Ribeiro, 1117, Boca da Mata<br>Salvador - BA · CEP 41.345-100</p>
+      </div>
+      <div>
+        <h4 style="margin:0 0 14px;font-size:12px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#fff">Produto</h4>
+        <div style="display:flex;flex-direction:column;gap:9px;font-size:13.5px">
+          <a href="#recursos">Recursos</a><a href="#funil">Funil Kanban</a><a href="#integracoes">Integrações</a><a href="#planos">Planos</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin:0 0 14px;font-size:12px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#fff">Empresa</h4>
+        <div style="display:flex;flex-direction:column;gap:9px;font-size:13.5px">
+          <a href="#">Sobre</a><a href="#">Blog</a><a href="#">Academy</a><a href="#">Seja parceiro</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin:0 0 14px;font-size:12px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#fff">Legal</h4>
+        <div style="display:flex;flex-direction:column;gap:9px;font-size:13.5px">
+          <a href="#">Termos de Uso</a><a href="#">Política de Privacidade</a><a href="#">LGPD</a><a href="#">Status</a>
+        </div>
+      </div>
+    </div>
+    <div style="max-width:1240px;margin:44px auto 0;padding-top:24px;border-top:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;font-size:12.5px;color:#64748B">
+      <span>© 2026 Agentes Virtuais. Todos os direitos reservados.</span>
+      <span>Feito no Brasil</span>
+    </div>
+  </footer>
+
+  <a href="#" style="position:fixed;bottom:26px;right:26px;width:56px;height:56px;background:#22A06B;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 16px 30px -10px rgba(34,160,107,0.7);z-index:80">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.2-1.8-.9-2-1s-.5-.2-.7.1-.8 1-1 1.2-.4.2-.7.1a8.2 8.2 0 0 1-2.4-1.5 9 9 0 0 1-1.7-2.1c-.2-.3 0-.5.1-.6l.5-.6.3-.5v-.5l-1-2.3c-.2-.6-.5-.5-.7-.5h-.6a1.2 1.2 0 0 0-.9.4A3.6 3.6 0 0 0 5.7 9c0 1.6 1.1 3.1 1.3 3.3a12 12 0 0 0 4.7 4.1c.6.3 1.2.4 1.6.5a3.8 3.8 0 0 0 1.7.1c.5-.1 1.8-.7 2-1.4s.2-1.2.2-1.3zM12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2z"></path></svg>
+  </a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440}}">
+const h = React.createElement;
+function svg(paths, size, opts) {
+  return h('svg', Object.assign({ width: size || 18, height: size || 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }, opts || {}),
+    paths.map((d, i) => h('path', { key: i, d })));
+}
+const P = {
+  dashboard: ['M3 3h8v8H3z', 'M13 3h8v5h-8z', 'M13 12h8v9h-8z', 'M3 15h8v6H3z'],
+  message: ['M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'],
+  target: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z', 'M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z'],
+  calendar: ['M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', 'M16 2v4', 'M8 2v4', 'M3 10h18'],
+  bot: ['M12 8V4H8', 'M4 8h16v12H4z', 'M2 14h2', 'M20 14h2', 'M15 13v2', 'M9 13v2'],
+  package: ['M21 8l-9-5-9 5 9 5 9-5z', 'M3 8v8l9 5 9-5V8', 'M12 13v8'],
+  chart: ['M3 3v18h18', 'M7 16v-5', 'M12 16V8', 'M17 16v-3'],
+  workflow: ['M3 3h6v6H3z', 'M15 15h6v6h-6z', 'M9 6h4a2 2 0 0 1 2 2v7'],
+  mic: ['M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z', 'M19 10v1a7 7 0 0 1-14 0v-1', 'M12 19v3'],
+  megaphone: ['M3 11v2a1 1 0 0 0 1 1h3l7 4V6L7 10H4a1 1 0 0 0-1 1z', 'M18 8a4 4 0 0 1 0 8'],
+  users: ['M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2', 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'],
+  plug: ['M9 2v6', 'M15 2v6', 'M6 8h12v3a6 6 0 0 1-12 0z', 'M12 17v5'],
+  shield: ['M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'],
+  clock: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M12 6v6l4 2'],
+  phone: ['M5 2h14a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z', 'M12 18h.01'],
+  instagram: ['M2 7a5 5 0 0 1 5-5h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5z', 'M16 11.4A4 4 0 1 1 12.6 8a4 4 0 0 1 3.4 3.4z'],
+  globe: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M2 12h20', 'M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z'],
+  check: ['M20 6L9 17l-5-5'],
+  x: ['M18 6L6 18M6 6l12 12'],
+  chevD: ['M6 9l6 6 6-6'],
+  chevU: ['M18 15l-6-6-6 6'],
+  filter: ['M22 3H2l8 9.5V19l4 2v-8.5z'],
+  bell: ['M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9', 'M13.7 21a2 2 0 0 1-3.4 0'],
+};
+const star = h('svg', { width: 15, height: 15, viewBox: '0 0 24 24', fill: 'currentColor' }, h('path', { d: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01z' }));
+const stars = (n) => Array.from({ length: n }).map((_, k) => h('span', { key: k }, star));
+
+class Component extends DCLogic {
+  state = { aberta: 0 };
+  renderVals() {
+    const faqs = [
+      { q: 'Quanto tempo leva para colocar no ar?', a: 'Cerca de um minuto para conectar o WhatsApp e mais alguns para treinar o agente com os seus documentos. A maioria dos clientes está atendendo no automático no mesmo dia.' },
+      { q: 'Os clientes percebem que estão falando com uma IA?', a: 'A conversa é natural e humanizada, com o tom e as informações do seu negócio. E, sempre que o cliente pedir ou o assunto exigir, a conversa passa para a sua equipe com todo o histórico.' },
+      { q: 'Em quais canais o agente atende?', a: 'WhatsApp oficial (Meta), Instagram Direct e um chat que você instala no seu site com uma linha de código. O mesmo agente atende os três, e todas as conversas chegam numa caixa de entrada só.' },
+      { q: 'Serve para qualquer tipo de negócio?', a: 'Sim. Clínicas, salões, academias, restaurantes, lojas, escritórios — qualquer negócio que atende e vende por mensagem. Templates prontos por segmento aceleram a configuração, e você personaliza a função do agente e a base de conhecimento.' },
+      { q: 'O agente consegue apresentar meus produtos?', a: 'Sim. Você cadastra produtos e serviços com foto, áudio e vídeo no catálogo, e na conversa o agente apresenta o item certo e envia a mídia automaticamente.' },
+      { q: 'Uso o WhatsApp oficial? Meu número corre risco?', a: 'Trabalhamos com a API oficial do WhatsApp (Meta), o canal aprovado para empresas — sem gambiarras que arriscam o seu número. Sua equipe pode intervir na conversa a qualquer momento.' },
+      { q: 'E a LGPD? Como ficam os dados dos clientes?', a: 'A plataforma nasce adequada à LGPD: consentimento registrado, descadastro imediato quando o cliente pede ("PARAR"), e exportação ou exclusão definitiva dos dados direto no painel.' },
+    ];
+    const railBg = 'transparent';
+    return {
+      railIcons: [
+        { icon: svg(P.dashboard, 16, { stroke: '#64748B' }), bg: railBg },
+        { icon: svg(P.message, 16, { stroke: '#fff' }), bg: 'rgba(255,255,255,0.1)' },
+        { icon: svg(P.target, 16, { stroke: '#64748B' }), bg: railBg },
+        { icon: svg(P.calendar, 16, { stroke: '#64748B' }), bg: railBg },
+        { icon: svg(P.bot, 16, { stroke: '#64748B' }), bg: railBg },
+        { icon: svg(P.package, 16, { stroke: '#64748B' }), bg: railBg },
+        { icon: svg(P.chart, 16, { stroke: '#64748B' }), bg: railBg },
+      ],
+      inbox: [
+        { ini: 'MC', name: 'Marina Costa', msg: 'Quinta 10h 🙌', time: 'agora', bg: '#F1F6FF', chBg: '#22A06B', chIcon: svg(P.phone, 8, { stroke: '#fff' }), tag: 'IA atendendo', tagBg: '#DBEAFE', tagColor: '#1D4ED8' },
+        { ini: 'LF', name: '@lucas.fit', msg: 'Manda o valor do plano?', time: '2 min', bg: '#fff', chBg: '#DB2777', chIcon: svg(P.instagram, 8, { stroke: '#fff' }), tag: 'Qualificando', tagBg: '#FEF3C7', tagColor: '#B45309' },
+        { ini: 'VS', name: 'Visitante do site', msg: 'Vocês atendem sábado?', time: '8 min', bg: '#fff', chBg: '#2563EB', chIcon: svg(P.globe, 8, { stroke: '#fff' }), tag: 'IA atendendo', tagBg: '#DBEAFE', tagColor: '#1D4ED8' },
+        { ini: 'RA', name: 'Roberto Alves', msg: 'Perfeito, obrigado!', time: '22 min', bg: '#fff', chBg: '#22A06B', chIcon: svg(P.phone, 8, { stroke: '#fff' }), tag: 'Agendado', tagBg: '#D1FAE5', tagColor: '#047857' },
+        { ini: 'CN', name: 'Carla Nogueira', msg: 'Quero falar com alguém', time: '35 min', bg: '#fff', chBg: '#22A06B', chIcon: svg(P.phone, 8, { stroke: '#fff' }), tag: 'Aguardando você', tagBg: '#FEE2E2', tagColor: '#B91C1C' },
+        { ini: 'JP', name: 'João Pereira', msg: 'Confirmo o retorno', time: '1 h', bg: '#fff', chBg: '#22A06B', chIcon: svg(P.phone, 8, { stroke: '#fff' }), tag: 'Agendado', tagBg: '#D1FAE5', tagColor: '#047857' },
+      ],
+      logos: ['Odonto Sorriso', 'Vida Plena', 'Fisio Movimento', 'Studio Aura', 'Casa Bella', 'Agência Norte'],
+      depoimentos: [
+        { bg: 'linear-gradient(165deg,#2563EB,#1D4ED8)', border: 'rgba(255,255,255,0.14)', star: '#FDE68A', stars: stars(5), quote: 'rgba(255,255,255,0.92)', name: '#fff', role: 'rgba(255,255,255,0.7)', avatarBg: 'rgba(255,255,255,0.2)', avatarColor: '#fff', q: 'O agente responde os clientes na hora, mesmo de madrugada. A equipe parou de viver apagando incêndio no WhatsApp e a agenda encheu — mais de 120 horários marcados sozinhos no primeiro mês.', a: 'Thiago Fonseca', r: 'Gestor · Vida Plena Studio', i: 'TF' },
+        { bg: 'linear-gradient(165deg,#1D4ED8,#1E40AF)', border: 'rgba(255,255,255,0.14)', star: '#FDE68A', stars: stars(5), quote: 'rgba(255,255,255,0.92)', name: '#fff', role: 'rgba(255,255,255,0.7)', avatarBg: 'rgba(255,255,255,0.2)', avatarColor: '#fff', q: 'Ligamos o agente no WhatsApp e no Instagram. Ele responde na hora, manda a foto do procedimento, tira as dúvidas e já agenda. Vendeu mais no primeiro mês do que a gente respondendo na mão.', a: 'Aline Mendes', r: 'Fundadora · Odonto Sorriso', i: 'AM' },
+        { bg: '#0E1525', border: 'rgba(255,255,255,0.08)', star: '#FBBF24', stars: stars(5), quote: '#CBD5E1', name: '#fff', role: '#64748B', avatarBg: 'rgba(37,99,235,0.2)', avatarColor: '#60A5FA', q: 'Reduzimos as faltas quase pela metade com os lembretes automáticos. E a equipe, que vivia presa no celular, voltou a focar no cliente que está no local.', a: 'Ricardo Cruz', r: 'Gestor · Fisio Movimento', i: 'RC' },
+        { bg: '#0E1525', border: 'rgba(255,255,255,0.08)', star: '#FBBF24', stars: stars(5), quote: '#CBD5E1', name: '#fff', role: '#64748B', avatarBg: 'rgba(37,99,235,0.2)', avatarColor: '#60A5FA', q: 'Atendo 4 lojas com a mesma equipe. O funil mostra quem está perto de fechar e o agente cuida do resto — parei de perder venda por demora no fim de semana.', a: 'Paula Riani', r: 'Sócia · Casa Bella Decor', i: 'PR' },
+      ],
+      numeros: [
+        { v: '< 5s', l: 'tempo médio de primeira resposta' },
+        { v: '24/7', l: 'atendimento sem pausa, em 3 canais' },
+        { v: '−48%', l: 'de faltas com lembrete automático' },
+        { v: '+3x', l: 'mais conversas atendidas por equipe' },
+      ],
+      recursosMenores: [
+        { icon: svg(P.workflow), t: 'Construtor de fluxos', d: 'Monte a conversa arrastando blocos e teste no simulador antes de publicar.' },
+        { icon: svg(P.package), t: 'Catálogo com mídia', d: 'O agente identifica o que o cliente quer e envia foto, áudio ou vídeo do produto.' },
+        { icon: svg(P.mic), t: 'Ouve e responde em áudio', d: 'Recebe o áudio do cliente, entende e responde falando.' },
+        { icon: svg(P.megaphone), t: 'Disparo em massa', d: 'Campanha por template aprovado, com projeção de custo antes de enviar.' },
+        { icon: svg(P.users), t: 'Equipe com permissão', d: 'Cada colaborador vê só os módulos que o cargo dele precisa.' },
+        { icon: svg(P.message), t: 'Fila e transferência', d: 'A IA transfere, o cliente vê a posição na fila e sua equipe assume de onde ela parou.' },
+        { icon: svg(P.plug), t: 'CRM e API abertos', d: 'RD Station, HubSpot, Salesforce e Pipedrive — entrada e saída, sem duplicar.' },
+        { icon: svg(P.shield), t: 'LGPD desde o início', d: 'Consentimento registrado, descadastro imediato e exportação de dados no painel.' },
+      ],
+      kanban: [
+        { title: 'Novos', color: '#94A3B8', count: 12, cards: [
+          { ini: 'MC', name: 'Marina Costa', note: 'Perguntou sobre clareamento a laser', tag: 'WhatsApp', tagBg: 'rgba(34,160,107,0.15)', tagColor: '#4ADE80', time: 'agora' },
+          { ini: 'JP', name: 'João Pereira', note: 'Chegou pelo anúncio do Instagram', tag: 'Instagram', tagBg: 'rgba(219,39,119,0.15)', tagColor: '#F472B6', time: '5 min' },
+        ] },
+        { title: 'Qualificando', color: '#3B82F6', count: 9, cards: [
+          { ini: 'LF', name: '@lucas.fit', note: 'IA identificou interesse no plano trimestral', tag: 'IA ativa', tagBg: 'rgba(37,99,235,0.2)', tagColor: '#60A5FA', time: '12 min' },
+          { ini: 'VS', name: 'Visitante do site', note: 'Quer atendimento aos sábados', tag: 'Site', tagBg: 'rgba(37,99,235,0.15)', tagColor: '#60A5FA', time: '18 min' },
+        ] },
+        { title: 'Proposta', color: '#A855F7', count: 7, cards: [
+          { ini: 'CN', name: 'Carla Nogueira', note: 'Recebeu orçamento de R$ 2.400', tag: 'Aguardando', tagBg: 'rgba(245,158,11,0.15)', tagColor: '#FBBF24', time: '1 h' },
+        ] },
+        { title: 'Agendado', color: '#22A06B', count: 11, cards: [
+          { ini: 'RA', name: 'Roberto Alves', note: 'Quinta, 10h · Google Calendar', tag: 'Confirmado', tagBg: 'rgba(34,160,107,0.15)', tagColor: '#4ADE80', time: '2 h' },
+          { ini: 'AM', name: 'Ana Martins', note: 'Sexta, 15h30 · lembrete enviado', tag: 'Confirmado', tagBg: 'rgba(34,160,107,0.15)', tagColor: '#4ADE80', time: '3 h' },
+        ] },
+        { title: 'Fechado', color: '#2563EB', count: 3, cards: [
+          { ini: 'PR', name: 'Paula Riani', note: 'Pacote 3 sessões · R$ 1.400', tag: 'Ganho', tagBg: 'rgba(37,99,235,0.2)', tagColor: '#60A5FA', time: 'ontem' },
+        ] },
+      ],
+      funilBeneficios: [
+        { icon: svg(P.bot, 20), t: 'A IA move o card', d: 'Cada etapa avança sozinha conforme a conversa evolui — sem alguém arrastando à mão.' },
+        { icon: svg(P.users, 20), t: 'Contato único', d: 'O mesmo cliente no WhatsApp e no Instagram vira uma ficha só, sem duplicata.' },
+        { icon: svg(P.clock, 20), t: 'Nada esfria', d: 'Lead parado tempo demais numa etapa vira alerta para a equipe assumir.' },
+        { icon: svg(P.chart, 20), t: 'Previsão de receita', d: 'Veja quanto tem em cada etapa e onde a conversa costuma travar.' },
+      ],
+      integracoes: [
+        { n: 'WhatsApp', c: 'API oficial Meta' }, { n: 'Instagram', c: 'Direct' }, { n: 'Google Calendar', c: 'Agenda' },
+        { n: 'Google Meet', c: 'Videochamada' }, { n: 'RD Station', c: 'CRM' }, { n: 'HubSpot', c: 'CRM' },
+        { n: 'Salesforce', c: 'CRM' }, { n: 'Pipedrive', c: 'CRM' }, { n: 'Stripe', c: 'Pagamentos' },
+        { n: 'Zapier', c: 'Automação' }, { n: 'Webhooks', c: 'Eventos' }, { n: 'API REST', c: 'Aberta' },
+      ],
+      semSolucao: [
+        'Mensagem de madrugada só é respondida no dia seguinte — se alguém lembrar.',
+        'WhatsApp, Instagram e site em telas diferentes, cada um com um responsável.',
+        'Cliente pergunta preço três vezes e desiste antes de receber a resposta.',
+        'Agenda com buraco de um lado e conflito do outro, mais as faltas de sempre.',
+        'Ninguém sabe quantos leads entraram nem quantos viraram venda.',
+      ],
+      comSolucao: [
+        'Resposta em menos de 5 segundos, a qualquer hora, em qualquer dia.',
+        'Três canais numa caixa de entrada só, com o histórico junto do contato.',
+        'O agente apresenta o produto com foto e preço e conduz até o fechamento.',
+        'Agendamento no Google Calendar sem conflito, com confirmação e lembrete.',
+        'Funil atualizado sozinho, com o número de leads e vendas de cada etapa.',
+      ],
+      limitesEssencial: [
+        { k: 'Conversas por mês', v: '1.500' }, { k: 'Agentes de IA', v: '1' },
+        { k: 'Colaboradores', v: '2' }, { k: 'Créditos de IA', v: '3M tokens' },
+      ],
+      limitesPro: [
+        { k: 'Conversas por mês', v: '6.000' }, { k: 'Agentes de IA', v: '5' },
+        { k: 'Colaboradores', v: '10' }, { k: 'Créditos de IA', v: '12,6M tokens' },
+      ],
+      recursosEssencial: [
+        { t: 'WhatsApp por QR Code', icon: svg(P.check, 17, { stroke: '#22A06B', strokeWidth: 2.4, style: { flexShrink: 0, marginTop: 2 } }), color: '#334155', deco: 'none' },
+        { t: 'Chat no site + Instagram', icon: svg(P.check, 17, { stroke: '#22A06B', strokeWidth: 2.4, style: { flexShrink: 0, marginTop: 2 } }), color: '#334155', deco: 'none' },
+        { t: 'Funil Kanban e catálogo', icon: svg(P.check, 17, { stroke: '#22A06B', strokeWidth: 2.4, style: { flexShrink: 0, marginTop: 2 } }), color: '#334155', deco: 'none' },
+        { t: 'Agenda e lembretes automáticos', icon: svg(P.check, 17, { stroke: '#22A06B', strokeWidth: 2.4, style: { flexShrink: 0, marginTop: 2 } }), color: '#334155', deco: 'none' },
+        { t: 'Disparo em massa', icon: svg(P.x, 17, { stroke: '#CBD5E1', strokeWidth: 2.2, style: { flexShrink: 0, marginTop: 2 } }), color: '#94A3B8', deco: 'line-through' },
+        { t: 'Integração com CRM externo', icon: svg(P.x, 17, { stroke: '#CBD5E1', strokeWidth: 2.2, style: { flexShrink: 0, marginTop: 2 } }), color: '#94A3B8', deco: 'line-through' },
+      ],
+      recursosPro: [
+        'Tudo do Essencial, sem limite de canal',
+        'WhatsApp oficial (Meta) — número protegido',
+        'Disparo em massa com template aprovado',
+        'Integração com RD Station, HubSpot e Pipedrive',
+        'Equipe com permissão por módulo',
+        'Construtor de fluxos com simulador',
+        'Suporte prioritário no WhatsApp',
+      ],
+      faq: faqs.map((f, i) => ({
+        q: f.q, a: f.a, open: this.state.aberta === i,
+        chevron: svg(this.state.aberta === i ? P.chevU : P.chevD, 18),
+        toggle: () => this.setState({ aberta: this.state.aberta === i ? -1 : i }),
+      })),
+    };
+  }
+}
+</script>
+</body>
+</html>

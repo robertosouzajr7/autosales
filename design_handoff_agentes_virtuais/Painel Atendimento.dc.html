@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F5F8FC; --surface:#FFFFFF; --surface-2:#F8FAFC; --border:#E4EAF3; --border-soft:#EEF2F8;
+  --text:#0F172A; --muted:#64748B; --faint:#94A3B8;
+  --accent:#2563EB; --accent-text:#2563EB; --accent-soft:#EFF6FF;
+  --rail:#0F172A; --rail-glow:rgba(37,99,235,0.24); --shadow:0 1px 2px rgba(15,23,42,0.05);
+}
+[data-theme="dark"]{
+  --bg:#080C16; --surface:#0E1525; --surface-2:#131C2E; --border:rgba(255,255,255,0.08); --border-soft:rgba(255,255,255,0.05);
+  --text:#F1F5F9; --muted:#94A3B8; --faint:#64748B;
+  --accent:#2563EB; --accent-text:#60A5FA; --accent-soft:rgba(37,99,235,0.15);
+  --rail:#05080F; --rail-glow:rgba(37,99,235,0.3); --shadow:0 1px 2px rgba(0,0,0,0.4);
+}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:-0.014em;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+a:hover{color:var(--accent-text)}
+@keyframes pulseDot{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+</helmet>
+<div style="display:flex;height:100vh;overflow:hidden;background:var(--bg)">
+
+  <aside style="width:236px;flex-shrink:0;background:var(--rail);background-image:radial-gradient(130% 55% at 0% 0%,var(--rail-glow),transparent 58%);display:flex;flex-direction:column;overflow:hidden">
+    <div style="height:64px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 17px;border-bottom:1px solid rgba(255,255,255,0.07)">
+      <span style="display:grid;place-items:center;width:30px;height:30px;flex-shrink:0;border-radius:9px;background:linear-gradient(135deg,#2563EB,#7C5CFF);box-shadow:0 8px 18px -6px rgba(37,99,235,0.7)">
+        <svg viewBox="0 0 64 64" width="16" height="16" fill="#fff"><path fill-rule="evenodd" clip-rule="evenodd" d="M32 6 L58 56 L6 56 Z M32 30 L45.5 56 L18.5 56 Z"></path></svg>
+      </span>
+      <div style="min-width:0;overflow:hidden">
+        <p style="margin:0;font-size:13.5px;font-weight:700;letter-spacing:-0.03em;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Agentes <span style="color:#60A5FA">Virtuais</span></p>
+        <p style="margin:0;font-size:11px;color:#64748B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Clínica Vida Plena</p>
+      </div>
+    </div>
+    <nav style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:14px">
+      <sc-for list="{{ grupos }}" as="g" hint-placeholder-count="5">
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <div style="padding:8px 11px 3px;font-size:10px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#475569">{{ g.title }}</div>
+          <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="4">
+            <button onClick="{{ it.go }}" style="position:relative;display:flex;align-items:center;gap:12px;height:38px;padding:0 11px;border:none;border-radius:10px;background:{{ it.bg }};color:{{ it.color }};font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;text-align:left;width:100%" style-hover="background:rgba(255,255,255,0.06);color:#fff">
+              <span style="flex-shrink:0;display:grid;place-items:center;width:20px">{{ it.icon }}</span>
+              <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ it.label }}</span>
+              {{ it.badge }}
+            </button>
+          </sc-for>
+        </div>
+      </sc-for>
+    </nav>
+    <div style="padding:12px;border-top:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;gap:11px">
+      <span style="width:30px;height:30px;flex-shrink:0;border-radius:50%;background:#2563EB;display:grid;place-items:center;font-size:12px;font-weight:600;color:#fff">R</span>
+      <div style="min-width:0;flex:1">
+        <p style="margin:0;font-size:12.5px;font-weight:500;color:#fff">Roberto Souza</p>
+        <p style="margin:0;font-size:11px;color:#64748B">Proprietário</p>
+      </div>
+    </div>
+  </aside>
+
+  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+    <header style="height:60px;flex-shrink:0;display:flex;align-items:center;gap:14px;padding:0 24px;background:var(--surface);border-bottom:1px solid var(--border)">
+      <h1 style="margin:0;font-size:15.5px;font-weight:600;letter-spacing:-0.025em">{{ tituloTela }}</h1>
+      <div style="margin-left:10px;flex:1;max-width:360px;height:36px;border-radius:10px;background:var(--surface-2);border:1px solid var(--border);display:flex;align-items:center;gap:9px;padding:0 12px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="M21 21l-4.3-4.3"></path></svg>
+        <span style="font-size:13px;color:var(--faint)">Buscar cliente, conversa ou agendamento</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--faint);border:1px solid var(--border);border-radius:5px;padding:1px 5px">⌘K</span>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+        <span style="display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;border-radius:8px;background:rgba(34,160,107,0.1);color:#15803D;font-size:12.5px;font-weight:600">
+          <span style="width:7px;height:7px;border-radius:50%;background:#22A06B;animation:pulseDot 2s infinite"></span>WhatsApp conectado
+        </span>
+        <button onClick="{{ toggleTema }}" style="width:36px;height:36px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);color:var(--muted);display:grid;place-items:center;cursor:pointer">{{ temaIcon }}</button>
+        <span style="width:34px;height:34px;border-radius:50%;background:#2563EB;display:grid;place-items:center;font-size:13px;font-weight:600;color:#fff">R</span>
+      </div>
+    </header>
+
+    <sc-if value="{{ ehConversas }}" hint-placeholder-val="{{ true }}">
+      <main style="flex:1;display:flex;overflow:hidden">
+        <div style="width:330px;min-width:260px;flex-shrink:1;box-sizing:border-box;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column">
+          <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px;border-bottom:1px solid var(--border-soft)">
+            <div style="height:36px;border-radius:10px;background:var(--surface-2);border:1px solid var(--border);display:flex;align-items:center;gap:9px;padding:0 11px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="M21 21l-4.3-4.3"></path></svg>
+              <span style="font-size:13px;color:var(--faint)">Buscar chat…</span>
+            </div>
+            <div style="display:flex;gap:6px">
+              <sc-for list="{{ filtros }}" as="f" hint-placeholder-count="3">
+                <button onClick="{{ f.go }}" style="flex:1;height:30px;border-radius:8px;border:1px solid {{ f.border }};background:{{ f.bg }};color:{{ f.color }};font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px">{{ f.label }}{{ f.count }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <div style="flex:1;overflow-y:auto">
+            <sc-for list="{{ conversas }}" as="c" hint-placeholder-count="7">
+              <button onClick="{{ c.go }}" style="width:100%;display:flex;gap:11px;align-items:flex-start;padding:13px 16px;border:none;border-bottom:1px solid var(--border-soft);border-left:3px solid {{ c.marker }};background:{{ c.bg }};cursor:pointer;text-align:left;font-family:inherit">
+                <div style="position:relative;flex-shrink:0">
+                  <div style="width:36px;height:36px;border-radius:50%;background:var(--surface-2);border:1px solid var(--border);display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--muted)">{{ c.ini }}</div>
+                  <div style="position:absolute;bottom:-2px;right:-2px;width:15px;height:15px;border-radius:50%;background:{{ c.chBg }};display:grid;place-items:center;border:2px solid var(--surface)">{{ c.chIcon }}</div>
+                </div>
+                <div style="min-width:0;flex:1">
+                  <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">
+                    <p style="margin:0;font-size:13.5px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.name }}</p>
+                    <span style="font-size:11px;color:var(--faint);flex-shrink:0">{{ c.time }}</span>
+                  </div>
+                  <p style="margin:3px 0 0;font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.msg }}</p>
+                  <div style="margin-top:7px;display:flex;align-items:center;gap:6px">
+                    <span style="font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:6px;background:{{ c.tagBg }};color:{{ c.tagColor }}">{{ c.tag }}</span>
+                    {{ c.unread }}
+                  </div>
+                </div>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="flex:1;display:flex;flex-direction:column;background:var(--bg);min-width:420px">
+          <div style="height:60px;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:0 20px">
+            <div style="width:36px;height:36px;border-radius:50%;background:var(--accent-soft);display:grid;place-items:center;font-size:13px;font-weight:700;color:var(--accent-text)">MC</div>
+            <div style="flex:1;min-width:0">
+              <p style="margin:0;font-size:14px;font-weight:600">Marina Costa</p>
+              <p style="margin:1px 0 0;font-size:11.5px;color:#15803D;display:flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:#22A06B;animation:pulseDot 2s infinite"></span>IA atendendo · WhatsApp · +55 71 98812-4477</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-radius:9px;border:1px solid var(--border);background:var(--surface-2);font-size:12.5px;font-weight:600;color:var(--muted)">
+                Agente ativo
+                <span style="width:32px;height:18px;border-radius:999px;background:#22A06B;position:relative;display:inline-block"><span style="position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:50%;background:#fff"></span></span>
+              </span>
+              <button style="height:34px;padding:0 14px;border-radius:9px;border:none;background:var(--accent);color:#fff;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">Assumir conversa</button>
+            </div>
+          </div>
+
+          <div style="flex:1;overflow-y:auto;padding:22px 24px;display:flex;flex-direction:column;gap:12px">
+            <div style="align-self:center;font-size:11px;font-weight:600;color:var(--faint);background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:4px 12px">Hoje</div>
+            <sc-for list="{{ mensagens }}" as="m" hint-placeholder-count="6">
+              <div style="max-width:62%;align-self:{{ m.align }};display:flex;flex-direction:column;gap:4px">
+                <div style="background:{{ m.bg }};color:{{ m.color }};border:1px solid {{ m.border }};border-radius:{{ m.radius }};padding:11px 14px;font-size:13.5px;line-height:1.55">{{ m.texto }}</div>
+                <span style="font-size:10.5px;color:var(--faint);align-self:{{ m.align }}">{{ m.hora }}</span>
+              </div>
+            </sc-for>
+            <div style="align-self:flex-end;max-width:62%;display:flex;flex-direction:column;gap:4px">
+              <div style="border-radius:14px;overflow:hidden;background:var(--surface);border:1px solid var(--border);width:250px">
+                <div style="height:110px;background:linear-gradient(135deg,#2563EB,#60A5FA);display:grid;place-items:center;color:rgba(255,255,255,0.85);font-size:11px">imagem do catálogo</div>
+                <div style="padding:11px 13px">
+                  <p style="margin:0;font-size:13px;font-weight:600">Clareamento a Laser</p>
+                  <p style="margin:3px 0 0;font-size:13px;font-weight:700;color:var(--accent-text)">R$ 1.400 · 3 sessões</p>
+                </div>
+              </div>
+              <span style="font-size:10.5px;color:var(--faint);align-self:flex-end">14:32 · enviado pelo agente</span>
+            </div>
+            <div style="align-self:center;display:inline-flex;align-items:center;gap:9px;background:rgba(34,160,107,0.1);border:1px solid rgba(34,160,107,0.25);color:#15803D;border-radius:10px;padding:9px 14px;font-size:12.5px;font-weight:600">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
+              Agendamento criado · quinta, 10h · Google Calendar
+            </div>
+          </div>
+
+          <div style="flex-shrink:0;background:var(--surface);border-top:1px solid var(--border);padding:14px 20px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <sc-for list="{{ respostasRapidas }}" as="r" hint-placeholder-count="4">
+                <span style="font-size:12px;font-weight:500;color:var(--muted);border:1px solid var(--border);background:var(--surface-2);border-radius:999px;padding:5px 12px;cursor:pointer">{{ r }}</span>
+              </sc-for>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="flex:1;height:44px;border-radius:12px;border:1px solid var(--border);background:var(--surface-2);display:flex;align-items:center;padding:0 14px;font-size:13.5px;color:var(--faint)">Responda manualmente ou deixe a IA agir…</div>
+              <button style="width:44px;height:44px;border-radius:12px;border:1px solid var(--border);background:var(--surface-2);color:var(--muted);display:grid;place-items:center;cursor:pointer">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21.4 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+              </button>
+              <button style="width:44px;height:44px;border-radius:12px;border:none;background:var(--accent);color:#fff;display:grid;place-items:center;cursor:pointer">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"></path></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div style="width:300px;min-width:240px;flex-shrink:1;box-sizing:border-box;background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:20px">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
+            <div style="width:60px;height:60px;border-radius:50%;background:var(--accent-soft);display:grid;place-items:center;font-size:20px;font-weight:700;color:var(--accent-text)">MC</div>
+            <div>
+              <p style="margin:0;font-size:16px;font-weight:600">Marina Costa</p>
+              <p style="margin:3px 0 0;font-size:12.5px;color:var(--muted)">Cliente desde março de 2026</p>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">
+              <span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:6px;background:var(--accent-soft);color:var(--accent-text)">vip</span>
+              <span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:6px;background:var(--surface-2);color:var(--muted);border:1px solid var(--border)">estética</span>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <p style="margin:0;font-size:10.5px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint)">Dados</p>
+            <sc-for list="{{ dadosContato }}" as="d" hint-placeholder-count="4">
+              <div style="display:flex;justify-content:space-between;gap:10px;font-size:13px">
+                <span style="color:var(--muted)">{{ d.k }}</span>
+                <span style="font-weight:600;text-align:right">{{ d.v }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <p style="margin:0;font-size:10.5px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint)">Etapa no funil</p>
+            <div style="display:flex;align-items:center;gap:9px;padding:11px 13px;border-radius:11px;border:1px solid var(--border);background:var(--surface-2)">
+              <span style="width:8px;height:8px;border-radius:50%;background:#22A06B"></span>
+              <span style="font-size:13.5px;font-weight:600;flex:1">Agendado</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"></path></svg>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <p style="margin:0;font-size:10.5px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint)">Próximo agendamento</p>
+            <div style="border-radius:11px;border:1px solid var(--border);background:var(--surface-2);padding:13px">
+              <p style="margin:0;font-size:13.5px;font-weight:600">Quinta, 6 de agosto · 10:00</p>
+              <p style="margin:4px 0 0;font-size:12.5px;color:var(--muted)">Clareamento a laser · 1ª sessão</p>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <p style="margin:0;font-size:10.5px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint)">Anotações</p>
+            <div style="border-radius:11px;border:1px solid var(--border);background:var(--surface-2);padding:13px;font-size:12.5px;line-height:1.6;color:var(--muted)">Prefere horários pela manhã. Já perguntou sobre parcelamento em 3x.</div>
+          </div>
+        </div>
+      </main>
+    </sc-if>
+
+    <sc-if value="{{ ehFunil }}" hint-placeholder-val="{{ false }}">
+      <main style="flex:1;overflow:hidden;display:flex;flex-direction:column;padding:22px 24px 0">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:18px">
+          <div>
+            <h2 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-0.035em">Funil de clientes</h2>
+            <p style="margin:5px 0 0;font-size:13.5px;color:var(--muted)">Acompanhe cada cliente do primeiro contato até o fechamento. O agente move o card sozinho.</p>
+          </div>
+          <div style="display:flex;gap:10px;flex-shrink:0">
+            <button style="height:38px;padding:0 15px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-family:inherit">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 3H2l8 9.5V19l4 2v-8.5z"></path></svg>Filtros
+            </button>
+            <button style="height:38px;padding:0 15px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Editar etapas</button>
+            <button style="height:38px;padding:0 15px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-family:inherit">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Novo cliente
+            </button>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:14px;margin-bottom:16px">
+          <sc-for list="{{ funilResumo }}" as="r" hint-placeholder-count="4">
+            <div style="flex:1;border-radius:12px;border:1px solid var(--border);background:var(--surface);padding:14px 16px">
+              <p style="margin:0;font-size:12px;color:var(--muted)">{{ r.k }}</p>
+              <p style="margin:5px 0 0;font-size:20px;font-weight:700;letter-spacing:-0.03em;color:{{ r.color }}">{{ r.v }}</p>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="flex:1;display:flex;gap:14px;overflow-x:auto;padding-bottom:22px">
+          <sc-for list="{{ kanban }}" as="col" hint-placeholder-count="5">
+            <div style="width:288px;flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:14px;display:flex;flex-direction:column;overflow:hidden">
+              <div style="padding:14px 16px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;justify-content:space-between">
+                <span style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600">
+                  <span style="width:8px;height:8px;border-radius:50%;background:{{ col.color }}"></span>{{ col.title }}
+                </span>
+                <span style="font-size:11.5px;font-weight:600;color:var(--muted);background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:2px 8px;font-variant-numeric:tabular-nums">{{ col.count }}</span>
+              </div>
+              <div style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px;background:var(--surface-2)">
+                <sc-for list="{{ col.cards }}" as="c" hint-placeholder-count="3">
+                  <div style="border-radius:11px;border:1px solid var(--border);background:var(--surface);padding:13px;cursor:grab;box-shadow:var(--shadow)">
+                    <div style="display:flex;align-items:center;gap:9px">
+                      <span style="width:26px;height:26px;border-radius:50%;background:var(--accent-soft);color:var(--accent-text);display:grid;place-items:center;font-size:10.5px;font-weight:700">{{ c.ini }}</span>
+                      <p style="margin:0;font-size:13px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.name }}</p>
+                      {{ c.canal }}
+                    </div>
+                    <p style="margin:9px 0 0;font-size:12px;line-height:1.5;color:var(--muted)">{{ c.note }}</p>
+                    <div style="margin-top:11px;display:flex;align-items:center;justify-content:space-between">
+                      <span style="font-size:13px;font-weight:700;letter-spacing:-0.02em">{{ c.valor }}</span>
+                      <span style="font-size:11px;color:var(--faint)">{{ c.time }}</span>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </main>
+    </sc-if>
+
+    <sc-if value="{{ ehClientes }}" hint-placeholder-val="{{ false }}">
+      <main style="flex:1;overflow-y:auto;padding:22px 24px 40px">
+        <div style="max-width:1380px;margin:0 auto;display:flex;flex-direction:column;gap:18px">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px">
+            <div>
+              <h2 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-0.035em">Clientes</h2>
+              <p style="margin:5px 0 0;font-size:13.5px;color:var(--muted)">1.284 contatos · o mesmo cliente em canais diferentes vira uma ficha só.</p>
+            </div>
+            <div style="display:flex;gap:10px;flex-shrink:0">
+              <button style="height:38px;padding:0 15px;border-radius:10px;border:1px solid var(--border);background:var(--surface);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text)">Importar CSV</button>
+              <button style="height:38px;padding:0 15px;border-radius:10px;border:1px solid var(--border);background:var(--surface);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text)">Ver duplicados <span style="color:#B45309">· 4</span></button>
+              <button style="height:38px;padding:0 15px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Novo cliente</button>
+            </div>
+          </div>
+
+          <div style="border-radius:14px;border:1px solid var(--border);background:var(--surface);overflow:hidden;box-shadow:var(--shadow)">
+            <div style="padding:14px 18px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;gap:12px">
+              <div style="flex:1;max-width:320px;height:36px;border-radius:10px;background:var(--surface-2);border:1px solid var(--border);display:flex;align-items:center;gap:9px;padding:0 11px">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="M21 21l-4.3-4.3"></path></svg>
+                <span style="font-size:13px;color:var(--faint)">Escreva o nome para filtrar…</span>
+              </div>
+              <div style="display:flex;gap:7px">
+                <sc-for list="{{ filtrosClientes }}" as="f" hint-placeholder-count="4">
+                  <span style="height:32px;display:inline-flex;align-items:center;padding:0 12px;border-radius:8px;border:1px solid {{ f.border }};background:{{ f.bg }};color:{{ f.color }};font-size:12.5px;font-weight:600;cursor:pointer">{{ f.label }}</span>
+                </sc-for>
+              </div>
+              <span style="margin-left:auto;font-size:12.5px;color:var(--muted)">Mostrando 8 de 1.284</span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:34px 2fr 1.4fr 1.2fr 1.3fr 1fr 40px;gap:12px;padding:11px 18px;border-bottom:1px solid var(--border-soft);background:var(--surface-2);font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--faint)">
+              <span><span style="display:block;width:15px;height:15px;border-radius:4px;border:1.5px solid var(--border)"></span></span>
+              <span>Cliente</span><span>Telefone</span><span>Canal</span><span>Etapa</span><span>Última conversa</span><span></span>
+            </div>
+            <sc-for list="{{ clientes }}" as="c" hint-placeholder-count="8">
+              <div style="display:grid;grid-template-columns:34px 2fr 1.4fr 1.2fr 1.3fr 1fr 40px;gap:12px;padding:13px 18px;border-bottom:1px solid var(--border-soft);align-items:center" style-hover="background:var(--surface-2)">
+                <span><span style="display:block;width:15px;height:15px;border-radius:4px;border:1.5px solid var(--border)"></span></span>
+                <div style="display:flex;align-items:center;gap:11px;min-width:0">
+                  <span style="width:32px;height:32px;flex-shrink:0;border-radius:50%;background:var(--surface-2);border:1px solid var(--border);display:grid;place-items:center;font-size:11.5px;font-weight:700;color:var(--muted)">{{ c.ini }}</span>
+                  <div style="min-width:0">
+                    <p style="margin:0;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.nome }}</p>
+                    <p style="margin:2px 0 0;font-size:11.5px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.email }}</p>
+                  </div>
+                </div>
+                <span style="font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums">{{ c.fone }}</span>
+                <span style="display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted)">{{ c.canalIcon }}{{ c.canal }}</span>
+                <span style="display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600"><span style="width:7px;height:7px;border-radius:50%;background:{{ c.etapaColor }}"></span>{{ c.etapa }}</span>
+                <span style="font-size:12.5px;color:var(--faint)">{{ c.ultima }}</span>
+                <span style="color:var(--faint);display:grid;place-items:center;cursor:pointer">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="12" cy="19" r="1.6"></circle></svg>
+                </span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </main>
+    </sc-if>
+
+    <sc-if value="{{ ehAgenda }}" hint-placeholder-val="{{ false }}">
+      <main style="flex:1;overflow-y:auto;padding:22px 24px 40px">
+        <div style="max-width:1380px;margin:0 auto;display:flex;flex-direction:column;gap:18px">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px">
+            <div>
+              <h2 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-0.035em">Agendamentos</h2>
+              <p style="margin:5px 0 0;font-size:13.5px;color:var(--muted)">Tudo o que o agente marcou, com confirmação e lembrete automáticos.</p>
+            </div>
+            <div style="display:flex;gap:10px;flex-shrink:0">
+              <div style="display:flex;padding:3px;border-radius:10px;background:var(--surface-2);border:1px solid var(--border);gap:3px">
+                <span style="padding:6px 14px;border-radius:8px;background:var(--surface);font-size:12.5px;font-weight:600;box-shadow:var(--shadow)">Dia</span>
+                <span style="padding:6px 14px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--muted)">Semana</span>
+                <span style="padding:6px 14px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--muted)">Mês</span>
+              </div>
+              <button style="height:38px;padding:0 15px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Novo agendamento</button>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px">
+            <sc-for list="{{ agendaKpis }}" as="k" hint-placeholder-count="4">
+              <div style="border-radius:14px;border:1px solid var(--border);background:var(--surface);padding:18px;box-shadow:var(--shadow)">
+                <p style="margin:0;font-size:12.5px;font-weight:600;color:var(--muted)">{{ k.label }}</p>
+                <p style="margin:9px 0 0;font-size:28px;font-weight:700;letter-spacing:-0.04em;line-height:1;color:{{ k.color }}">{{ k.v }}</p>
+                <p style="margin:8px 0 0;font-size:12px;color:var(--faint)">{{ k.hint }}</p>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1.7fr 1fr;gap:16px;align-items:start">
+            <section style="border-radius:14px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);overflow:hidden">
+              <header style="padding:16px 20px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;justify-content:space-between">
+                <h3 style="margin:0;font-size:14px;font-weight:600">Terça, 4 de agosto</h3>
+                <div style="display:flex;gap:6px">
+                  <span style="width:30px;height:30px;border-radius:8px;border:1px solid var(--border);display:grid;place-items:center;color:var(--muted);cursor:pointer">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"></path></svg>
+                  </span>
+                  <span style="width:30px;height:30px;border-radius:8px;border:1px solid var(--border);display:grid;place-items:center;color:var(--muted);cursor:pointer">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"></path></svg>
+                  </span>
+                </div>
+              </header>
+              <sc-for list="{{ agendaDia }}" as="a" hint-placeholder-count="6">
+                <div style="display:flex;gap:16px;padding:14px 20px;border-bottom:1px solid var(--border-soft);align-items:center">
+                  <div style="width:56px;flex-shrink:0">
+                    <p style="margin:0;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;color:{{ a.horaColor }}">{{ a.hora }}</p>
+                    <p style="margin:2px 0 0;font-size:11px;color:var(--faint)">{{ a.dur }}</p>
+                  </div>
+                  <span style="width:3px;align-self:stretch;border-radius:999px;background:{{ a.bar }};flex-shrink:0"></span>
+                  <div style="min-width:0;flex:1">
+                    <p style="margin:0;font-size:14px;font-weight:600">{{ a.nome }}</p>
+                    <p style="margin:3px 0 0;font-size:12.5px;color:var(--muted)">{{ a.servico }}</p>
+                  </div>
+                  <span style="flex-shrink:0;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:7px;background:{{ a.pillBg }};color:{{ a.pillColor }}">{{ a.pill }}</span>
+                  <button style="flex-shrink:0;height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--muted);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">Abrir</button>
+                </div>
+              </sc-for>
+            </section>
+
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <section style="border-radius:14px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);padding:18px">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+                  <h3 style="margin:0;font-size:14px;font-weight:600">Agosto 2026</h3>
+                  <span style="font-size:12px;color:var(--muted)">27 agendamentos</span>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;font-size:11px;color:var(--faint);text-align:center;margin-bottom:6px">
+                  <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
+                  <sc-for list="{{ diasMes }}" as="d" hint-placeholder-count="35">
+                    <div style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;font-weight:{{ d.peso }};background:{{ d.bg }};color:{{ d.color }}">
+                      {{ d.n }}
+                      {{ d.dot }}
+                    </div>
+                  </sc-for>
+                </div>
+              </section>
+
+              <section style="border-radius:14px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);padding:18px">
+                <h3 style="margin:0 0 14px;font-size:14px;font-weight:600">Lembretes automáticos</h3>
+                <div style="display:flex;flex-direction:column;gap:11px">
+                  <sc-for list="{{ lembretes }}" as="l" hint-placeholder-count="3">
+                    <div style="display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:11px;border:1px solid var(--border);background:var(--surface-2)">
+                      <span style="width:30px;height:30px;flex-shrink:0;border-radius:9px;background:var(--accent-soft);color:var(--accent-text);display:grid;place-items:center">{{ l.icon }}</span>
+                      <div style="min-width:0;flex:1">
+                        <p style="margin:0;font-size:13px;font-weight:600">{{ l.t }}</p>
+                        <p style="margin:2px 0 0;font-size:11.5px;color:var(--muted)">{{ l.d }}</p>
+                      </div>
+                      <span style="width:32px;height:18px;border-radius:999px;background:{{ l.switchBg }};position:relative;flex-shrink:0"><span style="position:absolute;top:2px;{{ l.knobSide }}:2px;width:14px;height:14px;border-radius:50%;background:#fff"></span></span>
+                    </div>
+                  </sc-for>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </main>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900}}">
+const h = React.createElement;
+function svg(paths, size, opts) {
+  return h('svg', Object.assign({ width: size || 17, height: size || 17, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }, opts || {}),
+    paths.map((d, i) => h('path', { key: i, d })));
+}
+const P = {
+  dashboard: ['M3 3h8v8H3z', 'M13 3h8v5h-8z', 'M13 12h8v9h-8z', 'M3 15h8v6H3z'],
+  chart: ['M3 3v18h18', 'M7 16v-5', 'M12 16V8', 'M17 16v-3'],
+  message: ['M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'],
+  calendar: ['M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', 'M16 2v4', 'M8 2v4', 'M3 10h18'],
+  target: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z', 'M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z'],
+  bookUser: ['M4 19.5A2.5 2.5 0 0 1 6.5 17H20', 'M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z'],
+  bot: ['M12 8V4H8', 'M4 8h16v12H4z', 'M2 14h2', 'M20 14h2', 'M15 13v2', 'M9 13v2'],
+  workflow: ['M3 3h6v6H3z', 'M15 15h6v6h-6z', 'M9 6h4a2 2 0 0 1 2 2v7'],
+  clock: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M12 6v6l4 2'],
+  building: ['M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18z', 'M10 6h4', 'M10 10h4', 'M10 14h4', 'M2 22h20'],
+  package: ['M21 8l-9-5-9 5 9 5 9-5z', 'M3 8v8l9 5 9-5V8', 'M12 13v8'],
+  megaphone: ['M3 11v2a1 1 0 0 0 1 1h3l7 4V6L7 10H4a1 1 0 0 0-1 1z', 'M18 8a4 4 0 0 1 0 8'],
+  phone: ['M5 2h14a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z', 'M12 18h.01'],
+  users: ['M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2', 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'],
+  settings: ['M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', 'M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'],
+  instagram: ['M2 7a5 5 0 0 1 5-5h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5z', 'M16 11.4A4 4 0 1 1 12.6 8a4 4 0 0 1 3.4 3.4z'],
+  globe: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M2 12h20', 'M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z'],
+  moon: ['M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z'],
+  sun: ['M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4'],
+  bell: ['M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9', 'M13.7 21a2 2 0 0 1-3.4 0'],
+  send: ['M22 2L11 13M22 2l-7 20-4-9-9-4z'],
+  check: ['M20 6L9 17l-5-5'],
+};
+const railOff = { color: '#94A3B8', bg: 'transparent' };
+const railOn = { color: '#FFFFFF', bg: 'rgba(255,255,255,0.09)' };
+const TITULOS = { conversas: 'Conversas', funil: 'Funil de clientes', clientes: 'Clientes', agenda: 'Agendamentos' };
+
+class Component extends DCLogic {
+  state = { tela: 'conversas', escuro: false, filtro: 'espera' };
+  componentDidMount() { this.aplicarTema(); }
+  componentDidUpdate() { this.aplicarTema(); }
+  aplicarTema() {
+    const el = document.documentElement;
+    if (this.state.escuro) el.setAttribute('data-theme', 'dark'); else el.removeAttribute('data-theme');
+  }
+  renderVals() {
+    const tela = this.state.tela;
+    const ir = (t) => () => this.setState({ tela: t });
+    const badge = (n, cor) => h('span', { style: { flexShrink: 0, fontSize: 10.5, fontWeight: 700, borderRadius: 999, padding: '2px 7px', background: cor, color: '#fff' } }, n);
+    const item = (label, paths, key, opts) => {
+      const o = opts || {};
+      const ativo = key && tela === key;
+      return Object.assign({
+        label, go: key ? ir(key) : () => {},
+        icon: svg(paths, 17, { stroke: ativo ? '#60A5FA' : '#64748B' }),
+        badge: o.badge ? badge(o.badge, o.badgeColor || '#2563EB') : null,
+      }, ativo ? railOn : railOff);
+    };
+    const chip = (label, key, count) => {
+      const on = this.state.filtro === key;
+      return {
+        label, go: () => this.setState({ filtro: key }),
+        bg: on ? 'var(--accent-soft)' : 'var(--surface-2)',
+        border: on ? 'var(--accent)' : 'var(--border)',
+        color: on ? 'var(--accent-text)' : 'var(--muted)',
+        count: count ? h('span', { style: { fontSize: 11, fontWeight: 700, opacity: 0.8 } }, count) : null,
+      };
+    };
+    const msg = (texto, hora, saida) => ({
+      texto, hora,
+      align: saida ? 'flex-end' : 'flex-start',
+      bg: saida ? 'var(--accent)' : 'var(--surface)',
+      color: saida ? '#fff' : 'var(--text)',
+      border: saida ? 'var(--accent)' : 'var(--border)',
+      radius: saida ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+    });
+    const dias = [];
+    for (let i = -4; i <= 30; i++) {
+      const n = i;
+      const valido = n >= 1 && n <= 31;
+      const hoje = n === 4;
+      const temEvento = valido && [4, 6, 7, 11, 13, 18, 20, 25, 27].indexOf(n) >= 0;
+      dias.push({
+        n: valido ? String(n) : '',
+        peso: hoje ? 700 : 500,
+        bg: hoje ? 'var(--accent)' : 'transparent',
+        color: hoje ? '#fff' : (valido ? 'var(--text)' : 'transparent'),
+        dot: temEvento && !hoje ? h('span', { style: { width: 4, height: 4, borderRadius: '50%', background: '#2563EB' } }) : null,
+      });
+    }
+    return {
+      tituloTela: TITULOS[tela],
+      ehConversas: tela === 'conversas', ehFunil: tela === 'funil',
+      ehClientes: tela === 'clientes', ehAgenda: tela === 'agenda',
+      toggleTema: () => this.setState({ escuro: !this.state.escuro }),
+      temaIcon: svg(this.state.escuro ? P.sun : P.moon, 17),
+      grupos: [
+        { title: 'Painel', items: [item('Dashboard', P.dashboard), item('Relatórios', P.chart)] },
+        { title: 'Atendimento', items: [
+          item('Conversas', P.message, 'conversas', { badge: 3, badgeColor: '#F59E0B' }),
+          item('Agendamentos', P.calendar, 'agenda', { badge: 6 }),
+          item('Funil de clientes', P.target, 'funil'),
+          item('Clientes', P.bookUser, 'clientes'),
+        ] },
+        { title: 'Automação', items: [item('Agente de IA', P.bot), item('Fluxos', P.workflow), item('Lembretes', P.clock)] },
+        { title: 'Conteúdo', items: [item('Meu negócio', P.building), item('Catálogo', P.package), item('Disparos', P.megaphone)] },
+        { title: 'Configuração', items: [item('Conexões', P.phone), item('Colaboradores', P.users), item('Configurações', P.settings)] },
+      ],
+      filtros: [chip('Todas', 'todas', 42), chip('IA', 'ia', 39), chip('Espera', 'espera', 3)],
+      conversas: [
+        { ini: 'MC', name: 'Marina Costa', msg: 'Quinta 10h 🙌', time: 'agora', bg: 'var(--accent-soft)', marker: 'var(--accent)', chBg: '#22A06B', chIcon: svg(P.phone, 8, { stroke: '#fff' }), tag: 'IA atendendo', tagBg: 'rgba(37,99,235,0.12)', tagColor: '#1D4ED8', unread: null, go: () => {} },
+        { ini: 'CN', name: 'Carla Nogueira', msg: 'Quero falar com alguém sobre o orçamento', time: '12 min', bg: 'transparent', marker: 'transparent', chBg: '#22A06B', chIcon: svg(P.phone, 8, { stroke: '#fff' }), tag: 'Aguardando você', tagBg: 'rgba(239,68,68,0.12)', tagColor: '#B91C1C', unread: h('span', { style: { marginLeft: 'auto', width: 18, height: 18, borderRadius: 999, background: '#2563EB', color: '#fff', fontSize: 10.5, fontWeight: 700, display: 'grid', placeItems: 'center' } }, '2'), go: () => {} },
+        { ini: 'LF', name: '@lucas.fit', msg: 'A IA não soube responder sobre 12x', time: '18 min', bg: 'transparent', marker: 'transparent', chBg: '#DB2777', chIcon: svg(P.instagram, 8, { stroke: '#fff' }), tag: 'IA travou', tagBg: 'rgba(239,68,68,0.12)', tagColor: '#B91C1C', unread: h('span', { style: { marginLeft: 'auto', width: 18, height: 18, borderRadius: 999, background: '#2563EB', color: '#fff', fontSize: 10.5, fontWeight: 700, display: 'grid', placeItems: 'center' } }, '1'), go: () => {} },
+        { ini: 'VS', name: 'Visitante do site', msg: 'Vocês atendem sábado?', time: '25 min', bg: 'transparent', marker: 'transparent', chBg: '#2563EB', chIcon: svg(P.globe, 8, { stroke: '#fff' }), tag: 'IA atendendo', tagBg: 'rgba(37,99,235,0.12)', tagColor: '#1D4ED8', unread: null, go: () => {} },
+        { ini: 'RA', name: 'Roberto Alves', msg: 'Perfeito, obrigado!', time: '1 h', bg: 'transparent', marker: 'transparent', chBg: '#22A06B', chIcon: svg(P.phone, 8, { stroke: '#fff' }), tag: 'Agendado', tagBg: 'rgba(34,160,107,0.12)', tagColor: '#15803D', unread: null, go: () => {} },
+        { ini: 'AM', name: 'Ana Martins', msg: 'Confirmo sexta 15h30', time: '2 h', bg: 'transparent', marker: 'transparent', chBg: '#22A06B', chIcon: svg(P.phone, 8, { stroke: '#fff' }), tag: 'Agendado', tagBg: 'rgba(34,160,107,0.12)', tagColor: '#15803D', unread: null, go: () => {} },
+        { ini: 'JP', name: 'João Pereira', msg: 'Vou pensar e te aviso', time: 'ontem', bg: 'transparent', marker: 'transparent', chBg: '#22A06B', chIcon: svg(P.phone, 8, { stroke: '#fff' }), tag: 'Proposta', tagBg: 'rgba(168,85,247,0.12)', tagColor: '#7E22CE', unread: null, go: () => {} },
+      ],
+      mensagens: [
+        msg('Oi! Vi o clareamento de vocês, quanto fica?', '14:28', false),
+        msg('Oi, Marina! O clareamento a laser sai R$ 1.400 em 3 sessões. Posso te mostrar como fica?', '14:29', true),
+        msg('Adorei! Consigo essa semana?', '14:33', false),
+        msg('Consigo sim. Tenho quinta 10h ou sexta 15h30. Qual fica melhor?', '14:33', true),
+        msg('Quinta 10h 🙌', '14:35', false),
+      ],
+      respostasRapidas: ['Enviar tabela de preços', 'Confirmar horário', 'Pedir documento', 'Transferir para equipe'],
+      dadosContato: [
+        { k: 'Telefone', v: '+55 71 98812-4477' },
+        { k: 'E-mail', v: 'marina@email.com' },
+        { k: 'Origem', v: 'Anúncio Instagram' },
+        { k: 'Conversas', v: '7' },
+      ],
+      funilResumo: [
+        { k: 'Leads ativos', v: '42', color: 'var(--text)' },
+        { k: 'Em negociação', v: 'R$ 28.400', color: 'var(--text)' },
+        { k: 'Fechado no mês', v: 'R$ 11.900', color: '#15803D' },
+        { k: 'Taxa de conversão', v: '7,0%', color: 'var(--text)' },
+      ],
+      kanban: [
+        { title: 'Novos', color: '#94A3B8', count: 12, cards: [
+          { ini: 'MC', name: 'Marina Costa', note: 'Perguntou sobre clareamento a laser', valor: 'R$ 1.400', time: 'agora', canal: svg(P.phone, 13, { stroke: '#22A06B' }) },
+          { ini: 'JP', name: 'João Pereira', note: 'Chegou pelo anúncio do Instagram', valor: 'R$ 890', time: '5 min', canal: svg(P.instagram, 13, { stroke: '#DB2777' }) },
+          { ini: 'TS', name: 'Tatiana Silva', note: 'Pediu tabela completa de serviços', valor: '—', time: '20 min', canal: svg(P.globe, 13, { stroke: '#2563EB' }) },
+        ] },
+        { title: 'Qualificando', color: '#3B82F6', count: 9, cards: [
+          { ini: 'LF', name: '@lucas.fit', note: 'IA identificou interesse no plano trimestral', valor: 'R$ 2.100', time: '12 min', canal: svg(P.instagram, 13, { stroke: '#DB2777' }) },
+          { ini: 'VS', name: 'Visitante do site', note: 'Quer atendimento aos sábados', valor: '—', time: '18 min', canal: svg(P.globe, 13, { stroke: '#2563EB' }) },
+        ] },
+        { title: 'Proposta', color: '#A855F7', count: 7, cards: [
+          { ini: 'CN', name: 'Carla Nogueira', note: 'Recebeu orçamento e pediu parcelamento', valor: 'R$ 2.400', time: '1 h', canal: svg(P.phone, 13, { stroke: '#22A06B' }) },
+          { ini: 'BM', name: 'Bruno Matos', note: 'Aguardando aprovação do sócio', valor: 'R$ 3.200', time: '4 h', canal: svg(P.phone, 13, { stroke: '#22A06B' }) },
+        ] },
+        { title: 'Agendado', color: '#22A06B', count: 11, cards: [
+          { ini: 'RA', name: 'Roberto Alves', note: 'Quinta, 10h · confirmado pelo lembrete', valor: 'R$ 1.400', time: '2 h', canal: svg(P.phone, 13, { stroke: '#22A06B' }) },
+          { ini: 'AM', name: 'Ana Martins', note: 'Sexta, 15h30 · lembrete enviado', valor: 'R$ 780', time: '3 h', canal: svg(P.phone, 13, { stroke: '#22A06B' }) },
+        ] },
+        { title: 'Fechado', color: '#2563EB', count: 3, cards: [
+          { ini: 'PR', name: 'Paula Riani', note: 'Pacote 3 sessões · pago no Pix', valor: 'R$ 1.400', time: 'ontem', canal: svg(P.phone, 13, { stroke: '#22A06B' }) },
+        ] },
+      ],
+      filtrosClientes: [
+        { label: 'Todos', bg: 'var(--accent-soft)', border: 'var(--accent)', color: 'var(--accent-text)' },
+        { label: 'WhatsApp', bg: 'var(--surface-2)', border: 'var(--border)', color: 'var(--muted)' },
+        { label: 'Instagram', bg: 'var(--surface-2)', border: 'var(--border)', color: 'var(--muted)' },
+        { label: 'Com agendamento', bg: 'var(--surface-2)', border: 'var(--border)', color: 'var(--muted)' },
+      ],
+      clientes: [
+        { ini: 'MC', nome: 'Marina Costa', email: 'marina@email.com', fone: '+55 71 98812-4477', canal: 'WhatsApp', canalIcon: svg(P.phone, 13, { stroke: '#22A06B' }), etapa: 'Agendado', etapaColor: '#22A06B', ultima: 'agora' },
+        { ini: 'CN', nome: 'Carla Nogueira', email: 'carla.n@email.com', fone: '+55 71 99120-8834', canal: 'WhatsApp', canalIcon: svg(P.phone, 13, { stroke: '#22A06B' }), etapa: 'Proposta', etapaColor: '#A855F7', ultima: '12 min' },
+        { ini: 'LF', nome: 'Lucas Ferraz', email: '@lucas.fit', fone: '+55 11 97744-1120', canal: 'Instagram', canalIcon: svg(P.instagram, 13, { stroke: '#DB2777' }), etapa: 'Qualificando', etapaColor: '#3B82F6', ultima: '18 min' },
+        { ini: 'RA', nome: 'Roberto Alves', email: 'roberto.alves@email.com', fone: '+55 71 98110-2299', canal: 'WhatsApp', canalIcon: svg(P.phone, 13, { stroke: '#22A06B' }), etapa: 'Agendado', etapaColor: '#22A06B', ultima: '1 h' },
+        { ini: 'AM', nome: 'Ana Martins', email: 'ana.martins@email.com', fone: '+55 71 99833-4410', canal: 'WhatsApp', canalIcon: svg(P.phone, 13, { stroke: '#22A06B' }), etapa: 'Agendado', etapaColor: '#22A06B', ultima: '2 h' },
+        { ini: 'TS', nome: 'Tatiana Silva', email: 'tati.silva@email.com', fone: '+55 71 98002-7781', canal: 'Site', canalIcon: svg(P.globe, 13, { stroke: '#2563EB' }), etapa: 'Novo', etapaColor: '#94A3B8', ultima: '3 h' },
+        { ini: 'BM', nome: 'Bruno Matos', email: 'bruno@casabella.com.br', fone: '+55 71 99441-0032', canal: 'WhatsApp', canalIcon: svg(P.phone, 13, { stroke: '#22A06B' }), etapa: 'Proposta', etapaColor: '#A855F7', ultima: '4 h' },
+        { ini: 'PR', nome: 'Paula Riani', email: 'paula@casabella.com.br', fone: '+55 71 98221-9987', canal: 'WhatsApp', canalIcon: svg(P.phone, 13, { stroke: '#22A06B' }), etapa: 'Fechado', etapaColor: '#2563EB', ultima: 'ontem' },
+      ],
+      agendaKpis: [
+        { label: 'Hoje', v: '6', hint: '2 já concluídos', color: 'var(--text)' },
+        { label: 'Esta semana', v: '23', hint: '+4 vs. semana passada', color: 'var(--text)' },
+        { label: 'Comparecimento', v: '92%', hint: 'com lembrete automático', color: '#15803D' },
+        { label: 'Risco de falta', v: '2', hint: 'sem confirmação do cliente', color: '#B45309' },
+      ],
+      agendaDia: [
+        { hora: '09:00', dur: '60 min', horaColor: 'var(--faint)', bar: '#22A06B', nome: 'Marina Costa', servico: 'Clareamento a laser · 1ª sessão', pill: 'Concluída', pillBg: 'rgba(34,160,107,0.12)', pillColor: '#15803D' },
+        { hora: '10:30', dur: '30 min', horaColor: 'var(--faint)', bar: '#22A06B', nome: 'Roberto Alves', servico: 'Avaliação inicial', pill: 'Concluída', pillBg: 'rgba(34,160,107,0.12)', pillColor: '#15803D' },
+        { hora: '14:00', dur: '45 min', horaColor: 'var(--accent-text)', bar: '#2563EB', nome: 'Ana Martins', servico: 'Limpeza + profilaxia', pill: 'Agora', pillBg: 'rgba(37,99,235,0.12)', pillColor: '#1D4ED8' },
+        { hora: '15:30', dur: '30 min', horaColor: 'var(--text)', bar: '#F59E0B', nome: 'João Pereira', servico: 'Retorno · lembrete não confirmado', pill: 'Risco de falta', pillBg: '#FEF3C7', pillColor: '#B45309' },
+        { hora: '16:15', dur: '60 min', horaColor: 'var(--text)', bar: '#94A3B8', nome: 'Paula Riani', servico: 'Consulta de avaliação', pill: 'Agendada', pillBg: 'var(--surface-2)', pillColor: 'var(--muted)' },
+        { hora: '17:30', dur: '45 min', horaColor: 'var(--text)', bar: '#94A3B8', nome: 'Bruno Matos', servico: 'Apresentação de pacote', pill: 'Agendada', pillBg: 'var(--surface-2)', pillColor: 'var(--muted)' },
+      ],
+      diasMes: dias,
+      lembretes: [
+        { t: 'Confirmação 24h antes', d: 'Enviado às 10h do dia anterior', icon: svg(P.clock, 15), switchBg: '#22A06B', knobSide: 'right' },
+        { t: 'Aviso 1h antes', d: 'Com link do Google Meet quando houver', icon: svg(P.bell, 15), switchBg: '#22A06B', knobSide: 'right' },
+        { t: 'Retorno de quem faltou', d: 'Mensagem no dia seguinte à falta', icon: svg(P.message, 15), switchBg: 'var(--border)', knobSide: 'left' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>
