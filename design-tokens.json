@@ -1,0 +1,80 @@
+{
+  "$description": "Tokens de design do Agentes Virtuais, extraídos de src/globals.css e tailwind.config.ts. Formato W3C Design Tokens — importável no Figma por plugins de variáveis. Fonte da verdade continua sendo o CSS: este arquivo é gerado a partir dele, não o contrário.",
+  "cor": {
+    "$type": "color",
+    "fundo": {
+      "claro": { "$value": "#F8FAFC", "$description": "--background · hsl(210 40% 98%)" },
+      "escuro": { "$value": "#080C16", "$description": "--background dark · hsl(222 47% 6%)" }
+    },
+    "superficie": {
+      "claro": { "$value": "#FFFFFF", "$description": "--card / --popover" },
+      "escuro": { "$value": "#0E1525", "$description": "--card dark · hsl(222 47% 10%)" }
+    },
+    "texto": {
+      "claro": { "$value": "#0F172A", "$description": "--foreground · hsl(222 47% 11%)" },
+      "escuro": { "$value": "#F8FAFC", "$description": "--foreground dark · hsl(210 40% 98%)" }
+    },
+    "texto-secundario": {
+      "claro": { "$value": "#64748B", "$description": "--muted-foreground · hsl(215 16% 47%)" },
+      "escuro": { "$value": "#94A3B8", "$description": "--muted-foreground dark · hsl(215 20% 65%)" }
+    },
+    "primaria": {
+      "claro": { "$value": "#2563EB", "$description": "--primary · hsl(217 91% 53%)" },
+      "escuro": { "$value": "#3B82F6", "$description": "--primary dark · hsl(217 91% 60%) — mais clara para manter contraste no fundo escuro" }
+    },
+    "primaria-texto": {
+      "claro": { "$value": "#FFFFFF", "$description": "--primary-foreground" },
+      "escuro": { "$value": "#0F172A", "$description": "--primary-foreground dark" }
+    },
+    "sutil": {
+      "claro": { "$value": "#F1F5F9", "$description": "--muted / --secondary / --accent · hsl(210 40% 96%)" },
+      "escuro": { "$value": "#1E293B", "$description": "--muted / --secondary / --accent dark · hsl(217 33% 17%)" }
+    },
+    "borda": {
+      "claro": { "$value": "#E2E8F0", "$description": "--border / --input · hsl(214 32% 91%)" },
+      "escuro": { "$value": "#1E293B", "$description": "--border / --input dark · hsl(217 33% 17%)" }
+    },
+    "foco": {
+      "claro": { "$value": "#2563EB", "$description": "--ring" },
+      "escuro": { "$value": "#3B82F6", "$description": "--ring dark" }
+    },
+    "destrutiva": {
+      "claro": { "$value": "#EF4444", "$description": "--destructive · hsl(0 84% 60%)" },
+      "escuro": { "$value": "#7F1D1D", "$description": "--destructive dark · hsl(0 63% 31%)" }
+    }
+  },
+  "tipografia": {
+    "familia": {
+      "$type": "fontFamily",
+      "sans": {
+        "$value": ["Inter", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Roboto", "Helvetica", "Arial", "sans-serif"],
+        "$description": "Família única do produto."
+      }
+    },
+    "tamanho": {
+      "$type": "dimension",
+      "xs": { "$value": "12px", "$description": "737 usos — o tamanho dominante do produto" },
+      "sm": { "$value": "14px", "$description": "361 usos" },
+      "base": { "$value": "16px", "$description": "35 usos" },
+      "lg": { "$value": "18px", "$description": "50 usos" },
+      "xl": { "$value": "20px", "$description": "18 usos" },
+      "2xl": { "$value": "24px", "$description": "26 usos" },
+      "3xl": { "$value": "30px", "$description": "30 usos" }
+    },
+    "peso": {
+      "$type": "fontWeight",
+      "normal": { "$value": 400, "$description": "10 usos — subaproveitado; quase todo texto do produto está destacado" },
+      "medium": { "$value": 500, "$description": "245 usos" },
+      "semibold": { "$value": 600, "$description": "457 usos" },
+      "bold": { "$value": 700, "$description": "378 usos" }
+    }
+  },
+  "raio": {
+    "$type": "dimension",
+    "$description": "O token do produto é único (--radius: 0.9rem). Os três papéis abaixo são a proposta de normalização das sete escalas hoje em uso.",
+    "base": { "$value": "14.4px", "$description": "--radius · 0.9rem" },
+    "card": { "$value": "16px", "$description": "proposto — hoje rounded-2xl, 349 usos" },
+    "controle": { "$value": "12px", "$description": "proposto — hoje rounded-xl, 233 usos" },
+    "pilula": { "$value": "9999px", "$description": "hoje rounded-full, 128 usos" }
+  }
+}
