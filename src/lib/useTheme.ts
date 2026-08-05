@@ -1,25 +1,40 @@
 import { useState, useEffect } from "react";
 
 /**
- * Tema claro/escuro compartilhado com a landing.
- * Lê/grava `landing_theme` no localStorage e alterna a classe `dark` no <html>,
- * exatamente como a LandingPage — assim login, cadastro e onboarding ficam
- * consistentes com o estilo escolhido pelo usuário. Escuro é o padrão.
+ * Tema claro/escuro do app inteiro.
+ *
+ * Era exclusivo da landing (chave `landing_theme`), enquanto o painel forçava
+ * claro por conta própria — duas fontes de verdade para a mesma decisão. Aqui
+ * fica uma só, e quem quiser fixar um tema numa tela específica o faz na tela.
+ *
+ * A chave antiga é lida uma vez na migração para ninguém perder a escolha.
  */
-export function useTheme() {
-  const [isDark, setIsDark] = useState<boolean>(() => localStorage.getItem("landing_theme") !== "light");
+
+const CHAVE = "tema";
+const CHAVE_ANTIGA = "landing_theme";
+
+function temaSalvo(): "claro" | "escuro" | null {
+  const atual = localStorage.getItem(CHAVE);
+  if (atual === "claro" || atual === "escuro") return atual;
+
+  const antigo = localStorage.getItem(CHAVE_ANTIGA);
+  if (antigo === "light") return "claro";
+  if (antigo === "dark") return "escuro";
+  return null;
+}
+
+export function useTheme(padrao: "claro" | "escuro" = "escuro") {
+  const [isDark, setIsDark] = useState<boolean>(() => (temaSalvo() ?? padrao) === "escuro");
 
   useEffect(() => {
-    const root = document.documentElement;
-    if (isDark) root.classList.add("dark");
-    else root.classList.remove("dark");
+    document.documentElement.classList.toggle("dark", isDark);
   }, [isDark]);
 
   const toggle = () =>
     setIsDark((v) => {
-      const next = !v;
-      localStorage.setItem("landing_theme", next ? "dark" : "light");
-      return next;
+      const proximo = !v;
+      localStorage.setItem(CHAVE, proximo ? "escuro" : "claro");
+      return proximo;
     });
 
   return { isDark, toggle };

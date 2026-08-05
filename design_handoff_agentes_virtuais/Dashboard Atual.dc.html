@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F8FAFC;color:#0F172A;font-family:Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:-0.011em;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+a:hover{color:#2563EB}
+</style>
+</helmet>
+<div style="display:flex;height:100vh;overflow:hidden;background:#F8FAFC">
+
+  <aside style="position:relative;display:flex;flex-direction:column;border-right:1px solid #E2E8F0;width:244px;flex-shrink:0;background:#0F172A;background-image:radial-gradient(130% 55% at 0% 0%,rgba(37,99,235,0.24),transparent 58%)">
+    <div style="display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:2px;border-bottom:1px solid rgba(51,65,85,0.6);padding:0 16px;height:64px">
+      <div style="display:flex;align-items:center;gap:10px;width:100%">
+        <span style="display:grid;place-items:center;width:28px;height:28px;border-radius:12px;background:linear-gradient(135deg,#2563EB,#7C5CFF);box-shadow:0 10px 15px -3px rgba(37,99,235,0.3)">
+          <svg viewBox="0 0 64 64" width="16" height="16" fill="#fff"><path fill-rule="evenodd" clip-rule="evenodd" d="M32 6 L58 56 L6 56 Z M32 30 L45.5 56 L18.5 56 Z"></path></svg>
+        </span>
+        <span style="font-size:15px;font-weight:700;letter-spacing:-0.02em;color:#fff">Agentes <span style="color:#2563EB">Virtuais</span></span>
+        <button style="margin-left:auto;height:28px;width:28px;border-radius:8px;border:none;background:transparent;color:#94A3B8;display:grid;place-items:center;cursor:pointer">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
+        </button>
+      </div>
+      <p style="margin:0;width:100%;font-size:12px;color:#64748B;line-height:1.2">Clínica Vida Plena</p>
+    </div>
+
+    <div style="flex:1;overflow-y:auto;padding-bottom:8px">
+      <nav style="display:flex;flex-direction:column;padding:0 10px">
+        <sc-for list="{{ grupos }}" as="g" hint-placeholder-count="6">
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <div style="display:flex;align-items:center;gap:4px;padding:12px 12px 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.14em;color:#64748B">{{ g.title }}</div>
+            <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="4">
+              <a href="#" style="position:relative;display:flex;align-items:center;gap:10px;border-radius:8px;padding:6px 12px;font-size:13px;font-weight:500;color:{{ it.color }};background:{{ it.bg }}">{{ it.icon }}<span>{{ it.label }}</span>{{ it.bar }}</a>
+            </sc-for>
+          </div>
+        </sc-for>
+      </nav>
+    </div>
+
+    <div style="padding:8px 12px 12px">
+      <div style="border-radius:12px;background:rgba(30,41,59,0.5);padding:12px;display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <p style="margin:0;font-size:11px;font-weight:500;color:#94A3B8">Créditos de IA</p>
+          <span style="background:rgba(37,99,235,0.15);padding:2px 8px;border-radius:6px;font-size:11px;font-weight:500;color:#2563EB">Profissional</span>
+        </div>
+        <div style="height:4px;overflow:hidden;border-radius:999px;background:#334155">
+          <div style="height:100%;width:62%;border-radius:999px;background:#2563EB"></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <p style="margin:0;font-size:11px;font-weight:500;color:#CBD5E1;font-variant-numeric:tabular-nums">7,8M <span style="color:#64748B">/ 12,6M</span></p>
+          <p style="margin:0;font-size:11px;color:#64748B">62% usado</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid rgba(51,65,85,0.6);padding:8px">
+      <div style="display:flex;align-items:center;gap:12px;border-radius:12px;padding:6px 8px">
+        <span style="height:28px;width:28px;border-radius:50%;background:#2563EB;border:1px solid #334155;display:grid;place-items:center;font-size:11px;font-weight:600;color:#fff">R</span>
+        <div style="min-width:0;flex:1">
+          <p style="margin:0;font-size:13px;font-weight:500;color:#fff">Roberto Souza</p>
+          <p style="margin:0;font-size:11px;color:#64748B">Proprietário</p>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div style="display:flex;flex:1;flex-direction:column;overflow:hidden">
+    <header style="display:flex;height:56px;flex-shrink:0;align-items:center;gap:16px;border-bottom:1px solid #E2E8F0;background:rgba(255,255,255,0.8);backdrop-filter:blur(24px);padding:0 24px">
+      <div style="display:flex;flex:1;align-items:center;gap:8px;min-width:0">
+        <h1 style="margin:0;font-size:16px;font-weight:600;letter-spacing:-0.02em;color:#0F172A">Dashboard</h1>
+      </div>
+      <button style="position:relative;height:40px;width:40px;border-radius:12px;border:none;background:transparent;color:#64748B;display:grid;place-items:center;cursor:pointer">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+        <span style="position:absolute;right:6px;top:6px;display:grid;place-items:center;height:16px;width:16px;border-radius:50%;background:#2563EB;font-size:10px;font-weight:700;color:#fff;border:2px solid #fff">3</span>
+      </button>
+      <button style="display:flex;align-items:center;gap:8px;padding:0 8px;height:40px;border:none;background:transparent;cursor:pointer">
+        <span style="height:28px;width:28px;border-radius:50%;background:#2563EB;display:grid;place-items:center;font-size:11px;font-weight:600;color:#fff">R</span>
+        <span style="font-size:14px;font-weight:500;color:#334155">Roberto Souza</span>
+      </button>
+    </header>
+
+    <main style="flex:1;overflow-y:auto">
+      <div style="margin:0 auto;max-width:1152px;padding:32px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:24px">
+          <div style="min-width:0">
+            <h1 style="margin:0;font-size:24px;font-weight:600;letter-spacing:-0.02em;color:#0F172A">Boa tarde, Clínica Vida Plena</h1>
+            <p style="margin:2px 0 0;font-size:14px;color:#64748B">Veja o que está acontecendo no seu negócio hoje.</p>
+          </div>
+          <button style="display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;border-radius:6px;border:none;background:#2563EB;color:#fff;font-size:14px;font-weight:500;cursor:pointer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
+            Agenda de hoje
+          </button>
+        </div>
+
+        <div style="margin-bottom:24px;border-radius:16px;border:1px solid rgba(37,99,235,0.2);background:rgba(37,99,235,0.05);padding:20px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div>
+              <h3 style="margin:0;font-size:16px;font-weight:600;color:#0F172A">Termine de configurar seu negócio</h3>
+              <p style="margin:0;font-size:14px;color:#64748B">Faltam alguns passos para o seu assistente começar a atender.</p>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <sc-for list="{{ setup }}" as="s" hint-placeholder-count="3">
+              <button style="display:flex;align-items:center;gap:12px;border-radius:12px;border:1px solid #E2E8F0;background:#fff;padding:12px 16px;text-align:left;cursor:pointer">
+                <span style="color:{{ s.color }};display:grid;place-items:center">{{ s.icon }}</span>
+                <span style="flex:1;font-size:14px;font-weight:500;color:{{ s.textColor }};text-decoration:{{ s.deco }}">{{ s.label }}</span>
+                {{ s.arrow }}
+              </button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px">
+          <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+            <div style="border-radius:16px;border:1px solid #E2E8F0;background:#fff;padding:20px">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <p style="margin:0;font-size:14px;font-weight:500;color:#64748B">{{ k.label }}</p>
+                <div style="color:rgba(37,99,235,0.8)">{{ k.icon }}</div>
+              </div>
+              <div style="margin-top:8px;display:flex;align-items:baseline;gap:8px">
+                <span style="font-size:30px;font-weight:600;letter-spacing:-0.02em;color:#0F172A;font-variant-numeric:tabular-nums">{{ k.value }}</span>
+              </div>
+              <p style="margin:4px 0 0;font-size:12px;color:#64748B">{{ k.hint }}</p>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+          <section style="border-radius:16px;border:1px solid #E2E8F0;background:#fff">
+            <header style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #E2E8F0">
+              <h2 style="margin:0;font-size:14px;font-weight:600;color:#0F172A;display:flex;align-items:center;gap:8px">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
+                Agendamentos de hoje
+              </h2>
+              <a href="#" style="font-size:14px;color:#2563EB;display:flex;align-items:center;gap:4px">Ver agenda
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg>
+              </a>
+            </header>
+            <div style="padding:8px">
+              <sc-for list="{{ agenda }}" as="a" hint-placeholder-count="4">
+                <div style="display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid #E2E8F0">
+                  <div style="display:flex;height:40px;width:56px;flex-shrink:0;align-items:center;justify-content:center;border-radius:8px;background:rgba(37,99,235,0.1);color:#2563EB">
+                    <span style="font-size:14px;font-weight:600;font-variant-numeric:tabular-nums">{{ a.time }}</span>
+                  </div>
+                  <div style="min-width:0;flex:1">
+                    <p style="margin:0;font-size:14px;font-weight:500;color:#0F172A">{{ a.name }}</p>
+                    <p style="margin:0;font-size:12px;color:#64748B">{{ a.title }}</p>
+                  </div>
+                  <span style="flex-shrink:0;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:500;background:{{ a.pillBg }};color:{{ a.pillColor }}">{{ a.pill }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </section>
+
+          <section style="border-radius:16px;border:1px solid #E2E8F0;background:#fff">
+            <header style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #E2E8F0">
+              <h2 style="margin:0;font-size:14px;font-weight:600;color:#0F172A;display:flex;align-items:center;gap:8px">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                Aguardando atendimento
+                <span style="margin-left:4px;display:inline-flex;height:20px;min-width:20px;align-items:center;justify-content:center;border-radius:999px;background:#FEF3C7;padding:0 6px;font-size:12px;font-weight:600;color:#B45309">3</span>
+              </h2>
+              <a href="#" style="font-size:14px;color:#2563EB;display:flex;align-items:center;gap:4px">Abrir conversas
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg>
+              </a>
+            </header>
+            <div style="padding:8px">
+              <sc-for list="{{ aguardando }}" as="w" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid #E2E8F0;cursor:pointer">
+                  <span style="display:flex;height:36px;width:36px;flex-shrink:0;align-items:center;justify-content:center;border-radius:50%;background:#FEF3C7;color:#B45309;font-size:14px;font-weight:600">{{ w.ini }}</span>
+                  <div style="min-width:0;flex:1">
+                    <p style="margin:0;font-size:14px;font-weight:500;color:#0F172A">{{ w.name }}</p>
+                    <p style="margin:0;font-size:12px;color:#D97706;display:flex;align-items:center;gap:4px">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3" fill="currentColor"></circle></svg>
+                      Aguardando você
+                    </p>
+                  </div>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
+                </div>
+              </sc-for>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const h = React.createElement;
+function svg(paths, size, opts) {
+  return h('svg', Object.assign({ width: size || 16, height: size || 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }, opts || {}),
+    paths.map((d, i) => h('path', { key: i, d })));
+}
+const P = {
+  dashboard: ['M3 3h8v8H3z', 'M13 3h8v5h-8z', 'M13 12h8v9h-8z', 'M3 15h8v6H3z'],
+  chart: ['M3 3v18h18', 'M7 16v-5', 'M12 16V8', 'M17 16v-3'],
+  message: ['M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'],
+  calendar: ['M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', 'M16 2v4', 'M8 2v4', 'M3 10h18'],
+  target: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z', 'M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z'],
+  bookUser: ['M4 19.5A2.5 2.5 0 0 1 6.5 17H20', 'M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z', 'M15 10a2 2 0 1 1-4 0 2 2 0 0 1 4 0z'],
+  bot: ['M12 8V4H8', 'M4 8h16v12H4z', 'M2 14h2', 'M20 14h2', 'M15 13v2', 'M9 13v2'],
+  workflow: ['M3 3h6v6H3z', 'M15 15h6v6h-6z', 'M9 6h4a2 2 0 0 1 2 2v7'],
+  clock: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M12 6v6l4 2'],
+  building: ['M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18z', 'M10 6h4', 'M10 10h4', 'M10 14h4', 'M2 22h20'],
+  package: ['M21 8l-9-5-9 5 9 5 9-5z', 'M3 8v8l9 5 9-5V8', 'M12 13v8'],
+  file: ['M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z', 'M14 2v6h6'],
+  megaphone: ['M3 11v2a1 1 0 0 0 1 1h3l7 4V6L7 10H4a1 1 0 0 0-1 1z', 'M18 8a4 4 0 0 1 0 8'],
+  phone: ['M5 2h14a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z', 'M12 18h.01'],
+  users: ['M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2', 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'],
+  card: ['M2 7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z', 'M2 10h20'],
+  settings: ['M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', 'M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'],
+  book: ['M4 19.5A2.5 2.5 0 0 1 6.5 17H20', 'M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z'],
+  cap: ['M22 10L12 5 2 10l10 5 10-5z', 'M6 12v5c3 3 9 3 12 0v-5'],
+  check: ['M22 11.08V12a10 10 0 1 1-5.93-9.14', 'M22 4L12 14.01l-3-3'],
+  smartphone: ['M5 2h14a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z', 'M12 18h.01'],
+  circleDot: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z'],
+  arrow: ['M5 12h14M12 5l7 7-7 7'],
+  timer: ['M12 22a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 'M12 9v4l2 2', 'M9 2h6'],
+};
+const on = { color: '#fff', bg: 'rgba(255,255,255,0.08)' };
+const off = { color: '#94A3B8', bg: 'transparent' };
+const icoOn = { stroke: '#2563EB' };
+const icoOff = { stroke: '#64748B' };
+const activeBar = h('span', { style: { position: 'absolute', left: 0, top: '50%', height: 16, width: 3, transform: 'translateY(-50%)', borderRadius: '0 999px 999px 0', background: '#2563EB' } });
+
+function item(label, paths, active) {
+  return Object.assign({ label: label, icon: svg(paths, 16, active ? icoOn : icoOff), bar: active ? activeBar : null }, active ? on : off);
+}
+
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      grupos: [
+        { title: 'Painel', items: [item('Dashboard', P.dashboard, true), item('Relatórios', P.chart)] },
+        { title: 'Atendimento', items: [item('Conversas', P.message), item('Agendamentos', P.calendar), item('Funil de clientes', P.target), item('Clientes', P.bookUser)] },
+        { title: 'Automação', items: [item('Agente de IA', P.bot), item('Fluxos', P.workflow), item('Lembretes', P.clock)] },
+        { title: 'Conteúdo', items: [item('Meu negócio', P.building), item('Catálogo', P.package), item('Templates', P.file), item('Disparos', P.megaphone)] },
+        { title: 'Configuração', items: [item('Conexões', P.phone), item('Colaboradores', P.users), item('Assinatura', P.card), item('Configurações', P.settings)] },
+        { title: 'Ajuda', items: [item('Base de conhecimento', P.book), item('Academy', P.cap)] },
+      ],
+      setup: [
+        { icon: svg(P.check, 20), color: '#2563EB', textColor: '#64748B', deco: 'line-through', label: 'Configurar seu negócio', arrow: null },
+        { icon: svg(P.smartphone, 20), color: '#64748B', textColor: '#0F172A', deco: 'none', label: 'Conectar o WhatsApp', arrow: svg(P.arrow, 16, { stroke: '#64748B' }) },
+        { icon: svg(P.bot, 20), color: '#64748B', textColor: '#0F172A', deco: 'none', label: 'Criar seu agente de IA', arrow: svg(P.arrow, 16, { stroke: '#64748B' }) },
+      ],
+      kpis: [
+        { label: 'Agendamentos (30 dias)', value: '128', hint: 'marcados no período', icon: svg(P.calendar, 20) },
+        { label: 'Conversas atendidas', value: '1.042', hint: 'últimos 30 dias', icon: svg(P.message, 20) },
+        { label: 'Comparecimento', value: '96', hint: 'agendamentos concluídos', icon: svg(P.check, 20) },
+        { label: 'Resposta média', value: '4s', hint: '1ª resposta ao cliente', icon: svg(P.timer, 20) },
+      ],
+      agenda: [
+        { time: '09:00', name: 'Marina Costa', title: 'Clareamento a laser', pill: 'Agendada', pillBg: 'rgba(37,99,235,0.1)', pillColor: '#2563EB' },
+        { time: '10:30', name: 'Roberto Alves', title: 'Avaliação inicial', pill: 'Concluída', pillBg: '#D1FAE5', pillColor: '#047857' },
+        { time: '14:00', name: 'Ana Martins', title: 'Limpeza + profilaxia', pill: 'Pendente', pillBg: '#FEF3C7', pillColor: '#B45309' },
+        { time: '16:15', name: 'João Pereira', title: 'Retorno', pill: 'Agendada', pillBg: 'rgba(37,99,235,0.1)', pillColor: '#2563EB' },
+      ],
+      aguardando: [
+        { ini: 'L', name: '@lucas.fit' },
+        { ini: 'C', name: 'Carla Nogueira' },
+        { ini: 'V', name: 'Visitante do site' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

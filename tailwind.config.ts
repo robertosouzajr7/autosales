@@ -55,6 +55,16 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Camada do redesign. Existe para as telas pararem de escolher um
+        // slate-* diferente para o mesmo papel em cada arquivo.
+        "surface-2": "hsl(var(--surface-2))",
+        "border-soft": "hsl(var(--border-soft))",
+        faint: "hsl(var(--faint))",
+        // accent-text ≠ primary: o azul de texto clareia no tema escuro, o
+        // fundo do botão não. Ver a nota em globals.css.
+        "accent-text": "hsl(var(--accent-text))",
+        "accent-soft": "hsl(var(--accent-soft))",
+        rail: "hsl(var(--rail))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -70,6 +80,13 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      backgroundImage: {
+        // Brilho radial no topo da sidebar (handoff → "Layout base do painel").
+        "rail-glow": "radial-gradient(130% 55% at 0% 0%, var(--rail-glow), transparent 58%)",
+      },
+      boxShadow: {
+        card: "var(--shadow-card)",
       },
       keyframes: {
         "accordion-down": {

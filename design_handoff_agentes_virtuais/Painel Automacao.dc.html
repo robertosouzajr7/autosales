@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F5F8FC; --surface:#FFFFFF; --surface-2:#F8FAFC; --border:#E4EAF3; --border-soft:#EEF2F8;
+  --text:#0F172A; --muted:#64748B; --faint:#94A3B8;
+  --accent:#2563EB; --accent-text:#2563EB; --accent-soft:#EFF6FF;
+  --rail:#0F172A; --rail-glow:rgba(37,99,235,0.24); --shadow:0 1px 2px rgba(15,23,42,0.05);
+  --grid:#E2E8F0;
+}
+[data-theme="dark"]{
+  --bg:#080C16; --surface:#0E1525; --surface-2:#131C2E; --border:rgba(255,255,255,0.08); --border-soft:rgba(255,255,255,0.05);
+  --text:#F1F5F9; --muted:#94A3B8; --faint:#64748B;
+  --accent:#2563EB; --accent-text:#60A5FA; --accent-soft:rgba(37,99,235,0.15);
+  --rail:#05080F; --rail-glow:rgba(37,99,235,0.3); --shadow:0 1px 2px rgba(0,0,0,0.4);
+  --grid:rgba(255,255,255,0.07);
+}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:-0.014em;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+a:hover{color:var(--accent-text)}
+@keyframes pulseDot{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+</helmet>
+<div style="display:flex;height:100vh;overflow:hidden;background:var(--bg)">
+
+  <aside style="width:236px;flex-shrink:0;box-sizing:border-box;background:var(--rail);background-image:radial-gradient(130% 55% at 0% 0%,var(--rail-glow),transparent 58%);display:flex;flex-direction:column;overflow:hidden">
+    <div style="height:64px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 17px;border-bottom:1px solid rgba(255,255,255,0.07)">
+      <span style="display:grid;place-items:center;width:30px;height:30px;flex-shrink:0;border-radius:9px;background:linear-gradient(135deg,#2563EB,#7C5CFF);box-shadow:0 8px 18px -6px rgba(37,99,235,0.7)">
+        <svg viewBox="0 0 64 64" width="16" height="16" fill="#fff"><path fill-rule="evenodd" clip-rule="evenodd" d="M32 6 L58 56 L6 56 Z M32 30 L45.5 56 L18.5 56 Z"></path></svg>
+      </span>
+      <div style="min-width:0;overflow:hidden">
+        <p style="margin:0;font-size:13.5px;font-weight:700;letter-spacing:-0.03em;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Agentes <span style="color:#60A5FA">Virtuais</span></p>
+        <p style="margin:0;font-size:11px;color:#64748B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Clínica Vida Plena</p>
+      </div>
+    </div>
+    <nav style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:14px">
+      <sc-for list="{{ grupos }}" as="g" hint-placeholder-count="5">
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <div style="padding:8px 11px 3px;font-size:10px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#475569">{{ g.title }}</div>
+          <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="4">
+            <button onClick="{{ it.go }}" style="display:flex;align-items:center;gap:12px;height:38px;padding:0 11px;border:none;border-radius:10px;background:{{ it.bg }};color:{{ it.color }};font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;text-align:left;width:100%" style-hover="background:rgba(255,255,255,0.06);color:#fff">
+              <span style="flex-shrink:0;display:grid;place-items:center;width:20px">{{ it.icon }}</span>
+              <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ it.label }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </sc-for>
+    </nav>
+    <div style="padding:12px;border-top:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;gap:11px">
+      <span style="width:30px;height:30px;flex-shrink:0;border-radius:50%;background:#2563EB;display:grid;place-items:center;font-size:12px;font-weight:600;color:#fff">R</span>
+      <div style="min-width:0;flex:1">
+        <p style="margin:0;font-size:12.5px;font-weight:500;color:#fff">Roberto Souza</p>
+        <p style="margin:0;font-size:11px;color:#64748B">Proprietário</p>
+      </div>
+    </div>
+  </aside>
+
+  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0">
+    <header style="height:60px;flex-shrink:0;display:flex;align-items:center;gap:14px;padding:0 24px;background:var(--surface);border-bottom:1px solid var(--border)">
+      <h1 style="margin:0;font-size:15.5px;font-weight:600;letter-spacing:-0.025em">{{ tituloTela }}</h1>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+        <span style="display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;border-radius:8px;background:rgba(34,160,107,0.1);color:#15803D;font-size:12.5px;font-weight:600">
+          <span style="width:7px;height:7px;border-radius:50%;background:#22A06B;animation:pulseDot 2s infinite"></span>Agente ativo
+        </span>
+        <button onClick="{{ toggleTema }}" style="width:36px;height:36px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);color:var(--muted);display:grid;place-items:center;cursor:pointer">{{ temaIcon }}</button>
+        <span style="width:34px;height:34px;border-radius:50%;background:#2563EB;display:grid;place-items:center;font-size:13px;font-weight:600;color:#fff">R</span>
+      </div>
+    </header>
+
+    <sc-if value="{{ ehAgente }}" hint-placeholder-val="{{ true }}">
+      <main style="flex:1;overflow-y:auto;padding:22px 24px 40px">
+        <div style="max-width:1380px;margin:0 auto;display:flex;flex-direction:column;gap:18px">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px">
+            <div>
+              <h2 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-0.035em">Agente de IA</h2>
+              <p style="margin:5px 0 0;font-size:13.5px;color:var(--muted)">Crie e treine o assistente que atende seus clientes no WhatsApp, Instagram e site.</p>
+            </div>
+            <div style="display:flex;gap:10px;flex-shrink:0">
+              <button style="height:38px;padding:0 15px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Testar no simulador</button>
+              <button style="height:38px;padding:0 15px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Salvar alterações</button>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:260px 1fr 320px;gap:16px;align-items:start">
+            <section style="border-radius:14px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);overflow:hidden">
+              <div style="padding:14px 16px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;justify-content:space-between">
+                <h3 style="margin:0;font-size:13px;font-weight:600">Seus agentes</h3>
+                <span style="font-size:11.5px;color:var(--muted)">3 de 5</span>
+              </div>
+              <sc-for list="{{ agentes }}" as="a" hint-placeholder-count="3">
+                <button style="width:100%;display:flex;align-items:center;gap:11px;padding:13px 16px;border:none;border-bottom:1px solid var(--border-soft);border-left:3px solid {{ a.marker }};background:{{ a.bg }};cursor:pointer;text-align:left;font-family:inherit">
+                  <span style="width:34px;height:34px;flex-shrink:0;border-radius:10px;background:{{ a.avBg }};color:{{ a.avColor }};display:grid;place-items:center;font-size:12px;font-weight:700">{{ a.ini }}</span>
+                  <div style="min-width:0;flex:1">
+                    <p style="margin:0;font-size:13.5px;font-weight:600;color:var(--text)">{{ a.nome }}</p>
+                    <p style="margin:2px 0 0;font-size:11.5px;color:var(--muted)">{{ a.funcao }}</p>
+                  </div>
+                  <span style="width:7px;height:7px;border-radius:50%;background:{{ a.status }};flex-shrink:0"></span>
+                </button>
+              </sc-for>
+              <button style="width:100%;padding:14px 16px;border:none;background:transparent;color:var(--accent-text);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;text-align:left">+ Novo agente</button>
+            </section>
+
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <section style="border-radius:14px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);padding:20px;display:flex;flex-direction:column;gap:18px">
+                <h3 style="margin:0;font-size:14px;font-weight:600">Identidade</h3>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                  <div>
+                    <label style="display:block;margin-bottom:7px;font-size:11.5px;font-weight:600;color:var(--muted)">Nome do agente</label>
+                    <div style="height:40px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);display:flex;align-items:center;padding:0 13px;font-size:13.5px;font-weight:500">Sofia</div>
+                  </div>
+                  <div>
+                    <label style="display:block;margin-bottom:7px;font-size:11.5px;font-weight:600;color:var(--muted)">Função</label>
+                    <div style="height:40px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);display:flex;align-items:center;padding:0 13px;font-size:13.5px;font-weight:500">Atendimento e agendamento
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="2" stroke-linecap="round" style="margin-left:auto"><path d="M6 9l6 6 6-6"></path></svg>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label style="display:block;margin-bottom:7px;font-size:11.5px;font-weight:600;color:var(--muted)">Tom de voz</label>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <sc-for list="{{ tons }}" as="t" hint-placeholder-count="5">
+                      <span style="height:32px;display:inline-flex;align-items:center;padding:0 13px;border-radius:8px;border:1px solid {{ t.border }};background:{{ t.bg }};color:{{ t.color }};font-size:12.5px;font-weight:600;cursor:pointer">{{ t.label }}</span>
+                    </sc-for>
+                  </div>
+                </div>
+                <div>
+                  <label style="display:block;margin-bottom:7px;font-size:11.5px;font-weight:600;color:var(--muted)">Regras específicas do seu negócio</label>
+                  <div style="min-height:110px;border-radius:11px;border:1px solid var(--border);background:var(--surface-2);padding:13px;font-size:13px;line-height:1.65;color:var(--muted)">Sempre confirmar o nome do cliente antes de agendar. Nunca prometer desconto sem aprovação. Se perguntarem por convênio, explicar que atendemos só particular e oferecer parcelamento em até 3x.</div>
+                </div>
+              </section>
+
+              <section style="border-radius:14px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);padding:20px;display:flex;flex-direction:column;gap:16px">
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <h3 style="margin:0;font-size:14px;font-weight:600">Base de conhecimento</h3>
+                  <button style="height:32px;padding:0 13px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">Enviar arquivo</button>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:9px">
+                  <sc-for list="{{ arquivos }}" as="f" hint-placeholder-count="4">
+                    <div style="display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:11px;border:1px solid var(--border);background:var(--surface-2)">
+                      <span style="width:30px;height:30px;flex-shrink:0;border-radius:8px;background:var(--accent-soft);color:var(--accent-text);display:grid;place-items:center">{{ f.icon }}</span>
+                      <div style="min-width:0;flex:1">
+                        <p style="margin:0;font-size:13px;font-weight:600">{{ f.nome }}</p>
+                        <p style="margin:2px 0 0;font-size:11.5px;color:var(--muted)">{{ f.meta }}</p>
+                      </div>
+                      <span style="font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:7px;background:{{ f.statusBg }};color:{{ f.statusColor }}">{{ f.status }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="border-radius:11px;border:1px dashed var(--border);padding:22px;text-align:center;color:var(--faint);font-size:12.5px">Arraste PDF, DOCX ou TXT aqui — o agente aprende o conteúdo em segundos.</div>
+              </section>
+
+              <section style="border-radius:14px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);padding:20px">
+                <h3 style="margin:0 0 16px;font-size:14px;font-weight:600">O que o agente pode fazer</h3>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                  <sc-for list="{{ ferramentas }}" as="t" hint-placeholder-count="6">
+                    <div style="display:flex;align-items:center;gap:11px;padding:12px 13px;border-radius:11px;border:1px solid var(--border);background:var(--surface-2)">
+                      <span style="width:30px;height:30px;flex-shrink:0;border-radius:8px;background:var(--accent-soft);color:var(--accent-text);display:grid;place-items:center">{{ t.icon }}</span>
+                      <div style="min-width:0;flex:1">
+                        <p style="margin:0;font-size:13px;font-weight:600">{{ t.t }}</p>
+                        <p style="margin:2px 0 0;font-size:11.5px;color:var(--muted)">{{ t.d }}</p>
+                      </div>
+                      <span style="width:32px;height:18px;border-radius:999px;background:{{ t.switchBg }};position:relative;flex-shrink:0"><span style="position:absolute;top:2px;{{ t.knobSide }}:2px;width:14px;height:14px;border-radius:50%;background:#fff"></span></span>
+                    </div>
+                  </sc-for>
+                </div>
+              </section>
+            </div>
+
+            <section style="border-radius:14px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);overflow:hidden;position:sticky;top:0">
+              <div style="padding:14px 16px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;gap:9px">
+                <span style="width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#2563EB,#7C5CFF);display:grid;place-items:center;color:#fff;font-size:11px;font-weight:700">S</span>
+                <div style="flex:1">
+                  <p style="margin:0;font-size:13px;font-weight:600">Simulador</p>
+                  <p style="margin:1px 0 0;font-size:11px;color:var(--muted)">Testa sem gastar créditos reais</p>
+                </div>
+              </div>
+              <div style="padding:16px;display:flex;flex-direction:column;gap:10px;height:420px;overflow-y:auto;background:var(--surface-2)">
+                <sc-for list="{{ simulacao }}" as="m" hint-placeholder-count="5">
+                  <div style="max-width:82%;align-self:{{ m.align }};background:{{ m.bg }};color:{{ m.color }};border:1px solid {{ m.border }};border-radius:{{ m.radius }};padding:10px 13px;font-size:12.5px;line-height:1.55">{{ m.texto }}</div>
+                </sc-for>
+                <div style="align-self:flex-start;display:inline-flex;align-items:center;gap:7px;font-size:11.5px;color:var(--faint)">
+                  <span style="width:5px;height:5px;border-radius:50%;background:var(--accent);animation:pulseDot 1.2s infinite"></span>Sofia está digitando…
+                </div>
+              </div>
+              <div style="padding:12px 16px;border-top:1px solid var(--border-soft);display:flex;gap:9px">
+                <div style="flex:1;height:38px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);display:flex;align-items:center;padding:0 12px;font-size:12.5px;color:var(--faint)">Escreva como o cliente…</div>
+                <button style="width:38px;height:38px;border-radius:10px;border:none;background:var(--accent);color:#fff;display:grid;place-items:center;cursor:pointer">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"></path></svg>
+                </button>
+              </div>
+            </section>
+          </div>
+        </div>
+      </main>
+    </sc-if>
+
+    <sc-if value="{{ ehFluxos }}" hint-placeholder-val="{{ false }}">
+      <main style="flex:1;display:flex;overflow:hidden;min-width:0">
+        <div style="width:236px;flex-shrink:1;min-width:200px;box-sizing:border-box;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column">
+          <div style="padding:14px 16px;border-bottom:1px solid var(--border-soft)">
+            <p style="margin:0;font-size:10.5px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint)">Blocos</p>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:14px">
+            <sc-for list="{{ blocos }}" as="cat" hint-placeholder-count="4">
+              <div>
+                <p style="margin:0 0 8px;font-size:11px;font-weight:600;color:var(--muted)">{{ cat.title }}</p>
+                <div style="display:flex;flex-direction:column;gap:6px">
+                  <sc-for list="{{ cat.items }}" as="b" hint-placeholder-count="4">
+                    <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:9px;border:1px solid var(--border);background:var(--surface-2);cursor:grab;font-size:12.5px;font-weight:500">
+                      <span style="color:{{ b.color }};display:grid;place-items:center">{{ b.icon }}</span>{{ b.t }}
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg)">
+          <div style="height:52px;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:0 18px">
+            <p style="margin:0;font-size:13.5px;font-weight:600">Qualificação de lead novo</p>
+            <span style="font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:7px;background:rgba(34,160,107,0.12);color:#15803D">Publicado</span>
+            <span style="font-size:12px;color:var(--muted)">Gatilho: primeira mensagem</span>
+            <div style="margin-left:auto;display:flex;gap:8px">
+              <button style="height:34px;padding:0 13px;border-radius:9px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">Simular</button>
+              <button style="height:34px;padding:0 13px;border-radius:9px;border:none;background:var(--accent);color:#fff;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">Publicar</button>
+            </div>
+          </div>
+
+          <div style="flex:1;position:relative;overflow:auto;background-image:radial-gradient(var(--grid) 1px,transparent 1px);background-size:22px 22px">
+            <svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none">
+              <path d="M170,96 C230,96 230,168 290,168" fill="none" stroke="#94A3B8" stroke-width="1.6"></path>
+              <path d="M170,96 C230,96 230,300 290,300" fill="none" stroke="#94A3B8" stroke-width="1.6"></path>
+              <path d="M470,168 C530,168 530,236 590,236" fill="none" stroke="#94A3B8" stroke-width="1.6"></path>
+              <path d="M470,300 C530,300 530,236 590,236" fill="none" stroke="#94A3B8" stroke-width="1.6" stroke-dasharray="4 4"></path>
+            </svg>
+            <sc-for list="{{ nos }}" as="n" hint-placeholder-count="5">
+              <div style="position:absolute;left:{{ n.x }};top:{{ n.y }};width:180px;border-radius:12px;border:1px solid {{ n.border }};background:var(--surface);box-shadow:0 6px 18px -10px rgba(15,23,42,0.4);overflow:hidden">
+                <div style="display:flex;align-items:center;gap:9px;padding:9px 12px;background:{{ n.headBg }};color:{{ n.headColor }}">
+                  <span style="display:grid;place-items:center">{{ n.icon }}</span>
+                  <span style="font-size:11.5px;font-weight:700;letter-spacing:0.02em;text-transform:uppercase">{{ n.tipo }}</span>
+                </div>
+                <div style="padding:11px 12px">
+                  <p style="margin:0;font-size:12.5px;font-weight:600">{{ n.titulo }}</p>
+                  <p style="margin:5px 0 0;font-size:11.5px;line-height:1.5;color:var(--muted)">{{ n.desc }}</p>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="width:280px;flex-shrink:1;min-width:230px;box-sizing:border-box;background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:18px">
+          <div>
+            <p style="margin:0;font-size:10.5px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint)">Bloco selecionado</p>
+            <p style="margin:9px 0 0;font-size:15px;font-weight:600">Pergunta com IA</p>
+          </div>
+          <div>
+            <label style="display:block;margin-bottom:7px;font-size:11.5px;font-weight:600;color:var(--muted)">Nome do bloco</label>
+            <div style="height:38px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);display:flex;align-items:center;padding:0 12px;font-size:13px">Perguntar interesse</div>
+          </div>
+          <div>
+            <label style="display:block;margin-bottom:7px;font-size:11.5px;font-weight:600;color:var(--muted)">Prompt IA</label>
+            <div style="min-height:90px;border-radius:11px;border:1px solid var(--border);background:var(--surface-2);padding:12px;font-size:12.5px;line-height:1.6;color:var(--muted)">Qualifique o lead {{ chaveLead }} descobrindo o serviço de interesse, a urgência e a faixa de preço aceita.</div>
+          </div>
+          <div>
+            <label style="display:block;margin-bottom:7px;font-size:11.5px;font-weight:600;color:var(--muted)">Variável de saída</label>
+            <div style="height:38px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);display:flex;align-items:center;padding:0 12px;font-size:13px;font-family:ui-monospace,Menlo,monospace">interesse</div>
+          </div>
+          <div>
+            <label style="display:block;margin-bottom:9px;font-size:11.5px;font-weight:600;color:var(--muted)">Ferramentas habilitadas</label>
+            <div style="display:flex;flex-wrap:wrap;gap:7px">
+              <sc-for list="{{ ferramentasBloco }}" as="f" hint-placeholder-count="4">
+                <span style="font-size:11.5px;font-weight:600;padding:5px 10px;border-radius:7px;background:{{ f.bg }};color:{{ f.color }};border:1px solid {{ f.border }}">{{ f.t }}</span>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </main>
+    </sc-if>
+
+    <sc-if value="{{ ehLembretes }}" hint-placeholder-val="{{ false }}">
+      <main style="flex:1;overflow-y:auto;padding:22px 24px 40px">
+        <div style="max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:18px">
+          <div>
+            <h2 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-0.035em">Lembretes e automações</h2>
+            <p style="margin:5px 0 0;font-size:13.5px;color:var(--muted)">A régua que confirma horários, recupera faltas e chama a equipe quando a IA não deve seguir sozinha.</p>
+          </div>
+
+          <div style="display:flex;gap:4px;padding:4px;border-radius:11px;background:var(--surface-2);border:1px solid var(--border);width:fit-content">
+            <sc-for list="{{ abas }}" as="a" hint-placeholder-count="5">
+              <button onClick="{{ a.go }}" style="height:34px;padding:0 15px;border-radius:8px;border:none;background:{{ a.bg }};color:{{ a.color }};font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;box-shadow:{{ a.shadow }}">{{ a.label }}</button>
+            </sc-for>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;align-items:start">
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <section style="border-radius:14px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);overflow:hidden">
+                <header style="padding:16px 20px;border-bottom:1px solid var(--border-soft)">
+                  <h3 style="margin:0;font-size:14px;font-weight:600">{{ tituloAba }}</h3>
+                  <p style="margin:4px 0 0;font-size:12.5px;color:var(--muted)">{{ descricaoAba }}</p>
+                </header>
+                <sc-for list="{{ regras }}" as="r" hint-placeholder-count="4">
+                  <div style="padding:16px 20px;border-bottom:1px solid var(--border-soft);display:flex;gap:14px;align-items:flex-start">
+                    <span style="width:34px;height:34px;flex-shrink:0;border-radius:10px;background:var(--accent-soft);color:var(--accent-text);display:grid;place-items:center">{{ r.icon }}</span>
+                    <div style="flex:1;min-width:0">
+                      <div style="display:flex;align-items:center;gap:9px">
+                        <p style="margin:0;font-size:13.5px;font-weight:600">{{ r.t }}</p>
+                        <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;background:{{ r.tagBg }};color:{{ r.tagColor }}">{{ r.tag }}</span>
+                      </div>
+                      <p style="margin:5px 0 0;font-size:12.5px;line-height:1.6;color:var(--muted)">{{ r.d }}</p>
+                      <div style="margin-top:11px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);padding:11px 13px;font-size:12.5px;line-height:1.6;color:var(--muted)">{{ r.mensagem }}</div>
+                    </div>
+                    <span style="width:34px;height:19px;border-radius:999px;background:{{ r.switchBg }};position:relative;flex-shrink:0"><span style="position:absolute;top:2px;{{ r.knobSide }}:2px;width:15px;height:15px;border-radius:50%;background:#fff"></span></span>
+                  </div>
+                </sc-for>
+              </section>
+
+              <section style="border-radius:14px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);padding:20px">
+                <h3 style="margin:0 0 6px;font-size:14px;font-weight:600">Palavras que chamam um humano</h3>
+                <p style="margin:0 0 14px;font-size:12.5px;color:var(--muted)">Quando o cliente escrever qualquer uma delas, a IA para e a conversa vai para a fila da equipe.</p>
+                <div style="display:flex;flex-wrap:wrap;gap:8px">
+                  <sc-for list="{{ palavras }}" as="p" hint-placeholder-count="6">
+                    <span style="display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:500;padding:6px 11px;border-radius:8px;background:var(--surface-2);border:1px solid var(--border);color:var(--text)">{{ p }}
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+                    </span>
+                  </sc-for>
+                  <span style="display:inline-flex;align-items:center;font-size:12.5px;padding:6px 11px;border-radius:8px;border:1px dashed var(--border);color:var(--faint)">+ adicionar</span>
+                </div>
+              </section>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <section style="border-radius:14px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);padding:20px">
+                <h3 style="margin:0 0 14px;font-size:14px;font-weight:600">Próximos envios</h3>
+                <div style="display:flex;flex-direction:column;gap:12px">
+                  <sc-for list="{{ envios }}" as="e" hint-placeholder-count="4">
+                    <div style="display:flex;gap:12px;align-items:center">
+                      <span style="width:48px;flex-shrink:0;font-size:12.5px;font-weight:700;color:var(--accent-text);font-variant-numeric:tabular-nums">{{ e.hora }}</span>
+                      <div style="min-width:0;flex:1">
+                        <p style="margin:0;font-size:13px;font-weight:600">{{ e.nome }}</p>
+                        <p style="margin:2px 0 0;font-size:11.5px;color:var(--muted)">{{ e.tipo }}</p>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </section>
+
+              <section style="border-radius:14px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);padding:20px">
+                <h3 style="margin:0 0 6px;font-size:14px;font-weight:600">Falhas recentes</h3>
+                <p style="margin:0 0 14px;font-size:12.5px;color:var(--muted)">Mensagens que não saíram e o motivo.</p>
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <sc-for list="{{ falhas }}" as="f" hint-placeholder-count="2">
+                    <div style="border-radius:11px;border:1px solid rgba(239,68,68,0.25);background:rgba(239,68,68,0.06);padding:12px 13px">
+                      <p style="margin:0;font-size:12.5px;font-weight:600;color:#B91C1C">{{ f.nome }}</p>
+                      <p style="margin:4px 0 0;font-size:11.5px;line-height:1.55;color:var(--muted)">{{ f.motivo }}</p>
+                    </div>
+                  </sc-for>
+                </div>
+              </section>
+
+              <section style="border-radius:14px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);padding:20px">
+                <h3 style="margin:0 0 14px;font-size:14px;font-weight:600">Impacto no mês</h3>
+                <div style="display:flex;flex-direction:column;gap:14px">
+                  <sc-for list="{{ impacto }}" as="i" hint-placeholder-count="3">
+                    <div>
+                      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+                        <span style="font-size:12.5px;color:var(--muted)">{{ i.k }}</span>
+                        <span style="font-size:15px;font-weight:700;letter-spacing:-0.02em;color:{{ i.color }}">{{ i.v }}</span>
+                      </div>
+                      <div style="height:6px;border-radius:999px;background:var(--surface-2);overflow:hidden"><div style="height:100%;width:{{ i.pct }};border-radius:999px;background:{{ i.color }}"></div></div>
+                    </div>
+                  </sc-for>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </main>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900}}">
+const h = React.createElement;
+function svg(paths, size, opts) {
+  return h('svg', Object.assign({ width: size || 17, height: size || 17, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }, opts || {}),
+    paths.map((d, i) => h('path', { key: i, d })));
+}
+const P = {
+  dashboard: ['M3 3h8v8H3z', 'M13 3h8v5h-8z', 'M13 12h8v9h-8z', 'M3 15h8v6H3z'],
+  chart: ['M3 3v18h18', 'M7 16v-5', 'M12 16V8', 'M17 16v-3'],
+  message: ['M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'],
+  calendar: ['M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', 'M16 2v4', 'M8 2v4', 'M3 10h18'],
+  target: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z', 'M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z'],
+  bookUser: ['M4 19.5A2.5 2.5 0 0 1 6.5 17H20', 'M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z'],
+  bot: ['M12 8V4H8', 'M4 8h16v12H4z', 'M2 14h2', 'M20 14h2', 'M15 13v2', 'M9 13v2'],
+  workflow: ['M3 3h6v6H3z', 'M15 15h6v6h-6z', 'M9 6h4a2 2 0 0 1 2 2v7'],
+  clock: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M12 6v6l4 2'],
+  building: ['M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18z', 'M10 6h4', 'M10 10h4', 'M10 14h4', 'M2 22h20'],
+  package: ['M21 8l-9-5-9 5 9 5 9-5z', 'M3 8v8l9 5 9-5V8', 'M12 13v8'],
+  megaphone: ['M3 11v2a1 1 0 0 0 1 1h3l7 4V6L7 10H4a1 1 0 0 0-1 1z', 'M18 8a4 4 0 0 1 0 8'],
+  phone: ['M5 2h14a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z', 'M12 18h.01'],
+  users: ['M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2', 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'],
+  settings: ['M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', 'M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'],
+  moon: ['M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z'],
+  sun: ['M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4'],
+  file: ['M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z', 'M14 2v6h6'],
+  bell: ['M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9', 'M13.7 21a2 2 0 0 1-3.4 0'],
+  userX: ['M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2', 'M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M17 8l5 5M22 8l-5 5'],
+  branch: ['M6 3v12', 'M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', 'M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', 'M18 9a9 9 0 0 1-9 9'],
+  shield: ['M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'],
+  activity: ['M22 12h-4l-3 9L9 3l-3 9H2'],
+  play: ['M5 3l14 9-14 9z'],
+  split: ['M12 3v6', 'M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', 'M18 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', 'M12 9a6 6 0 0 1-6 6', 'M12 9a6 6 0 0 0 6 6'],
+  tag: ['M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0l-8-8V4h8.6l9.4 9.4z', 'M7.5 7.5h.01'],
+  image: ['M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', 'M8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z', 'M21 15l-5-5L5 21'],
+  handoff: ['M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2', 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M22 11l-3 3-3-3'],
+  mic: ['M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z', 'M19 10v1a7 7 0 0 1-14 0v-1', 'M12 19v3'],
+  cart: ['M9 22a1 1 0 1 0 0-2 1 1 0 0 0 0 2z', 'M20 22a1 1 0 1 0 0-2 1 1 0 0 0 0 2z', 'M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6'],
+};
+const railOff = { color: '#94A3B8', bg: 'transparent' };
+const railOn = { color: '#FFFFFF', bg: 'rgba(255,255,255,0.09)' };
+const TITULOS = { agente: 'Agente de IA', fluxos: 'Fluxos', lembretes: 'Lembretes' };
+const ABAS = {
+  regua: { label: 'Régua do agendamento', titulo: 'Régua do agendamento', desc: 'O que o agente envia antes de cada horário marcado.' },
+  pos: { label: 'Faltas e pós-atendimento', titulo: 'Faltas e pós-atendimento', desc: 'Recuperação de quem não veio e retorno de quem foi atendido.' },
+  funil: { label: 'Funil', titulo: 'Movimentação no funil', desc: 'Quando a IA move o card de etapa sozinha.' },
+  handoff: { label: 'Handoff humano', titulo: 'Passagem para a equipe', desc: 'Em que situações a IA para e chama uma pessoa.' },
+  status: { label: 'Status', titulo: 'Status dos envios', desc: 'Fila, entregas e erros das últimas 24 horas.' },
+};
+
+class Component extends DCLogic {
+  state = { tela: 'agente', escuro: false, aba: 'regua' };
+  componentDidMount() { this.aplicarTema(); }
+  componentDidUpdate() { this.aplicarTema(); }
+  aplicarTema() {
+    const el = document.documentElement;
+    if (this.state.escuro) el.setAttribute('data-theme', 'dark'); else el.removeAttribute('data-theme');
+  }
+  renderVals() {
+    const tela = this.state.tela;
+    const ir = (t) => () => this.setState({ tela: t });
+    const item = (label, paths, key) => {
+      const ativo = key && tela === key;
+      return Object.assign({ label, go: key ? ir(key) : () => {}, icon: svg(paths, 17, { stroke: ativo ? '#60A5FA' : '#64748B' }) }, ativo ? railOn : railOff);
+    };
+    const aba = this.state.aba;
+    const REGRAS = {
+      regua: [
+        { icon: svg(P.calendar, 16), t: 'Confirmação 24h antes', tag: 'Ativo', tagBg: 'rgba(34,160,107,0.12)', tagColor: '#15803D', d: 'Enviado às 10h do dia anterior. Se o cliente não responder, o horário entra na lista de risco de falta.', mensagem: 'Oi, {nome}! Confirmando seu horário amanhã às {hora} na Clínica Vida Plena. Responda SIM para confirmar ou REMARCAR se precisar mudar.', switchBg: '#22A06B', knobSide: 'right' },
+        { icon: svg(P.clock, 16), t: 'Aviso 1 hora antes', tag: 'Ativo', tagBg: 'rgba(34,160,107,0.12)', tagColor: '#15803D', d: 'Inclui o endereço e, em consultas online, o link do Google Meet.', mensagem: 'Seu horário é daqui a pouco, às {hora}. Endereço: {endereco}. Até já!', switchBg: '#22A06B', knobSide: 'right' },
+        { icon: svg(P.message, 16), t: 'Instruções de preparo', tag: 'Pausado', tagBg: 'var(--surface-2)', tagColor: 'var(--muted)', d: 'Enviado 3 dias antes quando o serviço exige preparo prévio.', mensagem: 'Para o seu {servico} render melhor, evite {restricao} nas 24h anteriores.', switchBg: 'var(--border)', knobSide: 'left' },
+      ],
+      pos: [
+        { icon: svg(P.userX, 16), t: 'Retorno de quem faltou', tag: 'Ativo', tagBg: 'rgba(34,160,107,0.12)', tagColor: '#15803D', d: 'Enviado no dia seguinte à falta, com opção de remarcar em um toque.', mensagem: 'Oi, {nome}! Sentimos sua falta ontem. Quer que eu procure um novo horário para você?', switchBg: '#22A06B', knobSide: 'right' },
+        { icon: svg(P.message, 16), t: 'Pesquisa de satisfação', tag: 'Ativo', tagBg: 'rgba(34,160,107,0.12)', tagColor: '#15803D', d: 'Duas horas depois do atendimento concluído.', mensagem: 'Como foi seu atendimento hoje? Responda de 1 a 5 — sua opinião ajuda muito.', switchBg: '#22A06B', knobSide: 'right' },
+      ],
+      funil: [
+        { icon: svg(P.target, 16), t: 'Move para Qualificando', tag: 'Ativo', tagBg: 'rgba(34,160,107,0.12)', tagColor: '#15803D', d: 'Quando a IA identifica serviço de interesse e faixa de preço aceita.', mensagem: 'Sem mensagem — apenas movimentação interna do card.', switchBg: '#22A06B', knobSide: 'right' },
+        { icon: svg(P.branch, 16), t: 'Move para Agendado', tag: 'Ativo', tagBg: 'rgba(34,160,107,0.12)', tagColor: '#15803D', d: 'Assim que o agendamento é confirmado no Google Calendar.', mensagem: 'Sem mensagem — apenas movimentação interna do card.', switchBg: '#22A06B', knobSide: 'right' },
+      ],
+      handoff: [
+        { icon: svg(P.handoff, 16), t: 'Cliente pede atendente', tag: 'Ativo', tagBg: 'rgba(34,160,107,0.12)', tagColor: '#15803D', d: 'A IA para na hora e a conversa entra na fila da equipe com todo o histórico.', mensagem: 'Já estou chamando alguém do time. Você é o {posicao}º da fila e responderemos em instantes.', switchBg: '#22A06B', knobSide: 'right' },
+        { icon: svg(P.shield, 16), t: 'IA sem resposta segura', tag: 'Ativo', tagBg: 'rgba(34,160,107,0.12)', tagColor: '#15803D', d: 'Quando a base de conhecimento não cobre a pergunta, a IA não inventa.', mensagem: 'Essa é uma dúvida que prefiro confirmar com a equipe. Já estou pedindo ajuda para você.', switchBg: '#22A06B', knobSide: 'right' },
+      ],
+      status: [
+        { icon: svg(P.activity, 16), t: 'Fila de envio', tag: '12 na fila', tagBg: 'rgba(37,99,235,0.12)', tagColor: '#1D4ED8', d: 'Mensagens aguardando a janela de envio permitida pela Meta.', mensagem: 'Próximo disparo em 8 minutos.', switchBg: '#22A06B', knobSide: 'right' },
+        { icon: svg(P.bell, 16), t: 'Entregas nas últimas 24h', tag: '318 enviadas', tagBg: 'rgba(34,160,107,0.12)', tagColor: '#15803D', d: '311 entregues, 5 pendentes e 2 falhas.', mensagem: 'Taxa de entrega: 97,8%.', switchBg: '#22A06B', knobSide: 'right' },
+      ],
+    };
+    const msg = (texto, saida) => ({
+      texto,
+      align: saida ? 'flex-end' : 'flex-start',
+      bg: saida ? 'var(--accent)' : 'var(--surface)',
+      color: saida ? '#fff' : 'var(--text)',
+      border: saida ? 'var(--accent)' : 'var(--border)',
+      radius: saida ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
+    });
+    return {
+      chaveLead: '{{lead.name}}',
+      tituloTela: TITULOS[tela],
+      ehAgente: tela === 'agente', ehFluxos: tela === 'fluxos', ehLembretes: tela === 'lembretes',
+      toggleTema: () => this.setState({ escuro: !this.state.escuro }),
+      temaIcon: svg(this.state.escuro ? P.sun : P.moon, 17),
+      grupos: [
+        { title: 'Painel', items: [item('Dashboard', P.dashboard), item('Relatórios', P.chart)] },
+        { title: 'Atendimento', items: [item('Conversas', P.message), item('Agendamentos', P.calendar), item('Funil de clientes', P.target), item('Clientes', P.bookUser)] },
+        { title: 'Automação', items: [item('Agente de IA', P.bot, 'agente'), item('Fluxos', P.workflow, 'fluxos'), item('Lembretes', P.clock, 'lembretes')] },
+        { title: 'Conteúdo', items: [item('Meu negócio', P.building), item('Catálogo', P.package), item('Disparos', P.megaphone)] },
+        { title: 'Configuração', items: [item('Conexões', P.phone), item('Colaboradores', P.users), item('Configurações', P.settings)] },
+      ],
+      agentes: [
+        { ini: 'SO', nome: 'Sofia', funcao: 'Atendimento e agendamento', marker: 'var(--accent)', bg: 'var(--accent-soft)', avBg: 'var(--accent)', avColor: '#fff', status: '#22A06B' },
+        { ini: 'DA', nome: 'Daniel', funcao: 'Pré-venda no Instagram', marker: 'transparent', bg: 'transparent', avBg: 'var(--surface-2)', avColor: 'var(--muted)', status: '#22A06B' },
+        { ini: 'HE', nome: 'Helena', funcao: 'Pós-venda e retorno', marker: 'transparent', bg: 'transparent', avBg: 'var(--surface-2)', avColor: 'var(--muted)', status: '#94A3B8' },
+      ],
+      tons: [
+        { label: 'Acolhedor', bg: 'var(--accent-soft)', border: 'var(--accent)', color: 'var(--accent-text)' },
+        { label: 'Direto', bg: 'var(--surface-2)', border: 'var(--border)', color: 'var(--muted)' },
+        { label: 'Formal', bg: 'var(--surface-2)', border: 'var(--border)', color: 'var(--muted)' },
+        { label: 'Descontraído', bg: 'var(--surface-2)', border: 'var(--border)', color: 'var(--muted)' },
+        { label: 'Técnico', bg: 'var(--surface-2)', border: 'var(--border)', color: 'var(--muted)' },
+      ],
+      arquivos: [
+        { icon: svg(P.file, 15), nome: 'tabela-precos.pdf', meta: '240 KB · atualizado há 2 dias', status: 'Aprendido', statusBg: 'rgba(34,160,107,0.12)', statusColor: '#15803D' },
+        { icon: svg(P.file, 15), nome: 'politica-cancelamento.docx', meta: '38 KB · atualizado há 1 semana', status: 'Aprendido', statusBg: 'rgba(34,160,107,0.12)', statusColor: '#15803D' },
+        { icon: svg(P.file, 15), nome: 'faq-clientes.txt', meta: '12 KB · atualizado hoje', status: 'Processando', statusBg: '#FEF3C7', statusColor: '#B45309' },
+        { icon: svg(P.file, 15), nome: 'protocolos-clinicos.pdf', meta: '1,2 MB · atualizado há 3 semanas', status: 'Aprendido', statusBg: 'rgba(34,160,107,0.12)', statusColor: '#15803D' },
+      ],
+      ferramentas: [
+        { icon: svg(P.calendar, 15), t: 'Agendar no calendário', d: 'Consulta horários livres e marca', switchBg: '#22A06B', knobSide: 'right' },
+        { icon: svg(P.cart, 15), t: 'Apresentar catálogo', d: 'Envia foto, preço e vídeo do item', switchBg: '#22A06B', knobSide: 'right' },
+        { icon: svg(P.handoff, 15), t: 'Transferir para humano', d: 'Coloca a conversa na fila da equipe', switchBg: '#22A06B', knobSide: 'right' },
+        { icon: svg(P.target, 15), t: 'Mover no funil', d: 'Atualiza a etapa do lead sozinho', switchBg: '#22A06B', knobSide: 'right' },
+        { icon: svg(P.mic, 15), t: 'Responder em áudio', d: 'Ouve e responde falando', switchBg: 'var(--border)', knobSide: 'left' },
+        { icon: svg(P.tag, 15), t: 'Aplicar etiquetas', d: 'Marca interesse e origem do contato', switchBg: '#22A06B', knobSide: 'right' },
+      ],
+      simulacao: [
+        msg('Oi, vocês fazem clareamento?', false),
+        msg('Fazemos sim! O clareamento a laser sai R$ 1.400 em 3 sessões. Quer ver como fica o resultado?', true),
+        msg('Quero. E tem horário essa semana?', false),
+        msg('Tenho quinta às 10h ou sexta às 15h30. Qual fica melhor para você?', true),
+      ],
+      blocos: [
+        { title: 'Envio', items: [
+          { t: 'Mensagem', icon: svg(P.message, 14), color: '#2563EB' },
+          { t: 'Mídia', icon: svg(P.image, 14), color: '#2563EB' },
+          { t: 'Template aprovado', icon: svg(P.file, 14), color: '#2563EB' },
+        ] },
+        { title: 'Inteligência', items: [
+          { t: 'Pergunta com IA', icon: svg(P.bot, 14), color: '#7C3AED' },
+          { t: 'Classificar intenção', icon: svg(P.branch, 14), color: '#7C3AED' },
+          { t: 'Extrair dados', icon: svg(P.tag, 14), color: '#7C3AED' },
+        ] },
+        { title: 'Fluxo', items: [
+          { t: 'Condição', icon: svg(P.split, 14), color: '#F59E0B' },
+          { t: 'Espera', icon: svg(P.clock, 14), color: '#F59E0B' },
+          { t: 'Teste A/B', icon: svg(P.activity, 14), color: '#F59E0B' },
+        ] },
+        { title: 'Ação', items: [
+          { t: 'Mover no funil', icon: svg(P.target, 14), color: '#22A06B' },
+          { t: 'Agendar', icon: svg(P.calendar, 14), color: '#22A06B' },
+          { t: 'Transferir para humano', icon: svg(P.handoff, 14), color: '#22A06B' },
+        ] },
+      ],
+      nos: [
+        { x: '30px', y: '60px', tipo: 'Gatilho', titulo: 'Primeira mensagem', desc: 'Qualquer canal, fora de conversa ativa', icon: svg(P.play, 13, { stroke: '#fff' }), headBg: '#22A06B', headColor: '#fff', border: 'rgba(34,160,107,0.4)' },
+        { x: '290px', y: '132px', tipo: 'IA', titulo: 'Perguntar interesse', desc: 'Descobre serviço, urgência e faixa de preço', icon: svg(P.bot, 13, { stroke: '#fff' }), headBg: '#7C3AED', headColor: '#fff', border: 'rgba(124,58,237,0.45)' },
+        { x: '290px', y: '264px', tipo: 'Envio', titulo: 'Enviar catálogo', desc: 'Foto e preço do serviço mencionado', icon: svg(P.image, 13, { stroke: '#fff' }), headBg: '#2563EB', headColor: '#fff', border: 'rgba(37,99,235,0.45)' },
+        { x: '590px', y: '200px', tipo: 'Condição', titulo: 'Tem interesse?', desc: 'Se sim segue para agenda, se não entra em nutrição', icon: svg(P.split, 13, { stroke: '#fff' }), headBg: '#F59E0B', headColor: '#fff', border: 'rgba(245,158,11,0.45)' },
+        { x: '860px', y: '132px', tipo: 'Ação', titulo: 'Agendar horário', desc: 'Google Calendar sem conflito + confirmação', icon: svg(P.calendar, 13, { stroke: '#fff' }), headBg: '#22A06B', headColor: '#fff', border: 'rgba(34,160,107,0.4)' },
+      ],
+      ferramentasBloco: [
+        { t: 'Catálogo', bg: 'var(--accent-soft)', color: 'var(--accent-text)', border: 'transparent' },
+        { t: 'Agenda', bg: 'var(--accent-soft)', color: 'var(--accent-text)', border: 'transparent' },
+        { t: 'Funil', bg: 'var(--surface-2)', color: 'var(--muted)', border: 'var(--border)' },
+        { t: 'Transferir', bg: 'var(--surface-2)', color: 'var(--muted)', border: 'var(--border)' },
+      ],
+      abas: Object.keys(ABAS).map((k) => ({
+        label: ABAS[k].label,
+        go: () => this.setState({ aba: k }),
+        bg: aba === k ? 'var(--surface)' : 'transparent',
+        color: aba === k ? 'var(--text)' : 'var(--muted)',
+        shadow: aba === k ? 'var(--shadow)' : 'none',
+      })),
+      tituloAba: ABAS[aba].titulo,
+      descricaoAba: ABAS[aba].desc,
+      regras: REGRAS[aba],
+      palavras: ['reclamação', 'urgente', 'cancelar', 'advogado', 'processo', 'falar com humano'],
+      envios: [
+        { hora: '15:00', nome: 'Ana Martins', tipo: 'Aviso 1 hora antes' },
+        { hora: '16:00', nome: 'Paula Riani', tipo: 'Aviso 1 hora antes' },
+        { hora: '10:00', nome: '9 clientes de amanhã', tipo: 'Confirmação 24h antes' },
+        { hora: '09:00', nome: 'Marcos Lima', tipo: 'Retorno de quem faltou' },
+      ],
+      falhas: [
+        { nome: 'Juliana Reis · 71 99120-4471', motivo: 'Número fora da janela de 24h e sem template aprovado para o caso.' },
+        { nome: 'Pedro Antunes · 71 98831-2204', motivo: 'Cliente pediu descadastro ("PARAR") — envios bloqueados por LGPD.' },
+      ],
+      impacto: [
+        { k: 'Faltas evitadas', v: '31', pct: '78%', color: '#15803D' },
+        { k: 'Retornos recuperados', v: '12', pct: '44%', color: 'var(--accent)' },
+        { k: 'Conversas devolvidas à equipe', v: '18', pct: '22%', color: '#B45309' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

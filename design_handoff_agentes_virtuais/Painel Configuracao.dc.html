@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F5F8FC; --surface:#FFFFFF; --surface-2:#F8FAFC; --border:#E4EAF3; --border-soft:#EEF2F8;
+  --text:#0F172A; --muted:#64748B; --faint:#94A3B8;
+  --accent:#2563EB; --accent-text:#2563EB; --accent-soft:#EFF6FF;
+  --rail:#0F172A; --rail-glow:rgba(37,99,235,0.24); --shadow:0 1px 2px rgba(15,23,42,0.05);
+}
+[data-theme="dark"]{
+  --bg:#080C16; --surface:#0E1525; --surface-2:#131C2E; --border:rgba(255,255,255,0.08); --border-soft:rgba(255,255,255,0.05);
+  --text:#F1F5F9; --muted:#94A3B8; --faint:#64748B;
+  --accent:#2563EB; --accent-text:#60A5FA; --accent-soft:rgba(37,99,235,0.15);
+  --rail:#05080F; --rail-glow:rgba(37,99,235,0.3); --shadow:0 1px 2px rgba(0,0,0,0.4);
+}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:-0.014em;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+a:hover{color:var(--accent-text)}
+@keyframes pulseDot{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+</helmet>
+<div style="display:flex;height:100vh;overflow:hidden;background:var(--bg)">
+
+  <aside style="width:236px;flex-shrink:0;box-sizing:border-box;background:var(--rail);background-image:radial-gradient(130% 55% at 0% 0%,var(--rail-glow),transparent 58%);display:flex;flex-direction:column;overflow:hidden">
+    <div style="height:64px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 17px;border-bottom:1px solid rgba(255,255,255,0.07)">
+      <span style="display:grid;place-items:center;width:30px;height:30px;flex-shrink:0;border-radius:9px;background:linear-gradient(135deg,#2563EB,#7C5CFF);box-shadow:0 8px 18px -6px rgba(37,99,235,0.7)">
+        <svg viewBox="0 0 64 64" width="16" height="16" fill="#fff"><path fill-rule="evenodd" clip-rule="evenodd" d="M32 6 L58 56 L6 56 Z M32 30 L45.5 56 L18.5 56 Z"></path></svg>
+      </span>
+      <div style="min-width:0;overflow:hidden">
+        <p style="margin:0;font-size:13.5px;font-weight:700;letter-spacing:-0.03em;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Agentes <span style="color:#60A5FA">Virtuais</span></p>
+        <p style="margin:0;font-size:11px;color:#64748B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Clínica Vida Plena</p>
+      </div>
+    </div>
+    <nav style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:14px">
+      <sc-for list="{{ grupos }}" as="g" hint-placeholder-count="5">
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <div style="padding:8px 11px 3px;font-size:10px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#475569">{{ g.title }}</div>
+          <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="4">
+            <button onClick="{{ it.go }}" style="display:flex;align-items:center;gap:12px;height:38px;padding:0 11px;border:none;border-radius:10px;background:{{ it.bg }};color:{{ it.color }};font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;text-align:left;width:100%" style-hover="background:rgba(255,255,255,0.06);color:#fff">
+              <span style="flex-shrink:0;display:grid;place-items:center;width:20px">{{ it.icon }}</span>
+              <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ it.label }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </sc-for>
+    </nav>
+    <div style="padding:12px;border-top:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;gap:11px">
+      <span style="width:30px;height:30px;flex-shrink:0;border-radius:50%;background:#2563EB;display:grid;place-items:center;font-size:12px;font-weight:600;color:#fff">R</span>
+      <div style="min-width:0;flex:1;overflow:hidden">
+        <p style="margin:0;font-size:12.5px;font-weight:500;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Roberto Souza</p>
+        <p style="margin:0;font-size:11px;color:#64748B">Proprietário</p>
+      </div>
+    </div>
+  </aside>
+
+  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0">
+    <header style="height:60px;flex-shrink:0;display:flex;align-items:center;gap:14px;padding:0 24px;background:var(--surface);border-bottom:1px solid var(--border)">
+      <h1 style="margin:0;font-size:15.5px;font-weight:600;letter-spacing:-0.025em">{{ tituloTela }}</h1>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+        <button onClick="{{ toggleTema }}" style="width:36px;height:36px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);color:var(--muted);display:grid;place-items:center;cursor:pointer">{{ temaIcon }}</button>
+        <span style="width:34px;height:34px;border-radius:50%;background:#2563EB;display:grid;place-items:center;font-size:13px;font-weight:600;color:#fff">R</span>
+      </div>
+    </header>
+
+    <sc-if value="{{ ehConexoes }}" hint-placeholder-val="{{ true }}">
+      <main style="flex:1;overflow-y:auto;padding:22px 24px 40px">
+        <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:18px">
+          <div>
+            <h2 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-0.035em">Conexões</h2>
+            <p style="margin:5px 0 0;font-size:13.5px;color:var(--muted)">Os canais onde o agente atende e os serviços que ele usa para agendar e registrar.</p>
+          </div>
+
+          <section style="border-radius:14px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);overflow:hidden">
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border-soft)">
+              <h3 style="margin:0;font-size:14px;font-weight:600">Canais de atendimento</h3>
+              <p style="margin:4px 0 0;font-size:12.5px;color:var(--muted)">Cada canal conectado entra na mesma caixa de entrada.</p>
+            </div>
+            <sc-for list="{{ canais }}" as="c" hint-placeholder-count="3">
+              <div style="padding:18px 20px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;gap:16px">
+                <span style="width:42px;height:42px;flex-shrink:0;border-radius:12px;background:{{ c.iconBg }};color:{{ c.iconColor }};display:grid;place-items:center">{{ c.icon }}</span>
+                <div style="min-width:0;flex:1">
+                  <div style="display:flex;align-items:center;gap:9px">
+                    <p style="margin:0;font-size:14.5px;font-weight:600">{{ c.nome }}</p>
+                    <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:7px;background:{{ c.statusBg }};color:{{ c.statusColor }}"><span style="width:6px;height:6px;border-radius:50%;background:{{ c.dot }}"></span>{{ c.status }}</span>
+                  </div>
+                  <p style="margin:5px 0 0;font-size:13px;color:var(--muted)">{{ c.detalhe }}</p>
+                  <div style="margin-top:9px;display:flex;gap:18px">
+                    <sc-for list="{{ c.metricas }}" as="m" hint-placeholder-count="2">
+                      <span style="font-size:12px;color:var(--faint)">{{ m.k }} <b style="color:var(--text);font-weight:600">{{ m.v }}</b></span>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="display:flex;gap:9px;flex-shrink:0">
+                  <button style="height:36px;padding:0 14px;border-radius:9px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">{{ c.acaoSec }}</button>
+                  <button style="height:36px;padding:0 14px;border-radius:9px;border:none;background:{{ c.acaoBg }};color:{{ c.acaoColor }};font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">{{ c.acao }}</button>
+                </div>
+              </div>
+            </sc-for>
+          </section>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+            <section style="border-radius:14px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);overflow:hidden">
+              <div style="padding:16px 20px;border-bottom:1px solid var(--border-soft)">
+                <h3 style="margin:0;font-size:14px;font-weight:600">Integrações</h3>
+              </div>
+              <sc-for list="{{ integracoes }}" as="i" hint-placeholder-count="5">
+                <div style="padding:14px 20px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;gap:13px">
+                  <span style="width:34px;height:34px;flex-shrink:0;border-radius:10px;background:var(--surface-2);border:1px solid var(--border);color:var(--muted);display:grid;place-items:center">{{ i.icon }}</span>
+                  <div style="min-width:0;flex:1">
+                    <p style="margin:0;font-size:13.5px;font-weight:600">{{ i.nome }}</p>
+                    <p style="margin:2px 0 0;font-size:11.5px;color:var(--muted)">{{ i.detalhe }}</p>
+                  </div>
+                  <span style="flex-shrink:0;font-size:11.5px;font-weight:600;padding:4px 9px;border-radius:7px;background:{{ i.statusBg }};color:{{ i.statusColor }}">{{ i.status }}</span>
+                </div>
+              </sc-for>
+            </section>
+
+            <section style="border-radius:14px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);padding:20px">
+              <h3 style="margin:0 0 6px;font-size:14px;font-weight:600">Chave de API e webhooks</h3>
+              <p style="margin:0 0 16px;font-size:12.5px;color:var(--muted)">Para integrar com o seu sistema ou com o Zapier.</p>
+              <label style="display:block;margin-bottom:7px;font-size:11.5px;font-weight:600;color:var(--muted)">Chave de produção</label>
+              <div style="height:40px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);display:flex;align-items:center;padding:0 13px;gap:10px;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--muted)">
+                <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">av_live_9f3c••••••••••••••••4d71</span>
+                <span style="font-size:11.5px;font-weight:600;color:var(--accent-text);font-family:Inter,sans-serif;cursor:pointer">Copiar</span>
+              </div>
+              <label style="display:block;margin:16px 0 7px;font-size:11.5px;font-weight:600;color:var(--muted)">URL de webhook</label>
+              <div style="height:40px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);display:flex;align-items:center;padding:0 13px;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">https://vidaplena.com.br/hooks/agentes</div>
+              <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:7px">
+                <sc-for list="{{ eventos }}" as="e" hint-placeholder-count="5">
+                  <span style="font-size:11.5px;font-weight:600;padding:5px 10px;border-radius:7px;background:var(--accent-soft);color:var(--accent-text)">{{ e }}</span>
+                </sc-for>
+              </div>
+            </section>
+          </div>
+        </div>
+      </main>
+    </sc-if>
+
+    <sc-if value="{{ ehEquipe }}" hint-placeholder-val="{{ false }}">
+      <main style="flex:1;overflow-y:auto;padding:22px 24px 40px">
+        <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:18px">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px">
+            <div>
+              <h2 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-0.035em">Colaboradores</h2>
+              <p style="margin:5px 0 0;font-size:13.5px;color:var(--muted)">6 de 10 lugares usados · cada cargo vê apenas os módulos que precisa.</p>
+            </div>
+            <button style="height:38px;padding:0 15px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0">Convidar pessoa</button>
+          </div>
+
+          <section style="border-radius:14px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);overflow:hidden">
+            <div style="display:grid;grid-template-columns:2fr 1.2fr 1fr 1.1fr 40px;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border-soft);background:var(--surface-2);font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--faint)">
+              <span>Pessoa</span><span>Cargo</span><span>Status</span><span>Último acesso</span><span></span>
+            </div>
+            <sc-for list="{{ equipe }}" as="p" hint-placeholder-count="6">
+              <div style="display:grid;grid-template-columns:2fr 1.2fr 1fr 1.1fr 40px;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border-soft);align-items:center" style-hover="background:var(--surface-2)">
+                <div style="display:flex;align-items:center;gap:12px;min-width:0">
+                  <span style="width:34px;height:34px;flex-shrink:0;border-radius:50%;background:{{ p.avBg }};color:{{ p.avColor }};display:grid;place-items:center;font-size:12px;font-weight:700">{{ p.ini }}</span>
+                  <div style="min-width:0">
+                    <p style="margin:0;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.nome }}</p>
+                    <p style="margin:2px 0 0;font-size:11.5px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.email }}</p>
+                  </div>
+                </div>
+                <span style="font-size:12.5px;font-weight:600;padding:4px 10px;border-radius:7px;background:{{ p.cargoBg }};color:{{ p.cargoColor }};width:fit-content">{{ p.cargo }}</span>
+                <span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)"><span style="width:7px;height:7px;border-radius:50%;background:{{ p.dot }}"></span>{{ p.status }}</span>
+                <span style="font-size:12.5px;color:var(--faint)">{{ p.acesso }}</span>
+                <span style="color:var(--faint);display:grid;place-items:center;cursor:pointer">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="12" cy="19" r="1.6"></circle></svg>
+                </span>
+              </div>
+            </sc-for>
+          </section>
+
+          <section style="border-radius:14px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);overflow:hidden">
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border-soft)">
+              <h3 style="margin:0;font-size:14px;font-weight:600">O que cada cargo pode fazer</h3>
+            </div>
+            <div style="overflow-x:auto">
+              <div style="min-width:640px">
+                <div style="display:grid;grid-template-columns:1.6fr repeat(4,1fr);gap:12px;padding:12px 20px;border-bottom:1px solid var(--border-soft);background:var(--surface-2);font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--faint)">
+                  <span>Permissão</span><span>Proprietário</span><span>Gestor</span><span>Atendente</span><span>Visualizador</span>
+                </div>
+                <sc-for list="{{ permissoes }}" as="r" hint-placeholder-count="7">
+                  <div style="display:grid;grid-template-columns:1.6fr repeat(4,1fr);gap:12px;padding:12px 20px;border-bottom:1px solid var(--border-soft);align-items:center">
+                    <span style="font-size:13px;font-weight:500">{{ r.label }}</span>
+                    <sc-for list="{{ r.celulas }}" as="c" hint-placeholder-count="4">
+                      <span style="display:grid;place-items:start">{{ c }}</span>
+                    </sc-for>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </sc-if>
+
+    <sc-if value="{{ ehAssinatura }}" hint-placeholder-val="{{ false }}">
+      <main style="flex:1;overflow-y:auto;padding:22px 24px 40px">
+        <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:18px">
+          <div>
+            <h2 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-0.035em">Assinatura</h2>
+            <p style="margin:5px 0 0;font-size:13.5px;color:var(--muted)">Seu plano, o consumo do mês e as faturas anteriores.</p>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;align-items:start">
+            <section style="border-radius:14px;border:1px solid var(--accent);background:var(--accent-soft);padding:22px">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px">
+                <div>
+                  <span style="font-size:11.5px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-text)">Plano atual</span>
+                  <h3 style="margin:8px 0 0;font-size:24px;font-weight:700;letter-spacing:-0.035em">Profissional</h3>
+                  <p style="margin:6px 0 0;font-size:13.5px;color:var(--muted)">API oficial do WhatsApp · cobrança mensal · renova em 4 de setembro</p>
+                </div>
+                <div style="text-align:right;flex-shrink:0">
+                  <p style="margin:0;font-size:28px;font-weight:700;letter-spacing:-0.04em">R$ 399</p>
+                  <p style="margin:3px 0 0;font-size:12.5px;color:var(--muted)">por mês</p>
+                </div>
+              </div>
+              <div style="margin-top:20px;display:flex;flex-direction:column;gap:16px">
+                <sc-for list="{{ consumo }}" as="c" hint-placeholder-count="4">
+                  <div>
+                    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:7px">
+                      <span style="font-size:13px;color:var(--muted)">{{ c.k }}</span>
+                      <span style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums">{{ c.v }}</span>
+                    </div>
+                    <div style="height:7px;border-radius:999px;background:var(--surface);overflow:hidden"><div style="height:100%;width:{{ c.pct }};border-radius:999px;background:{{ c.color }}"></div></div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="margin-top:22px;display:flex;gap:10px">
+                <button style="height:40px;padding:0 16px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Mudar de plano</button>
+                <button style="height:40px;padding:0 16px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Comprar créditos extras</button>
+              </div>
+            </section>
+
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <section style="border-radius:14px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);padding:20px">
+                <h3 style="margin:0 0 14px;font-size:14px;font-weight:600">Forma de pagamento</h3>
+                <div style="display:flex;align-items:center;gap:13px;padding:13px;border-radius:11px;border:1px solid var(--border);background:var(--surface-2)">
+                  <span style="width:38px;height:38px;flex-shrink:0;border-radius:9px;background:var(--accent-soft);color:var(--accent-text);display:grid;place-items:center">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path></svg>
+                  </span>
+                  <div style="flex:1;min-width:0">
+                    <p style="margin:0;font-size:13.5px;font-weight:600">Mastercard •••• 4417</p>
+                    <p style="margin:2px 0 0;font-size:11.5px;color:var(--muted)">Vence em 09/2029</p>
+                  </div>
+                  <span style="font-size:12px;font-weight:600;color:var(--accent-text);cursor:pointer;flex-shrink:0">Trocar</span>
+                </div>
+                <div style="margin-top:14px;font-size:12.5px;color:var(--muted);line-height:1.6">Nota fiscal emitida para <b style="color:var(--text)">Clínica Vida Plena LTDA</b> · CNPJ 42.118.907/0001-33</div>
+              </section>
+
+              <section style="border-radius:14px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);overflow:hidden">
+                <div style="padding:16px 20px;border-bottom:1px solid var(--border-soft)">
+                  <h3 style="margin:0;font-size:14px;font-weight:600">Faturas</h3>
+                </div>
+                <sc-for list="{{ faturas }}" as="f" hint-placeholder-count="5">
+                  <div style="padding:13px 20px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;gap:12px">
+                    <div style="min-width:0;flex:1">
+                      <p style="margin:0;font-size:13px;font-weight:600">{{ f.mes }}</p>
+                      <p style="margin:2px 0 0;font-size:11.5px;color:var(--muted)">{{ f.detalhe }}</p>
+                    </div>
+                    <span style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;flex-shrink:0">{{ f.valor }}</span>
+                    <span style="flex-shrink:0;font-size:11.5px;font-weight:600;padding:4px 9px;border-radius:7px;background:{{ f.statusBg }};color:{{ f.statusColor }}">{{ f.status }}</span>
+                  </div>
+                </sc-for>
+              </section>
+            </div>
+          </div>
+        </div>
+      </main>
+    </sc-if>
+
+    <sc-if value="{{ ehAjustes }}" hint-placeholder-val="{{ false }}">
+      <main style="flex:1;overflow-y:auto;padding:22px 24px 40px">
+        <div style="max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:18px">
+          <div>
+            <h2 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-0.035em">Configurações</h2>
+            <p style="margin:5px 0 0;font-size:13.5px;color:var(--muted)">Preferências da conta, notificações e privacidade de dados.</p>
+          </div>
+
+          <sc-for list="{{ secoesAjustes }}" as="s" hint-placeholder-count="3">
+            <section style="border-radius:14px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);overflow:hidden">
+              <div style="padding:16px 20px;border-bottom:1px solid var(--border-soft)">
+                <h3 style="margin:0;font-size:14px;font-weight:600">{{ s.titulo }}</h3>
+                <p style="margin:4px 0 0;font-size:12.5px;color:var(--muted)">{{ s.desc }}</p>
+              </div>
+              <sc-for list="{{ s.linhas }}" as="l" hint-placeholder-count="3">
+                <div style="padding:16px 20px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;gap:16px">
+                  <div style="min-width:0;flex:1">
+                    <p style="margin:0;font-size:13.5px;font-weight:600">{{ l.t }}</p>
+                    <p style="margin:4px 0 0;font-size:12.5px;line-height:1.6;color:var(--muted)">{{ l.d }}</p>
+                  </div>
+                  {{ l.controle }}
+                </div>
+              </sc-for>
+            </section>
+          </sc-for>
+
+          <section style="border-radius:14px;border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.05);padding:20px;display:flex;align-items:center;gap:16px">
+            <div style="flex:1">
+              <h3 style="margin:0;font-size:14px;font-weight:600;color:#B91C1C">Encerrar conta</h3>
+              <p style="margin:5px 0 0;font-size:12.5px;line-height:1.6;color:var(--muted)">Cancela a assinatura, desconecta os canais e apaga os dados após 30 dias. Exporte tudo antes se precisar do histórico.</p>
+            </div>
+            <button style="flex-shrink:0;height:38px;padding:0 15px;border-radius:10px;border:1px solid #B91C1C;background:transparent;color:#B91C1C;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Encerrar conta</button>
+          </section>
+        </div>
+      </main>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900}}">
+const h = React.createElement;
+function svg(paths, size, opts) {
+  return h('svg', Object.assign({ width: size || 17, height: size || 17, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }, opts || {}),
+    paths.map((d, i) => h('path', { key: i, d })));
+}
+const P = {
+  dashboard: ['M3 3h8v8H3z', 'M13 3h8v5h-8z', 'M13 12h8v9h-8z', 'M3 15h8v6H3z'],
+  chart: ['M3 3v18h18', 'M7 16v-5', 'M12 16V8', 'M17 16v-3'],
+  message: ['M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'],
+  calendar: ['M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', 'M16 2v4', 'M8 2v4', 'M3 10h18'],
+  target: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z', 'M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z'],
+  bookUser: ['M4 19.5A2.5 2.5 0 0 1 6.5 17H20', 'M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z'],
+  bot: ['M12 8V4H8', 'M4 8h16v12H4z', 'M2 14h2', 'M20 14h2', 'M15 13v2', 'M9 13v2'],
+  workflow: ['M3 3h6v6H3z', 'M15 15h6v6h-6z', 'M9 6h4a2 2 0 0 1 2 2v7'],
+  clock: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M12 6v6l4 2'],
+  building: ['M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18z', 'M10 6h4', 'M10 10h4', 'M10 14h4', 'M2 22h20'],
+  package: ['M21 8l-9-5-9 5 9 5 9-5z', 'M3 8v8l9 5 9-5V8', 'M12 13v8'],
+  file: ['M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z', 'M14 2v6h6'],
+  megaphone: ['M3 11v2a1 1 0 0 0 1 1h3l7 4V6L7 10H4a1 1 0 0 0-1 1z', 'M18 8a4 4 0 0 1 0 8'],
+  phone: ['M5 2h14a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z', 'M12 18h.01'],
+  users: ['M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2', 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'],
+  card: ['M2 7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z', 'M2 10h20'],
+  settings: ['M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', 'M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'],
+  instagram: ['M2 7a5 5 0 0 1 5-5h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5z', 'M16 11.4A4 4 0 1 1 12.6 8a4 4 0 0 1 3.4 3.4z'],
+  globe: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M2 12h20', 'M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z'],
+  moon: ['M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z'],
+  sun: ['M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4'],
+  check: ['M20 6L9 17l-5-5'],
+  x: ['M18 6L6 18M6 6l12 12'],
+  eye: ['M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z', 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z'],
+  video: ['M23 7l-7 5 7 5z', 'M1 7a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2z'],
+  plug: ['M9 2v6', 'M15 2v6', 'M6 8h12v3a6 6 0 0 1-12 0z', 'M12 17v5'],
+  zap: ['M13 2L3 14h9l-1 8 10-12h-9z'],
+};
+const railOff = { color: '#94A3B8', bg: 'transparent' };
+const railOn = { color: '#FFFFFF', bg: 'rgba(255,255,255,0.09)' };
+const TITULOS = { conexoes: 'Conexões', equipe: 'Colaboradores', assinatura: 'Assinatura', ajustes: 'Configurações' };
+const sim = h('span', { style: { color: '#15803D', display: 'grid', placeItems: 'center' } }, svg(['M20 6L9 17l-5-5'], 16, { strokeWidth: 2.6 }));
+const nao = h('span', { style: { color: '#CBD5E1', display: 'grid', placeItems: 'center' } }, svg(['M18 6L6 18M6 6l12 12'], 15, { strokeWidth: 2.2 }));
+
+class Component extends DCLogic {
+  state = { tela: 'conexoes', escuro: false };
+  componentDidMount() { this.aplicarTema(); }
+  componentDidUpdate() { this.aplicarTema(); }
+  aplicarTema() {
+    const el = document.documentElement;
+    if (this.state.escuro) el.setAttribute('data-theme', 'dark'); else el.removeAttribute('data-theme');
+  }
+  renderVals() {
+    const tela = this.state.tela;
+    const ir = (t) => () => this.setState({ tela: t });
+    const item = (label, paths, key) => {
+      const ativo = key && tela === key;
+      return Object.assign({ label, go: key ? ir(key) : () => {}, icon: svg(paths, 17, { stroke: ativo ? '#60A5FA' : '#64748B' }) }, ativo ? railOn : railOff);
+    };
+    const toggle = (ligado) => h('span', {
+      style: { width: 36, height: 20, borderRadius: 999, background: ligado ? '#22A06B' : 'var(--border)', position: 'relative', flexShrink: 0 },
+    }, h('span', { style: { position: 'absolute', top: 2, [ligado ? 'right' : 'left']: 2, width: 16, height: 16, borderRadius: '50%', background: '#fff' } }));
+    const botao = (texto) => h('button', {
+      style: { flexShrink: 0, height: 34, padding: '0 13px', borderRadius: 9, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
+    }, texto);
+    const seletor = (valor) => h('span', {
+      style: { flexShrink: 0, height: 34, padding: '0 13px', borderRadius: 9, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 12.5, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 8 },
+    }, valor, svg(['M6 9l6 6 6-6'], 14, { stroke: 'var(--faint)' }));
+    return {
+      tituloTela: TITULOS[tela],
+      ehConexoes: tela === 'conexoes', ehEquipe: tela === 'equipe',
+      ehAssinatura: tela === 'assinatura', ehAjustes: tela === 'ajustes',
+      toggleTema: () => this.setState({ escuro: !this.state.escuro }),
+      temaIcon: svg(this.state.escuro ? P.sun : P.moon, 17),
+      grupos: [
+        { title: 'Painel', items: [item('Dashboard', P.dashboard), item('Relatórios', P.chart)] },
+        { title: 'Atendimento', items: [item('Conversas', P.message), item('Agendamentos', P.calendar), item('Funil de clientes', P.target), item('Clientes', P.bookUser)] },
+        { title: 'Automação', items: [item('Agente de IA', P.bot), item('Fluxos', P.workflow), item('Lembretes', P.clock)] },
+        { title: 'Conteúdo', items: [item('Meu negócio', P.building), item('Catálogo', P.package), item('Templates', P.file), item('Disparos', P.megaphone)] },
+        { title: 'Configuração', items: [item('Conexões', P.phone, 'conexoes'), item('Colaboradores', P.users, 'equipe'), item('Assinatura', P.card, 'assinatura'), item('Configurações', P.settings, 'ajustes')] },
+      ],
+      canais: [
+        { nome: 'WhatsApp oficial', detalhe: '+55 71 99204-2802 · número verificado na Meta, qualidade alta', icon: svg(P.phone, 20), iconBg: 'rgba(34,160,107,0.12)', iconColor: '#15803D', status: 'Conectado', statusBg: 'rgba(34,160,107,0.12)', statusColor: '#15803D', dot: '#22A06B', acao: 'Gerenciar', acaoBg: 'var(--accent)', acaoColor: '#fff', acaoSec: 'Ver logs', metricas: [{ k: 'Conversas 30d', v: '842' }, { k: 'Entrega', v: '97,8%' }, { k: 'Templates ativos', v: '9' }] },
+        { nome: 'Instagram Direct', detalhe: '@clinicavidaplena · conta profissional vinculada ao Facebook', icon: svg(P.instagram, 20), iconBg: 'rgba(219,39,119,0.1)', iconColor: '#DB2777', status: 'Conectado', statusBg: 'rgba(34,160,107,0.12)', statusColor: '#15803D', dot: '#22A06B', acao: 'Gerenciar', acaoBg: 'var(--accent)', acaoColor: '#fff', acaoSec: 'Ver logs', metricas: [{ k: 'Conversas 30d', v: '146' }, { k: 'Resposta média', v: '6s' }] },
+        { nome: 'Chat do site', detalhe: 'vidaplena.com.br · widget instalado com uma linha de código', icon: svg(P.globe, 20), iconBg: 'var(--accent-soft)', iconColor: 'var(--accent-text)', status: 'Conectado', statusBg: 'rgba(34,160,107,0.12)', statusColor: '#15803D', dot: '#22A06B', acao: 'Personalizar', acaoBg: 'var(--accent)', acaoColor: '#fff', acaoSec: 'Copiar código', metricas: [{ k: 'Conversas 30d', v: '54' }, { k: 'Páginas ativas', v: '4' }] },
+      ],
+      integracoes: [
+        { nome: 'Google Calendar', detalhe: 'agenda@vidaplena.com.br', icon: svg(P.calendar, 16), status: 'Renovar em 3 dias', statusBg: '#FEF3C7', statusColor: '#B45309' },
+        { nome: 'Google Meet', detalhe: 'Link gerado a cada consulta online', icon: svg(P.video, 16), status: 'Ativo', statusBg: 'rgba(34,160,107,0.12)', statusColor: '#15803D' },
+        { nome: 'RD Station', detalhe: 'Sincroniza leads nos dois sentidos', icon: svg(P.zap, 16), status: 'Ativo', statusBg: 'rgba(34,160,107,0.12)', statusColor: '#15803D' },
+        { nome: 'Pipedrive', detalhe: 'Não conectado', icon: svg(P.target, 16), status: 'Conectar', statusBg: 'var(--surface-2)', statusColor: 'var(--accent-text)' },
+        { nome: 'Zapier', detalhe: '3 automações publicadas', icon: svg(P.plug, 16), status: 'Ativo', statusBg: 'rgba(34,160,107,0.12)', statusColor: '#15803D' },
+      ],
+      eventos: ['conversa.criada', 'conversa.transferida', 'agendamento.criado', 'agendamento.cancelado', 'lead.mudou_etapa'],
+      equipe: [
+        { ini: 'RS', nome: 'Roberto Souza', email: 'roberto@vidaplena.com.br', cargo: 'Proprietário', cargoBg: 'var(--accent-soft)', cargoColor: 'var(--accent-text)', status: 'Ativo', dot: '#22A06B', acesso: 'agora', avBg: '#2563EB', avColor: '#fff' },
+        { ini: 'CM', nome: 'Camila Moreira', email: 'camila@vidaplena.com.br', cargo: 'Gestor', cargoBg: 'rgba(168,85,247,0.12)', cargoColor: '#7E22CE', status: 'Ativo', dot: '#22A06B', acesso: 'há 20 min', avBg: 'var(--surface-2)', avColor: 'var(--muted)' },
+        { ini: 'DL', nome: 'Diego Lopes', email: 'diego@vidaplena.com.br', cargo: 'Atendente', cargoBg: 'var(--surface-2)', cargoColor: 'var(--muted)', status: 'Ativo', dot: '#22A06B', acesso: 'há 5 min', avBg: 'var(--surface-2)', avColor: 'var(--muted)' },
+        { ini: 'JN', nome: 'Juliana Nunes', email: 'juliana@vidaplena.com.br', cargo: 'Atendente', cargoBg: 'var(--surface-2)', cargoColor: 'var(--muted)', status: 'Ativo', dot: '#22A06B', acesso: 'há 2 h', avBg: 'var(--surface-2)', avColor: 'var(--muted)' },
+        { ini: 'FT', nome: 'Fernanda Teles', email: 'fernanda@vidaplena.com.br', cargo: 'Visualizador', cargoBg: 'var(--surface-2)', cargoColor: 'var(--muted)', status: 'Ativo', dot: '#22A06B', acesso: 'ontem', avBg: 'var(--surface-2)', avColor: 'var(--muted)' },
+        { ini: 'MP', nome: 'Marcos Pinho', email: 'marcos@vidaplena.com.br', cargo: 'Atendente', cargoBg: 'var(--surface-2)', cargoColor: 'var(--muted)', status: 'Convite pendente', dot: '#F59E0B', acesso: '—', avBg: 'var(--surface-2)', avColor: 'var(--muted)' },
+      ],
+      permissoes: [
+        { label: 'Responder conversas', celulas: [sim, sim, sim, nao] },
+        { label: 'Ver o funil e mover leads', celulas: [sim, sim, sim, nao] },
+        { label: 'Criar e editar agendamentos', celulas: [sim, sim, sim, nao] },
+        { label: 'Treinar o agente de IA', celulas: [sim, sim, nao, nao] },
+        { label: 'Enviar disparo em massa', celulas: [sim, sim, nao, nao] },
+        { label: 'Gerenciar colaboradores', celulas: [sim, nao, nao, nao] },
+        { label: 'Ver assinatura e faturas', celulas: [sim, nao, nao, nao] },
+      ],
+      consumo: [
+        { k: 'Créditos de IA', v: '7,8M / 12,6M tokens', pct: '62%', color: 'var(--accent)' },
+        { k: 'Conversas do mês', v: '1.042 / 6.000', pct: '17%', color: 'var(--accent)' },
+        { k: 'Agentes de IA', v: '3 / 5', pct: '60%', color: 'var(--accent)' },
+        { k: 'Colaboradores', v: '6 / 10', pct: '60%', color: 'var(--accent)' },
+      ],
+      faturas: [
+        { mes: 'Agosto 2026', detalhe: 'Profissional · mensal', valor: 'R$ 399,00', status: 'Em aberto', statusBg: 'var(--accent-soft)', statusColor: 'var(--accent-text)' },
+        { mes: 'Julho 2026', detalhe: 'Profissional + créditos extras', valor: 'R$ 478,00', status: 'Paga', statusBg: 'rgba(34,160,107,0.12)', statusColor: '#15803D' },
+        { mes: 'Junho 2026', detalhe: 'Profissional · mensal', valor: 'R$ 399,00', status: 'Paga', statusBg: 'rgba(34,160,107,0.12)', statusColor: '#15803D' },
+        { mes: 'Maio 2026', detalhe: 'Profissional · mensal', valor: 'R$ 399,00', status: 'Paga', statusBg: 'rgba(34,160,107,0.12)', statusColor: '#15803D' },
+        { mes: 'Abril 2026', detalhe: 'Essencial · mensal', valor: 'R$ 189,00', status: 'Paga', statusBg: 'rgba(34,160,107,0.12)', statusColor: '#15803D' },
+      ],
+      secoesAjustes: [
+        { titulo: 'Preferências', desc: 'Como o painel se comporta para você.', linhas: [
+          { t: 'Tema', d: 'Claro, escuro ou seguindo o sistema operacional.', controle: seletor('Claro') },
+          { t: 'Idioma', d: 'Idioma do painel. O agente responde no idioma do cliente.', controle: seletor('Português (BR)') },
+          { t: 'Fuso horário', d: 'Usado na agenda e nos lembretes automáticos.', controle: seletor('Bahia (GMT−3)') },
+        ] },
+        { titulo: 'Notificações', desc: 'Quando avisamos você e sua equipe.', linhas: [
+          { t: 'Conversa aguardando atendimento', d: 'Notificação no painel e por e-mail quando alguém pede um humano.', controle: toggle(true) },
+          { t: 'Canal desconectado', d: 'Aviso imediato se o WhatsApp, Instagram ou site cair.', controle: toggle(true) },
+          { t: 'Resumo diário por e-mail', d: 'Conversas, agendamentos e vendas do dia às 19h.', controle: toggle(true) },
+          { t: 'Créditos de IA acabando', d: 'Aviso quando o consumo passar de 85% do plano.', controle: toggle(false) },
+        ] },
+        { titulo: 'Privacidade e LGPD', desc: 'Consentimento, retenção e exportação dos dados dos clientes.', linhas: [
+          { t: 'Registrar consentimento na primeira conversa', d: 'O agente informa que a conversa é registrada e pede aceite.', controle: toggle(true) },
+          { t: 'Descadastro automático com "PARAR"', d: 'Remove o contato de campanhas na hora, sem passar por ninguém.', controle: toggle(true) },
+          { t: 'Retenção de conversas', d: 'Depois desse prazo o histórico é apagado definitivamente.', controle: seletor('24 meses') },
+          { t: 'Exportar dados dos clientes', d: 'Gera um arquivo CSV com contatos, conversas e agendamentos.', controle: botao('Exportar') },
+        ] },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>
