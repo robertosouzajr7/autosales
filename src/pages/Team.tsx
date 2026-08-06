@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -425,7 +426,18 @@ export default function Team() {
               </p>
             </div>
 
-            {queues.length > 0 && (
+            {queues.length === 0 ? (
+              // Sem fila cadastrada esta seção sumia inteira, e não havia nada
+              // na tela dizendo que filas existem nem por onde criar uma.
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-500">Filas de atendimento</Label>
+                <p className="rounded-xl bg-slate-50 px-3 py-2.5 text-[11.5px] leading-relaxed text-slate-500">
+                  Nenhuma fila cadastrada ainda. Crie as filas em{" "}
+                  <Link to="/filas" className="font-semibold text-[#2563EB] hover:underline">Filas de atendimento</Link>{" "}
+                  para poder dizer quais este colaborador atende.
+                </p>
+              </div>
+            ) : (
               <div className="space-y-2">
                 <Label className="text-xs font-bold text-slate-500">Filas de atendimento</Label>
                 <div className="grid sm:grid-cols-2 gap-1.5">
@@ -441,7 +453,8 @@ export default function Team() {
                   ))}
                 </div>
                 <p className="text-[11px] text-slate-400">
-                  O atendente vê no inbox as conversas das filas em que está cadastrado.
+                  O atendente vê no inbox as conversas das filas em que está cadastrado. Pode
+                  atender mais de uma.
                 </p>
               </div>
             )}

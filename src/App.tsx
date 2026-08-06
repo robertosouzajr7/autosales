@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Team from "./pages/Team";
+import Filas from "./pages/Filas";
 import LandingPage from "@/pages/LandingPage";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
@@ -82,6 +83,7 @@ function App() {
         <Route path="/docs" element={<Docs />} />
         <Route path="/connections" element={<Connections />} />
         <Route path="/equipe" element={<Team />} />
+        <Route path="/filas" element={<Filas />} />
         <Route path="/settings" element={<Settings />} />
         {/* Ajuda: base de conhecimento (texto) e Academy (vídeos). */}
         <Route path="/ajuda" element={<Ajuda />} />
