@@ -230,16 +230,40 @@ export const submitChat = async (req, res) => {
     let lead;
     if (leadId) {
       lead = await prisma.lead.findUnique({ where: { id: leadId } });
+      // Confere que o contato é deste negócio: o leadId vem da sessão do
+      // navegador, que é do visitante e não do servidor.
+      if (lead && lead.tenantId !== resolvedTenantId) lead = null;
     }
 
+    const { normalizePhone, normalizeEmail } = await import("../services/ContactIdentity.js");
+    const telefone = normalizePhone(phone);
+    const eMail = normalizeEmail(email);
+
     if (!lead) {
-      // O visitorId identifica a sessão do site — não é telefone. O telefone só
-      // entra se o visitante realmente informou um, e é validado antes.
+      // Conversa nova só começa identificada. Sem isso o atendimento nasce
+      // como "Visitante do site" e ninguém consegue retomar o contato depois
+      // que a aba fecha — que é justamente o valor do chat público.
+      if (!String(name || "").trim() || !eMail || !telefone) {
+        return res.status(400).json({
+          error: "Informe nome, e-mail e telefone para começar a conversa.",
+          identificacaoNecessaria: true,
+        });
+      }
+      // O visitorId identifica a sessão do site — não é telefone.
       const identity = buildIdentity("SITE", visitorId, { name, email });
-      const { normalizePhone } = await import("../services/ContactIdentity.js");
-      identity.phone = normalizePhone(phone);
+      identity.phone = telefone;
       const r = await findOrCreateLead(resolvedTenantId, identity, { source: "WEBCHAT" });
       lead = r.lead;
+    } else {
+      // Contato que já existia (inclusive de antes desta tela pedir os dados):
+      // completa o que estiver faltando, sem sobrescrever o que já se sabe.
+      const faltando = {};
+      if (!lead.email && eMail) faltando.email = eMail;
+      if (!lead.phone && telefone) faltando.phone = telefone;
+      if (name?.trim() && (!lead.name || lead.name === "Visitante do site")) faltando.name = name.trim();
+      if (Object.keys(faltando).length) {
+        lead = await prisma.lead.update({ where: { id: lead.id }, data: faltando });
+      }
     }
 
     // 2. Find or create conversation

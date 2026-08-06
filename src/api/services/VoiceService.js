@@ -59,6 +59,65 @@ export async function resolveVoiceConfig() {
   return { elevenKey, enabledVoices };
 }
 
+/**
+ * Traduz a recusa da ElevenLabs para uma frase que diga o que fazer. O
+ * genérico "verifique a chave" mandava mexer na chave mesmo quando o
+ * problema era outro — permissão faltando, crédito acabado, rede bloqueada.
+ */
+export function motivoDaEleven(e) {
+  const status = e.response?.status;
+  const detail = e.response?.data?.detail;
+  // `detail` vem ora como objeto {status, message}, ora como string, ora como
+  // lista de erros de validação.
+  const doServidor =
+    (typeof detail === "string" && detail) ||
+    detail?.message ||
+    (Array.isArray(detail) ? detail.map((d) => d?.msg).filter(Boolean).join("; ") : "") ||
+    e.response?.data?.message ||
+    "";
+  const codigo = detail?.status || "";
+
+  if (status === 401) {
+    return `A ElevenLabs recusou a chave (401${codigo ? `, ${codigo}` : ""}). ${doServidor || "Confira a chave configurada."}`;
+  }
+  if (status === 403) {
+    return `A chave não tem permissão para ler as vozes (403${codigo ? `, ${codigo}` : ""}). ${doServidor || "Habilite a permissão voices_read na chave."}`;
+  }
+  if (status === 429) {
+    return `A ElevenLabs limitou as requisições (429). ${doServidor || "Tente de novo em alguns instantes."}`;
+  }
+  if (status) return `A ElevenLabs respondeu ${status}. ${doServidor || e.message}`;
+  // Sem resposta: nem chegou lá (DNS, proxy, firewall, timeout).
+  return `Não foi possível falar com a ElevenLabs: ${e.message}. Verifique a saída de rede do servidor.`;
+}
+
+/**
+ * Catálogo de vozes da conta. O /v2/voices é o endpoint atual e pagina; o
+ * /v1 continua de pé e é o plano B para chaves/contas que ainda respondem
+ * só por ele.
+ */
+async function listarVozesEleven(chave) {
+  const headers = { "xi-api-key": chave };
+  try {
+    const todas = [];
+    let pagina = null;
+    do {
+      const { data } = await axios.get("https://api.elevenlabs.io/v2/voices", {
+        headers,
+        params: { page_size: 100, ...(pagina ? { next_page_token: pagina } : {}) },
+        timeout: 30000,
+      });
+      todas.push(...(data?.voices || []));
+      pagina = data?.has_more ? data?.next_page_token : null;
+    } while (pagina && todas.length < 500);
+    return todas;
+  } catch (e) {
+    if (![400, 404, 405].includes(e.response?.status)) throw e;
+    const { data } = await axios.get("https://api.elevenlabs.io/v1/voices", { headers, timeout: 30000 });
+    return data?.voices || [];
+  }
+}
+
 /** Vozes nativas do Gemini (catálogo fixo). */
 export const GEMINI_VOICES = [
   { id: "Kore", name: "Kore (feminina, neutra)" },
@@ -184,11 +243,7 @@ class VoiceService {
     // Vozes premium (ElevenLabs) — exigem plano com voz premium.
     if (!elevenKey) return { voices, elevenConfigured: false };
     try {
-      const { data } = await axios.get("https://api.elevenlabs.io/v1/voices", {
-        headers: { "xi-api-key": elevenKey },
-        timeout: 30000,
-      });
-      for (const v of data?.voices || []) {
+      for (const v of await listarVozesEleven(elevenKey)) {
         voices.push({
           id: v.voice_id,
           name: v.name,
@@ -201,8 +256,9 @@ class VoiceService {
       }
       return { voices, elevenConfigured: true };
     } catch (e) {
-      console.error("[Voice] Erro ao listar vozes da ElevenLabs:", e.response?.data?.detail?.message || e.message);
-      return { voices, elevenConfigured: true, error: "Não foi possível listar as vozes premium (verifique a chave)." };
+      const motivo = motivoDaEleven(e);
+      console.error("[Voice] Erro ao listar vozes da ElevenLabs:", motivo);
+      return { voices, elevenConfigured: true, error: motivo };
     }
   }
 

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { adminApi } from "@/lib/adminApi";
 import { Textarea } from "@/components/ui/textarea";
-import { Bot, CreditCard, Globe, Loader2, ShieldCheck, Save, Coins, Mic, RefreshCw, Megaphone, Plus, Quote, Star, Trash2 } from "lucide-react";
+import { Bot, CreditCard, Globe, Loader2, ShieldCheck, Save, Coins, Mic, RefreshCw, Megaphone, Plus, Quote, Star, Trash2, AlertTriangle } from "lucide-react";
 
 const brl = (v: number) =>
   (Number(v) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2, maximumFractionDigits: 4 });
@@ -41,6 +41,9 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
   const [providerVoices, setProviderVoices] = useState<any[]>([]);
   const [enabledVoices, setEnabledVoices] = useState<any[]>([]);
   const [voicesLoading, setVoicesLoading] = useState(false);
+  // O motivo da recusa do provedor fica na tela: um toast some antes de o
+  // admin conseguir ler o que precisa corrigir.
+  const [voicesErro, setVoicesErro] = useState<string | null>(null);
   const [savingVoice, setSavingVoice] = useState(false);
 
   // Precificação de tokens (câmbio + markup padrão) e tabela de custo real
@@ -101,10 +104,13 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
   // Carrega as vozes do provedor ativo (ElevenLabs via chave global).
   const loadVoices = async () => {
     setVoicesLoading(true);
+    setVoicesErro(null);
     const res = await adminApi.get("/api/admin/voices");
     if (res.ok) {
       setProviderVoices(res.data?.voices || []);
-      if (res.data?.error) toast({ title: "Vozes", description: res.data.error, variant: "destructive" });
+      if (res.data?.error) setVoicesErro(res.data.error);
+    } else {
+      setVoicesErro(res.data?.error || "Não foi possível carregar as vozes.");
     }
     setVoicesLoading(false);
   };
@@ -500,6 +506,15 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
               <RefreshCw className={`w-3 h-3 ${voicesLoading ? "animate-spin" : ""}`} /> Atualizar lista
             </button>
           </div>
+          {voicesErro && (
+            <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-[11.5px] leading-relaxed text-rose-800">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>
+                <b className="font-semibold">Vozes premium indisponíveis.</b> {voicesErro}
+              </span>
+            </div>
+          )}
+
           {providerVoices.length === 0 ? (
             <p className="text-xs text-muted-foreground">
               {voicesLoading ? "Carregando vozes…" : "Nenhuma voz disponível — configure a chave do provedor e atualize."}
