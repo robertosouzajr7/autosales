@@ -38,9 +38,7 @@ export const sendMessage = async (req, res) => {
       where: { id: leadId, tenantId }
     });
 
-    if (!lead || !lead.phone) {
-      return res.status(400).json({ error: "Lead inválido ou sem telefone" });
-    }
+    if (!lead) return res.status(400).json({ error: "Contato não encontrado." });
 
     // Fora da janela de 24h o WhatsApp recusa texto livre — só template
     // aprovado inicia conversa. Barramos aqui para o atendente receber uma
@@ -50,28 +48,32 @@ export const sendMessage = async (req, res) => {
       select: { lastInboundAt: true },
     });
     if (conv && !isWindowOpen(conv.lastInboundAt)) {
+      // A saída da janela é diferente em cada canal: no WhatsApp existe o
+      // template aprovado, no Instagram não existe nada — só esperar.
+      const canal = String(lead.channel || "WHATSAPP").toUpperCase();
       return res.status(409).json({
-        error: "A janela de 24h fechou. Use um template aprovado para reabrir a conversa.",
+        error: canal === "INSTAGRAM"
+          ? "Passaram-se mais de 24h desde a última mensagem do contato. O Instagram só permite responder de novo quando ele escrever."
+          : "A janela de 24h fechou. Use um template aprovado para reabrir a conversa.",
         windowClosed: true,
       });
     }
 
-    // Try sending via WhatsApp Manager
-    let success = false;
+    // O canal do contato decide o transporte: WhatsApp usa telefone, Instagram
+    // usa o IGSID. Quem sabe disso é o MessagingService.
     const MEDIA = { AUDIO: 'audio', IMAGE: 'image', VIDEO: 'video', DOCUMENT: 'document' };
-    if (MEDIA[messageType]) {
+    const envio = MEDIA[messageType]
       // Áudio herda o comportamento antigo (URL vinha em content); os demais
       // trazem o arquivo em mediaUrl e o texto vira legenda.
-      const url = mediaUrl || content;
-      success = await MessagingService.sendMedia(
-        tenantId, lead.phone, url, MEDIA[messageType], mediaUrl ? content : ''
-      );
-    } else {
-      success = await MessagingService.sendText(tenantId, lead.phone, content);
-    }
-    
-    if (!success) {
-      return res.status(500).json({ error: "Falha ao enviar mensagem pelo WhatsApp" });
+      ? await MessagingService.sendToLead(lead, content, {
+          mediaUrl: mediaUrl || content,
+          mediaType: MEDIA[messageType],
+          caption: mediaUrl ? content : '',
+        })
+      : await MessagingService.sendToLead(lead, content);
+
+    if (!envio.ok) {
+      return res.status(502).json({ error: envio.erro || "Falha ao enviar a mensagem." });
     }
 
     let conversation = await prisma.conversation.findUnique({

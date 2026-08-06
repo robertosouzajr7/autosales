@@ -300,40 +300,39 @@ export default function Conversations() {
   const [anotacao, setAnotacao] = useState("");
   const [salvandoAnotacao, setSalvandoAnotacao] = useState(false);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  // Qual conversa está aberta na última rolagem — é o que distingue "abri uma
+  // conversa" de "chegou mensagem na conversa que já estava aberta".
+  const conversaRolada = useRef<string | null>(null);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    const atual = selectedChat?.id || null;
+    const acabouDeAbrir = conversaRolada.current !== atual;
+    conversaRolada.current = atual;
+    // Ao abrir, a última mensagem já tem de estar à vista: animar faria a tela
+    // percorrer o histórico inteiro até o fim. A animação fica só para a
+    // mensagem que chega com a conversa aberta.
+    messagesEndRef.current?.scrollIntoView({
+      behavior: acabouDeAbrir ? "auto" : "smooth",
+      block: "end",
+    });
+  }, [messages, selectedChat?.id]);
 
-  const fetchData = async () => {
+  /**
+   * Só a lista de conversas. Separada do resto porque é a única coisa que
+   * muda quando chega mensagem — recarregar templates, agentes, filas e
+   * etapas a cada mensagem nova deixava o inbox lento no horário de pico.
+   */
+  const fetchConversations = async () => {
+    const token = localStorage.getItem("token");
     try {
-      const token = localStorage.getItem("token");
-      const [convRes, settingsRes, connRes, tplRes, agentsRes, queuesRes, etapasRes] = await Promise.all([
-        fetch("/api/conversations", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch("/api/settings", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch("/api/whatsapp/accounts", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch("/api/templates", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch("/api/attendance/agents", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch("/api/queues", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch("/api/pipeline-stages", { headers: { "Authorization": `Bearer ${token}` } })
-      ]);
-
-      const convData = convRes.ok ? await convRes.json() : [];
-      const settingsData = await settingsRes.json();
-      const connData = connRes.ok ? await connRes.json() : [];
-      const tplData = tplRes.ok ? await tplRes.json() : [];
-      setAgents(agentsRes.ok ? await agentsRes.json() : []);
-      setQueues(queuesRes.ok ? await queuesRes.json() : []);
-      const etapasData = etapasRes.ok ? await etapasRes.json() : [];
-      setEtapas(Array.isArray(etapasData) ? etapasData : []);
+      const res = await fetch("/api/conversations", { headers: { Authorization: `Bearer ${token}` } });
+      const convData = res.ok ? await res.json() : [];
+      const lista = Array.isArray(convData) ? convData : [];
 
       // O endpoint já devolve ordenado por última mensagem. `id` vira o leadId
       // porque o resto da tela (mensagens, toggle do bot) trabalha com ele.
       setChats(
-        (Array.isArray(convData) ? convData : []).map((c: any) => ({
+        lista.map((c: any) => ({
           ...c,
           id: c.leadId,
           conversationId: c.id,
@@ -344,9 +343,33 @@ export default function Conversations() {
       // Mantém o cabeçalho do chat aberto em dia com a fase/dono atual.
       setSelectedChat((prev: any) => {
         if (!prev) return prev;
-        const fresco = (Array.isArray(convData) ? convData : []).find((c: any) => c.leadId === prev.id);
+        const fresco = lista.find((c: any) => c.leadId === prev.id);
         return fresco ? { ...prev, ...fresco, id: prev.id, conversationId: fresco.id } : prev;
       });
+    } catch (e) {}
+  };
+
+  const fetchData = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const [settingsRes, connRes, tplRes, agentsRes, queuesRes, etapasRes] = await Promise.all([
+        fetch("/api/settings", { headers: { "Authorization": `Bearer ${token}` } }),
+        fetch("/api/whatsapp/accounts", { headers: { "Authorization": `Bearer ${token}` } }),
+        fetch("/api/templates", { headers: { "Authorization": `Bearer ${token}` } }),
+        fetch("/api/attendance/agents", { headers: { "Authorization": `Bearer ${token}` } }),
+        fetch("/api/queues", { headers: { "Authorization": `Bearer ${token}` } }),
+        fetch("/api/pipeline-stages", { headers: { "Authorization": `Bearer ${token}` } })
+      ]);
+      await fetchConversations();
+
+      const settingsData = await settingsRes.json();
+      const connData = connRes.ok ? await connRes.json() : [];
+      const tplData = tplRes.ok ? await tplRes.json() : [];
+      setAgents(agentsRes.ok ? await agentsRes.json() : []);
+      setQueues(queuesRes.ok ? await queuesRes.json() : []);
+      const etapasData = etapasRes.ok ? await etapasRes.json() : [];
+      setEtapas(Array.isArray(etapasData) ? etapasData : []);
+
       setTemplates(tplData.filter((t: any) => t.status === "APPROVED"));
       setConnections(Array.isArray(connData) ? connData : []);
       setHasWhatsApp(!!settingsData.hasWhatsAppConnection);
@@ -531,16 +554,37 @@ export default function Conversations() {
     if (!message.trim() || !selectedChat) return;
     const content = message;
     setMessage("");
+
+    // O balão aparece na hora, antes da resposta do servidor. Antes a tela
+    // esperava o envio e recarregava a conversa inteira — e quando o envio
+    // falhava não aparecia nada: a mensagem simplesmente sumia.
+    const provisorio = {
+      id: `local-${Date.now()}`,
+      content,
+      role: "SDR",
+      messageType: "TEXT",
+      createdAt: new Date().toISOString(),
+      enviando: true,
+    };
+    setMessages((prev: any[]) => [...prev, provisorio]);
+
     try {
       const res = await fetch("/api/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ leadId: selectedChat.id, content, role: "SDR" })
       });
-      if (res.ok) {
-        fetchMessages(selectedChat.id);
-      }
-    } catch (e) {}
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || "Não foi possível enviar a mensagem.");
+      setMessages((prev: any[]) => prev.map((m) => (m.id === provisorio.id ? d : m)));
+      fetchConversations();
+    } catch (e: any) {
+      setMessages((prev: any[]) => prev.filter((m) => m.id !== provisorio.id));
+      // Devolve o texto ao campo: reescrever tudo por causa de uma falha de
+      // envio é o pior desfecho possível para quem está atendendo.
+      setMessage((atual: string) => atual || content);
+      toast({ title: "Mensagem não enviada", description: e.message, variant: "destructive" });
+    }
   };
 
   // Audio recording functions
@@ -713,8 +757,9 @@ export default function Conversations() {
           }
         }
 
-        // Chat fechado: o recarregar abaixo já traz o não-lidas do servidor.
-        fetchData();
+        // Chat fechado: recarrega só a lista, que é o que muda (prévia,
+        // não-lidas, ordem). O resto da tela não depende da mensagem nova.
+        fetchConversations();
       } catch {}
     };
     return () => eventSource.close();
@@ -1151,11 +1196,11 @@ export default function Conversations() {
                         ) : (
                           <div key={msg.id} className={`flex ${isOut ? "justify-end" : "justify-start"}`}>
                             <div
-                              className={`max-w-[76%] px-3.5 py-2.5 text-[13px] leading-relaxed ${
+                              className={`max-w-[76%] px-3.5 py-2.5 text-[13px] leading-relaxed transition-opacity ${
                                 isOut
                                   ? "rounded-[14px_14px_4px_14px] bg-[#2563EB] text-white"
                                   : "rounded-[14px_14px_14px_4px] border border-border-soft bg-background text-foreground"
-                              }`}
+                              } ${msg.enviando ? "opacity-60" : ""}`}
                             >
                               {msg.messageType === "AUDIO" && (msg.mediaUrl || (typeof msg.content === "string" && msg.content.includes("/uploads/"))) ? (
                                 <div className="space-y-1.5">

@@ -18,12 +18,17 @@ const ok = (cond, msg) => {
   if (!cond) falhas++;
 };
 
-// Captura os envios em vez de bater no WhatsApp.
+// Captura os envios em vez de bater no WhatsApp. `processDue` varre TODOS os
+// lembretes vencidos do banco, inclusive os que outros testes deixaram para
+// trás, então só interessa o que saiu para o contato deste teste.
+const TELEFONE = "5571999990000";
 const enviados = [];
 MessagingService.sendText = async (tenantId, phone, text) => {
-  enviados.push({ tipo: "texto", phone, text });
+  if (phone === TELEFONE) enviados.push({ tipo: "texto", phone, text });
   return true;
 };
+/** O envio deste teste que casa com o trecho — não o n-ésimo da fila. */
+const enviado = (trecho) => enviados.find((e) => new RegExp(trecho).test(e.text || ""))?.text || "";
 
 const HORA = 60 * 60 * 1000;
 const MIN = 60 * 1000;
@@ -43,7 +48,7 @@ async function seed() {
     data: {
       tenantId: tenant.id,
       name: "Maria Silva",
-      phone: "5571999990000",
+      phone: TELEFONE,
       email: "maria@teste.local",
       stageId: stages[0].id,
     },
@@ -123,10 +128,11 @@ async function main() {
     prisma.appointmentReminder.findUnique({ where: { id: porTipo.FINAL.id } }),
   ]);
   ok(meet.status === "SENT", `link da call enviado (${meet.status}: ${meet.error || "-"})`);
-  ok(/meet\.google\.com/.test(enviados[0]?.text || ""), "mensagem do link traz a URL do Meet");
-  ok(/10 minutos/.test(enviados[0]?.text || ""), "avisa a antecedência");
+  const doMeet = enviado("meet\\.google\\.com/abc");
+  ok(!!doMeet, "mensagem do link traz a URL do Meet");
+  ok(/10 minutos/.test(doMeet), "avisa a antecedência");
   ok(final.status === "SENT", `lembrete final enviado (${final.status})`);
-  ok(/é agora/.test(enviados[1]?.text || ""), "lembrete final diz que é agora");
+  ok(!!enviado("é agora"), "lembrete final diz que é agora");
 
   // ── 6. Sem link de Meet o lembrete é pulado, não falha ──────
   console.log("\n6. Agendamento sem Google Meet");
