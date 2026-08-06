@@ -440,6 +440,20 @@ export const receiveWhatsappWebhook = async (req, res) => {
       conversation = (await AttendanceService.onInbound(conversation.id)) || conversation;
     }
 
+    // 4.8 Período de ausência (feriado, recesso, plantão): avisa quem escreveu
+    // e, se configurado, cala a IA. Antes desta checagem a conversa seguiria
+    // para o agente, que prometeria um retorno que ninguém daria.
+    try {
+      const { avisarSeAusente } = await import("../services/AwayService.js");
+      const ausencia = await avisarSeAusente(tenantId, lead);
+      if (ausencia.pausarIa) {
+        return res.json({ success: true, ai_response: null, ausente: ausencia.periodo?.name || true });
+      }
+    } catch (e) {
+      // O aviso de ausência não pode derrubar o atendimento: segue para a IA.
+      console.error("[Ausência] Falha ao avaliar o período:", e.message);
+    }
+
     // 5. Na fila ou em atendimento humano quem responde é a pessoa, não a IA.
     if (!conversation.botActive || ["QUEUE", "HUMAN"].includes(conversation.phase)) {
       console.log(

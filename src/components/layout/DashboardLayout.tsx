@@ -344,29 +344,14 @@ function SidebarContent({
         )}
       >
         <div className="flex items-center gap-2.5 w-full">
-          {/* Recolhido, o próprio logo vira o botão de expandir: antes não
-              havia caminho de volta e o menu ficava preso em ícones. */}
-          {collapsed && showCollapseButton ? (
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={onToggleCollapse}
-                  className="group relative grid h-[30px] w-[30px] place-items-center rounded-[9px] bg-gradient-to-br from-[#2563EB] to-[#7C5CFF] shadow-[0_8px_18px_-6px_rgba(37,99,235,0.7)] transition-transform hover:scale-105"
-                  aria-label="Expandir menu"
-                >
-                  <LogoIcon className="h-[18px] w-[18px] text-white transition-opacity group-hover:opacity-0" />
-                  <ChevronRight className="absolute h-4 w-4 text-white opacity-0 transition-opacity group-hover:opacity-100" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="font-medium">Expandir menu</TooltipContent>
-            </Tooltip>
-          ) : (
-            /* Quadrado 30×30 em gradiente com sombra azul — o handoff é
-               específico aqui, e é o que dá identidade ao canto superior. */
-            <div className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-[9px] bg-gradient-to-br from-[#2563EB] to-[#7C5CFF] shadow-[0_8px_18px_-6px_rgba(37,99,235,0.7)]">
-              <LogoIcon className="h-[18px] w-[18px] text-white" />
-            </div>
-          )}
+          {/* Quadrado 30×30 em gradiente com sombra azul — o handoff é
+             específico aqui, e é o que dá identidade ao canto superior.
+             Recolhido, o logo já foi também o botão de expandir; recolher em
+             baixo e expandir em cima obrigava a procurar o caminho de volta
+             num lugar diferente do que foi usado para ir. */}
+          <div className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-[9px] bg-gradient-to-br from-[#2563EB] to-[#7C5CFF] shadow-[0_8px_18px_-6px_rgba(37,99,235,0.7)]">
+            <LogoIcon className="h-[18px] w-[18px] text-white" />
+          </div>
           {!collapsed && (
             <span className="linha-unica-elipse text-[13.5px] font-bold tracking-tight text-white">
               Agentes <span className="text-accent-text">Virtuais</span>
@@ -434,17 +419,33 @@ function SidebarContent({
         );
       })()}
 
-      {/* Recolher: o handoff pede o rótulo junto do chevron. Um ícone sozinho
-          num canto escuro não é descoberto por quem nunca clicou nele. */}
-      {showCollapseButton && !collapsed && (
-        <div className="shrink-0 px-3 pb-2">
-          <button
-            onClick={onToggleCollapse}
-            className="linha-unica flex h-[34px] w-full items-center justify-center gap-2 rounded-lg text-[12px] font-medium text-[#94A3B8] transition-colors hover:bg-white/[0.06] hover:text-white"
-          >
-            <ChevronLeft className="h-4 w-4 shrink-0" />
-            Recolher menu
-          </button>
+      {/* Recolher e expandir no MESMO lugar: o botão que fecha é o botão que
+          abre, no mesmo canto. Expandido leva o rótulo junto do chevron —
+          um ícone sozinho num canto escuro não é descoberto por quem nunca
+          clicou nele; recolhido sobra só o chevron, com dica no hover. */}
+      {showCollapseButton && (
+        <div className={cn("shrink-0 pb-2", collapsed ? "px-2" : "px-3")}>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <button
+                onClick={onToggleCollapse}
+                aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
+                className={cn(
+                  "linha-unica flex h-[34px] w-full items-center justify-center gap-2 rounded-lg text-[12px] font-medium text-[#94A3B8] transition-colors hover:bg-white/[0.06] hover:text-white",
+                )}
+              >
+                {collapsed ? (
+                  <ChevronRight className="h-4 w-4 shrink-0" />
+                ) : (
+                  <>
+                    <ChevronLeft className="h-4 w-4 shrink-0" />
+                    Recolher menu
+                  </>
+                )}
+              </button>
+            </TooltipTrigger>
+            {collapsed && <TooltipContent side="right" className="font-medium">Expandir menu</TooltipContent>}
+          </Tooltip>
         </div>
       )}
 
@@ -586,11 +587,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     return assinarEventos((msg: any) => {
       if (msg?.role !== "USER") return;
       notificationStore.add({
-        id: msg.id || Date.now(),
+        id: msg.id,
+        leadId: msg.leadId || null,
         content: msg.content,
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        read: false,
         messageType: msg.messageType,
+        criadoEm: msg.createdAt ? new Date(msg.createdAt).getTime() : Date.now(),
       });
       toast({
         title: "💬 Nova mensagem",
@@ -600,9 +601,38 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }, [toast]);
 
   useEffect(() => {
-    return notificationStore.subscribe((newNotifs) => {
-      setNotifications([...newNotifs]);
-    });
+    return notificationStore.subscribe((novas) => setNotifications([...novas]));
+  }, []);
+
+  // Estado inicial do sino. Sem isto ele só sabia do que chegasse com a aba
+  // aberta: quem abrisse o painel de manhã via "nenhuma notificação" mesmo
+  // com conversas esperando desde a véspera.
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    let cancelado = false;
+    fetch("/api/conversations", { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((lista) => {
+        if (cancelado || !Array.isArray(lista)) return;
+        notificationStore.semear(
+          lista
+            .filter((c: any) => (c.unreadCount || 0) > 0 && c.lastMessagePreview)
+            .slice(0, 20)
+            .map((c: any) => ({
+              id: `conv-${c.id}-${c.lastMessageAt}`,
+              leadId: c.leadId,
+              nome: c.name,
+              content: c.lastMessagePreview,
+              time: c.lastMessageAt
+                ? new Date(c.lastMessageAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                : "",
+              criadoEm: c.lastMessageAt ? new Date(c.lastMessageAt).getTime() : Date.now(),
+            }))
+        );
+      })
+      .catch(() => { /* o sino não é motivo para atrapalhar a navegação */ });
+    return () => { cancelado = true; };
   }, []);
 
   useEffect(() => {
@@ -814,7 +844,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <DropdownMenuContent align="end" className="w-80 p-0 overflow-hidden rounded-2xl border border-border shadow-lg bg-card">
               <div className="px-4 py-3 flex items-center justify-between border-b border-border">
                 <h3 className="text-sm font-semibold text-foreground">Notificações</h3>
-                {unreadCount > 0 && <span className="text-xs text-muted-foreground">{unreadCount} nova(s)</span>}
+                {unreadCount > 0 && (
+                  <button
+                    onClick={(e) => { e.preventDefault(); notificationStore.marcarTodasLidas(); }}
+                    className="text-xs font-medium text-accent-text hover:underline"
+                  >
+                    marcar {unreadCount} como lida{unreadCount > 1 ? "s" : ""}
+                  </button>
+                )}
               </div>
               <ScrollArea className="max-h-[340px]">
                 {notifications.length === 0 ? (
@@ -829,10 +866,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     {notifications.map((n) => (
                       <DropdownMenuItem
                         key={n.id}
-                        className="p-3 rounded-xl cursor-pointer flex items-start gap-3"
+                        className={`p-3 rounded-xl cursor-pointer flex items-start gap-3 ${n.read ? "opacity-60" : ""}`}
                         onClick={() => {
-                          n.read = true;
-                          navigate("/conversations");
+                          notificationStore.marcarLida(n.id);
+                          // Abre já na conversa de onde veio a mensagem, e não
+                          // no inbox genérico para o atendente procurar.
+                          navigate(n.leadId ? `/conversations?lead=${n.leadId}` : "/conversations");
                         }}
                       >
                         <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
@@ -840,7 +879,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-center mb-0.5">
-                            <p className="text-sm font-medium text-foreground">Nova mensagem</p>
+                            <p className="linha-unica-elipse text-sm font-medium text-foreground">{n.nome || "Nova mensagem"}</p>
                             <span className="text-xs text-muted-foreground">{n.time}</span>
                           </div>
                           <p className="text-sm text-muted-foreground line-clamp-2 leading-snug">
@@ -855,7 +894,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               {notifications.length > 0 && (
                 <div className="p-2 border-t border-border">
                   <Button variant="ghost" size="sm" className="w-full text-muted-foreground"
-                    onClick={() => setNotifications([])}>
+                    onClick={() => notificationStore.limpar()}>
                     Limpar tudo
                   </Button>
                 </div>

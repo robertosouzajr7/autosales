@@ -44,6 +44,7 @@ import {
 } from "../middlewares/planLimits.js";
 
 import { receberArquivo } from "../middlewares/upload.js";
+import * as AwayController from "../controllers/AwayController.js";
 
 const router = express.Router();
 
@@ -204,6 +205,7 @@ router.get("/campaigns/quota", CampaignController.getCampaignQuota);
 router.post("/campaigns/preview", requirePermission("campaigns"), CampaignController.previewCampaign);
 router.post("/campaigns", requirePermission("campaigns"), CampaignController.createCampaign);
 router.post("/campaigns/:id/start", CampaignController.startCampaign);
+router.post("/campaigns/:id/schedule", requirePermission("campaigns"), CampaignController.scheduleCampaign);
 router.post("/campaigns/:id/pause", CampaignController.pauseCampaign);
 router.delete("/campaigns/:id", CampaignController.deleteCampaign);
 
@@ -227,6 +229,13 @@ router.get("/conversations/pending-count", requirePermission("conversations"), M
 router.get("/conversations/:leadId/contact", requirePermission("conversations"), MessageController.getConversationContact);
 router.put("/conversations/:leadId/contact", requirePermission("conversations"), MessageController.updateConversationContact);
 // Filas de atendimento e fases da conversa
+// Períodos de ausência: feriado, recesso, plantão. Ficam com "automations"
+// porque é onde a tela vive (Lembretes).
+router.get("/away-periods", requirePermission("reminders"), AwayController.listAwayPeriods);
+router.post("/away-periods", requirePermission("reminders"), AwayController.createAwayPeriod);
+router.put("/away-periods/:id", requirePermission("reminders"), AwayController.updateAwayPeriod);
+router.delete("/away-periods/:id", requirePermission("reminders"), AwayController.deleteAwayPeriod);
+
 router.get("/queues", requirePermission("queues"), AttendanceController.listQueues);
 router.post("/queues", requirePermission("queues"), AttendanceController.createQueue);
 router.put("/queues/:id", requirePermission("queues"), AttendanceController.updateQueue);

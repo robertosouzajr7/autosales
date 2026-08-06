@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Megaphone, Plus, Play, Pause, Trash2, AlertTriangle, CheckCircle2, Clock, Users, Info, ArrowUpRight,
   BarChart3, Download, XCircle, ShieldCheck,
+  CalendarClock,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AudiencePicker } from "@/components/campaigns/AudiencePicker";
@@ -44,12 +45,18 @@ export default function Campaigns() {
   // Seleção explícita de contatos; substitui o filtro por etapa do funil.
   const [leadIds, setLeadIds] = useState<string[]>([]);
   const [report, setReport] = useState<any>(null);
+  // Qual campanha está com o seletor de data aberto, e para quando.
+  const [agendando, setAgendando] = useState<{ id: string; quando: string } | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [preview, setPreview] = useState<any>(null);
   const [previewErro, setPreviewErro] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
+  /** `datetime-local` fala em hora local sem fuso; o servidor fala em ISO. */
+const paraCampoLocal = (d: Date) =>
+  new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
 
   const load = async () => {
     try {
@@ -155,6 +162,20 @@ export default function Campaigns() {
     else toast({ title: d.error || "Erro", variant: "destructive" });
   };
 
+  /** Marca, remarca ou desmarca a hora do disparo. */
+  const agendar = async (c: any, quando: string | null) => {
+    const res = await fetch(`/api/campaigns/${c.id}/schedule`, {
+      method: "POST",
+      headers: { ...auth(), "Content-Type": "application/json" },
+      body: JSON.stringify({ scheduledAt: quando }),
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) return toast({ title: d.error || "Não foi possível agendar", variant: "destructive" });
+    toast({ title: quando ? "Disparo agendado" : "Agendamento cancelado" });
+    setAgendando(null);
+    load();
+  };
+
   const remove = async (c: any) => {
     if (!confirm(`Remover a campanha "${c.name}"?`)) return;
     const res = await fetch(`/api/campaigns/${c.id}`, { method: "DELETE", headers: auth() });
@@ -219,7 +240,9 @@ export default function Campaigns() {
     return null;
   })();
 
-  const rascunhos = campaigns.filter((c) => c.status === "DRAFT");
+  // Agendada ainda não saiu: pertence ao mesmo bloco do que está pronto para
+  // disparar, só que com a hora à vista.
+  const rascunhos = campaigns.filter((c) => ["DRAFT", "SCHEDULED"].includes(c.status));
   const anteriores = campaigns.filter((c) => c.status !== "DRAFT");
 
   return (
@@ -331,19 +354,78 @@ export default function Campaigns() {
           <section key={c.id} className="mb-4 rounded-[14px] border border-accent-text/30 bg-accent-soft p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-accent-text">Rascunho</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-accent-text">
+                  {c.status === "SCHEDULED" ? "Agendado" : "Rascunho"}
+                </p>
                 <h2 className="mt-1 text-[17px] font-bold text-foreground">{c.name}</h2>
                 <p className="mt-0.5 text-[12.5px] text-muted-foreground">
                   Template <span className="font-mono">{c.template?.name}</span> · {c.recipientCount || 0} contatos no público
                 </p>
               </div>
-              <div className="flex shrink-0 gap-2">
+              <div className="flex shrink-0 flex-wrap gap-2">
                 <Button variant="outline" onClick={() => remove(c)} className="h-9 bg-card text-[12.5px]">Descartar</Button>
+                {c.status === "SCHEDULED" ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => agendar(c, null)}
+                    className="h-9 gap-1.5 bg-card text-[12.5px]"
+                  >
+                    <CalendarClock className="h-3.5 w-3.5" /> Cancelar agendamento
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      setAgendando({
+                        id: c.id,
+                        // Uma hora à frente: agendar para daqui a instantes é
+                        // quase sempre engano, e o servidor recusa o passado.
+                        quando: paraCampoLocal(new Date(Date.now() + 60 * 60 * 1000)),
+                      })
+                    }
+                    className="h-9 gap-1.5 bg-card text-[12.5px]"
+                  >
+                    <CalendarClock className="h-3.5 w-3.5" /> Agendar
+                  </Button>
+                )}
                 <Button onClick={() => act(c, "start")} className="h-9 gap-1.5 text-[12.5px]">
                   <Play className="h-3.5 w-3.5" /> Disparar agora
                 </Button>
               </div>
             </div>
+
+            {c.status === "SCHEDULED" && c.scheduledAt && (
+              <p className="mt-3 flex items-center gap-1.5 rounded-lg bg-card px-3 py-2 text-[12.5px] font-medium text-foreground">
+                <CalendarClock className="h-3.5 w-3.5 text-accent-text" />
+                Sai automaticamente em{" "}
+                {new Date(c.scheduledAt).toLocaleString("pt-BR", {
+                  day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
+                })}
+              </p>
+            )}
+
+            {agendando?.id === c.id && (
+              <div className="mt-3 flex flex-wrap items-end gap-2 rounded-lg bg-card p-3">
+                <div className="min-w-[200px] flex-1 space-y-1">
+                  <label className="text-[11.5px] font-semibold text-muted-foreground">Disparar em</label>
+                  <Input
+                    type="datetime-local"
+                    value={agendando.quando}
+                    onChange={(e) => setAgendando({ id: c.id, quando: e.target.value })}
+                    className="h-9 text-[13px]"
+                  />
+                </div>
+                <Button variant="outline" className="h-9 text-[12.5px]" onClick={() => setAgendando(null)}>
+                  Cancelar
+                </Button>
+                <Button
+                  className="h-9 gap-1.5 text-[12.5px]"
+                  onClick={() => agendar(c, new Date(agendando.quando).toISOString())}
+                >
+                  <CalendarClock className="h-3.5 w-3.5" /> Confirmar
+                </Button>
+              </div>
+            )}
 
             <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
               {[

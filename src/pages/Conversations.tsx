@@ -302,6 +302,15 @@ export default function Conversations() {
   const [anotacao, setAnotacao] = useState("");
   const [salvandoAnotacao, setSalvandoAnotacao] = useState(false);
 
+  // Chegou pelo sino de notificações: abre direto a conversa apontada, em vez
+  // de largar o atendente no inbox para procurar de quem era a mensagem.
+  useEffect(() => {
+    const alvo = new URLSearchParams(window.location.search).get("lead");
+    if (!alvo || !chats.length || selectedChat) return;
+    const achado = chats.find((c: any) => c.id === alvo);
+    if (achado) setSelectedChat(achado);
+  }, [chats, selectedChat]);
+
   // Qual conversa está aberta na última rolagem — é o que distingue "abri uma
   // conversa" de "chegou mensagem na conversa que já estava aberta".
   const conversaRolada = useRef<string | null>(null);

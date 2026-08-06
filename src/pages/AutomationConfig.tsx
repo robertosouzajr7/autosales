@@ -10,7 +10,9 @@ import { useToast } from "@/components/ui/use-toast";
 import {
   Clock, Bell, UserX, Save, RefreshCw, ShieldCheck, CalendarClock, AlertTriangle,
   Handshake, X, Plus, Sliders, Video, CheckCircle2, GitBranch, Activity,
+  CalendarOff,
 } from "lucide-react";
+import { PeriodosDeAusencia } from "@/components/automations/PeriodosDeAusencia";
 
 /**
  * Lembretes e rotinas do agendamento.
@@ -212,6 +214,7 @@ export default function AutomationConfig() {
     { id: "faltas", rotulo: "Faltas e pós-atendimento", Icone: UserX },
     { id: "funil", rotulo: "Funil", Icone: GitBranch },
     { id: "handoff", rotulo: "Handoff humano", Icone: Handshake },
+    { id: "ausencia", rotulo: "Ausência", Icone: CalendarOff },
     { id: "status", rotulo: "Status", Icone: Activity },
   ];
 
@@ -321,6 +324,8 @@ export default function AutomationConfig() {
             </nav>
 
             <div className="space-y-3 p-5">
+              {aba === "ausencia" && <PeriodosDeAusencia />}
+
               {(aba === "regua" || aba === "faltas") && REGRAS[aba].map((r) => (
                 <article key={r.campo} className="rounded-xl border border-border-soft p-4">
                   <div className="flex flex-wrap items-start gap-3">
