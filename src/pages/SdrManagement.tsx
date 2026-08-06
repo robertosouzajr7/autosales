@@ -1,167 +1,196 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { PageHeader } from "@/components/shared/PageHeader";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { 
-  Bot, Plus, Trash2, Brain, Zap, Globe, Save, RefreshCw, Sliders, User, ShieldCheck, Clock, CheckCircle2, MessageSquare, Upload, FileText, FileJson, Power, Check, Play, Lock, Sparkles
+import {
+  Bot, Plus, Trash2, Save, Upload, FileText, Play, Lock, Check,
+  Send, Sparkles, MessageSquare, Instagram, Globe, Volume2, Loader2,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+
+/**
+ * Agente de IA — três painéis: lista de agentes, edição e simulador.
+ *
+ * A edição é inline, não em modal: quem ajusta o tom de voz quer testar o
+ * efeito na mesma tela, e um modal esconderia justamente o simulador.
+ */
+
+const TONS = [
+  { id: "FRIENDLY", label: "Acolhedor" },
+  { id: "DIRECT", label: "Direto" },
+  { id: "PROFESSIONAL", label: "Formal" },
+  { id: "CASUAL", label: "Descontraído" },
+  { id: "TECHNICAL", label: "Técnico" },
+];
+
+const CANAL = {
+  WHATSAPP: { label: "WhatsApp", Icon: MessageSquare, cls: "text-emerald-600" },
+  INSTAGRAM: { label: "Instagram", Icon: Instagram, cls: "text-pink-600" },
+  SITE: { label: "Site", Icon: Globe, cls: "text-blue-600" },
+};
+const canal = (c?: string) => CANAL[(c || "WHATSAPP").toUpperCase() as keyof typeof CANAL] || CANAL.WHATSAPP;
+
+const VAZIO = {
+  name: "", role: "SDR", agentFunction: "SCHEDULER", skills: [] as string[],
+  prompt: "", knowledgeBase: "", trainingUrls: "", responseDelay: 2000,
+  voiceTone: "PROFESSIONAL",
+  escalationKeywords: "atendente, falar com humano, ajuda",
+  followUpInterval: 120, preConfirmationHours: 12, noShowGraceMinutes: 15,
+  postServiceCheckHours: 24, enableWaitlist: true, voiceId: "Kore",
+  responseMode: "TEXT", accountIds: [] as string[], active: true,
+};
 
 export default function SdrManagement() {
   const [sdrs, setSdrs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
-  const navigate = useNavigate();
-  
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingSdr, setEditingSdr] = useState<any>(null);
-
+  const [selecionado, setSelecionado] = useState<any>(null);
+  const [form, setForm] = useState({ ...VAZIO });
+  const [salvando, setSalvando] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [functions, setFunctions] = useState<any[]>([]);
   const [skillsCatalog, setSkillsCatalog] = useState<any[]>([]);
-  // Vozes liberadas pelo admin do SaaS (a chave do provedor é global).
   const [voices, setVoices] = useState<any[]>([]);
-  const [previewingId, setPreviewingId] = useState<string | null>(null);
-  const [upgradeVoice, setUpgradeVoice] = useState<any>(null); // voz premium bloqueada
-  const previewAudio = useRef<HTMLAudioElement | null>(null);
-
-  const [form, setForm] = useState({
-    name: "",
-    role: "SDR",
-    agentFunction: "SCHEDULER",
-    skills: [] as string[],
-    prompt: "",
-    knowledgeBase: "",
-    trainingUrls: "",
-    responseDelay: 2000,
-    voiceTone: "PROFESSIONAL",
-    escalationKeywords: "atendente, falar com humano, ajuda, queima, dor, bolha",
-    followUpInterval: 120,
-    preConfirmationHours: 12,
-    noShowGraceMinutes: 15,
-    postServiceCheckHours: 24,
-    enableWaitlist: true,
-    voiceId: "Kore",
-    responseMode: "TEXT",
-    accountIds: [] as string[],
-    active: true
-  });
-  
-  const [uploading, setUploading] = useState(false);
-
-  const [hasWhatsApp, setHasWhatsApp] = useState<boolean>(false);
-  // Conexões da conta, para escolher quais o agente atende.
   const [connections, setConnections] = useState<any[]>([]);
+  const [previewingId, setPreviewingId] = useState<string | null>(null);
+  const [upgradeVoice, setUpgradeVoice] = useState<any>(null);
+  const previewAudio = useRef<HTMLAudioElement | null>(null);
+  // Simulador
+  const [teste, setTeste] = useState<{ role: string; content: string }[]>([]);
+  const [msgTeste, setMsgTeste] = useState("");
+  const [pensando, setPensando] = useState(false);
+  const fimDoTeste = useRef<HTMLDivElement | null>(null);
+  const { toast } = useToast();
 
-  const fetchData = async () => {
-    const token = localStorage.getItem("token");
+  const fetchData = async (selecionarId?: string) => {
     try {
-      const [sdrsRes, settingsRes, fnRes, voicesRes, connRes] = await Promise.all([
-        fetch("/api/sdrs", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch("/api/settings", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch("/api/agent-functions", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch("/api/voices", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch("/api/whatsapp/accounts", { headers: { "Authorization": `Bearer ${token}` } })
+      const [sdrsRes, fnRes, voicesRes, connRes] = await Promise.all([
+        fetch("/api/sdrs"), fetch("/api/agent-functions"), fetch("/api/voices"), fetch("/api/whatsapp/accounts"),
       ]);
-
-      const sdrData = await sdrsRes.json();
-      const settingsData = await settingsRes.json();
-      const fnData = await fnRes.json();
+      // Ordem de criação: é a mesma que o motor usa para escolher quem
+      // atende (`orderBy: createdAt asc` + pickAgentForAccount). Listar em
+      // outra ordem faria a tela sugerir uma prioridade que não existe.
+      const bruta = sdrsRes.ok ? await sdrsRes.json() : [];
+      const lista = (Array.isArray(bruta) ? bruta : []).sort(
+        (a: any, b: any) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+      );
+      const fnData = fnRes.ok ? await fnRes.json() : {};
       const voiceData = voicesRes.ok ? await voicesRes.json() : { voices: [] };
-
-      setSdrs(Array.isArray(sdrData) ? sdrData : []);
-      setHasWhatsApp(!!settingsData.hasWhatsAppConnection);
+      setSdrs(lista);
       setFunctions(fnData.functions || []);
       setSkillsCatalog(fnData.skills || []);
       setVoices(voiceData.voices || []);
       setConnections(connRes.ok ? await connRes.json() : []);
+
+      const alvo = lista.find((s: any) => s.id === selecionarId) || lista[0];
+      if (alvo) escolher(alvo);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
 
   useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fimDoTeste.current?.scrollIntoView({ behavior: "smooth" }); }, [teste, pensando]);
 
-  const handleOpenModal = (sdr: any = null) => {
-    if (sdr) {
-      setEditingSdr(sdr);
-      let parsedSkills: string[] = [];
-      try { parsedSkills = sdr.skills ? JSON.parse(sdr.skills) : []; } catch { parsedSkills = []; }
-      let parsedAccounts: string[] = [];
-      try { parsedAccounts = sdr.accountIds ? JSON.parse(sdr.accountIds) : []; } catch { parsedAccounts = []; }
-      setForm({
-        name: sdr.name || "",
-        role: sdr.role || "SDR",
-        agentFunction: sdr.agentFunction || "SCHEDULER",
-        skills: parsedSkills,
-        prompt: sdr.prompt || "",
-        knowledgeBase: sdr.knowledgeBase || "",
-        trainingUrls: sdr.trainingUrls || "",
-        responseDelay: sdr.responseDelay || 2000,
-        voiceTone: sdr.voiceTone || "PROFESSIONAL",
-        escalationKeywords: sdr.escalationKeywords || "atendente, falar com humano, ajuda, queima, dor, bolha",
-        followUpInterval: sdr.followUpInterval || 120,
-        preConfirmationHours: sdr.preConfirmationHours || 12,
-        noShowGraceMinutes: sdr.noShowGraceMinutes || 15,
-        postServiceCheckHours: sdr.postServiceCheckHours || 24,
-        enableWaitlist: sdr.enableWaitlist ?? true,
-        voiceId: sdr.voiceId || "Kore",
-        responseMode: sdr.responseMode || "TEXT",
-        accountIds: parsedAccounts,
-        active: sdr.active ?? true
-      });
-    } else {
-      setEditingSdr(null);
-      const defaultFn = functions.find((f) => f.id === "SCHEDULER") || functions[0];
-      setForm({
-        name: "",
-        role: "SDR",
-        agentFunction: defaultFn?.id || "SCHEDULER",
-        skills: defaultFn?.skills || [],
-        prompt: "",
-        knowledgeBase: "",
-        trainingUrls: "",
-        responseDelay: 2000,
-        voiceTone: "PROFESSIONAL",
-        escalationKeywords: "atendente, falar com humano, ajuda, queima, dor, bolha",
-        followUpInterval: 120,
-        preConfirmationHours: 12,
-        noShowGraceMinutes: 15,
-        postServiceCheckHours: 24,
-        enableWaitlist: true,
-        voiceId: "Kore",
-        responseMode: "TEXT",
-        accountIds: [],
-        active: true
-      });
-    }
-    setIsModalOpen(true);
+  const escolher = (sdr: any) => {
+    const json = (v: any) => { try { return v ? JSON.parse(v) : []; } catch { return []; } };
+    setSelecionado(sdr);
+    setForm({
+      ...VAZIO,
+      ...sdr,
+      skills: json(sdr.skills),
+      accountIds: json(sdr.accountIds),
+      voiceTone: sdr.voiceTone || "PROFESSIONAL",
+      prompt: sdr.prompt || "",
+      knowledgeBase: sdr.knowledgeBase || "",
+      escalationKeywords: sdr.escalationKeywords || VAZIO.escalationKeywords,
+      active: sdr.active ?? true,
+    });
+    setTeste([]);
   };
 
-  // Toca alguns segundos da voz. Premium usa o preview da ElevenLabs; a voz
-  // padrão é gerada (e cacheada) pelo backend.
-  const playPreview = async (v: any) => {
+  const novoAgente = () => {
+    const padrao = functions.find((f) => f.id === "SCHEDULER") || functions[0];
+    setSelecionado(null);
+    setForm({ ...VAZIO, agentFunction: padrao?.id || "SCHEDULER", skills: padrao?.skills || [] });
+    setTeste([]);
+  };
+
+  const salvar = async () => {
+    if (!form.name.trim()) return toast({ title: "Dê um nome ao agente", variant: "destructive" });
+    setSalvando(true);
+    try {
+      const res = await fetch(selecionado ? `/api/sdrs/${selecionado.id}` : "/api/sdrs", {
+        method: selecionado ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || "Não foi possível salvar.");
+      toast({ title: selecionado ? "Agente atualizado" : "Agente criado" });
+      fetchData(d.id || selecionado?.id);
+    } catch (e: any) {
+      toast({ title: e.message, variant: "destructive" });
+    } finally { setSalvando(false); }
+  };
+
+  const remover = async (id: string) => {
+    if (!confirm("Remover este agente?\n\nAs conversas que ele atendeu continuam no inbox.")) return;
+    await fetch(`/api/sdrs/${id}`, { method: "DELETE" });
+    setSelecionado(null);
+    setForm({ ...VAZIO });
+    fetchData();
+    toast({ title: "Agente removido" });
+  };
+
+  const alternarAtivo = async (sdr: any) => {
+    try {
+      const res = await fetch(`/api/sdrs/${sdr.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...sdr, active: !sdr.active }),
+      });
+      if (!res.ok) throw new Error();
+      toast({ title: sdr.active ? "Agente desligado" : "Agente ligado" });
+      fetchData(sdr.id);
+    } catch { toast({ title: "Erro ao mudar o estado", variant: "destructive" }); }
+  };
+
+  const subirArquivo = async (e: any) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!selecionado) return toast({ title: "Salve o agente antes de treinar", variant: "destructive" });
+    setUploading(true);
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const res = await fetch(`/api/sdrs/${selecionado.id}/training`, { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast({
+        title: "Documento aprendido",
+        description: `${(data.extractedChars || 0).toLocaleString("pt-BR")} caracteres entraram na base.`,
+      });
+      setForm((f) => ({ ...f, knowledgeBase: data.sdr.knowledgeBase }));
+      fetchData(selecionado.id);
+    } catch (err: any) {
+      toast({ title: "Erro no treinamento", description: err.message, variant: "destructive" });
+    } finally { setUploading(false); }
+  };
+
+  const tocarAmostra = async (v: any) => {
     try {
       previewAudio.current?.pause();
       setPreviewingId(v.id);
       let url = v.preview;
       if (!url) {
-        const token = localStorage.getItem("token");
-        const res = await fetch(`/api/voices/${encodeURIComponent(v.id)}/preview`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const d = await res.json();
-        url = d.url;
+        const res = await fetch(`/api/voices/${encodeURIComponent(v.id)}/preview`);
+        url = (await res.json()).url;
       }
       if (!url) throw new Error("sem amostra");
       const audio = new Audio(url);
@@ -175,527 +204,440 @@ export default function SdrManagement() {
     }
   };
 
-  // Voz bloqueada abre o modal de upgrade; liberada é selecionada.
-  const selectVoice = (v: any) => {
-    if (v.locked) { setUpgradeVoice(v); return; }
-    setForm({ ...form, voiceId: v.id });
-  };
-
-  const handleSave = async () => {
-    if (!form.name) return toast({ title: "Nome obrigatório", variant: "destructive" });
-    const token = localStorage.getItem("token");
+  /** Conversa de teste. Não grava contato nem conversa — só gasta token. */
+  const enviarTeste = async () => {
+    const texto = msgTeste.trim();
+    if (!texto || !selecionado) return;
+    setMsgTeste("");
+    const historico = [...teste, { role: "user", content: texto }];
+    setTeste(historico);
+    setPensando(true);
     try {
-      const url = editingSdr ? `/api/sdrs/${editingSdr.id}` : "/api/sdrs";
-      const method = editingSdr ? "PUT" : "POST";
-      const res = await fetch(url, {
-        method,
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(form)
-      });
-      if (res.ok) {
-        toast({ title: editingSdr ? "🧠 Parâmetros Atualizados" : "🤖 SDR Contratado" });
-        setIsModalOpen(false);
-        fetchData();
-      }
-    } catch (e) { toast({ title: "Erro ao salvar", variant: "destructive" }); }
-  };
-
-  const handleFileUpload = async (e: any) => {
-    console.log(`[Neural-Training] Iniciando upload para SDR: ${editingSdr?.id}`);
-    const file = e.target.files[0];
-    if (!file || !editingSdr) return;
-    
-    setUploading(true);
-    const formData = new FormData();
-    formData.append("file", file);
-    const token = localStorage.getItem("token");
-
-    try {
-      const res = await fetch(`/api/sdrs/${editingSdr.id}/training`, {
+      const res = await fetch(`/api/sdrs/${selecionado.id}/simulate`, {
         method: "POST",
-        headers: { "Authorization": `Bearer ${token}` },
-        body: formData
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: texto, history: teste }),
       });
-      const data = await res.json();
-      if (res.ok) {
-        toast({ title: "Documento processado", description: `${(data.extractedChars || 0).toLocaleString()} caracteres extraídos e adicionados à base de conhecimento.` });
-        setForm({...form, knowledgeBase: data.sdr.knowledgeBase});
-        fetchData();
-      } else {
-        throw new Error(data.error);
-      }
-    } catch (err: any) {
-      toast({ title: "Erro no treinamento", description: err.message, variant: "destructive" });
-    } finally {
-      setUploading(false);
-    }
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Falha no simulador");
+      setTeste([...historico, { role: "assistant", content: d.response }]);
+    } catch (e: any) {
+      toast({ title: e.message, variant: "destructive" });
+      setTeste(historico);
+    } finally { setPensando(false); }
   };
 
-  const deleteSdr = async (id: string) => {
-    if (!confirm("Remover este robô do time?")) return;
-    const token = localStorage.getItem("token");
-    await fetch(`/api/sdrs/${id}`, { 
-      method: "DELETE",
-      headers: { "Authorization": `Bearer ${token}` }
-    });
-    fetchData();
-    toast({ title: "🗑️ Removido" });
-  };
+  const alternarSkill = (id: string) =>
+    setForm((f) => ({
+      ...f,
+      skills: f.skills.includes(id) ? f.skills.filter((s) => s !== id) : [...f.skills, id],
+    }));
 
-  const toggleSdrActive = async (sdr: any) => {
-    const token = localStorage.getItem("token");
-    try {
-      const res = await fetch(`/api/sdrs/${sdr.id}`, {
-        method: "PUT",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ ...sdr, active: !sdr.active })
-      });
-      if (res.ok) {
-        toast({ title: !sdr.active ? "🟢 Robô Ativado" : "🔴 Robô Desativado" });
-        fetchData();
-      }
-    } catch (e) {
-      toast({ title: "Erro", variant: "destructive" });
-    }
-  };
+  const alternarConta = (id: string) =>
+    setForm((f) => ({
+      ...f,
+      accountIds: f.accountIds.includes(id) ? f.accountIds.filter((a) => a !== id) : [...f.accountIds, id],
+    }));
+
+  const funcaoAtual = functions.find((f) => f.id === form.agentFunction);
+  const iniciais = (n?: string) => (n || "?").trim().substring(0, 2).toUpperCase();
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-10 p-6 lg:p-10 max-w-screen-2xl mx-auto">
-        
-        {/* HEADER ESTRATÉGICO */}
-        <PageHeader
-          icon={<Bot className="w-5 h-5" />}
-          title="Assistente de IA"
-          subtitle="Crie e treine o assistente que atende seus pacientes no WhatsApp."
-          actions={
-            <div className="flex flex-col items-end gap-1">
-              <Button
-                onClick={() => hasWhatsApp ? handleOpenModal() : toast({ title: "WhatsApp necessário", description: "Conecte um WhatsApp antes de criar um assistente.", variant: "destructive" })}
-                disabled={!hasWhatsApp}
-              >
-                <Plus className="w-4 h-4 mr-2" /> Criar assistente
-              </Button>
-              {!hasWhatsApp && (
-                <p className="text-xs text-muted-foreground">Requer conexão com o WhatsApp</p>
-              )}
-            </div>
-          }
-        />
+      <div className="mx-auto max-w-[1500px] px-4 pb-10 pt-5 sm:px-6">
 
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-40 gap-4 opacity-30">
-             <RefreshCw className="w-10 h-10 text-[#2563EB] animate-spin" />
-             <p className="text-xs font-semibold ">Sincronizando IA...</p>
+        <header className="mb-4 flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-[26px] font-bold tracking-[-0.03em] text-foreground">Agente de IA</h1>
+            <p className="mt-0.5 max-w-md text-[13.5px] text-muted-foreground">
+              Crie e treine o assistente que atende seus clientes no WhatsApp, Instagram e site.
+            </p>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {sdrs.map(sdr => (
-              <Card key={sdr.id} className="border-none shadow-sm rounded-2xl bg-white overflow-hidden hover:scale-[1.01] transition-all group relative">
-                <div className="p-8 bg-slate-50 flex items-center justify-between group-hover:bg-slate-900 transition-all duration-500">
-                   <div className="flex items-center gap-5">
-                      <div className="w-10 h-10 bg-white group-hover:bg-[#2563EB] rounded-2xl flex items-center justify-center shadow-lg transition-all">
-                         <Bot className="w-7 h-7 text-slate-800 group-hover:text-white" />
-                      </div>
-                      <div>
-                         <h3 className="text-slate-900 group-hover:text-white font-semibold text-lg leading-none uppercase">{sdr.name}</h3>
-                         <Badge className="bg-[#2563EB]/10 text-[#2563EB] font-semibold text-xs mt-1 uppercase border-none">{functions.find((f) => f.id === sdr.agentFunction)?.label || sdr.role}</Badge>
-                      </div>
-                   </div>
-                   <div className="flex items-center gap-3">
-                      <div 
-                        onClick={(e) => { e.stopPropagation(); toggleSdrActive(sdr); }}
-                        className={`flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded-full border transition-all ${sdr.active ? 'bg-[#2563EB]/10 border-[#2563EB]/20 text-[#2563EB] hover:bg-[#2563EB]/20' : 'bg-slate-800/50 border-slate-700 hover:bg-slate-700 text-slate-400 group-hover:bg-slate-800'}`}
-                        title={sdr.active ? "Desativar SDR" : "Ativar SDR"}
-                      >
-                         <Power className={`w-4 h-4 ${sdr.active ? 'text-[#2563EB]' : 'text-slate-400'}`} />
-                         <span className="text-xs font-semibold leading-none">{sdr.active ? 'ON' : 'OFF'}</span>
-                      </div>
-                      <Button variant="ghost" size="icon" className="w-10 h-10 rounded-xl hover:bg-red-50 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all" onClick={(e) => { e.stopPropagation(); deleteSdr(sdr.id); }}>
-                         <Trash2 className="w-5 h-5" />
-                      </Button>
-                   </div>
-                </div>
-                
-                <div className="p-8 space-y-6">
-                   <div className="grid grid-cols-3 gap-2">
-                      <div className="bg-slate-50 p-3 rounded-2xl text-center">
-                         <MessageSquare className="w-4 h-4 text-[#2563EB] mx-auto mb-1" />
-                         <span className="text-xs font-semibold text-slate-800 block">{sdr.followUpInterval}m</span>
-                         <span className="text-xs font-bold text-slate-400 uppercase">Followup</span>
-                      </div>
-                      <div className="bg-slate-50 p-3 rounded-2xl text-center">
-                         <Clock className="w-4 h-4 text-[#2563EB] mx-auto mb-1" />
-                         <span className="text-xs font-semibold text-slate-800 block">{sdr.preConfirmationHours}h</span>
-                         <span className="text-xs font-bold text-slate-400 uppercase">Confirm</span>
-                      </div>
-                      <div className="bg-slate-50 p-3 rounded-2xl text-center">
-                         <CheckCircle2 className="w-4 h-4 text-[#2563EB] mx-auto mb-1" />
-                         <span className="text-xs font-semibold text-slate-800 block">{sdr.enableWaitlist ? "ON" : "OFF"}</span>
-                         <span className="text-xs font-bold text-slate-400 uppercase">Encaixe</span>
-                      </div>
-                   </div>
+          <div className="flex shrink-0 gap-2">
+            <Button variant="outline" onClick={() => document.getElementById("simulador")?.scrollIntoView({ behavior: "smooth" })} className="h-10 gap-2">
+              <Sparkles className="h-4 w-4" /> Testar no simulador
+            </Button>
+            <Button onClick={salvar} disabled={salvando} className="h-10 gap-2">
+              <Save className="h-4 w-4" /> {salvando ? "Salvando…" : "Salvar alterações"}
+            </Button>
+          </div>
+        </header>
 
-                   <Button onClick={() => handleOpenModal(sdr)} className="w-full h-10 bg-slate-900 hover:bg-black text-white font-semibold rounded-2xl uppercase text-xs transition-all">
-                      Ajustar Parâmetros IA
-                   </Button>
+        <div className="grid items-start gap-4 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)_320px]">
+
+          {/* ───── Lista de agentes ───── */}
+          <aside className="rounded-[14px] border border-border bg-card shadow-card">
+            <header className="flex items-center justify-between border-b border-border px-4 py-3">
+              <h2 className="text-[13.5px] font-semibold text-foreground">Seus agentes</h2>
+              <span className="num text-[11.5px] text-faint">{sdrs.length}</span>
+            </header>
+            {loading ? (
+              <div className="space-y-2 p-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-14 rounded-lg" />)}</div>
+            ) : (
+              <ul>
+                {sdrs.map((s) => {
+                  const ativo = selecionado?.id === s.id;
+                  return (
+                    <li key={s.id}>
+                      <button
+                        onClick={() => escolher(s)}
+                        className={`flex w-full items-center gap-3 border-l-[3px] border-b border-b-border-soft px-3.5 py-3 text-left transition-colors ${
+                          ativo ? "border-l-[#2563EB] bg-accent-soft" : "border-l-transparent hover:bg-surface-2"
+                        }`}
+                      >
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-[11px] font-bold text-accent-text">
+                          {iniciais(s.name)}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="linha-unica-elipse block text-[13px] font-semibold text-foreground">{s.name}</span>
+                          <span className="linha-unica-elipse block text-[11.5px] text-faint">
+                            {functions.find((f) => f.id === s.agentFunction)?.label || "Atendimento"}
+                          </span>
+                        </span>
+                        <span
+                          title={s.active ? "Ligado" : "Desligado"}
+                          className={`h-2 w-2 shrink-0 rounded-full ${s.active ? "bg-emerald-500" : "bg-slate-300"}`}
+                        />
+                      </button>
+                    </li>
+                  );
+                })}
+                <li>
+                  <button onClick={novoAgente} className="w-full px-3.5 py-3 text-left text-[13px] font-semibold text-accent-text hover:bg-surface-2">
+                    + Novo agente
+                  </button>
+                </li>
+              </ul>
+            )}
+          </aside>
+
+          {/* ───── Edição ───── */}
+          <div className="min-w-0 space-y-4">
+            {/* Identidade */}
+            <section className="rounded-[14px] border border-border bg-card p-5 shadow-card">
+              <h2 className="text-[15px] font-semibold text-foreground">Identidade</h2>
+
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label className="text-[12px] font-medium text-muted-foreground">Nome do agente</Label>
+                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="h-10" placeholder="Ex: Sofia" />
                 </div>
-              </Card>
-            ))}
-            {sdrs.length === 0 && (
-               <div className="col-span-full py-20 text-center opacity-30 flex flex-col items-center gap-3">
-                  <Bot className="w-10 h-10 text-slate-300" />
-                  <p className="text-xs font-semibold text-slate-300">Nenhum robô contratado</p>
-               </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[12px] font-medium text-muted-foreground">Função</Label>
+                  <Select
+                    value={form.agentFunction}
+                    onValueChange={(v) => {
+                      // Trocar a função troca também as ferramentas: cada preset
+                      // já vem com o conjunto que faz sentido para ele.
+                      const preset = functions.find((f) => f.id === v);
+                      setForm({ ...form, agentFunction: v, skills: preset?.skills || form.skills });
+                    }}
+                  >
+                    <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {functions.map((f) => <SelectItem key={f.id} value={f.id}>{f.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              {funcaoAtual?.hint && <p className="mt-2 text-[12px] text-faint">{funcaoAtual.hint}</p>}
+
+              <div className="mt-5 space-y-2">
+                <Label className="text-[12px] font-medium text-muted-foreground">Tom de voz</Label>
+                <div className="flex flex-wrap gap-2">
+                  {TONS.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => setForm({ ...form, voiceTone: t.id })}
+                      className={`h-9 rounded-lg border px-4 text-[13px] font-semibold transition-colors ${
+                        form.voiceTone === t.id
+                          ? "border-accent-text/40 bg-accent-soft text-accent-text"
+                          : "border-border-soft bg-card text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-5 space-y-1.5">
+                <Label className="text-[12px] font-medium text-muted-foreground">Regras específicas do seu negócio</Label>
+                <Textarea
+                  value={form.prompt}
+                  onChange={(e) => setForm({ ...form, prompt: e.target.value })}
+                  rows={5}
+                  className="resize-none text-[13.5px]"
+                  placeholder="Sempre confirmar o nome do cliente antes de agendar. Nunca prometer desconto sem aprovação."
+                />
+              </div>
+            </section>
+
+            {/* Base de conhecimento */}
+            <section className="rounded-[14px] border border-border bg-card p-5 shadow-card">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 className="text-[15px] font-semibold text-foreground">Base de conhecimento</h2>
+                <span className="num text-[11.5px] text-faint">
+                  {(form.knowledgeBase || "").length.toLocaleString("pt-BR")} caracteres
+                </span>
+              </div>
+              <p className="mt-1 text-[12.5px] text-muted-foreground">
+                O agente responde com base no que estiver aqui. Suba um documento ou escreva direto.
+              </p>
+
+              <input type="file" id="kb-file" className="hidden" accept=".pdf,.txt,.doc,.docx,.csv" onChange={subirArquivo} />
+              <button
+                onClick={() => document.getElementById("kb-file")?.click()}
+                disabled={uploading || !selecionado}
+                className="mt-4 grid w-full place-items-center gap-1.5 rounded-xl border border-dashed border-border py-8 text-faint transition-colors hover:border-accent-text/40 hover:text-accent-text disabled:opacity-50"
+              >
+                {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
+                <span className="text-[12.5px] font-medium">
+                  {uploading ? "Processando o documento…" : "Arraste um PDF, DOCX ou TXT — ou clique para escolher"}
+                </span>
+                {!selecionado && <span className="text-[11.5px]">Salve o agente antes de treinar</span>}
+              </button>
+
+              <Textarea
+                value={form.knowledgeBase}
+                onChange={(e) => setForm({ ...form, knowledgeBase: e.target.value })}
+                rows={6}
+                className="mt-3 resize-none text-[13px]"
+                placeholder="Preços, prazos, políticas, perguntas frequentes…"
+              />
+            </section>
+
+            {/* Ferramentas */}
+            <section className="rounded-[14px] border border-border bg-card p-5 shadow-card">
+              <h2 className="text-[15px] font-semibold text-foreground">O que o agente pode fazer</h2>
+              <p className="mt-1 text-[12.5px] text-muted-foreground">
+                Desligar uma ferramenta tira a capacidade — o agente deixa de conseguir, não só de tentar.
+              </p>
+              <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
+                {skillsCatalog.map((s) => (
+                  <label key={s.id} className="flex cursor-pointer items-start gap-3 rounded-xl border border-border-soft bg-surface-2 p-3.5">
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13px] font-semibold text-foreground">{s.label}</span>
+                      <span className="mt-0.5 block text-[11.5px] leading-relaxed text-muted-foreground">{s.desc}</span>
+                    </span>
+                    <Switch checked={form.skills.includes(s.id)} onCheckedChange={() => alternarSkill(s.id)} aria-label={s.label} />
+                  </label>
+                ))}
+              </div>
+            </section>
+
+            {/* Voz e canais */}
+            <section className="rounded-[14px] border border-border bg-card p-5 shadow-card">
+              <h2 className="text-[15px] font-semibold text-foreground">Voz e canais</h2>
+
+              <div className="mt-4 space-y-1.5">
+                <Label className="text-[12px] font-medium text-muted-foreground">Como o agente responde</Label>
+                <Select value={form.responseMode} onValueChange={(v) => setForm({ ...form, responseMode: v })}>
+                  <SelectTrigger className="h-10 sm:w-[280px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="TEXT">Só texto</SelectItem>
+                    <SelectItem value="AUDIO">Só áudio</SelectItem>
+                    <SelectItem value="MIRROR">Espelha o cliente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {form.responseMode !== "TEXT" && voices.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <Label className="text-[12px] font-medium text-muted-foreground">Voz</Label>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {voices.map((v) => (
+                      <div
+                        key={v.id}
+                        onClick={() => (v.locked ? setUpgradeVoice(v) : setForm({ ...form, voiceId: v.id }))}
+                        className={`flex cursor-pointer items-center gap-2.5 rounded-xl border p-3 ${
+                          form.voiceId === v.id ? "border-accent-text/40 bg-accent-soft" : "border-border-soft bg-surface-2"
+                        }`}
+                      >
+                        {v.locked ? <Lock className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+                          : form.voiceId === v.id ? <Check className="h-3.5 w-3.5 shrink-0 text-accent-text" />
+                          : <Volume2 className="h-3.5 w-3.5 shrink-0 text-faint" />}
+                        <span className="min-w-0 flex-1">
+                          <span className="linha-unica-elipse block text-[13px] font-medium text-foreground">{v.label || v.id}</span>
+                          {v.locked && <span className="block text-[11px] text-amber-700">Voz premium</span>}
+                        </span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); tocarAmostra(v); }}
+                          className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-faint hover:text-accent-text"
+                          aria-label="Ouvir amostra"
+                        >
+                          {previewingId === v.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {connections.length > 0 && (
+                <div className="mt-5 space-y-2">
+                  <Label className="text-[12px] font-medium text-muted-foreground">Conexões que este agente atende</Label>
+                  <p className="text-[11.5px] text-faint">Nenhuma marcada: ele atende todas.</p>
+                  <div className="flex flex-wrap gap-2">
+                    {connections.map((c) => {
+                      const m = canal(c.channel);
+                      const marcada = form.accountIds.includes(c.id);
+                      return (
+                        <button
+                          key={c.id}
+                          onClick={() => alternarConta(c.id)}
+                          className={`flex h-9 items-center gap-1.5 rounded-lg border px-3 text-[12.5px] font-semibold transition-colors ${
+                            marcada ? "border-accent-text/40 bg-accent-soft text-accent-text" : "border-border-soft text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          <m.Icon className={`h-3.5 w-3.5 ${marcada ? "" : m.cls}`} /> {c.name || c.phone || m.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* Comportamento */}
+            <section className="rounded-[14px] border border-border bg-card p-5 shadow-card">
+              <h2 className="text-[15px] font-semibold text-foreground">Comportamento</h2>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label className="text-[12px] font-medium text-muted-foreground">Espera antes de responder (ms)</Label>
+                  <Input type="number" min="0" value={form.responseDelay}
+                    onChange={(e) => setForm({ ...form, responseDelay: Number(e.target.value) })} className="h-10" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[12px] font-medium text-muted-foreground">Retomar contato após (min)</Label>
+                  <Input type="number" min="0" value={form.followUpInterval}
+                    onChange={(e) => setForm({ ...form, followUpInterval: Number(e.target.value) })} className="h-10" />
+                </div>
+                <div className="col-span-full space-y-1.5">
+                  <Label className="text-[12px] font-medium text-muted-foreground">Palavras que chamam um humano</Label>
+                  <Input value={form.escalationKeywords}
+                    onChange={(e) => setForm({ ...form, escalationKeywords: e.target.value })}
+                    className="h-10" placeholder="atendente, falar com humano, reclamação" />
+                  <p className="text-[11.5px] text-faint">Separe por vírgula. Ao ouvir uma delas, o agente passa a conversa para a fila.</p>
+                </div>
+                <label className="col-span-full flex items-center justify-between rounded-xl border border-border-soft bg-surface-2 p-3.5">
+                  <span>
+                    <span className="block text-[13px] font-semibold text-foreground">Lista de espera</span>
+                    <span className="block text-[11.5px] text-muted-foreground">Sem horário livre, o agente oferece entrar na fila.</span>
+                  </span>
+                  <Switch checked={form.enableWaitlist} onCheckedChange={(v) => setForm({ ...form, enableWaitlist: v })} />
+                </label>
+              </div>
+            </section>
+
+            {selecionado && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-border bg-card p-4 shadow-card">
+                <label className="flex items-center gap-2.5">
+                  <Switch checked={!!selecionado.active} onCheckedChange={() => alternarAtivo(selecionado)} />
+                  <span className="text-[13px] font-medium text-foreground">
+                    {selecionado.active ? "Agente ligado — está atendendo" : "Agente desligado"}
+                  </span>
+                </label>
+                <Button variant="outline" onClick={() => remover(selecionado.id)} className="gap-2 text-red-600 hover:bg-red-50">
+                  <Trash2 className="h-4 w-4" /> Remover agente
+                </Button>
+              </div>
             )}
           </div>
-        )}
+
+          {/* ───── Simulador ───── */}
+          <aside id="simulador" className="rounded-[14px] border border-border bg-card shadow-card xl:sticky xl:top-[76px]">
+            <header className="flex items-center gap-3 border-b border-border px-4 py-3">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#2563EB] to-[#7C5CFF] text-[11px] font-bold text-white">
+                {iniciais(form.name) || "IA"}
+              </span>
+              <div className="min-w-0">
+                <p className="linha-unica-elipse text-[13.5px] font-semibold text-foreground">{form.name || "Simulador"}</p>
+                <p className="text-[11.5px] text-faint">Conversa de teste</p>
+              </div>
+            </header>
+
+            <div className="h-[420px] overflow-y-auto bg-surface-2 p-4">
+              {!selecionado ? (
+                <p className="pt-16 text-center text-[12.5px] text-muted-foreground">
+                  Salve o agente para conversar com ele aqui.
+                </p>
+              ) : teste.length === 0 ? (
+                <div className="pt-12 text-center">
+                  <Bot className="mx-auto h-7 w-7 text-border-soft" />
+                  <p className="mt-3 text-[12.5px] leading-relaxed text-muted-foreground">
+                    Escreva como se fosse um cliente. Nada aqui vira contato,<br />conversa nem mensagem enviada.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2.5">
+                  {teste.map((m, i) => (
+                    <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                      <div className={`max-w-[85%] whitespace-pre-wrap px-3.5 py-2.5 text-[13px] leading-relaxed ${
+                        m.role === "user"
+                          ? "rounded-[14px_14px_4px_14px] bg-[#2563EB] text-white"
+                          : "rounded-[14px_14px_14px_4px] border border-border-soft bg-background text-foreground"
+                      }`}>
+                        {m.content}
+                      </div>
+                    </div>
+                  ))}
+                  {pensando && (
+                    <div className="flex justify-start">
+                      <div className="flex items-center gap-1.5 rounded-[14px_14px_14px_4px] border border-border-soft bg-background px-3.5 py-3">
+                        {[0, 1, 2].map((i) => (
+                          <span key={i} className="h-1.5 w-1.5 animate-pulseDot rounded-full bg-accent-text"
+                            style={{ animationDuration: "1.2s", animationDelay: `${i * 0.15}s` }} />
+                        ))}
+                        <span className="ml-1 text-[11.5px] text-faint">{form.name || "O agente"} está digitando…</span>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={fimDoTeste} />
+                </div>
+              )}
+            </div>
+
+            <form
+              onSubmit={(e) => { e.preventDefault(); enviarTeste(); }}
+              className="flex items-center gap-2 border-t border-border p-3"
+            >
+              <Input
+                value={msgTeste}
+                onChange={(e) => setMsgTeste(e.target.value)}
+                disabled={!selecionado || pensando}
+                placeholder="Escreva como um cliente…"
+                className="h-10 text-[13px]"
+              />
+              <Button type="submit" disabled={!selecionado || pensando} className="h-10 w-10 shrink-0 p-0">
+                <Send className="h-4 w-4" />
+              </Button>
+            </form>
+            {teste.length > 0 && (
+              <button onClick={() => setTeste([])} className="w-full border-t border-border-soft py-2 text-[12px] font-medium text-faint hover:text-foreground">
+                Limpar conversa
+              </button>
+            )}
+          </aside>
+        </div>
       </div>
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-4xl p-0 border-none shadow-sm bg-white overflow-hidden rounded-2xl">
-          <div className="flex flex-col md:flex-row h-[85vh]">
-            <div className="w-full md:w-80 bg-slate-900 p-10 flex flex-col justify-between relative overflow-hidden">
-              <DialogHeader className="hidden">
-                 <DialogTitle>Gerenciador de SDR Inteligente</DialogTitle>
-                 <DialogDescription>Ajuste os parâmetros de comportamento e conhecimento do seu robô.</DialogDescription>
-              </DialogHeader>
-              <div className="absolute top-0 left-0 w-32 h-32 bg-[#2563EB]/10 blur-3xl rounded-full translate-x-[-50%] translate-y-[-50%]" />
-              <div className="space-y-10 relative z-10">
-                 <div className="w-16 h-11 bg-[#2563EB] rounded-2xl flex items-center justify-center shadow-lg"><Brain className="w-8 h-8 text-white" /></div>
-                 <div className="space-y-3">
-                    <h3 className="text-2xl font-semibold text-white tracking-tight uppercase leading-tight">Módulo <span className="text-[#2563EB] font-medium">Global</span></h3>
-                    <p className="text-white/30 text-xs font-bold leading-relaxed">Personalize a inteligência e o comportamento para o fluxo de qualquer negócio.</p>
-                 </div>
-              </div>
-              <div className="p-5 bg-white/5 rounded-2xl border border-white/5 space-y-2">
-                 <p className="text-xs font-semibold text-[#2563EB] mb-1">Nota Técnica</p>
-                 <p className="text-xs text-slate-400 leading-relaxed font-medium">Este robô agora gerencia automaticamente a lista de espera e cobrança de vouchers promocionais.</p>
-              </div>
-            </div>
-
-            <div className="flex-1 p-10 overflow-y-auto bg-white">
-               <Tabs defaultValue="perfil" className="space-y-8">
-                  <TabsList className="bg-slate-100 p-1.5 rounded-2xl h-16 w-full shadow-inner">
-                    <TabsTrigger value="perfil" className="flex-1 rounded-2xl font-semibold uppercase text-xs data-[state=active]:bg-white data-[state=active]:shadow-md">Perfil</TabsTrigger>
-                    <TabsTrigger value="knowledge" className="flex-1 rounded-2xl font-semibold uppercase text-xs data-[state=active]:bg-white data-[state=active]:shadow-md">Conhecimento</TabsTrigger>
-                    <TabsTrigger value="params" className="flex-1 rounded-2xl font-semibold uppercase text-xs data-[state=active]:bg-white data-[state=active]:shadow-md">Parâmetros</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="perfil" className="space-y-6 animate-in fade-in slide-in-from-top-4">
-                    <div className="space-y-2">
-                       <Label className="font-semibold text-xs text-slate-400 pl-1">Identificação da IA</Label>
-                       <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="h-10 rounded-2xl border-none bg-slate-50 font-bold px-6 shadow-inner" placeholder="Ex: Joana Bronze" />
-                    </div>
-
-                    {/* FUNÇÃO DO AGENTE */}
-                    <div className="space-y-2">
-                       <Label className="font-semibold text-xs text-slate-400 pl-1">Função do agente</Label>
-                       <div className="grid sm:grid-cols-2 gap-2">
-                          {functions.map((f) => {
-                            const active = form.agentFunction === f.id;
-                            return (
-                              <button
-                                key={f.id}
-                                type="button"
-                                onClick={() => setForm({ ...form, agentFunction: f.id, skills: f.skills })}
-                                className={`text-left rounded-2xl border p-3 transition-all ${active ? "border-[#2563EB] bg-[#2563EB]/5 ring-2 ring-[#2563EB]/20" : "border-slate-200 hover:border-[#2563EB]/40"}`}
-                              >
-                                <p className="text-sm font-semibold text-slate-900">{f.label}</p>
-                                <p className="text-xs text-slate-500 mt-0.5">{f.hint}</p>
-                              </button>
-                            );
-                          })}
-                       </div>
-                       <p className="text-xs text-slate-400 pl-1">A função define a persona e liga as skills recomendadas. Você ajusta abaixo.</p>
-                    </div>
-
-                    {/* SKILLS */}
-                    <div className="space-y-2">
-                       <Label className="font-semibold text-xs text-slate-400 pl-1">Skills (o que o agente pode fazer)</Label>
-                       <div className="grid sm:grid-cols-2 gap-2">
-                          {skillsCatalog.map((s) => {
-                            const on = form.skills.includes(s.id);
-                            return (
-                              <button
-                                key={s.id}
-                                type="button"
-                                onClick={() => setForm({ ...form, skills: on ? form.skills.filter((x) => x !== s.id) : [...form.skills, s.id] })}
-                                className={`text-left rounded-2xl border p-3 flex items-start gap-2 transition-all ${on ? "border-emerald-300 bg-emerald-50" : "border-slate-200 hover:border-slate-300"}`}
-                              >
-                                <div className={`h-4 w-4 rounded mt-0.5 shrink-0 grid place-items-center ${on ? "bg-emerald-500 text-white" : "bg-slate-200"}`}>
-                                  {on && <Check className="w-3 h-3" />}
-                                </div>
-                                <div>
-                                  <p className="text-sm font-semibold text-slate-900">{s.label}</p>
-                                  <p className="text-xs text-slate-500">{s.desc}</p>
-                                </div>
-                              </button>
-                            );
-                          })}
-                       </div>
-                    </div>
-
-                    <div className="space-y-2">
-                       <Label className="font-semibold text-xs text-slate-400 pl-1">Instruções adicionais (opcional)</Label>
-                       <Textarea value={form.prompt} onChange={e => setForm({...form, prompt: e.target.value})} className="min-h-[120px] rounded-2xl border-none bg-slate-50 p-6 font-medium leading-relaxed" placeholder="Regras específicas do seu negócio, tom de voz, o que evitar…" />
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="knowledge" className="space-y-6 animate-in fade-in slide-in-from-top-4">
-                    {editingSdr && (
-                      <div className="p-6 bg-blue-50 rounded-2xl border-2 border-dashed border-slate-300 space-y-4">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-[#2563EB] rounded-2xl flex items-center justify-center shadow-lg">
-                            <Upload className="w-6 h-6 text-white" />
-                          </div>
-                          <div>
-                            <h4 className="text-sm font-semibold text-[#0F172A] tracking-tight">Treinar por documento</h4>
-                            <p className="text-xs text-[#2563EB] font-bold ">PDF, DOCX, planilha (XLSX/CSV) ou TXT</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <Input
-                            type="file"
-                            accept=".pdf,.docx,.xlsx,.xls,.csv,.txt"
-                            onChange={handleFileUpload}
-                            disabled={uploading}
-                            className="hidden" 
-                            id="training-file"
-                          />
-                          <Button 
-                            asChild 
-                            className="w-full h-10 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold rounded-xl uppercase text-xs cursor-pointer shadow-lg"
-                          >
-                            <label htmlFor="training-file">
-                              {uploading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
-                              {uploading ? "Absorvendo conteúdo..." : "Selecionar Documento"}
-                            </label>
-                          </Button>
-                        </div>
-                        <p className="text-xs text-[#2DD4BF] font-medium text-center">O robô lerá o arquivo e especializará sua base de respostas automaticamente.</p>
-                      </div>
-                    )}
-                    
-                    <div className="space-y-2">
-                       <Label className="font-semibold text-xs text-slate-400 pl-1">Cérebro do Agente (Texto Consolidado)</Label>
-                       <Textarea value={form.knowledgeBase} onChange={e => setForm({...form, knowledgeBase: e.target.value})} className="min-h-[200px] rounded-2xl border-none bg-slate-50 p-6 font-medium leading-relaxed text-sm" placeholder="O conteúdo dos arquivos e textos manuais aparecerão aqui..." />
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="params" className="space-y-8 animate-in fade-in slide-in-from-top-4 py-2">
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-6">
-                       <div className="space-y-2">
-                          <Label className="font-semibold text-xs text-slate-400 pl-1">Follow-up de Venda (Minutos)</Label>
-                          <Input type="number" value={form.followUpInterval} onChange={e => setForm({...form, followUpInterval: parseInt(e.target.value)})} className="h-10 rounded-2xl border-none bg-slate-50 font-bold px-6 shadow-inner" />
-                          <p className="text-xs font-bold text-slate-400 pl-1">Tempo para cobrar resposta após info de preço.</p>
-                       </div>
-                       <div className="space-y-2">
-                          <Label className="font-semibold text-xs text-slate-400 pl-1">Janela Pré-Confirmação (Horas)</Label>
-                          <Input type="number" value={form.preConfirmationHours} onChange={e => setForm({...form, preConfirmationHours: parseInt(e.target.value)})} className="h-10 rounded-2xl border-none bg-slate-50 font-bold px-6 shadow-inner" />
-                          <p className="text-xs font-bold text-slate-400 pl-1">Quanto tempo antes enviar o 1º lembrete.</p>
-                       </div>
-                       <div className="space-y-2">
-                          <Label className="font-semibold text-xs text-slate-400 pl-1">Tolerância No-Show (Minutos)</Label>
-                          <Input type="number" value={form.noShowGraceMinutes} onChange={e => setForm({...form, noShowGraceMinutes: parseInt(e.target.value)})} className="h-10 rounded-2xl border-none bg-slate-50 font-bold px-6 shadow-inner" />
-                          <p className="text-xs font-bold text-slate-400 pl-1">Atraso permitido antes de perguntar se ainda vem.</p>
-                       </div>
-                       <div className="space-y-2">
-                          <Label className="font-semibold text-xs text-slate-400 pl-1">Pós-Venda Checkup (Horas)</Label>
-                          <Input type="number" value={form.postServiceCheckHours} onChange={e => setForm({...form, postServiceCheckHours: parseInt(e.target.value)})} className="h-10 rounded-2xl border-none bg-slate-50 font-bold px-6 shadow-inner" />
-                          <p className="text-xs font-bold text-slate-400 pl-1">Tempo após serviço para checar se está tudo OK.</p>
-                       </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between p-6 bg-slate-50 rounded-2xl border border-slate-100">
-                       <div className="space-y-0.5">
-                          <Label className="text-sm font-semibold text-slate-900 tracking-tight">Gestão de Encaixe Automático</Label>
-                          <p className="text-xs font-bold text-slate-400 uppercase leading-none">Busca leads na lista de espera em caso de desistência</p>
-                       </div>
-                       <Switch checked={form.enableWaitlist} onCheckedChange={v => setForm({...form, enableWaitlist: v})} className="data-[state=checked]:bg-[#2563EB]" />
-                    </div>
-
-                    <div className="space-y-2">
-                       <Label className="font-semibold text-xs text-slate-400 pl-1">Gatilhos de Alerta Humano (Separados por vírgula)</Label>
-                       <Input value={form.escalationKeywords} onChange={e => setForm({...form, escalationKeywords: e.target.value})} className="h-10 rounded-2xl border-none bg-slate-50 font-bold px-6 shadow-inner" />
-                    </div>
-
-                    <Separator className="opacity-50" />
-
-                    {/* Conexões atendidas — só faz sentido com mais de um canal. */}
-                    {connections.length > 1 && (
-                      <div className="space-y-3">
-                        <div>
-                          <Label className="font-semibold text-xs text-slate-500 pl-1">Conexões que este agente atende</Label>
-                          <p className="text-xs text-slate-400 pl-1 mt-1">
-                            {form.accountIds.length === 0
-                              ? "Nenhuma marcada: o agente responde em todas as conexões."
-                              : `Responde em ${form.accountIds.length} de ${connections.length} conexões.`}
-                          </p>
-                        </div>
-                        <div className="space-y-1.5">
-                          {connections.map((c) => {
-                            const on = form.accountIds.includes(c.id);
-                            return (
-                              <button
-                                key={c.id}
-                                type="button"
-                                onClick={() => setForm({
-                                  ...form,
-                                  accountIds: on
-                                    ? form.accountIds.filter((x) => x !== c.id)
-                                    : [...form.accountIds, c.id],
-                                })}
-                                className={`w-full flex items-center gap-3 rounded-2xl px-5 py-3 text-left transition ${on ? "bg-[#2563EB]/10 ring-1 ring-[#2563EB]" : "bg-slate-50 hover:bg-slate-100"}`}
-                              >
-                                <span className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 ${on ? "bg-[#2563EB]" : "bg-slate-300"}`}>
-                                  {on && <Check className="w-3 h-3 text-white" />}
-                                </span>
-                                <span className="flex-1 min-w-0">
-                                  <span className="block text-sm font-bold text-slate-700 truncate">{c.name}</span>
-                                  <span className="block text-xs text-slate-400 truncate">
-                                    {c.channel === "INSTAGRAM" ? "Instagram" : c.mode === "CLOUD" ? "WhatsApp oficial" : "WhatsApp (QR)"}
-                                    {c.phone ? ` · ${c.phone}` : ""}
-                                  </span>
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {connections.length > 1 && <Separator className="opacity-50" />}
-
-                    <div className="bg-slate-900 p-8 rounded-2xl space-y-6">
-                       <div className="flex items-center gap-3 text-[#2DD4BF] mb-2">
-                          <Zap className="w-5 h-5" />
-                          <h4 className="font-semibold uppercase text-xs ">Configuração de Voz (Neural)</h4>
-                       </div>
-                       
-                       <div className="grid grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                             <Label className="font-semibold text-xs text-white/50 pl-1">Modo de Resposta</Label>
-                             <Select value={form.responseMode} onValueChange={v => setForm({...form, responseMode: v})}>
-                                <SelectTrigger className="h-10 rounded-2xl border-none bg-white/5 text-white font-bold px-6 shadow-inner">
-                                   <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent className="rounded-xl border-none shadow-sm">
-                                   <SelectItem value="TEXT" className="font-bold">APENAS TEXTO</SelectItem>
-                                   <SelectItem value="AUDIO" className="font-bold">APENAS ÁUDIO (Voz)</SelectItem>
-                                   <SelectItem value="BOTH" className="font-bold">AMBOS (Texto + Áudio)</SelectItem>
-                                </SelectContent>
-                             </Select>
-                          </div>
-                          
-                          <div className="space-y-2">
-                             <Label className="font-semibold text-xs text-white/50 pl-1">Voz</Label>
-                             <div className="max-h-44 overflow-y-auto space-y-1.5 pr-1">
-                                {voices.length === 0 && (
-                                  <p className="text-xs font-bold text-white/30">Nenhuma voz disponível.</p>
-                                )}
-                                {voices.map((v: any) => {
-                                  const selected = form.voiceId === v.id;
-                                  return (
-                                    <div
-                                      key={v.id}
-                                      className={`flex items-center gap-2 rounded-xl px-3 py-2 transition-colors ${
-                                        selected ? "bg-[#2563EB]/20 ring-1 ring-[#2563EB]/40" : "bg-white/5 hover:bg-white/10"
-                                      }`}
-                                    >
-                                      {/* Ouvir amostra antes de escolher */}
-                                      <button
-                                        type="button"
-                                        onClick={() => playPreview(v)}
-                                        title="Ouvir amostra"
-                                        className="shrink-0 h-7 w-7 rounded-full bg-white/10 hover:bg-white/20 grid place-items-center text-white"
-                                      >
-                                        {previewingId === v.id
-                                          ? <RefreshCw className="w-3 h-3 animate-spin" />
-                                          : <Play className="w-3 h-3" />}
-                                      </button>
-
-                                      <button
-                                        type="button"
-                                        onClick={() => selectVoice(v)}
-                                        className="flex-1 text-left min-w-0"
-                                      >
-                                        <span className="text-xs font-bold text-white truncate block">{v.name}</span>
-                                        <span className="text-[10px] font-bold text-white/30">
-                                          {v.premium ? "Premium · ElevenLabs" : "Padrão"}
-                                        </span>
-                                      </button>
-
-                                      {v.locked && (
-                                        <span className="shrink-0 text-[10px] font-bold text-amber-300 flex items-center gap-1">
-                                          <Lock className="w-3 h-3" /> Upgrade
-                                        </span>
-                                      )}
-                                      {selected && !v.locked && <Check className="w-4 h-4 text-[#2DD4BF] shrink-0" />}
-                                    </div>
-                                  );
-                                })}
-                             </div>
-                             <p className="text-xs font-bold text-white/20 pl-1">Ouça a amostra antes de escolher. Vozes premium exigem upgrade.</p>
-                          </div>
-                       </div>
-                    </div>
-                  </TabsContent>
-
-                  <div className="flex gap-4 pt-4 pb-2">
-                     <Button onClick={handleSave} className="flex-[3] h-20 bg-slate-900 hover:bg-black text-white font-semibold rounded-2xl shadow-sm transition-all hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3">
-                        <Save className="w-5 h-5 text-[#2563EB]" /> Salvar Agente Inteligente
-                     </Button>
-                     <Button onClick={() => setIsModalOpen(false)} variant="ghost" className="flex-1 h-20 rounded-2xl font-semibold uppercase text-xs text-slate-400 leading-none">Cancelar</Button>
-                  </div>
-               </Tabs>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-      {/* UPGRADE — voz premium bloqueada pelo plano */}
+      {/* Voz premium bloqueada pelo plano */}
       <Dialog open={!!upgradeVoice} onOpenChange={(o) => !o && setUpgradeVoice(null)}>
-        <DialogContent className="rounded-2xl max-w-md">
+        <DialogContent className="max-w-md rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-[#2563EB]" /> Voz premium
+            <DialogTitle className="flex items-center gap-2 text-[17px] font-semibold">
+              <Lock className="h-4 w-4 text-amber-600" /> Voz premium
             </DialogTitle>
-            <DialogDescription>
-              A voz <b>{upgradeVoice?.name}</b> faz parte das vozes premium (ElevenLabs) —
-              mais naturais e expressivas, ideais para atendimento por áudio.
+            <DialogDescription className="text-[13px]">
+              A voz “{upgradeVoice?.label || upgradeVoice?.id}” está disponível nos planos com voz premium.
+              As vozes padrão continuam liberadas no seu plano.
             </DialogDescription>
           </DialogHeader>
-
-          <div className="rounded-xl bg-blue-50 p-4 space-y-2 text-sm text-slate-700">
-            <p className="font-semibold text-slate-900">O que muda com as vozes premium</p>
-            <ul className="space-y-1 text-xs">
-              <li>• Voz humana e natural, com entonação real</li>
-              <li>• Português do Brasil sem sotaque robótico</li>
-              <li>• Dezenas de vozes para combinar com a marca</li>
-            </ul>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              className="flex-1 gap-2"
-              onClick={() => upgradeVoice && playPreview(upgradeVoice)}
-            >
-              <Play className="w-4 h-4" /> Ouvir de novo
-            </Button>
-            <Button
-              className="flex-1 bg-[#2563EB] hover:bg-[#1D4ED8] text-white gap-2"
-              onClick={() => { setUpgradeVoice(null); navigate("/assinatura"); }}
-            >
-              <Sparkles className="w-4 h-4" /> Fazer upgrade
-            </Button>
-          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUpgradeVoice(null)}>Fechar</Button>
+            <Button onClick={() => { window.location.href = "/assinatura"; }}>Ver planos</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </DashboardLayout>
