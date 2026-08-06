@@ -9,7 +9,8 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { DashboardMockup } from "@/components/landing/DashboardMockup";
 import { Logo } from "@/components/Logo";
-import { IdentificacaoVisitante, type Visitante } from "@/components/public/IdentificacaoVisitante";
+import { IdentificacaoVisitante } from "@/components/public/IdentificacaoVisitante";
+import { useChatPublico } from "@/hooks/useChatPublico";
 
 /**
  * Landing pública.
@@ -132,19 +133,14 @@ export default function LandingPage() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMessage, setChatMessage] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [leadId, setLeadId] = useState<string | null>(() => sessionStorage.getItem("landing_lead_id") || null);
-  const [chatHistory, setChatHistory] = useState<{ role: string; content: string }[]>(() => {
-    const saved = sessionStorage.getItem("landing_chat_history");
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [loadingChat, setLoadingChat] = useState(false);
-  // Quem está do outro lado. Guardado na sessão para não perguntar de novo a
-  // cada mensagem — e para a conversa chegar identificada no painel.
-  const [visitante, setVisitante] = useState<Visitante | null>(() => {
-    const salvo = sessionStorage.getItem("landing_visitante");
-    return salvo ? JSON.parse(salvo) : null;
-  });
   const { toast } = useToast();
+
+  // A conversa vive no servidor: é o que permite a resposta do atendente
+  // humano chegar até aqui, e não só a da IA.
+  const chat = useChatPublico({
+    chave: "landing",
+    corpoBase: () => ({ sdrId: settings?.selectedSdrId }),
+  });
 
   useEffect(() => {
     fetch("/api/public/landing")
@@ -155,10 +151,6 @@ export default function LandingPage() {
       })
       .catch((err) => console.error("Erro ao carregar a landing:", err));
   }, []);
-
-  useEffect(() => {
-    if (chatHistory.length > 0) sessionStorage.setItem("landing_chat_history", JSON.stringify(chatHistory));
-  }, [chatHistory]);
 
   // A landing é sempre clara: as cores dos blocos são fixas e o `dark` do
   // painel viraria texto escuro sobre fundo escuro aqui.
@@ -171,37 +163,10 @@ export default function LandingPage() {
     return () => { document.body.style.overflow = ""; };
   }, [menuOpen]);
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = () => {
     if (!chatMessage.trim() || !settings?.selectedSdrId) return;
-    const userMsg = chatMessage;
+    chat.enviar(chatMessage);
     setChatMessage("");
-    setChatHistory((prev) => [...prev, { role: "user", content: userMsg }]);
-    setLoadingChat(true);
-    try {
-      const res = await fetch("/api/public/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sdrId: settings.selectedSdrId,
-          message: userMsg,
-          history: chatHistory,
-          leadId,
-          name: visitante?.name,
-          email: visitante?.email,
-          phone: visitante?.phone,
-        }),
-      });
-      const data = await res.json();
-      if (data.leadId && !leadId) {
-        setLeadId(data.leadId);
-        sessionStorage.setItem("landing_lead_id", data.leadId);
-      }
-      if (data.response) setChatHistory((prev) => [...prev, { role: "assistant", content: data.response }]);
-    } catch (e) {
-      toast({ title: "Erro no chat", description: "Não foi possível falar com o agente agora.", variant: "destructive" });
-    } finally {
-      setLoadingChat(false);
-    }
   };
 
   // Os dois planos vêm do banco. Sem eles a seção mostra o caminho do
@@ -886,26 +851,30 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="h-96 flex-1 space-y-3 overflow-y-auto bg-[#F8FAFF] p-4">
-            {chatHistory.length === 0 && (
+            {chat.mensagens.length === 0 && (
               <div className="rounded-2xl border border-[#E9EEF5] bg-white p-4 text-[13px] leading-relaxed text-[#475569]">
                 Olá! Quer ver como um agente de IA pode atender, vender e agendar para o seu
                 negócio 24 horas por dia?
               </div>
             )}
-            {chatHistory.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[80%] whitespace-pre-wrap px-3.5 py-2.5 text-[13px] leading-relaxed ${
-                  msg.role === "user"
-                    ? "rounded-[14px_14px_4px_14px] bg-[#2563EB] text-white"
-                    : "rounded-[14px_14px_14px_4px] border border-[#E9EEF5] bg-white text-slate-700"
-                }`}>
-                  {msg.content}
+            {chat.mensagens.map((msg, i) => {
+              const doVisitante = msg.role === "USER";
+              return (
+                <div key={msg.id || i} className={`flex ${doVisitante ? "justify-end" : "justify-start"}`}>
+                  <div className={`max-w-[80%] whitespace-pre-wrap px-3.5 py-2.5 text-[13px] leading-relaxed ${
+                    doVisitante
+                      ? "rounded-[14px_14px_4px_14px] bg-[#2563EB] text-white"
+                      : "rounded-[14px_14px_14px_4px] border border-[#E9EEF5] bg-white text-slate-700"
+                  } ${msg.enviando ? "opacity-60" : ""}`}>
+                    {msg.content}
+                  </div>
                 </div>
-              </div>
-            ))}
-            {loadingChat && <p className="pl-1 text-[12px] font-semibold text-[#2563EB]">digitando…</p>}
+              );
+            })}
+            {chat.enviando && <p className="pl-1 text-[12px] font-semibold text-[#2563EB]">digitando…</p>}
+            {chat.erro && <p className="pl-1 text-[12px] font-medium text-rose-500">{chat.erro}</p>}
           </div>
-          {visitante ? (
+          {chat.visitante ? (
             <div className="flex gap-2 border-t border-[#E9EEF5] p-3">
               <input
                 value={chatMessage}
@@ -914,17 +883,12 @@ export default function LandingPage() {
                 placeholder="Tire suas dúvidas…"
                 className="h-11 flex-1 rounded-xl bg-[#F1F5F9] px-4 text-[13px] outline-none transition focus:ring-2 focus:ring-[#2563EB]/30"
               />
-              <Button onClick={handleSendMessage} disabled={loadingChat} className="h-11 w-11 shrink-0 rounded-xl bg-[#2563EB] p-0 hover:bg-[#1D4ED8]">
+              <Button onClick={handleSendMessage} disabled={chat.enviando} className="h-11 w-11 shrink-0 rounded-xl bg-[#2563EB] p-0 hover:bg-[#1D4ED8]">
                 <Send className="h-5 w-5" />
               </Button>
             </div>
           ) : (
-            <IdentificacaoVisitante
-              onPronto={(v) => {
-                setVisitante(v);
-                sessionStorage.setItem("landing_visitante", JSON.stringify(v));
-              }}
-            />
+            <IdentificacaoVisitante onPronto={chat.identificar} />
           )}
         </div>
       )}

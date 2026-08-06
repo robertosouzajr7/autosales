@@ -1237,8 +1237,15 @@ model ConversationEvent {
   type           String // QUEUED | ASSIGNED | TRANSFERRED | RETURNED_TO_BOT | CLOSED | REOPENED
   fromPhase      String?
   toPhase        String?
+  // Quem FEZ a ação. Num "assumir" é o próprio atendente; numa transferência
+  // feita por um supervisor é o supervisor.
   actorUserId    String?
   actorName      String?
+  // Quem passou a ATENDER. Sem este campo não dava para dizer quem cuidou de
+  // uma conversa depois transferida: o relatório contava o dono atual e o
+  // crédito ia todo para quem recebeu por último.
+  targetUserId   String?
+  targetName     String?
   note           String?
 
   createdAt DateTime @default(now())
@@ -1246,6 +1253,7 @@ model ConversationEvent {
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId, createdAt])
+  @@index([targetUserId, createdAt])
 }
 
 /// Lead da PLATAFORMA: quem pediu o diagnóstico na landing e ainda não virou

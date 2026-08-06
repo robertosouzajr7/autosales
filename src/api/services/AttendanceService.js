@@ -26,7 +26,7 @@ export const PHASE_LABEL = {
 };
 
 /** Mensagem visível na conversa, para o histórico contar a mesma história. */
-async function registrar(conversation, { type, toPhase, actor, note, aviso }) {
+async function registrar(conversation, { type, toPhase, actor, alvo = null, note, aviso }) {
   await prisma.conversationEvent.create({
     data: {
       conversationId: conversation.id,
@@ -36,6 +36,10 @@ async function registrar(conversation, { type, toPhase, actor, note, aviso }) {
       toPhase,
       actorUserId: actor?.id || null,
       actorName: actor?.name || null,
+      // Quem passou a atender. Diferente do ator quando um supervisor
+      // transfere a conversa para outra pessoa.
+      targetUserId: alvo?.id || null,
+      targetName: alvo?.name || null,
       note: note || null,
     },
   });
@@ -191,6 +195,7 @@ class AttendanceService {
       type: conversation.phase === "HUMAN" ? "TRANSFERRED" : "ASSIGNED",
       toPhase: "HUMAN",
       actor: actor || atendente,
+      alvo: atendente,
       note: `Atendimento com ${atendente.name}`,
       aviso: `${atendente.name} assumiu o atendimento.`,
     });

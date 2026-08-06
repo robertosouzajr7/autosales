@@ -172,10 +172,10 @@ class MessagingService {
     }
 
     if (canal === "SITE") {
-      return {
-        ok: false,
-        erro: "O chat do site ainda não recebe resposta do painel — responda por outro canal do contato.",
-      };
+      // No site não há transporte externo: a mensagem gravada É a entrega. O
+      // visitante recebe pelo SSE do webchat se estiver com a aba aberta, e
+      // pelo histórico quando voltar. Quem grava é quem chamou.
+      return { ok: true, entregaLocal: true };
     }
 
     if (!lead.phone) return { ok: false, erro: "Contato sem telefone." };

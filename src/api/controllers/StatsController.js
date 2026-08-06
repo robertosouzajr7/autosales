@@ -426,16 +426,44 @@ export const getReport = async (req, res) => {
         GROUP BY 1 ORDER BY 1
       `,
 
-      // Quem da equipe atendeu. Conta a conversa pelo dono atual: não há
-      // histórico de quem passou por ela antes da transferência.
+      // Quem da equipe atendeu, pelo histórico e não pelo dono atual.
+      //
+      // Contar por `assignedToId` credita a conversa inteira a quem a recebeu
+      // por último: quem atendeu por uma hora e transferiu sumia do relatório.
+      // A linha do tempo (ConversationEvent) guarda cada passagem, então cada
+      // pessoa é contada uma vez por conversa em que esteve.
+      //
+      // O UNION com o dono atual cobre dois casos reais: conversas anteriores
+      // ao registro de eventos, e transferências antigas cujo alvo não foi
+      // gravado (a migração só conseguiu preencher os "assumir").
       prisma.$queryRaw`
-        SELECT u."id", u."name", COUNT(c."id")::int AS atendidas,
-               COUNT(*) FILTER (WHERE c."phase" = 'CLOSED')::int AS encerradas
-        FROM "Conversation" c
-        JOIN "User" u ON u."id" = c."assignedToId"
-        WHERE c."tenantId" = ${tenantId}
-          AND EXISTS (SELECT 1 FROM "Message" m WHERE m."conversationId" = c."id" AND m."createdAt" >= ${inicio})
-        GROUP BY 1, 2 ORDER BY 3 DESC LIMIT 10
+        WITH atendidas AS (
+          SELECT DISTINCT e."targetUserId" AS "userId", e."conversationId"
+            FROM "ConversationEvent" e
+            JOIN "Conversation" c ON c."id" = e."conversationId"
+           WHERE e."tenantId" = ${tenantId}
+             AND e."type" IN ('ASSIGNED', 'TRANSFERRED')
+             AND e."targetUserId" IS NOT NULL
+             AND EXISTS (SELECT 1 FROM "Message" m WHERE m."conversationId" = c."id" AND m."createdAt" >= ${inicio})
+          UNION
+          SELECT DISTINCT c."assignedToId" AS "userId", c."id" AS "conversationId"
+            FROM "Conversation" c
+           WHERE c."tenantId" = ${tenantId}
+             AND c."assignedToId" IS NOT NULL
+             AND EXISTS (SELECT 1 FROM "Message" m WHERE m."conversationId" = c."id" AND m."createdAt" >= ${inicio})
+        )
+        SELECT u."id", u."name",
+               COUNT(DISTINCT a."conversationId")::int AS atendidas,
+               COUNT(DISTINCT a."conversationId") FILTER (
+                 WHERE EXISTS (
+                   SELECT 1 FROM "ConversationEvent" f
+                    WHERE f."conversationId" = a."conversationId"
+                      AND f."type" = 'CLOSED' AND f."actorUserId" = u."id"
+                 )
+               )::int AS encerradas
+          FROM atendidas a
+          JOIN "User" u ON u."id" = a."userId"
+         GROUP BY 1, 2 ORDER BY 3 DESC LIMIT 10
       `,
 
       // Filas: o que passou por elas e quantas ainda esperam.

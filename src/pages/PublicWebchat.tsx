@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
-import { IdentificacaoVisitante, type Visitante } from "@/components/public/IdentificacaoVisitante";
+import { IdentificacaoVisitante } from "@/components/public/IdentificacaoVisitante";
+import { useChatPublico } from "@/hooks/useChatPublico";
 
 export default function PublicWebchat() {
   const { tenantId } = useParams();
@@ -16,22 +17,11 @@ export default function PublicWebchat() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   
-  // Restore leadId and chatHistory from sessionStorage
-  const [leadId, setLeadId] = useState<string | null>(() => {
-    return sessionStorage.getItem(`webchat_lead_id_${tenantId}`) || null;
-  });
-  
-  const [chatHistory, setChatHistory] = useState<{role: string, content: string}[]>(() => {
-    const savedHistory = sessionStorage.getItem(`webchat_history_${tenantId}`);
-    return savedHistory ? JSON.parse(savedHistory) : [];
-  });
-  
-  const [sending, setSending] = useState(false);
-  // Quem está do outro lado. Sem isso a conversa chega ao painel como
-  // "Visitante do site", sem um jeito de retomar depois que ele fecha a aba.
-  const [visitante, setVisitante] = useState<Visitante | null>(() => {
-    const salvo = sessionStorage.getItem(`webchat_visitante_${tenantId}`);
-    return salvo ? JSON.parse(salvo) : null;
+  // A conversa vive no servidor. Antes ficava no sessionStorage, e o que o
+  // atendente respondia pelo painel nunca chegava até aqui.
+  const chat = useChatPublico({
+    chave: `webchat_${tenantId}`,
+    corpoBase: () => ({ tenantId, sdrId: data?.sdr?.id }),
   });
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -50,57 +40,15 @@ export default function PublicWebchat() {
   }, [tenantId]);
 
   useEffect(() => {
-    if (chatHistory.length > 0) {
-      sessionStorage.setItem(`webchat_history_${tenantId}`, JSON.stringify(chatHistory));
-    }
-  }, [chatHistory, tenantId]);
-
-  useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [chatHistory]);
+  }, [chat.mensagens]);
 
-  const handleSend = async () => {
-    if (!message.trim() || sending || !data) return;
-
-    const userMsg = message;
+  const handleSend = () => {
+    if (!message.trim() || chat.enviando || !data) return;
+    chat.enviar(message);
     setMessage("");
-    const newHistory = [...chatHistory, { role: "user", content: userMsg }];
-    setChatHistory(newHistory);
-    setSending(true);
-
-    try {
-      const res = await fetch("/api/public/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          // O backend resolve o agente pelo tenant; sdrId é opcional.
-          tenantId,
-          sdrId: data?.sdr?.id,
-          message: userMsg,
-          history: chatHistory,
-          leadId: leadId,
-          name: visitante?.name,
-          email: visitante?.email,
-          phone: visitante?.phone,
-        })
-      });
-      const resJson = await res.json();
-      
-      if (resJson.leadId && !leadId) {
-        setLeadId(resJson.leadId);
-        sessionStorage.setItem(`webchat_lead_id_${tenantId}`, resJson.leadId);
-      }
-
-      if (resJson.response) {
-        setChatHistory(prev => [...prev, { role: "assistant", content: resJson.response }]);
-      }
-    } catch (e) {
-      toast({ title: "Erro no envio", description: "O consultor está offline no momento.", variant: "destructive" });
-    } finally {
-      setSending(false);
-    }
   };
 
 
@@ -198,7 +146,7 @@ export default function PublicWebchat() {
                   <p className="text-xs font-bold text-white ">Criptografia ponta-a-ponta ativada</p>
                </div>
 
-               {chatHistory.length === 0 && (
+               {chat.mensagens.length === 0 && (
                  <div className="flex justify-start animate-in slide-in-from-left duration-700">
                     <div className="max-w-[85%] p-6 bg-white/5 border border-white/5 rounded-2xl rounded-tl-none">
                        <p className="text-white/80 font-bold leading-relaxed">
@@ -209,19 +157,25 @@ export default function PublicWebchat() {
                  </div>
                )}
 
-               {chatHistory.map((msg, i) => (
-                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in zoom-in-95`}>
-                    <div className={`shadow-2xl max-w-[85%] p-6 rounded-2xl ${
- msg.role === 'user' 
- ? 'bg-[#2563EB] text-slate-950 font-bold rounded-tr-none' 
- : 'bg-white/5 border border-white/5 text-white font-bold rounded-tl-none'
- }`}>
-                       <p className="leading-relaxed">{msg.content}</p>
-                    </div>
-                 </div>
-               ))}
+               {chat.mensagens.map((msg, i) => {
+                 const doVisitante = msg.role === 'USER';
+                 return (
+                   <div key={msg.id || i} className={`flex ${doVisitante ? 'justify-end' : 'justify-start'} animate-in zoom-in-95`}>
+                      <div className={`shadow-2xl max-w-[85%] p-6 rounded-2xl ${
+                        doVisitante
+                          ? 'bg-[#2563EB] text-slate-950 font-bold rounded-tr-none'
+                          : 'bg-white/5 border border-white/5 text-white font-bold rounded-tl-none'
+                      } ${msg.enviando ? 'opacity-60' : ''}`}>
+                         <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                      </div>
+                   </div>
+                 );
+               })}
+               {chat.erro && (
+                 <p className="pl-4 text-xs font-bold text-rose-400">{chat.erro}</p>
+               )}
                
-               {sending && (
+               {chat.enviando && (
                  <div className="flex justify-start">
                     <div className="flex items-center gap-2 text-white/20 font-bold uppercase text-xs pl-4">
                        <div className="flex gap-1">
@@ -236,16 +190,10 @@ export default function PublicWebchat() {
             </div>
 
             {/* INPUT AREA */}
-            {!visitante ? (
+            {!chat.visitante ? (
               <div className="p-6 md:p-10 pt-0">
                 <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl">
-                  <IdentificacaoVisitante
-                    tema="escuro"
-                    onPronto={(v) => {
-                      setVisitante(v);
-                      sessionStorage.setItem(`webchat_visitante_${tenantId}`, JSON.stringify(v));
-                    }}
-                  />
+                  <IdentificacaoVisitante tema="escuro" onPronto={chat.identificar} />
                 </div>
               </div>
             ) : (
@@ -262,7 +210,7 @@ export default function PublicWebchat() {
                      />
                      <Button 
                        onClick={handleSend}
-                       disabled={sending || !message.trim()}
+                       disabled={chat.enviando || !message.trim()}
                        className="h-14 w-14 rounded-2xl bg-[#2563EB] hover:bg-emerald-400 text-slate-950 shadow-xl active:scale-90 transition-all p-0 flex items-center justify-center shrink-0"
                      >
                         <Send className="w-6 h-6" />
