@@ -184,6 +184,12 @@ export const listCampaigns = async (req, res) => {
 export const createCampaign = async (req, res) => {
   try {
     const { name, templateId, tagIds, stageId, accountId, variables, scheduledAt, leadIds } = req.body;
+    // Agendar para o passado é engano de digitação; disparar na hora, sem a
+    // pessoa ter pedido, é pior que recusar.
+    const quando = scheduledAt ? new Date(scheduledAt) : null;
+    if (quando && (isNaN(quando) || quando <= new Date())) {
+      return res.status(400).json({ error: "Escolha uma data e hora futuras para o agendamento." });
+    }
     if (!name || !templateId) return res.status(400).json({ error: "Nome e template são obrigatórios." });
 
     const template = await prisma.messageTemplate.findFirst({
@@ -223,8 +229,11 @@ export const createCampaign = async (req, res) => {
         // O custo real vai junto com o preço: sem os dois, o relatório do
         // SaaS não consegue dizer qual foi a margem do disparo.
         realCost: estimate.costBrl,
-        scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
-        status: "DRAFT",
+        scheduledAt: quando,
+        // Com hora marcada a campanha nasce agendada. Antes nascia como
+        // rascunho mesmo com data preenchida, então o horário era só um
+        // enfeite: alguém tinha de clicar em "Disparar" na hora combinada.
+        status: quando ? "SCHEDULED" : "DRAFT",
       },
     });
     res.json({ campaign, estimate, quota });
@@ -237,66 +246,79 @@ export const createCampaign = async (req, res) => {
  * Dispara. Responde na hora e envia em background: uma campanha de milhares
  * de mensagens levaria muito mais que o timeout de uma requisição HTTP.
  */
+/**
+ * Coloca a campanha no ar.
+ *
+ * Separado do handler HTTP porque agora existem dois caminhos até aqui: o
+ * botão "Disparar" e o agendamento, que roda sem requisição nenhuma. Devolve
+ * `{ ok, status, erro }` em vez de escrever na resposta.
+ */
+export async function dispararCampanha(campaignId, tenantId) {
+  const campaign = await prisma.campaign.findFirst({
+    where: { id: campaignId, tenantId },
+    include: { template: true },
+  });
+  if (!campaign) return { ok: false, status: 404, erro: "Campanha não encontrada." };
+  if (campaign.status === "RUNNING") return { ok: false, status: 409, erro: "Campanha já está em andamento." };
+  if (campaign.status === "COMPLETED") return { ok: false, status: 409, erro: "Campanha já foi concluída." };
+  if (campaign.template.status !== "APPROVED") {
+    return { ok: false, status: 400, erro: "O template não está aprovado pela Meta." };
+  }
+
+  // O template pode ter mudado depois da criação da campanha.
+  let variaveisSalvas = [];
+  try { variaveisSalvas = campaign.variables ? JSON.parse(campaign.variables) : []; } catch { variaveisSalvas = []; }
+  const faltaVariavel = validarVariaveis(campaign.template, variaveisSalvas);
+  if (faltaVariavel) return { ok: false, status: 400, erro: faltaVariavel };
+
+  const sender = await resolveSender(tenantId, campaign.accountId);
+  if (!sender) return { ok: false, status: 400, erro: "Nenhuma conexão oficial disponível para o disparo." };
+
+  let tagIds = [];
+  let leadIds = [];
+  try { tagIds = campaign.targetTagIds ? JSON.parse(campaign.targetTagIds) : []; } catch { tagIds = []; }
+  try { leadIds = campaign.targetLeadIds ? JSON.parse(campaign.targetLeadIds) : []; } catch { leadIds = []; }
+  const recipients = await resolveRecipients(tenantId, { tagIds, leadIds });
+  if (recipients.length === 0) return { ok: false, status: 400, erro: "Nenhum destinatário elegível." };
+
+  // Revalida o saldo: o público pode ter crescido desde a criação, e outro
+  // disparo pode ter consumido crédito nesse meio-tempo.
+  const quota = await podeDisparar(tenantId, recipients.length, campaign.template.category);
+  if (!quota.allowed) return { ok: false, status: 403, erro: quota.reason, quota };
+
+  // Recria a lista de destinatários: é a base do relatório final e permite
+  // dizer QUEM recebeu, não só quantos.
+  await prisma.campaignRecipient.deleteMany({ where: { campaignId: campaign.id } });
+  await prisma.campaignRecipient.createMany({
+    data: recipients.map((l) => ({
+      campaignId: campaign.id,
+      leadId: l.id,
+      name: l.name || null,
+      phone: l.phone,
+      status: "PENDING",
+    })),
+  });
+
+  await prisma.campaign.update({
+    where: { id: campaign.id },
+    data: {
+      status: "RUNNING", startedAt: new Date(), sentCount: 0, errorCount: 0,
+      errorLog: null, finishedAt: null, recipientCount: recipients.length,
+    },
+  });
+
+  runCampaign(campaign, sender, recipients, tenantId).catch((e) =>
+    console.error("[Campanha] Falha inesperada:", e.message)
+  );
+
+  return { ok: true, status: 200, recipientCount: recipients.length };
+}
+
 export const startCampaign = async (req, res) => {
   try {
-    const campaign = await prisma.campaign.findFirst({
-      where: { id: req.params.id, tenantId: req.tenantId },
-      include: { template: true },
-    });
-    if (!campaign) return res.status(404).json({ error: "Campanha não encontrada." });
-    if (campaign.status === "RUNNING") return res.status(409).json({ error: "Campanha já está em andamento." });
-    if (campaign.status === "COMPLETED") return res.status(409).json({ error: "Campanha já foi concluída." });
-    if (campaign.template.status !== "APPROVED") {
-      return res.status(400).json({ error: "O template não está aprovado pela Meta." });
-    }
-
-    // O template pode ter mudado depois da criação da campanha.
-    let variaveisSalvas = [];
-    try { variaveisSalvas = campaign.variables ? JSON.parse(campaign.variables) : []; } catch { variaveisSalvas = []; }
-    const faltaVariavel = validarVariaveis(campaign.template, variaveisSalvas);
-    if (faltaVariavel) return res.status(400).json({ error: faltaVariavel });
-
-    const sender = await resolveSender(req.tenantId, campaign.accountId);
-    if (!sender) return res.status(400).json({ error: "Nenhuma conexão oficial disponível para o disparo." });
-
-    let tagIds = [];
-    let leadIds = [];
-    try { tagIds = campaign.targetTagIds ? JSON.parse(campaign.targetTagIds) : []; } catch { tagIds = []; }
-    try { leadIds = campaign.targetLeadIds ? JSON.parse(campaign.targetLeadIds) : []; } catch { leadIds = []; }
-    const recipients = await resolveRecipients(req.tenantId, { tagIds, leadIds });
-    if (recipients.length === 0) return res.status(400).json({ error: "Nenhum destinatário elegível." });
-
-    // Revalida o saldo: o público pode ter crescido desde a criação, e outro
-    // disparo pode ter consumido crédito nesse meio-tempo.
-    const quota = await podeDisparar(req.tenantId, recipients.length, campaign.template.category);
-    if (!quota.allowed) return res.status(403).json({ error: quota.reason, quota });
-
-    // Recria a lista de destinatários: é a base do relatório final e permite
-    // dizer QUEM recebeu, não só quantos.
-    await prisma.campaignRecipient.deleteMany({ where: { campaignId: campaign.id } });
-    await prisma.campaignRecipient.createMany({
-      data: recipients.map((l) => ({
-        campaignId: campaign.id,
-        leadId: l.id,
-        name: l.name || null,
-        phone: l.phone,
-        status: "PENDING",
-      })),
-    });
-
-    await prisma.campaign.update({
-      where: { id: campaign.id },
-      data: {
-        status: "RUNNING", startedAt: new Date(), sentCount: 0, errorCount: 0,
-        errorLog: null, finishedAt: null, recipientCount: recipients.length,
-      },
-    });
-
-    runCampaign(campaign, sender, recipients, req.tenantId).catch((e) =>
-      console.error("[Campanha] Falha inesperada:", e.message)
-    );
-
-    res.json({ success: true, status: "RUNNING", recipientCount: recipients.length });
+    const r = await dispararCampanha(req.params.id, req.tenantId);
+    if (!r.ok) return res.status(r.status).json({ error: r.erro, ...(r.quota ? { quota: r.quota } : {}) });
+    res.json({ success: true, status: "RUNNING", recipientCount: r.recipientCount });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -526,6 +548,93 @@ export const campaignReport = async (req, res) => {
         error: d.error, sentAt: d.sentAt,
       })),
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Campanhas com hora marcada.
+ *
+ * `scheduledAt` já era gravado na criação, mas nada o lia: a campanha ficava
+ * parada esperando alguém clicar em "Disparar" na hora combinada. Este laço
+ * é quem cumpre o agendamento.
+ */
+export async function dispararAgendadas(limite = 20) {
+  const agora = new Date();
+  const pendentes = await prisma.campaign.findMany({
+    where: { status: "SCHEDULED", scheduledAt: { lte: agora } },
+    orderBy: { scheduledAt: "asc" },
+    take: limite,
+    select: { id: true, tenantId: true, name: true, scheduledAt: true },
+  });
+
+  for (const c of pendentes) {
+    // Marca antes de disparar: se o processo cair no meio, a campanha não
+    // volta para a fila e sai duas vezes para o mesmo público.
+    const reservada = await prisma.campaign.updateMany({
+      where: { id: c.id, status: "SCHEDULED" },
+      data: { status: "STARTING" },
+    });
+    if (reservada.count === 0) continue;
+
+    try {
+      const r = await dispararCampanha(c.id, c.tenantId);
+      if (!r.ok) {
+        // Falhou por saldo, template ou público: volta a rascunho com o
+        // motivo à vista, em vez de sumir de todas as listas.
+        await prisma.campaign.update({
+          where: { id: c.id },
+          data: { status: "DRAFT", errorLog: `Agendamento não disparou: ${r.erro}` },
+        });
+        console.warn(`[Campanha] "${c.name}" não disparou no horário: ${r.erro}`);
+      } else {
+        console.log(`[Campanha] "${c.name}" disparada no horário agendado.`);
+      }
+    } catch (e) {
+      await prisma.campaign
+        .update({ where: { id: c.id }, data: { status: "DRAFT", errorLog: `Erro ao disparar: ${e.message}` } })
+        .catch(() => {});
+      console.error(`[Campanha] Erro ao disparar "${c.name}":`, e.message);
+    }
+  }
+  return pendentes.length;
+}
+
+/**
+ * Marca, remarca ou desmarca a hora do disparo.
+ *
+ * Vale só antes de sair: uma campanha em andamento ou concluída não tem mais
+ * agendamento a mudar.
+ */
+export const scheduleCampaign = async (req, res) => {
+  try {
+    const campaign = await prisma.campaign.findFirst({
+      where: { id: req.params.id, tenantId: req.tenantId },
+    });
+    if (!campaign) return res.status(404).json({ error: "Campanha não encontrada." });
+    if (!["DRAFT", "SCHEDULED"].includes(campaign.status)) {
+      return res.status(409).json({ error: "Só dá para agendar campanha que ainda não foi disparada." });
+    }
+
+    const { scheduledAt } = req.body;
+    if (!scheduledAt) {
+      const atualizada = await prisma.campaign.update({
+        where: { id: campaign.id },
+        data: { scheduledAt: null, status: "DRAFT" },
+      });
+      return res.json({ campaign: atualizada, agendada: false });
+    }
+
+    const quando = new Date(scheduledAt);
+    if (isNaN(quando) || quando <= new Date()) {
+      return res.status(400).json({ error: "Escolha uma data e hora futuras para o agendamento." });
+    }
+    const atualizada = await prisma.campaign.update({
+      where: { id: campaign.id },
+      data: { scheduledAt: quando, status: "SCHEDULED", errorLog: null },
+    });
+    res.json({ campaign: atualizada, agendada: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

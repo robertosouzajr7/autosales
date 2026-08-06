@@ -457,7 +457,11 @@ export default function SdrManagement() {
                           : form.voiceId === v.id ? <Check className="h-3.5 w-3.5 shrink-0 text-accent-text" />
                           : <Volume2 className="h-3.5 w-3.5 shrink-0 text-faint" />}
                         <span className="min-w-0 flex-1">
-                          <span className="linha-unica-elipse block text-[13px] font-medium text-foreground">{v.label || v.id}</span>
+                          {/* `name` é o que o servidor manda. Lendo `label`, que
+                              não existe, sobrava o id: nas vozes do Gemini o id
+                              é uma palavra ("Kore") e passava despercebido, mas
+                              nas da ElevenLabs é um hash. */}
+                          <span className="linha-unica-elipse block text-[13px] font-medium text-foreground">{v.name || v.label || v.id}</span>
                           {v.locked && <span className="block text-[11px] text-amber-700">Voz premium</span>}
                         </span>
                         <button
@@ -629,7 +633,7 @@ export default function SdrManagement() {
               <Lock className="h-4 w-4 text-amber-600" /> Voz premium
             </DialogTitle>
             <DialogDescription className="text-[13px]">
-              A voz “{upgradeVoice?.label || upgradeVoice?.id}” está disponível nos planos com voz premium.
+              A voz “{upgradeVoice?.name || upgradeVoice?.label || upgradeVoice?.id}” está disponível nos planos com voz premium.
               As vozes padrão continuam liberadas no seu plano.
             </DialogDescription>
           </DialogHeader>

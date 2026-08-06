@@ -92,6 +92,9 @@ class AutomationEngine {
     // Régua do agendamento: 1 min é a granularidade útil — o lembrete "10
     // minutos antes" não sobrevive a uma varredura de 5 em 5 minutos.
     this.reminderInterval = setInterval(() => this.processDueReminders(), 60 * 1000);
+    // Disparos com hora marcada. Mesmo minuto de granularidade: quem agenda
+    // para as 9h não espera que saia às 9h05.
+    this.campaignInterval = setInterval(() => this.processScheduledCampaigns(), 60 * 1000);
     this.routineInterval = setInterval(() => this.processGlobalRoutines(), 5 * 60 * 1000);
     this.inactivityInterval = setInterval(() => this.processInactivityTriggers(), 5 * 60 * 1000);
     this.queueInterval = setInterval(() => this.processQueue(), 1000);
@@ -2993,6 +2996,19 @@ ${scrapeContext}
       await ReminderService.processDue();
     } catch (err) {
       console.error("[AutoEngine] Erro ao processar lembretes:", err.message);
+    }
+  }
+
+  /**
+   * Dispara as campanhas cuja hora chegou. O `scheduledAt` era gravado desde
+   * sempre, mas nada o lia — a campanha ficava esperando alguém clicar.
+   */
+  async processScheduledCampaigns() {
+    try {
+      const { dispararAgendadas } = await import("./src/api/controllers/CampaignController.js");
+      await dispararAgendadas();
+    } catch (err) {
+      console.error("[AutoEngine] Erro ao disparar campanhas agendadas:", err.message);
     }
   }
 

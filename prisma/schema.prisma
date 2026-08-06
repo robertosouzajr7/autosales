@@ -119,6 +119,7 @@ model Tenant {
   contactIdentities ContactIdentity[]
   apiKeys           ApiKey[]
   crmConnections    CrmConnection[]
+  awayPeriods AwayPeriod[]
 }
 
 model PipelineStage {
@@ -1263,6 +1264,49 @@ model ConversationEvent {
 /// O e-mail é único de propósito: refazer o diagnóstico atualiza o mesmo
 /// registro em vez de criar um segundo, pela mesma razão que a base de
 /// contatos não duplica.
+/// Período em que o negócio não atende: feriado, recesso, viagem, plantão.
+///
+/// Existe porque "fora de horário" não é só a régua semanal — tem o Natal, a
+/// semana de férias, o dia do inventário. Nesses casos o cliente escreve e
+/// fica sem resposta, ou pior: recebe da IA uma promessa de atendimento que
+/// ninguém vai cumprir.
+model AwayPeriod {
+  id       String @id @default(uuid())
+  tenantId String
+  name     String
+  message  String
+
+  startsAt DateTime
+  endsAt   DateTime
+
+  active Boolean @default(true)
+  /// Durante o período a IA não responde. Ligado por padrão: o sentido do
+  /// aviso é dizer que ninguém está atendendo — deixar o agente conversando
+  /// em seguida contradiz a mensagem.
+  pauseAi Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant  Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  avisados AwayNotice[]
+
+  @@index([tenantId, active, startsAt, endsAt])
+}
+
+/// Quem já recebeu o aviso deste período. Sem isto, cada mensagem do cliente
+/// durante o recesso traria a mesma resposta automática de volta.
+model AwayNotice {
+  id       String   @id @default(uuid())
+  periodId String
+  leadId   String
+  sentAt   DateTime @default(now())
+
+  period AwayPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  @@unique([periodId, leadId])
+}
+
 model PlatformLead {
   id    String  @id @default(uuid())
   name  String
