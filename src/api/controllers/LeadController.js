@@ -39,9 +39,21 @@ export const getLeads = async (req, res) => {
   try {
     const tenantId = req.tenantId;
     if (!tenantId) return res.json([]);
+    // Antes isto trazia `conversations: { include: { messages: true } }` —
+    // ou seja, TODA mensagem de TODA conversa de TODO contato. Numa base de
+    // mil contatos a resposta virava megabytes para desenhar uma tabela que
+    // só mostra a data da última conversa. As telas precisam do resumo, não
+    // do histórico: quem quer o histórico abre a conversa.
     const leads = await prisma.lead.findMany({
       where: { tenantId },
-      include: { conversations: { include: { messages: true } } }
+      include: {
+        stage: { select: { id: true, name: true, color: true } },
+        tags: { select: { id: true, name: true, color: true } },
+        conversations: {
+          select: { id: true, phase: true, botActive: true, unreadCount: true, lastMessageAt: true, lastMessagePreview: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
     });
     res.status(200).json(leads);
   } catch (error) {

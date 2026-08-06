@@ -3,12 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { 
-  Users, Search, Filter, 
-  MoreVertical, UserPlus, Phone, 
-  Mail, MessageSquare, Download,
-  Tag, ChevronRight, Star, Heart, Save,
-  LayoutGrid, List, Info, Trash2, Edit3, X, CheckCircle2, Merge
+import {
+  Users, Search, MoreVertical, UserPlus, MessageSquare, Download, Upload,
+  Save, Trash2, Edit3, X, Merge, Instagram, Globe,
 } from "lucide-react";
 import { DuplicatesDialog } from "@/components/contacts/DuplicatesDialog";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +15,29 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+const CANAL: Record<string, { label: string; cls: string; Icon: any }> = {
+  WHATSAPP: { label: "WhatsApp", cls: "text-emerald-600", Icon: MessageSquare },
+  INSTAGRAM: { label: "Instagram", cls: "text-pink-600", Icon: Instagram },
+  SITE: { label: "Site", cls: "text-blue-600", Icon: Globe },
+};
+const canal = (c?: string) => CANAL[(c || "WHATSAPP").toUpperCase()] || CANAL.WHATSAPP;
+
+/** "agora", "12 min", "3h", "5d" — quando foi a última conversa. */
+function desde(iso?: string) {
+  if (!iso) return "—";
+  const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (min < 1) return "agora";
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h}h`;
+  const d = Math.floor(h / 24);
+  return d < 30 ? `${d}d` : `${Math.floor(d / 30)} mês`;
+}
 
 interface Lead {
   id: string;
@@ -36,6 +55,10 @@ interface Lead {
   extraPhones?: string | null;
   extraEmails?: string | null;
   createdAt?: string;
+  channel?: string;
+  igUsername?: string | null;
+  stage?: { id: string; name: string; color?: string | null } | null;
+  conversations?: { lastMessageAt?: string | null }[];
 }
 
 export default function Contacts() {
@@ -54,6 +77,11 @@ export default function Contacts() {
   const [importPreview, setImportPreview] = useState<{name: string, phone: string, email?: string}[]>([]);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isDuplicatesOpen, setIsDuplicatesOpen] = useState(false);
+  const [filtro, setFiltro] = useState("ALL");
+  // Contagem de duplicados e quem tem agendamento: os dois alimentam a barra
+  // de ferramentas e não vêm em /leads.
+  const [duplicados, setDuplicados] = useState(0);
+  const [agendados, setAgendados] = useState<string[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -65,10 +93,25 @@ export default function Contacts() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/leads", { headers: getHeaders() });
+      const [res, dupRes, apptRes] = await Promise.all([
+        fetch("/api/leads", { headers: getHeaders() }),
+        fetch("/api/contacts/duplicates", { headers: getHeaders() }),
+        fetch("/api/appointments", { headers: getHeaders() }),
+      ]);
       if (!res.ok) throw new Error("Falha ao buscar");
       const data = await res.json();
       setContacts(Array.isArray(data) ? data : []);
+
+      // Sem permissão para essas rotas o filtro some, em vez de a página
+      // inteira falhar por causa de um contador.
+      const dup = dupRes.ok ? await dupRes.json().catch(() => null) : null;
+      setDuplicados(Array.isArray(dup) ? dup.length : Array.isArray(dup?.grupos) ? dup.grupos.length : 0);
+      const appts = apptRes.ok ? await apptRes.json().catch(() => null) : null;
+      setAgendados(
+        Array.isArray(appts)
+          ? appts.filter((a: any) => a.status !== "CANCELLED").map((a: any) => a.leadId)
+          : []
+      );
     } catch (e) { toast({ title: "Erro na base", variant: "destructive" }); }
     setLoading(false);
   };
@@ -191,17 +234,11 @@ export default function Contacts() {
     setLoading(false);
   };
 
+  /** Marca ou desmarca exatamente o que está visível — não a base inteira. */
   const handleSelectAll = () => {
-    const filtered = contacts.filter(c => 
-      c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      c.phone.includes(searchTerm)
-    );
-    
-    if (selectedIds.size === filtered.length && filtered.length > 0) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filtered.map(c => c.id)));
-    }
+    const visiveis = filtrados.map((c) => c.id);
+    const todosJaMarcados = visiveis.length > 0 && visiveis.every((id) => selectedIds.has(id));
+    setSelectedIds(todosJaMarcados ? new Set() : new Set(visiveis));
   };
 
   const toggleSelect = (id: string, e: any) => {
@@ -247,176 +284,220 @@ export default function Contacts() {
     } catch (e) { toast({ title: "Erro na deleção", variant: "destructive" }); }
   };
 
+  const comAgendamento = new Set(agendados);
+
+  const filtrados = contacts.filter((c) => {
+    if (filtro === "WHATSAPP" && (c.channel || "WHATSAPP").toUpperCase() !== "WHATSAPP") return false;
+    if (filtro === "INSTAGRAM" && (c.channel || "").toUpperCase() !== "INSTAGRAM") return false;
+    if (filtro === "AGENDADO" && !comAgendamento.has(c.id)) return false;
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase();
+      if (!`${c.name || ""} ${c.phone || ""} ${c.email || ""}`.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+
+  const todosMarcados = filtrados.length > 0 && filtrados.every((c) => selectedIds.has(c.id));
+
+  const CHIPS = [
+    { id: "ALL", rotulo: "Todos" },
+    { id: "WHATSAPP", rotulo: "WhatsApp" },
+    { id: "INSTAGRAM", rotulo: "Instagram" },
+    { id: "AGENDADO", rotulo: "Com agendamento" },
+  ];
+
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-8 p-6 lg:p-10 max-w-[1500px] mx-auto animate-in fade-in duration-700">
-        
-        {/* HEADER CONTATOS */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-           <div className="space-y-1">
-              <h1 className="text-4xl font-semibold text-slate-900 tracking-tight uppercase flex items-center gap-3">
-                 Base de <span className="text-[#2563EB]">Contatos</span>
-              </h1>
-              <p className="text-slate-400 font-bold text-xs">Gerenciamento Premium de Pipeline</p>
-           </div>
-           
-            <div className="flex gap-4">
-               <div className="flex gap-2">
-                  <input 
-                    type="file" 
-                    id="csvImport" 
-                    className="hidden" 
-                    accept=".csv" 
-                    onChange={handleImportClick} 
-                 />
-                 <Button variant="outline" size="icon" onClick={handleExport} className="h-10 w-10 rounded-2xl border-2" title="Exportar CSV"><Download className="w-4 h-4" /></Button>
-                 <Button variant="outline" size="icon" onClick={() => setIsDuplicatesOpen(true)} className="h-10 w-10 rounded-2xl border-2" title="Contatos repetidos"><Merge className="w-4 h-4" /></Button>
-                 <Button variant="outline" size="icon" onClick={() => document.getElementById('csvImport')?.click()} className="h-10 w-10 rounded-2xl border-2"><UserPlus className="w-4 h-4" /></Button>
-                 {selectedIds.size > 0 && (
-                   <>
-                     <Button 
-                       onClick={handleBulkEnrich} 
-                       className="h-10 bg-[#2563EB] hover:bg-[#1D4ED8] px-6 rounded-2xl font-semibold uppercase text-xs text-white shadow-lg animate-in slide-in-from-right"
-                     >
-                       Investigação BDR
-                     </Button>
-                     <Button variant="destructive" size="icon" onClick={handleBulkDelete} className="h-10 w-10 rounded-2xl animate-in zoom-in"><Trash2 className="w-4 h-4" /></Button>
-                   </>
-                 )}
-               </div>
-               <Tabs defaultValue="grid" className="w-[120px] h-10" onValueChange={(v) => setViewMode(v as any)}>
-                  <TabsList className="grid w-full grid-cols-2 bg-slate-100 p-1 rounded-2xl h-10">
-                     <TabsTrigger value="grid" className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm"><LayoutGrid className="w-4 h-4" /></TabsTrigger>
-                     <TabsTrigger value="list" className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm"><List className="w-4 h-4" /></TabsTrigger>
-                  </TabsList>
-               </Tabs>
-               <Button 
-                 onClick={() => setIsAddModalOpen(true)}
-                 className="h-10 bg-slate-900 hover:bg-slate-800 px-8 rounded-2xl font-semibold uppercase text-xs text-white shadow-sm"
-               >
-                  <UserPlus className="w-4 h-4 mr-2" /> Novo Contato
-               </Button>
-            </div>
+      <div className="mx-auto max-w-[1500px] px-4 pb-10 pt-5 sm:px-6">
+
+        {/* Cabeçalho */}
+        <header className="mb-4 flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-[26px] font-bold tracking-[-0.03em] text-foreground">Clientes</h1>
+            <p className="mt-0.5 max-w-md text-[13.5px] text-muted-foreground">
+              <span className="num">{contacts.length.toLocaleString("pt-BR")}</span>{" "}
+              {contacts.length === 1 ? "contato" : "contatos"} · o mesmo cliente em canais diferentes vira uma ficha só.
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <input type="file" id="csv-import" accept=".csv,text/csv" className="hidden" onChange={handleImportClick} />
+            <Button variant="outline" onClick={() => document.getElementById("csv-import")?.click()} className="h-10 gap-2">
+              <Upload className="h-4 w-4" /> Importar CSV
+            </Button>
+            <Button variant="outline" onClick={handleExport} className="h-10 gap-2" title="Exportar CSV">
+              <Download className="h-4 w-4" /> Exportar
+            </Button>
+            <Button variant="outline" onClick={() => setIsDuplicatesOpen(true)} className="h-10 gap-2">
+              <Merge className="h-4 w-4" /> Ver duplicados
+              {/* O número em laranja: é uma pendência, não um enfeite. */}
+              {duplicados > 0 && <span className="num font-bold text-amber-600">· {duplicados}</span>}
+            </Button>
+            <Button onClick={() => setIsAddModalOpen(true)} className="h-10 gap-2">
+              <UserPlus className="h-4 w-4" /> Novo cliente
+            </Button>
+          </div>
+        </header>
+
+        {/* Barra de ferramentas */}
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-[14px] border border-border bg-card px-3 py-2.5 shadow-card">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-faint" />
+            <Input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Escreva o nome para filtrar…"
+              className="h-9 w-[240px] rounded-lg border-border-soft bg-surface-2 pl-9 text-[13px]"
+            />
+          </div>
+          {CHIPS.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => setFiltro(c.id)}
+              className={`h-9 rounded-lg border px-3 text-[12.5px] font-semibold transition-colors ${
+                filtro === c.id
+                  ? "border-accent-text/30 bg-accent-soft text-accent-text"
+                  : "border-border-soft bg-card text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {c.rotulo}
+            </button>
+          ))}
+          <span className="num ml-auto text-[12px] text-faint">
+            Mostrando {filtrados.length.toLocaleString("pt-BR")} de {contacts.length.toLocaleString("pt-BR")}
+          </span>
         </div>
 
-        {/* BUSCA RAPIDA */}
-        <Card className="border-none shadow-sm rounded-2xl bg-white p-6 flex flex-col md:flex-row items-center gap-6">
-            <div 
-              onClick={handleSelectAll}
-              className={`flex-none w-10 h-10 rounded-2xl border-2 cursor-pointer flex items-center justify-center transition-all ${
- selectedIds.size > 0 && selectedIds.size === contacts.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.phone.includes(searchTerm)).length
- ? 'bg-[#2563EB] border-emerald-500 text-white' 
- : 'bg-slate-50 border-slate-100 text-slate-300'
- }`}
-            >
-               <CheckCircle2 className="w-6 h-6" />
-            </div>
-            <div className="flex-1 w-full relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-              <Input 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Escreva o nome para filtrar..." 
-                className="h-10 pl-12 w-full border-none bg-slate-50 text-slate-900 rounded-2xl focus:ring-emerald-500/30 font-bold text-xs" 
-              />
-            </div>
-           <Badge className="h-10 px-8 rounded-2xl bg-blue-50 text-[#2563EB] border-none flex items-center gap-2 font-semibold text-xs ">
-             {selectedIds.size > 0 ? `${selectedIds.size} Selecionados` : `${contacts.length} Na Base`}
-           </Badge>
-        </Card>
+        {/* Ações em massa: só aparecem quando há seleção. */}
+        {selectedIds.size > 0 && (
+          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-[14px] border border-accent-text/30 bg-accent-soft px-4 py-2.5">
+            <span className="num text-[13px] font-semibold text-accent-text">
+              {selectedIds.size} {selectedIds.size === 1 ? "selecionado" : "selecionados"}
+            </span>
+            <Button variant="outline" size="sm" onClick={handleBulkEnrich} className="ml-auto h-8 gap-1.5 bg-card text-[12px]">
+              <Search className="h-3.5 w-3.5" /> Enriquecer dados
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleBulkDelete} className="h-8 gap-1.5 bg-card text-[12px] text-red-600 hover:bg-red-50">
+              <Trash2 className="h-3.5 w-3.5" /> Remover
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())} className="h-8 text-[12px]">
+              Limpar
+            </Button>
+          </div>
+        )}
 
-        {/* GRID OU LISTA */}
-        <div className={`grid gap-6 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
-           {contacts
-             .filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.phone.includes(searchTerm))
-             .map(contact => (
-              <Card 
-                key={contact.id} 
-                onClick={() => setSelectedContact(contact)}
-                className={`border-none shadow-sm rounded-2xl bg-white overflow-hidden hover:scale-[1.01] transition-all duration-500 group cursor-pointer relative ${
- viewMode === "list" ? "flex flex-row items-center p-4 h-24" : "flex flex-col"
- }`}
-              >
-                <div 
-                  onClick={(e) => toggleSelect(contact.id, e)}
-                  className={`absolute top-6 left-6 w-6 h-6 rounded-full border-2 z-10 transition-all flex items-center justify-center ${
- selectedIds.has(contact.id) ? 'bg-[#2563EB] border-emerald-500' : 'bg-white/50 border-slate-200 opacity-0 group-hover:opacity-100'
- }`}
-                >
-                  {selectedIds.has(contact.id) && <CheckCircle2 className="w-3 h-3 text-white" />}
+        {/* Tabela */}
+        <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-card">
+          <div className="overflow-x-auto">
+            <div className="min-w-[900px]">
+              <div className="grid grid-cols-[34px_2fr_1.4fr_1.2fr_1.3fr_1fr_40px] items-center gap-3 border-b border-border bg-surface-2 px-4 py-2.5">
+                <input
+                  type="checkbox" checked={todosMarcados} onChange={handleSelectAll}
+                  aria-label="Selecionar todos" className="h-3.5 w-3.5 cursor-pointer accent-[#2563EB]"
+                />
+                {["Cliente", "Telefone", "Canal", "Etapa", "Última conversa"].map((t) => (
+                  <span key={t} className="linha-unica text-[11px] font-semibold uppercase tracking-wide text-faint">{t}</span>
+                ))}
+                <span />
+              </div>
+
+              {loading ? (
+                <div className="space-y-2 p-4">
+                  {[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-11 rounded-lg" />)}
                 </div>
-                <CardContent className={`p-0 ${viewMode === "list" ? "flex items-center gap-6 w-full" : "w-full"}`}>
-                   {/* Avatar e Infos Principais */}
-                   <div className={`p-8 space-y-6 ${viewMode === "list" ? "p-0 flex items-center gap-6 flex-1" : ""}`}>
-                      <div className="flex items-center gap-4">
-                         <Avatar className={`${viewMode === "list" ? "h-10 w-10" : "h-16 w-16"}`}>
-                            <AvatarFallback className="bg-slate-900 text-white font-semibold text-lg">
-                               {contact.name.substring(0,2).toUpperCase()}
-                            </AvatarFallback>
-                         </Avatar>
-                         <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-lg text-slate-900 leading-tight truncate">{contact.name}</p>
-                             <Badge className={`${
- contact.status === 'CONVERTED' ? 'bg-emerald-100 text-[#2563EB]' : 
- contact.status === 'APPOINTMENT' ? 'bg-slate-200 text-blue-600' : 
- contact.status === 'QUALIFYING' ? 'bg-orange-100 text-orange-600' : 
- contact.status === 'INTERESTED' ? 'bg-emerald-100 text-[#2563EB]' : 
- contact.status === 'NEW' ? 'bg-blue-100 text-[#2563EB]' : 'bg-slate-100 text-slate-400'
- } border-none font-bold text-xs tracking-tight mt-1`}>
-                                {contact.status || "Ativo"}
-                             </Badge>
-                             {contact.isToEnrich && (
-                               <Badge className="bg-[#2563EB] text-white animate-pulse border-none font-bold text-xs tracking-tight mt-1 ml-2 shadow-lg ">
-                                  BDR Investigando... 🕵️‍♂️
-                               </Badge>
-                             )}
-                         </div>
+              ) : filtrados.length === 0 ? (
+                <div className="grid place-items-center gap-2 px-6 py-16 text-center">
+                  <Users className="h-8 w-8 text-border-soft" />
+                  <p className="text-[13px] text-muted-foreground">
+                    {searchTerm.trim() || filtro !== "ALL"
+                      ? "Nenhum cliente com esse filtro."
+                      : "Nenhum cliente cadastrado ainda."}
+                  </p>
+                </div>
+              ) : (
+                filtrados.map((c) => {
+                  const m = canal(c.channel);
+                  const conv = c.conversations?.[0];
+                  const etapa = c.stage;
+                  return (
+                    <div
+                      key={c.id}
+                      onClick={() => setSelectedContact(c)}
+                      className="grid cursor-pointer grid-cols-[34px_2fr_1.4fr_1.2fr_1.3fr_1fr_40px] items-center gap-3 border-b border-border-soft px-4 py-2.5 last:border-0 hover:bg-surface-2"
+                    >
+                      <input
+                        type="checkbox" checked={selectedIds.has(c.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => toggleSelect(c.id, e)}
+                        aria-label={`Selecionar ${c.name}`}
+                        className="h-3.5 w-3.5 cursor-pointer accent-[#2563EB]"
+                      />
+
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <Avatar className="h-8 w-8 shrink-0">
+                          <AvatarFallback className="bg-accent-soft text-[10px] font-semibold text-accent-text">
+                            {(c.name || "?").substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <p className="linha-unica-elipse text-[13px] font-semibold text-foreground">{c.name}</p>
+                          <p className="linha-unica-elipse text-[11.5px] text-faint">{c.email || c.igUsername || "—"}</p>
+                        </div>
                       </div>
 
-                      {viewMode === "grid" && (
-                        <div className="space-y-4 pt-4 border-t border-slate-50">
-                           <ContactItem icon={<Phone className="w-4 h-4" />} value={contact.phone} />
-                           <ContactItem icon={<Mail className="w-4 h-4" />} value={contact.email || "E-mail não informado"} />
-                        </div>
-                      )}
-                   </div>
+                      <span className="num linha-unica-elipse text-[12.5px] text-muted-foreground">{c.phone || "—"}</span>
 
-                   {/* Ações (Apenas no Grid ou final da Lista) */}
-                   {viewMode === "grid" ? (
-                     <div className="bg-slate-50 p-6 flex justify-between items-center group-hover:bg-blue-50 transition-colors">
-                        <Button variant="ghost" className="text-slate-400 font-semibold uppercase text-xs hover:text-[#2563EB]">Ver Perfil</Button>
-                        <div className="flex gap-2">
-                           <Button 
-                              onClick={(e) => { e.stopPropagation(); navigate(`/conversations?phone=${contact.phone}`); }}
-                              size="icon" 
-                              className="w-10 h-10 bg-slate-900 hover:bg-slate-800 rounded-xl shadow-lg"
-                           >
-                              <MessageSquare className="w-4 h-4 text-white" />
-                           </Button>
-                           <Button 
-                              onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${contact.phone}`; }}
-                              size="icon" 
-                              className="w-10 h-10 bg-[#2563EB] hover:bg-[#1D4ED8] rounded-xl shadow-lg "
-                           >
-                              <Phone className="w-4 h-4 text-white" />
-                           </Button>
-                        </div>
-                     </div>
-                   ) : (
-                     <div className="flex items-center gap-8 pr-10">
-                        <div className="hidden lg:flex flex-col text-right">
-                           <p className="text-xs font-semibold text-slate-300 ">WhatsApp</p>
-                           <p className="text-xs font-bold text-slate-600">{contact.phone}</p>
-                        </div>
-                        <div className="flex gap-2">
-                           <Button onClick={(e) => { e.stopPropagation(); navigate(`/conversations?phone=${contact.phone}`); }} size="icon" className="w-10 h-10 bg-slate-900 rounded-xl"><MessageSquare className="w-4 h-4 text-white" /></Button>
-                           <Button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${contact.phone}`; }} size="icon" className="w-10 h-10 bg-[#2563EB] rounded-xl"><Phone className="w-4 h-4 text-white" /></Button>
-                        </div>
-                     </div>
-                   )}
-                </CardContent>
-             </Card>
-           ))}
+                      <span className="linha-unica flex items-center gap-1.5 text-[12.5px] text-muted-foreground">
+                        <m.Icon className={`h-3.5 w-3.5 shrink-0 ${m.cls}`} /> {m.label}
+                      </span>
+
+                      <span className="linha-unica-elipse flex items-center gap-1.5 text-[12.5px] text-muted-foreground">
+                        {etapa ? (
+                          <>
+                            <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: etapa.color || "#2563EB" }} />
+                            {etapa.name}
+                          </>
+                        ) : (
+                          <span className="text-faint">Sem etapa</span>
+                        )}
+                      </span>
+
+                      <span className="num linha-unica text-[12px] text-faint">
+                        {conv?.lastMessageAt ? desde(conv.lastMessageAt) : "—"}
+                      </span>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <button className="grid h-8 w-8 place-items-center rounded-lg text-faint hover:bg-card hover:text-foreground">
+                            <MoreVertical className="h-4 w-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48 rounded-xl p-1.5">
+                          <DropdownMenuItem
+                            className="cursor-pointer rounded-lg text-[12px] font-medium"
+                            onClick={(e) => { e.stopPropagation(); navigate("/conversations"); }}
+                          >
+                            <MessageSquare className="mr-2 h-4 w-4 text-accent-text" /> Abrir conversa
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer rounded-lg text-[12px] font-medium"
+                            onClick={(e) => { e.stopPropagation(); setSelectedContact(c); }}
+                          >
+                            <Edit3 className="mr-2 h-4 w-4 text-accent-text" /> Editar ficha
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer rounded-lg text-[12px] font-medium text-red-600 focus:text-red-600"
+                            onClick={(e) => { e.stopPropagation(); handleDeleteContact(c.id); }}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" /> Remover
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
