@@ -32,7 +32,8 @@ import {
   CreditCard,
   FileText,
   Megaphone,
-  Workflow
+  Workflow,
+  Inbox
 } from "lucide-react";
 import { notificationStore } from "@/lib/notifications";
 
@@ -147,6 +148,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: "Conexões", icon: Smartphone, href: "/connections", permission: "connections" },
       { label: "Colaboradores", icon: Users, href: "/equipe", permission: "team" },
+      { label: "Filas", icon: Inbox, href: "/filas", permission: "queues" },
       { label: "Assinatura", icon: CreditCard, href: "/assinatura", permission: "billing" },
       { label: "Configurações", icon: Settings, href: "/settings", permission: "settings" },
     ],
