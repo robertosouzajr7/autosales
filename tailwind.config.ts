@@ -88,7 +88,16 @@ export default {
       boxShadow: {
         card: "var(--shadow-card)",
       },
+      transitionTimingFunction: {
+        // Curva do recolher/expandir da sidebar (handoff → Interações).
+        rail: "cubic-bezier(.22,1,.36,1)",
+      },
       keyframes: {
+        // Ponto de status "ao vivo": pulsa para dizer que o dado é de agora.
+        pulseDot: {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.3" },
+        },
         "accordion-down": {
           from: {
             height: "0",
@@ -107,6 +116,8 @@ export default {
         },
       },
       animation: {
+        // 2s no header; o handoff usa 1.6s no QR e 1.2s no "digitando".
+        pulseDot: "pulseDot 2s ease-in-out infinite",
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },
