@@ -7,7 +7,8 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { adminApi } from "@/lib/adminApi";
-import { Bot, CreditCard, Globe, Loader2, ShieldCheck, Save, Coins, Mic, RefreshCw, Megaphone } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Bot, CreditCard, Globe, Loader2, ShieldCheck, Save, Coins, Mic, RefreshCw, Megaphone, Plus, Quote, Star, Trash2 } from "lucide-react";
 
 const brl = (v: number) =>
   (Number(v) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2, maximumFractionDigits: 4 });
@@ -62,6 +63,10 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
   });
   const [savingLp, setSavingLp] = useState(false);
 
+  // Depoimentos da landing. Ficam em estado próprio porque na tela são uma
+  // lista editável, e viram JSON só na hora de salvar.
+  const [depoimentos, setDepoimentos] = useState<any[]>([]);
+
   const load = async () => {
     const [gwRes, lpRes, prRes] = await Promise.all([
       adminApi.get("/api/admin/platform-settings"),
@@ -82,7 +87,13 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
       setVoiceProvider(gwRes.data.voiceProvider || "GEMINI");
       setEnabledVoices(gwRes.data.enabledVoices || []);
     }
-    if (lpRes.ok && lpRes.data) setLp((prev: any) => ({ ...prev, ...lpRes.data }));
+    if (lpRes.ok && lpRes.data) {
+      setLp((prev: any) => ({ ...prev, ...lpRes.data }));
+      try {
+        const lista = JSON.parse(lpRes.data.testimonials || "[]");
+        setDepoimentos(Array.isArray(lista) ? lista : []);
+      } catch { setDepoimentos([]); }
+    }
     if (prRes.ok) setPricing(prRes.data);
   };
   useEffect(() => { load(); }, []);
@@ -207,12 +218,29 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
   const webhookUrl = typeof window !== "undefined" ? `${window.location.origin}/api/webhook/${provider === "STRIPE" ? "stripe" : "payment"}` : "";
 
   const saveLanding = async () => {
+    const incompletos = depoimentos.filter((d) => !d.nome?.trim() || !d.texto?.trim()).length;
+    if (incompletos) {
+      toast({
+        title: "Depoimento sem nome ou sem texto",
+        description: "O servidor descarta esses; preencha quem falou e o que foi dito.",
+        variant: "destructive",
+      });
+      return;
+    }
     setSavingLp(true);
-    const res = await adminApi.put("/api/admin/landing-settings", lp);
+    const res = await adminApi.put("/api/admin/landing-settings", { ...lp, testimonials: depoimentos });
     setSavingLp(false);
-    if (res.ok) toast({ title: "Landing page atualizada" });
-    else toast({ title: "Erro ao salvar", description: res.data?.error, variant: "destructive" });
+    if (res.ok) {
+      toast({ title: "Landing page atualizada" });
+      try {
+        const lista = JSON.parse(res.data?.testimonials || "[]");
+        setDepoimentos(Array.isArray(lista) ? lista : []);
+      } catch { setDepoimentos([]); }
+    } else toast({ title: "Erro ao salvar", description: res.data?.error, variant: "destructive" });
   };
+
+  const mudarDepoimento = (i: number, campo: string, valor: any) =>
+    setDepoimentos(depoimentos.map((d, k) => (k === i ? { ...d, [campo]: valor } : d)));
 
   const togglePlanVisible = (planId: string) => {
     const ids = (lp.visiblePlanIds || "").split(",").filter(Boolean);
@@ -747,6 +775,85 @@ export function SettingsPanel({ sdrs, plans }: { sdrs: any[]; plans: any[] }) {
               );
             })}
           </div>
+        </div>
+
+        {/* DEPOIMENTOS ─────────────────────────────────────── */}
+        <div className="space-y-3 border-t border-border pt-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-0.5">
+              <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Quote className="h-3.5 w-3.5" /> Depoimentos
+              </Label>
+              <p className="text-[11px] text-muted-foreground">
+                Só de cliente real, com autorização. Sem nenhum cadastrado, a seção mostra
+                apenas os números do produto. A landing exibe os quatro primeiros.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0 gap-1.5"
+              onClick={() => setDepoimentos([...depoimentos, { nome: "", papel: "", texto: "", nota: 5 }])}
+            >
+              <Plus className="h-3.5 w-3.5" /> Adicionar
+            </Button>
+          </div>
+
+          {depoimentos.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-border px-4 py-6 text-center text-xs text-muted-foreground">
+              Nenhum depoimento cadastrado.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {depoimentos.map((d, i) => (
+                <div key={i} className="space-y-2 rounded-xl border border-border bg-muted/40 p-3">
+                  <div className="flex items-center gap-2">
+                    <Badge className="shrink-0 border-none bg-primary/10 px-2 text-[10px] font-semibold text-primary">
+                      {i < 4 ? `#${i + 1}` : "não exibido"}
+                    </Badge>
+                    <Input
+                      className="h-8 text-xs"
+                      placeholder="Nome de quem falou"
+                      value={d.nome || ""}
+                      onChange={(e) => mudarDepoimento(i, "nome", e.target.value)}
+                    />
+                    <Input
+                      className="h-8 text-xs"
+                      placeholder="Cargo e empresa"
+                      value={d.papel || ""}
+                      onChange={(e) => mudarDepoimento(i, "papel", e.target.value)}
+                    />
+                    <button
+                      onClick={() => setDepoimentos(depoimentos.filter((_, k) => k !== i))}
+                      className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-rose-50 hover:text-rose-600"
+                      title="Remover depoimento"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <Textarea
+                    rows={2}
+                    className="text-xs"
+                    placeholder="O que o cliente disse, nas palavras dele."
+                    value={d.texto || ""}
+                    onChange={(e) => mudarDepoimento(i, "texto", e.target.value)}
+                  />
+                  <div className="flex items-center gap-1">
+                    <span className="mr-1 text-[11px] text-muted-foreground">Nota</span>
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <button key={n} onClick={() => mudarDepoimento(i, "nota", n)} title={`${n} de 5`}>
+                        <Star
+                          className={`h-4 w-4 transition-colors ${
+                            n <= (Number(d.nota) || 5) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/40"
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end">
