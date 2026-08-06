@@ -109,6 +109,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/components/ui/use-toast";
+import { assinarEventos } from "@/lib/eventosDoPainel";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -716,13 +717,8 @@ export default function Conversations() {
 
   useEffect(() => {
     fetchData();
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    const eventSource = new EventSource(`/api/events?token=${token}`);
-    eventSource.onmessage = (event) => {
+    return assinarEventos((msg: any) => {
       try {
-        const msg = JSON.parse(event.data);
         // O servidor emite { conversationId, role, content, ... } ou nested { message: {...} }
         const message = msg.message || msg;
         const conversationId = message.conversationId || msg.conversationId;
@@ -761,8 +757,7 @@ export default function Conversations() {
         // não-lidas, ordem). O resto da tela não depende da mensagem nova.
         fetchConversations();
       } catch {}
-    };
-    return () => eventSource.close();
+    });
   }, []);
 
   // Abas por fase do atendimento. "Minhas" = atribuídas a mim.

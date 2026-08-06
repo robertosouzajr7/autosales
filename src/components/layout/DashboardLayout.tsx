@@ -63,6 +63,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import { assinarEventos } from "@/lib/eventosDoPainel";
 import { LogoIcon } from "@/components/Logo";
 import { TrialBanner } from "@/components/billing/TrialBanner";
 import { VerifyEmailGate } from "@/components/billing/VerifyEmailGate";
@@ -580,37 +581,22 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }, []);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    if (!token) return;
-
-    const eventSource = new EventSource(`/api/events?token=${token}`);
-
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === 'new_message' && data.message.role === 'USER') {
-          notificationStore.add({
-            id: data.message.id || Date.now(),
-            content: data.message.content,
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            read: false,
-            messageType: data.message.messageType
-          });
-
-          toast({
-            title: "💬 Nova mensagem",
-            description: data.message.messageType === 'AUDIO' 
-              ? "🎙️ Áudio recebido" 
-              : (data.message.content || "").slice(0, 60),
-          });
-        }
-      } catch (e) {
-        console.error("Erro no SSE de notificações:", e);
-      }
-    };
-
-    return () => eventSource.close();
+    // O servidor manda a própria mensagem, não um envelope: procurar por
+    // `data.type === "new_message"` nunca dava certo e o sino ficava mudo.
+    return assinarEventos((msg: any) => {
+      if (msg?.role !== "USER") return;
+      notificationStore.add({
+        id: msg.id || Date.now(),
+        content: msg.content,
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        read: false,
+        messageType: msg.messageType,
+      });
+      toast({
+        title: "💬 Nova mensagem",
+        description: msg.messageType === "AUDIO" ? "🎙️ Áudio recebido" : (msg.content || "").slice(0, 60),
+      });
+    });
   }, [toast]);
 
   useEffect(() => {
