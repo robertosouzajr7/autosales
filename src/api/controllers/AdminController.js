@@ -372,15 +372,63 @@ export const getLandingSettings = async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 };
 
+// A tela devolve o objeto inteiro que leu, com id e datas junto. Sem esta
+// lista, tudo isso ia parar no update.
+const CAMPOS_LANDING = [
+  "logoUrl", "contactWhatsApp", "contactEmail", "contactInstagram",
+  "contactLinkedIn", "contactYouTube", "selectedSdrId", "visiblePlanIds",
+];
+
+/**
+ * Depoimento é declaração de um cliente real, então entra validado: sem nome
+ * ou sem texto não é depoimento, e some da lista. Guardado como JSON; lista
+ * vazia grava null e a seção da landing volta a mostrar só os números.
+ */
+function normalizarDepoimentos(bruto) {
+  if (bruto === undefined) return undefined;
+  let lista = bruto;
+  if (typeof bruto === "string") {
+    if (!bruto.trim()) return null;
+    try { lista = JSON.parse(bruto); } catch { throw new Error("Depoimentos em formato inválido."); }
+  }
+  if (lista === null) return null;
+  if (!Array.isArray(lista)) throw new Error("Depoimentos precisam vir em uma lista.");
+
+  // `|| 5` aqui engoliria o zero antes do clamp e devolveria 5 estrelas para
+  // quem mandou zero. O padrão vale só para o que não é número.
+  const naEscala = (bruto) => {
+    const n = Number(bruto);
+    return Number.isFinite(n) ? Math.min(5, Math.max(1, Math.round(n))) : 5;
+  };
+
+  const limpos = lista
+    .map((d) => ({
+      nome: String(d?.nome ?? "").trim(),
+      papel: String(d?.papel ?? "").trim(),
+      texto: String(d?.texto ?? "").trim(),
+      nota: naEscala(d?.nota),
+    }))
+    .filter((d) => d.nome && d.texto);
+
+  return limpos.length ? JSON.stringify(limpos) : null;
+}
+
 export const updateLandingSettings = async (req, res) => {
   try {
+    const dados = {};
+    for (const campo of CAMPOS_LANDING) {
+      if (req.body?.[campo] !== undefined) dados[campo] = req.body[campo];
+    }
+    const depoimentos = normalizarDepoimentos(req.body?.testimonials);
+    if (depoimentos !== undefined) dados.testimonials = depoimentos;
+
     const settings = await prisma.landingPageSettings.upsert({
       where: { id: "singleton" },
-      update: req.body,
-      create: { ...req.body, id: "singleton" }
+      update: dados,
+      create: { ...dados, id: "singleton" }
     });
     res.json(settings);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { res.status(400).json({ error: e.message }); }
 };
 
 // ─── Configurações da plataforma (gateway de pagamento etc.) ────
