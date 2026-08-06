@@ -214,3 +214,57 @@ export const trainSdr = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+/**
+ * Simulador do agente: conversa de teste sem tocar nos dados da conta.
+ *
+ * O caminho normal (`submitChat`) cria contato, cria conversa e grava cada
+ * mensagem — o que é certo para um visitante do site e errado para o dono
+ * testando o próprio agente: em cinco testes ele teria cinco contatos falsos
+ * no funil e cinco conversas no inbox.
+ *
+ * Aqui o histórico vem do navegador e é entregue pronto ao motor via
+ * `preloaded`, que é justamente o atalho para quem já tem o contexto em mãos.
+ * Nada é gravado, nada é enviado por WhatsApp.
+ *
+ * Os tokens SÃO cobrados: a chamada ao modelo acontece de verdade, e não
+ * cobrar faria o painel mostrar um consumo menor que o real.
+ */
+export const simulateSdr = async (req, res) => {
+  const tenantId = req.tenantId;
+  const { message, history = [] } = req.body || {};
+  if (!tenantId) return res.status(401).json({ error: "Tenant ID missing" });
+  if (!message?.trim()) return res.status(400).json({ error: "Escreva uma mensagem para testar." });
+
+  try {
+    const sdr = await prisma.sdrBot.findFirst({ where: { id: req.params.id, tenantId } });
+    if (!sdr) return res.status(404).json({ error: "Agente não encontrado." });
+
+    const anteriores = (Array.isArray(history) ? history : [])
+      .slice(-14)
+      .map((m) => `${m.role === "user" ? "LEAD" : "SDR"}: ${m.content}`);
+    const conversa = [...anteriores, `LEAD: ${message}`].join("\n");
+
+    const { default: AutomationEngine } = await import("../../../automation_engine.js");
+    const resposta = await AutomationEngine.callAI(
+      null,
+      // Contato de mentira: o motor só lê nome, telefone e tenantId daqui.
+      { id: "simulacao", name: "Cliente de teste", phone: "—", tenantId },
+      {
+        tenantId,
+        preloaded: {
+          sdr,
+          history: conversa,
+          kb: sdr.knowledgeBase || "",
+          appointments: "",
+          // Sem fluxo em execução: o simulador testa o agente, não a régua.
+          fluxos: "",
+        },
+      }
+    );
+
+    res.json({ response: resposta || "O agente não respondeu. Verifique se há créditos de IA no plano." });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

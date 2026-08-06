@@ -285,6 +285,8 @@ router.post("/sdrs", requirePermission("agents"), SdrController.createSdr);
 router.put("/sdrs/:id", requirePermission("agents"), SdrController.updateSdr);
 router.delete("/sdrs/:id", requirePermission("agents"), SdrController.deleteSdr);
 router.post("/sdrs/:id/training", requirePermission("agents"), upload.single("file"), SdrController.trainSdr);
+// Simulador: conversa de teste com o agente, sem gravar nada na conta.
+router.post("/sdrs/:id/simulate", requirePermission("agents"), SdrController.simulateSdr);
 
 // Vozes LIBERADAS pelo admin — o cliente escolhe entre estas no agente.
 // A chave do provedor é global e nunca é exposta.
