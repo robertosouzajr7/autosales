@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -547,6 +547,21 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   // null = ainda não sabemos; a pílula só aparece quando há resposta, para o
   // header não piscar "desconectado" durante o carregamento.
   const [conexaoAtiva, setConexaoAtiva] = useState<boolean | null>(null);
+  const [busca, setBusca] = useState("");
+  const campoBusca = useRef<HTMLInputElement>(null);
+
+  // ⌘K / Ctrl+K foca a busca. Anunciar o atalho no campo e não implementá-lo
+  // seria pior do que não anunciar.
+  useEffect(() => {
+    const aoTeclar = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        campoBusca.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", aoTeclar);
+    return () => window.removeEventListener("keydown", aoTeclar);
+  }, []);
   const unreadCount = notifications.filter(n => !n.read).length;
 
   // O painel ainda é sempre claro. Não é escolha de design: 1.227 utilitários
@@ -625,8 +640,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     // Status do canal para a pílula do header. Uma chamada por montagem do
     // shell, não por navegação — o layout não remonta ao trocar de rota.
     fetch("/api/whatsapp/accounts", { headers })
-      .then((r) => (r.ok ? r.json() : []))
+      .then((r) => {
+        // A rota exige o módulo "connections". Quem não o tem recebe 403 — e
+        // transformar isso em lista vazia faria o header afirmar "WhatsApp
+        // desconectado" para um colaborador de atendimento, com o canal no ar.
+        // Sem permissão de ver, o estado é desconhecido, não é negativo.
+        if (!r.ok) return null;
+        return r.json();
+      })
       .then((contas) => {
+        if (contas === null) return setConexaoAtiva(null);
         const lista = Array.isArray(contas) ? contas : [];
         const zap = lista.filter((c: any) => String(c.channel || "").toUpperCase() !== "INSTAGRAM");
         setConexaoAtiva(zap.some((c: any) => c.status === "CONNECTED" || c.connected === true || !!c.phoneId));
@@ -723,18 +746,35 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             {currentPage}
           </h1>
 
-          {/* Busca. O atalho é anunciado no próprio campo: um ⌘K escondido
-              não é atalho, é curiosidade. */}
-          <div className="relative ml-4 hidden min-w-0 max-w-[340px] flex-1 md:block">
+          {/* Busca. O atalho é anunciado no próprio campo: um ⌘K escondido não
+              é atalho, é curiosidade.
+
+              O rótulo promete só o que a busca entrega hoje — clientes. O
+              handoff pede "cliente, conversa ou agendamento", mas conversa e
+              agendamento ainda não têm busca por URL; prometer as três e
+              entregar uma é pior do que prometer uma. O texto cresce quando as
+              telas ganharem o parâmetro. */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const q = busca.trim();
+              if (q) navigate(`/contacts?q=${encodeURIComponent(q)}`);
+            }}
+            className="relative ml-4 hidden min-w-0 max-w-[340px] flex-1 md:block"
+          >
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-faint" />
             <Input
-              placeholder="Buscar cliente, conversa ou agendamento"
+              ref={campoBusca}
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar cliente"
+              aria-label="Buscar cliente"
               className="linha-unica h-9 rounded-[11px] border-border bg-surface-2 pl-9 pr-14 text-[13px] placeholder:text-faint"
             />
             <kbd className="num pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-border bg-card px-1.5 py-0.5 text-[10px] font-semibold text-faint">
               ⌘K
             </kbd>
-          </div>
+          </form>
 
           <div className="ml-auto flex items-center gap-2">
             {/* Status do canal: o ponto pulsa porque o dado é de agora. */}

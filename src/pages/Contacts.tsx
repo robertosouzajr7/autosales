@@ -45,7 +45,11 @@ export default function Contacts() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Lead | null>(null);
   const [newContact, setNewContact] = useState({ name: "", phone: "", email: "", tags: "", notes: "", status: "NEW" });
-  const [searchTerm, setSearchTerm] = useState("");
+  // A busca do header manda o termo por ?q= — assim o atalho do topo leva a
+  // um resultado, em vez de só trocar de página.
+  const [searchTerm, setSearchTerm] = useState(
+    () => new URLSearchParams(window.location.search).get("q") || ""
+  );
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [importPreview, setImportPreview] = useState<{name: string, phone: string, email?: string}[]>([]);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
