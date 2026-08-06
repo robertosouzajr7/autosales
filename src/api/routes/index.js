@@ -23,7 +23,6 @@ import * as TemplateController from "../controllers/TemplateController.js";
 import * as CampaignController from "../controllers/CampaignController.js";
 import * as AcademyController from "../controllers/AcademyController.js";
 import * as ContactController from "../controllers/ContactController.js";
-import * as AnalyticsController from "../controllers/AnalyticsController.js";
 import * as FinancialController from "../controllers/FinancialController.js";
 import * as BillingController from "../controllers/BillingController.js";
 import BillingService from "../services/BillingService.js";
@@ -171,7 +170,7 @@ router.get("/stats/dashboard", StatsController.getDashboardStats);
 router.get("/stats/results", StatsController.getResults);
 // Números da home do painel: série, variação, IA/equipe e valores do funil.
 router.get("/stats/home", StatsController.getHomeStats);
-router.get("/analytics", requirePermission("analytics"), AnalyticsController.getAnalytics);
+router.get("/stats/report", requirePermission("analytics"), StatsController.getReport);
 
 // Messages & Conversations (Chat/Inbox)
 router.get("/messages/:leadId", requirePermission("conversations"), MessageController.getMessages);
