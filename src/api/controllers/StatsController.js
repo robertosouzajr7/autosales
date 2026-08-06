@@ -344,3 +344,200 @@ export const getHomeStats = async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 };
+
+/**
+ * Relatórios: os cortes que a home não mostra.
+ *
+ * A tela antiga inventava os números — "Visitantes" era `leads * 3`,
+ * "Qualificados" era 40% do total e o ROI era a string "150%". Aqui tudo é
+ * contado no banco; o que não dá para responder fica de fora em vez de ser
+ * estimado.
+ *
+ * Cada bloco responde uma pergunta de dono de negócio: por onde entra
+ * conversa, quanto a IA resolveu sozinha, quem da equipe está atendendo,
+ * onde as filas estão travando e quanto disso virou agenda cumprida.
+ */
+export const getReport = async (req, res) => {
+  try {
+    const tenantId = req.tenantId;
+    const days = Math.min(parseInt(req.query.days) || 30, 365);
+    const DIA = 24 * 60 * 60 * 1000;
+    const agora = Date.now();
+    const inicio = new Date(agora - days * DIA);
+    const inicioAnterior = new Date(agora - 2 * days * DIA);
+
+    const variacao = (atual, anterior) =>
+      anterior ? Math.round(((atual - anterior) / anterior) * 1000) / 10 : null;
+
+    const passouPorHumano = {
+      OR: [
+        { assignedToId: { not: null } },
+        { handoffReason: { not: null } },
+        { phase: { in: ["QUEUE", "HUMAN"] } },
+      ],
+    };
+    const comMensagemEm = (de, ate) => ({
+      tenantId,
+      messages: { some: { createdAt: { gte: de, ...(ate ? { lt: ate } : {}) } } },
+    });
+
+    const [
+      conversas, conversasAnterior, conversasEquipe,
+      contatosNovos, contatosNovosAnterior,
+      recebidas, enviadas,
+      porCanal,
+      agendados, agendadosAnterior, concluidos, faltas, cancelados,
+      serie, porAtendente, porFila, encerradas,
+    ] = await Promise.all([
+      prisma.conversation.count({ where: comMensagemEm(inicio) }),
+      prisma.conversation.count({ where: comMensagemEm(inicioAnterior, inicio) }),
+      prisma.conversation.count({ where: { ...comMensagemEm(inicio), ...passouPorHumano } }),
+
+      prisma.lead.count({ where: { tenantId, createdAt: { gte: inicio } } }),
+      prisma.lead.count({ where: { tenantId, createdAt: { gte: inicioAnterior, lt: inicio } } }),
+
+      prisma.message.count({ where: { tenantId, role: "USER", createdAt: { gte: inicio } } }),
+      prisma.message.count({ where: { tenantId, role: { in: ["ASSISTANT", "SDR"] }, createdAt: { gte: inicio } } }),
+
+      // Por onde a conversa entrou. O canal fica no contato, não na conversa.
+      prisma.$queryRaw`
+        SELECT COALESCE(l."channel", 'WHATSAPP') AS canal, COUNT(DISTINCT c."id")::int AS total
+        FROM "Conversation" c
+        JOIN "Lead" l ON l."id" = c."leadId"
+        WHERE c."tenantId" = ${tenantId}
+          AND EXISTS (SELECT 1 FROM "Message" m WHERE m."conversationId" = c."id" AND m."createdAt" >= ${inicio})
+        GROUP BY 1 ORDER BY 2 DESC
+      `,
+
+      prisma.appointment.count({ where: { tenantId, createdAt: { gte: inicio } } }),
+      prisma.appointment.count({ where: { tenantId, createdAt: { gte: inicioAnterior, lt: inicio } } }),
+      // Comparecimento olha a data do compromisso, e só o que já venceu.
+      prisma.appointment.count({ where: { tenantId, status: "COMPLETED", date: { gte: inicio, lt: new Date(agora) } } }),
+      prisma.appointment.count({ where: { tenantId, status: "NOSHOW", date: { gte: inicio, lt: new Date(agora) } } }),
+      prisma.appointment.count({ where: { tenantId, status: "CANCELLED", date: { gte: inicio, lt: new Date(agora) } } }),
+
+      // Série diária, em SQL para não fazer uma consulta por dia.
+      prisma.$queryRaw`
+        SELECT date_trunc('day', m."createdAt")::date AS dia,
+               COUNT(DISTINCT m."conversationId")::int AS conversas,
+               COUNT(*) FILTER (WHERE m."role" = 'USER')::int AS recebidas
+        FROM "Message" m
+        WHERE m."tenantId" = ${tenantId} AND m."createdAt" >= ${inicio}
+        GROUP BY 1 ORDER BY 1
+      `,
+
+      // Quem da equipe atendeu. Conta a conversa pelo dono atual: não há
+      // histórico de quem passou por ela antes da transferência.
+      prisma.$queryRaw`
+        SELECT u."id", u."name", COUNT(c."id")::int AS atendidas,
+               COUNT(*) FILTER (WHERE c."phase" = 'CLOSED')::int AS encerradas
+        FROM "Conversation" c
+        JOIN "User" u ON u."id" = c."assignedToId"
+        WHERE c."tenantId" = ${tenantId}
+          AND EXISTS (SELECT 1 FROM "Message" m WHERE m."conversationId" = c."id" AND m."createdAt" >= ${inicio})
+        GROUP BY 1, 2 ORDER BY 3 DESC LIMIT 10
+      `,
+
+      // Filas: o que passou por elas e quantas ainda esperam.
+      prisma.$queryRaw`
+        SELECT q."id", q."name", q."color",
+               COUNT(c."id")::int AS total,
+               COUNT(*) FILTER (WHERE c."phase" = 'QUEUE')::int AS esperando
+        FROM "ServiceQueue" q
+        LEFT JOIN "Conversation" c ON c."queueId" = q."id"
+             AND EXISTS (SELECT 1 FROM "Message" m WHERE m."conversationId" = c."id" AND m."createdAt" >= ${inicio})
+        WHERE q."tenantId" = ${tenantId}
+        GROUP BY 1, 2, 3 ORDER BY 4 DESC
+      `,
+
+      prisma.conversation.count({ where: { ...comMensagemEm(inicio), phase: "CLOSED" } }),
+    ]);
+
+    const taxa = (ok, falta) => (ok + falta > 0 ? Math.round((ok / (ok + falta)) * 100) : null);
+
+    const porDia = new Map(
+      (serie || []).map((l) => [new Date(l.dia).toISOString().slice(0, 10), l])
+    );
+    const serieCheia = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(agora - i * DIA).toISOString().slice(0, 10);
+      const linha = porDia.get(d);
+      serieCheia.push({
+        dia: d,
+        conversas: Number(linha?.conversas || 0),
+        recebidas: Number(linha?.recebidas || 0),
+      });
+    }
+
+    // Tempo de primeira resposta (mediana), ignorando intervalos acima de 6h,
+    // que são atendimento humano no dia seguinte e não a resposta automática.
+    const convs = await prisma.conversation.findMany({
+      where: comMensagemEm(inicio),
+      select: {
+        messages: {
+          where: { createdAt: { gte: inicio } },
+          orderBy: { createdAt: "asc" },
+          select: { role: true, createdAt: true },
+        },
+      },
+      take: 500,
+    });
+    const tempos = [];
+    for (const c of convs) {
+      const doCliente = c.messages.find((m) => m.role === "USER");
+      if (!doCliente) continue;
+      const resposta = c.messages.find((m) => m.role !== "USER" && m.createdAt > doCliente.createdAt);
+      if (!resposta) continue;
+      const s = (new Date(resposta.createdAt) - new Date(doCliente.createdAt)) / 1000;
+      if (s >= 0 && s <= 6 * 60 * 60) tempos.push(s);
+    }
+    let respostaSegundos = null;
+    if (tempos.length) {
+      tempos.sort((a, b) => a - b);
+      const meio = Math.floor(tempos.length / 2);
+      respostaSegundos = Math.round(tempos.length % 2 ? tempos[meio] : (tempos[meio - 1] + tempos[meio]) / 2);
+    }
+
+    const ia = Math.max(conversas - conversasEquipe, 0);
+
+    res.json({
+      periodDays: days,
+      volume: {
+        conversas,
+        conversasDelta: variacao(conversas, conversasAnterior),
+        contatosNovos,
+        contatosNovosDelta: variacao(contatosNovos, contatosNovosAnterior),
+        recebidas,
+        enviadas,
+        encerradas,
+        serie: serieCheia,
+      },
+      atendimento: {
+        ia,
+        equipe: conversasEquipe,
+        // Percentual do que a IA resolveu sem passar por gente. Sem conversa
+        // no período não existe percentual — devolver 0% diria que a IA
+        // falhou em tudo, e devolver 100% diria que resolveu tudo.
+        percentualIa: conversas ? Math.round((ia / conversas) * 100) : null,
+        respostaSegundos,
+      },
+      canais: (porCanal || []).map((c) => ({ canal: c.canal, total: Number(c.total) })),
+      agenda: {
+        agendados,
+        agendadosDelta: variacao(agendados, agendadosAnterior),
+        concluidos, faltas, cancelados,
+        comparecimento: taxa(concluidos, faltas),
+      },
+      equipe: (porAtendente || []).map((u) => ({
+        id: u.id, nome: u.name,
+        atendidas: Number(u.atendidas), encerradas: Number(u.encerradas),
+      })),
+      filas: (porFila || []).map((f) => ({
+        id: f.id, nome: f.name, cor: f.color,
+        total: Number(f.total), esperando: Number(f.esperando),
+      })),
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+};
