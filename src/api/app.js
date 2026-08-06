@@ -8,6 +8,7 @@ import { avisarSeSchemaAtrasado, checarSchema } from "./config/schemaCheck.js";
 import path from "path";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import { donoDoOrcamento, FLUXOS, WEBHOOKS } from "./utils/rateLimitKey.js";
 import apiRouter from "./routes/index.js";
 import publicRouter from "./routes/public.js";
 import publicApiRouter from "./routes/publicApi.js";
@@ -112,17 +113,23 @@ const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 600, // uso normal do painel (polling de conversas/stats)
   message: { error: "Muitas requisições. Tente novamente mais tarde." },
-  // Webhooks são chamados por origem única (loop interno localhost, ou a
-  // infra da Meta em rajada) — limitá-los por IP estrangularia todos os
-  // tenants de uma vez. O webhook da Meta é autenticado por HMAC.
-  skip: (req) => ["/webhook/whatsapp", "/webhook/meta", "/webhook/payment", "/webhook/stripe"].includes(req.path)
+  keyGenerator: donoDoOrcamento,
+  skip: (req) => WEBHOOKS.includes(req.path) || FLUXOS.includes(req.path)
 });
 
-// Login/registro: janela pequena contra força bruta e enumeração de contas
+// Login/registro: janela pequena contra força bruta e enumeração de contas.
+// Vale só para o que é adivinhável — o retorno do OAuth do Google/Meta é um
+// redirecionamento do provedor e, contado aqui, gastava o mesmo balde que a
+// tentativa de senha.
+const ADIVINHAVEIS = [
+  "/login", "/register", "/forgot-password", "/reset-password",
+  "/verify-email", "/resend-verification", "/send-code", "/verify-code",
+];
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
-  message: { error: "Muitas tentativas de autenticação. Aguarde alguns minutos." }
+  message: { error: "Muitas tentativas de autenticação. Aguarde alguns minutos." },
+  skip: (req) => !ADIVINHAVEIS.includes(req.path),
 });
 
 app.use("/api/auth/", authLimiter);

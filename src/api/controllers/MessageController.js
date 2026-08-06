@@ -143,12 +143,15 @@ export const toggleBot = async (req, res) => {
 
 export const sseEvents = (req, res) => {
   const tenantId = req.tenantId;
-  
+
   res.writeHead(200, {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache",
-    "Connection": "keep-alive"
+    Connection: "keep-alive",
+    // Sem isto o nginx segura o fluxo em buffer e o "tempo real" chega em lotes.
+    "X-Accel-Buffering": "no",
   });
+  res.write(": conectado\n\n");
 
   const onMessage = (data) => {
     if (data.tenantId === tenantId) {
@@ -158,7 +161,14 @@ export const sseEvents = (req, res) => {
 
   messageEvents.on("new_message", onMessage);
 
+  // Um fluxo sem tráfego é um fluxo ocioso, e proxy derruba conexão ociosa
+  // em torno de 60s. Quando isso acontecia, o EventSource reconectava a cada
+  // três segundos, para sempre — era o que enchia o balde do rate limit e
+  // fazia a próxima ação do usuário levar 429.
+  const batida = setInterval(() => res.write(": ping\n\n"), 25000);
+
   req.on("close", () => {
+    clearInterval(batida);
     messageEvents.off("new_message", onMessage);
   });
 };
