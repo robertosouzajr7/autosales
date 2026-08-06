@@ -1,27 +1,58 @@
 import { useState, useEffect } from "react";
-import { cn } from "../lib/utils";
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { PageHeader } from "@/components/shared/PageHeader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { 
-  Calendar as CalendarIcon, Clock, CheckCircle2, AlertCircle, 
-  Trash2, Plus, ArrowRight, User, 
-  Search, Filter, Smartphone, MoreHorizontal,
-  ChevronRight, CalendarDays, Save, LayoutGrid, List,
-  Calendar as LucideCalendar, Video, Copy, Check, ExternalLink
+import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  CheckCircle2, Trash2, Plus, MoreVertical, UserX, Bell,
+  ChevronLeft, ChevronRight,
+  Calendar as LucideCalendar, Video, Copy, Check, ExternalLink,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, isSameDay, isToday, isTomorrow, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
+
+/** Duração padrão de um compromisso no produto (AppointmentController). */
+const DURACAO_MIN = 60;
+
+/**
+ * Estado do compromisso na lista.
+ *
+ * "Risco de falta" não é status do banco: é compromisso ainda agendado, não
+ * confirmado pelo cliente, cujo lembrete de confirmação já saiu. Ou seja, foi
+ * perguntado e ninguém respondeu — que é quando vale a pena alguém ligar.
+ */
+function estadoDoCompromisso(a: Appointment) {
+  const inicio = new Date(a.date).getTime();
+  const agora = Date.now();
+
+  if (a.status === "COMPLETED") {
+    return { id: "OK", rotulo: "Concluída", barra: "bg-emerald-500", pilula: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400" };
+  }
+  if (a.status === "NOSHOW") {
+    return { id: "FALTOU", rotulo: "Faltou", barra: "bg-rose-500", pilula: "bg-rose-500/12 text-rose-700 dark:text-rose-400" };
+  }
+  if (inicio <= agora && agora < inicio + DURACAO_MIN * 60000) {
+    return { id: "AGORA", rotulo: "Agora", barra: "bg-primary", pilula: "bg-primary/12 text-accent-text" };
+  }
+  const confirmacaoEnviada = (a.reminders || []).some((r) => r.kind === "CONFIRM" && r.status === "SENT");
+  if (!a.confirmedAt && confirmacaoEnviada && inicio > agora) {
+    return { id: "RISCO", rotulo: "Risco de falta", barra: "bg-amber-500", pilula: "bg-amber-500/12 text-amber-700 dark:text-amber-500" };
+  }
+  if (a.confirmedAt) {
+    return { id: "CONFIRMADA", rotulo: "Confirmada", barra: "bg-emerald-500", pilula: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400" };
+  }
+  return { id: "AGENDADA", rotulo: "Agendada", barra: "bg-primary", pilula: "bg-surface-2 text-muted-foreground" };
+}
 
 interface Appointment {
   id: string;
@@ -31,6 +62,8 @@ interface Appointment {
   status: string;
   leadId: string;
   meetLink?: string | null;
+  confirmedAt?: string | null;
+  reminders?: { kind: string; status: string }[];
   lead?: {
     id: string;
     name: string;
@@ -65,26 +98,26 @@ function MeetLink({ url }: { url: string }) {
   };
 
   return (
-    <div className="flex items-center gap-2 min-w-0">
+    <div className="flex min-w-0 items-center gap-1.5">
       <a
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 hover:bg-emerald-100 transition-colors min-w-0"
+        className="flex min-w-0 items-center gap-1.5 rounded-lg border border-accent-text/30 bg-accent-soft px-2.5 py-1 text-[11.5px] font-semibold text-accent-text transition-colors hover:bg-accent-soft/70"
         title={url}
       >
-        <Video className="w-3 h-3 shrink-0" />
-        <span className="text-xs font-bold uppercase">Entrar</span>
-        <ExternalLink className="w-3 h-3 shrink-0 opacity-60" />
+        <Video className="h-3 w-3 shrink-0" />
+        Entrar na reunião
+        <ExternalLink className="h-3 w-3 shrink-0 opacity-60" />
       </a>
       <button
         type="button"
         onClick={copiar}
-        className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 border border-slate-100 text-slate-500 hover:bg-slate-100 transition-colors"
+        className="flex items-center gap-1.5 rounded-lg border border-border-soft px-2.5 py-1 text-[11.5px] font-semibold text-muted-foreground transition-colors hover:text-foreground"
         title="Copiar o link da reunião"
       >
-        {copiado ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-        <span className="text-xs font-bold uppercase">{copiado ? "Copiado" : "Copiar link"}</span>
+        {copiado ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+        {copiado ? "Copiado" : "Copiar link"}
       </button>
     </div>
   );
@@ -97,20 +130,25 @@ export default function Appointments() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newAppt, setNewAppt] = useState({ title: "", date: "", leadId: "", notes: "" });
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [viewMode, setViewMode] = useState<"day" | "week" | "month" | "upcoming">("upcoming");
+  const [viewMode, setViewMode] = useState<"day" | "week" | "month">("day");
+  // Config dos lembretes: o painel lateral liga e desliga os três da régua.
+  const [config, setConfig] = useState<any>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const fetchData = async () => {
     try {
       const token = localStorage.getItem("token");
-      const [aRes, lRes] = await Promise.all([
+      const [aRes, lRes, cRes] = await Promise.all([
         fetch("/api/appointments", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch("/api/leads", { headers: { "Authorization": `Bearer ${token}` } })
+        fetch("/api/leads", { headers: { "Authorization": `Bearer ${token}` } }),
+        fetch("/api/automations/config", { headers: { "Authorization": `Bearer ${token}` } }),
       ]);
       const aData = await aRes.json();
       const lData = await lRes.json();
       setAppts(Array.isArray(aData) ? aData : []);
       setLeads(Array.isArray(lData) ? lData : []);
+      setConfig(cRes.ok ? await cRes.json().catch(() => null) : null);
     } catch (e) {
       toast({ title: "Erro na agenda", variant: "destructive" });
     }
@@ -157,327 +195,426 @@ export default function Appointments() {
     } catch (e) { toast({ title: "Erro ao excluir", variant: "destructive" }); }
   };
 
-  const toggleComplete = async (appt: Appointment) => {
-    try {
-      const token = localStorage.getItem("token");
-      const newStatus = appt.status === "COMPLETED" ? "PENDING" : "COMPLETED";
-      const res = await fetch(`/api/appointments/${appt.id}`, {
-        method: "PUT",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ status: newStatus })
-      });
-      if (res.ok) {
-        toast({ title: newStatus === "COMPLETED" ? "Reunião Concluída! ✅" : "Status resetado." });
-        fetchData();
-      }
-    } catch (e) { toast({ title: "Ops! Erro ao atualizar", variant: "destructive" }); }
+  const ROTULO_STATUS: Record<string, string> = {
+    COMPLETED: "Marcado como concluído",
+    NOSHOW: "Falta registrada",
+    SCHEDULED: "Voltou para agendado",
   };
 
-  const stats = (() => {
-    const now = new Date();
-    const monthAppts = appts.filter(a => {
-      const d = new Date(a.date);
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    });
-    const completed = monthAppts.filter(a => a.status === "COMPLETED").length;
-    const rate = monthAppts.length > 0 ? Math.round((completed / monthAppts.length) * 100) : 0;
-    return { total: monthAppts.length, rate };
-  })();
-
-  const filteredAppts = appts.filter(appt => {
-    const apptDate = new Date(appt.date);
-    
-    // Visão "Próximos" mostra TUDO que for futuro ou hoje
-    if (viewMode === "upcoming") {
-      return apptDate >= new Date(new Date().setHours(0,0,0,0)); 
-    }
-    
-    if (!selectedDate) return true;
-
-    if (viewMode === "day") {
-      return isSameDay(apptDate, selectedDate);
-    } else if (viewMode === "week") {
-      return isWithinInterval(apptDate, {
-        start: startOfWeek(selectedDate, { weekStartsOn: 0 }),
-        end: endOfWeek(selectedDate, { weekStartsOn: 0 })
-      });
-    } else {
-      return isWithinInterval(apptDate, {
-        start: startOfMonth(selectedDate),
-        end: endOfMonth(selectedDate)
-      });
-    }
-  }).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-  const groupedAppts = filteredAppts.reduce((acc: any, appt) => {
+  const mudarStatus = async (appt: Appointment, status: string) => {
     try {
-      const dateStr = format(new Date(appt.date), "yyyy-MM-dd");
-      if (!acc[dateStr]) acc[dateStr] = [];
-      acc[dateStr].push(appt);
+      const res = await fetch(`/api/appointments/${appt.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error();
+      toast({ title: ROTULO_STATUS[status] || "Status atualizado" });
+      fetchData();
+    } catch (e) { toast({ title: "Erro ao atualizar", variant: "destructive" }); }
+  };
+
+  /** Liga/desliga um lembrete da régua sem sair da agenda. */
+  const alternarLembrete = async (campo: string, valor: boolean) => {
+    const anterior = config;
+    setConfig((c: any) => ({ ...c, [campo]: valor }));
+    try {
+      const res = await fetch("/api/automations/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [campo]: valor }),
+      });
+      if (!res.ok) throw new Error();
     } catch (e) {
-      console.warn("[Agenda] Erro ao agrupar agendamento:", appt.id, e.message);
+      setConfig(anterior);
+      toast({ title: "Não foi possível mudar o lembrete", variant: "destructive" });
     }
+  };
+
+  // ── Números do topo ─────────────────────────────────────────
+  const inicioDoDia = (d: Date) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+  const ativos = appts.filter((a) => a.status !== "CANCELLED");
+
+  const deHoje = ativos.filter((a) => isSameDay(new Date(a.date), new Date()));
+  const daSemana = ativos.filter((a) =>
+    isWithinInterval(new Date(a.date), {
+      start: startOfWeek(new Date(), { weekStartsOn: 0 }),
+      end: endOfWeek(new Date(), { weekStartsOn: 0 }),
+    })
+  );
+  const semanaPassada = ativos.filter((a) =>
+    isWithinInterval(new Date(a.date), {
+      start: startOfWeek(new Date(Date.now() - 7 * 864e5), { weekStartsOn: 0 }),
+      end: endOfWeek(new Date(Date.now() - 7 * 864e5), { weekStartsOn: 0 }),
+    })
+  );
+  // Comparecimento olha só o que já venceu: compromisso futuro não faltou.
+  const vencidos = ativos.filter((a) => new Date(a.date) < new Date());
+  const compareceram = vencidos.filter((a) => a.status === "COMPLETED").length;
+  const faltaram = vencidos.filter((a) => a.status === "NOSHOW").length;
+  const taxaComparecimento = compareceram + faltaram > 0
+    ? Math.round((compareceram / (compareceram + faltaram)) * 100)
+    : null;
+
+  const emRisco = ativos.filter((a) => estadoDoCompromisso(a).id === "RISCO");
+
+  // ── Lista do dia / semana / mês ─────────────────────────────
+  const noPeriodo = ativos
+    .filter((a) => {
+      const d = new Date(a.date);
+      if (!selectedDate) return true;
+      if (viewMode === "day") return isSameDay(d, selectedDate);
+      if (viewMode === "week") {
+        return isWithinInterval(d, {
+          start: startOfWeek(selectedDate, { weekStartsOn: 0 }),
+          end: endOfWeek(selectedDate, { weekStartsOn: 0 }),
+        });
+      }
+      return isWithinInterval(d, { start: startOfMonth(selectedDate), end: endOfMonth(selectedDate) });
+    })
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  const agrupados = noPeriodo.reduce((acc: Record<string, Appointment[]>, a) => {
+    const chave = format(new Date(a.date), "yyyy-MM-dd");
+    (acc[chave] = acc[chave] || []).push(a);
     return acc;
   }, {});
 
-  const getDateLabel = (dateStr: string) => {
-    try {
-      const d = new Date(dateStr + "T12:00:00");
-      if (isToday(d)) return "Hoje";
-      if (isTomorrow(d)) return "Amanhã";
-      return format(d, "eeee, d 'de' MMMM", { locale: ptBR });
-    } catch (e) { return "Data Inválida"; }
+  const rotuloDoDia = (chave: string) => {
+    const d = new Date(`${chave}T12:00:00`);
+    if (isToday(d)) return "Hoje";
+    if (isTomorrow(d)) return "Amanhã";
+    return format(d, "eeee, d 'de' MMMM", { locale: ptBR });
   };
+
+  const andarDia = (passos: number) => {
+    const base = selectedDate || new Date();
+    const d = new Date(base);
+    if (viewMode === "day") d.setDate(d.getDate() + passos);
+    else if (viewMode === "week") d.setDate(d.getDate() + passos * 7);
+    else d.setMonth(d.getMonth() + passos);
+    setSelectedDate(d);
+  };
+
+  // Dias do mês que têm compromisso, para os pontos do calendário.
+  const diasComEvento = new Set(ativos.map((a) => format(new Date(a.date), "yyyy-MM-dd")));
+
+  const LEMBRETES = [
+    { campo: "confirmEnabled", rotulo: "Confirmação 24h antes", detalhe: "Pergunta se o cliente confirma." },
+    { campo: "meetLinkEnabled", rotulo: "Link da reunião", detalhe: "Envia o link do Meet antes da hora." },
+    { campo: "finalEnabled", rotulo: "Lembrete final", detalhe: "Avisa minutos antes de começar." },
+  ];
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-8 p-6 lg:p-10 max-w-screen-2xl mx-auto">
-        
-        <PageHeader
-          icon={<CalendarIcon className="w-5 h-5" />}
-          title="Agenda de consultas"
-          subtitle="Todas as consultas marcadas na sua clínica."
-          actions={
-            <Button onClick={() => setIsAddModalOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" /> Nova consulta
+      <div className="mx-auto max-w-[1500px] px-4 pb-10 pt-5 sm:px-6">
+
+        {/* Cabeçalho */}
+        <header className="mb-4 flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-[26px] font-bold tracking-[-0.03em] text-foreground">Agendamentos</h1>
+            <p className="mt-0.5 max-w-md text-[13.5px] text-muted-foreground">
+              Tudo o que o agente marcou, com confirmação e lembrete automáticos.
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="flex rounded-lg border border-border-soft bg-card p-1">
+              {(["day", "week", "month"] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setViewMode(v)}
+                  className={`h-8 rounded-md px-4 text-[12.5px] font-semibold transition-colors ${
+                    viewMode === v ? "bg-accent-soft text-accent-text" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {v === "day" ? "Dia" : v === "week" ? "Semana" : "Mês"}
+                </button>
+              ))}
+            </div>
+            <Button onClick={() => setIsAddModalOpen(true)} className="h-10 gap-2">
+              <Plus className="h-4 w-4" /> Novo agendamento
             </Button>
-          }
-        />
+          </div>
+        </header>
 
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
-           
-           <div className="xl:col-span-1 space-y-6">
-              <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden">
-                 <CardHeader className="pb-0 pt-8 px-8">
-                    <CardTitle className="text-sm font-semibold text-slate-900 tracking-tight">Explorar Data</CardTitle>
-                 </CardHeader>
-                 <div className="p-4 flex justify-center">
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={setSelectedDate}
-                      className="rounded-2xl border-none font-bold"
-                      locale={ptBR}
-                    />
-                 </div>
-              </Card>
+        {/* KPIs */}
+        <section className="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <KpiAgenda
+            rotulo="Hoje"
+            valor={String(deHoje.length)}
+            detalhe={`${deHoje.filter((a) => a.status === "COMPLETED").length} já concluídos`}
+          />
+          <KpiAgenda
+            rotulo="Esta semana"
+            valor={String(daSemana.length)}
+            detalhe={
+              semanaPassada.length === 0
+                ? "sem semana anterior para comparar"
+                : `${daSemana.length - semanaPassada.length >= 0 ? "+" : ""}${daSemana.length - semanaPassada.length} vs. semana passada`
+            }
+          />
+          <KpiAgenda
+            rotulo="Comparecimento"
+            valor={taxaComparecimento === null ? "—" : `${taxaComparecimento}%`}
+            detalhe={
+              taxaComparecimento === null
+                ? "nenhum compromisso vencido ainda"
+                : `${compareceram} de ${compareceram + faltaram} compareceram`
+            }
+            verde
+          />
+          <KpiAgenda
+            rotulo="Risco de falta"
+            valor={String(emRisco.length)}
+            detalhe="sem confirmação do cliente"
+            laranja={emRisco.length > 0}
+          />
+        </section>
 
-              <Card className="border-none shadow-sm rounded-2xl bg-slate-900 p-8 text-white space-y-6">
-                 <div>
-                    <p className="text-xs font-semibold text-[#2DD4BF] mb-2">Visão Rápida</p>
-                    <h4 className="text-xl font-semibold">Performance SDR</h4>
-                 </div>
-                 <div className="space-y-4">
-                    <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl">
-                       <span className="text-xs font-bold text-slate-400">Total no Mês</span>
-                       <span className="text-lg font-semibold text-white">{stats.total}</span>
-                    </div>
-                    <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl">
-                       <span className="text-xs font-bold text-slate-400">Taxa de Show</span>
-                       <span className="text-lg font-semibold text-[#2DD4BF]">{stats.rate}%</span>
-                    </div>
-                 </div>
-              </Card>
-           </div>
+        <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+          {/* Lista do período */}
+          <section className="rounded-[14px] border border-border bg-card shadow-card">
+            <header className="flex items-center justify-between gap-2 border-b border-border px-5 py-3">
+              <h2 className="linha-unica-elipse text-[14px] font-semibold capitalize text-foreground">
+                {viewMode === "day"
+                  ? format(selectedDate || new Date(), "eeee, d 'de' MMMM", { locale: ptBR })
+                  : viewMode === "week"
+                  ? `Semana de ${format(startOfWeek(selectedDate || new Date(), { weekStartsOn: 0 }), "d 'de' MMMM", { locale: ptBR })}`
+                  : format(selectedDate || new Date(), "MMMM 'de' yyyy", { locale: ptBR })}
+              </h2>
+              <div className="flex shrink-0 gap-1">
+                <button onClick={() => andarDia(-1)} className="grid h-8 w-8 place-items-center rounded-lg border border-border-soft text-faint hover:text-foreground" aria-label="Anterior">
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button onClick={() => setSelectedDate(new Date())} className="h-8 rounded-lg border border-border-soft px-3 text-[12px] font-semibold text-muted-foreground hover:text-foreground">
+                  Hoje
+                </button>
+                <button onClick={() => andarDia(1)} className="grid h-8 w-8 place-items-center rounded-lg border border-border-soft text-faint hover:text-foreground" aria-label="Próximo">
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </header>
 
-           <div className="xl:col-span-3 space-y-6">
-              <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)} className="w-full">
-                 <div className="flex items-center justify-between bg-white p-2 rounded-2xl shadow-sm border border-slate-50 mb-8">
-                    <TabsList className="bg-transparent border-none">
-                       <TabsTrigger value="day" className="h-11 px-8 rounded-2xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-semibold uppercase text-xs transition-all">Dia</TabsTrigger>
-                       <TabsTrigger value="week" className="h-11 px-8 rounded-2xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-semibold uppercase text-xs transition-all">Semana</TabsTrigger>
-                       <TabsTrigger value="month" className="h-11 px-8 rounded-2xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-semibold uppercase text-xs transition-all">Mês</TabsTrigger>
-                       <TabsTrigger value="upcoming" className="h-11 px-8 rounded-2xl data-[state=active]:bg-slate-900 data-[state=active]:text-white font-semibold uppercase text-xs transition-all">Próximos</TabsTrigger>
-                    </TabsList>
-                    
-                    <div className="flex items-center gap-3 pr-2">
-                       <div className="hidden md:flex items-center bg-slate-50 rounded-2xl px-4 py-2 border border-slate-100">
-                          <CalendarDays className="w-4 h-4 text-[#2563EB] mr-3" />
-                          <span className="text-xs font-semibold text-slate-500 tracking-tight">
-                             {format(selectedDate || new Date(), "MMMM yyyy", { locale: ptBR })}
+            {loading ? (
+              <div className="space-y-2 p-4">
+                {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-14 rounded-lg" />)}
+              </div>
+            ) : noPeriodo.length === 0 ? (
+              <div className="grid place-items-center gap-2 px-6 py-16 text-center">
+                <LucideCalendar className="h-8 w-8 text-border-soft" />
+                <p className="text-[13px] text-muted-foreground">Nenhum agendamento neste período.</p>
+                <Button variant="outline" onClick={() => setIsAddModalOpen(true)} className="mt-2 gap-2">
+                  <Plus className="h-4 w-4" /> Novo agendamento
+                </Button>
+              </div>
+            ) : (
+              <div>
+                {Object.keys(agrupados).map((chave) => (
+                  <div key={chave}>
+                    {viewMode !== "day" && (
+                      <p className="linha-unica border-b border-border-soft bg-surface-2 px-5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-faint">
+                        {rotuloDoDia(chave)}
+                      </p>
+                    )}
+                    {agrupados[chave].map((a) => {
+                      const e = estadoDoCompromisso(a);
+                      return (
+                        <article key={a.id} className="flex items-center gap-3 border-b border-border-soft px-5 py-3 last:border-0 hover:bg-surface-2">
+                          <div className="w-[52px] shrink-0">
+                            <p className="num text-[14px] font-bold tabular-nums text-accent-text">{format(new Date(a.date), "HH:mm")}</p>
+                            <p className="num text-[11px] text-faint">{DURACAO_MIN} min</p>
+                          </div>
+                          <span className={`h-10 w-[3px] shrink-0 rounded-full ${e.barra}`} />
+                          <div className="min-w-0 flex-1">
+                            <p className="linha-unica-elipse text-[13.5px] font-semibold text-foreground">{a.lead?.name || "Contato"}</p>
+                            <p className="linha-unica-elipse text-[12px] text-muted-foreground">{a.title}</p>
+                            {a.meetLink && <div className="mt-1.5"><MeetLink url={a.meetLink} /></div>}
+                          </div>
+                          <span className={`linha-unica shrink-0 rounded-full px-2.5 py-0.5 text-[11.5px] font-medium ${e.pilula}`}>
+                            {e.rotulo}
                           </span>
-                       </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-faint hover:bg-card hover:text-foreground">
+                                <MoreVertical className="h-4 w-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-52 rounded-xl p-1.5">
+                              <DropdownMenuItem className="cursor-pointer rounded-lg text-[12px] font-medium" onClick={() => mudarStatus(a, "COMPLETED")}>
+                                <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-600" /> Marcar como concluído
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="cursor-pointer rounded-lg text-[12px] font-medium" onClick={() => mudarStatus(a, "NOSHOW")}>
+                                <UserX className="mr-2 h-4 w-4 text-amber-600" /> Registrar falta
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="cursor-pointer rounded-lg text-[12px] font-medium" onClick={() => mudarStatus(a, "SCHEDULED")}>
+                                <LucideCalendar className="mr-2 h-4 w-4 text-accent-text" /> Voltar para agendado
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="cursor-pointer rounded-lg text-[12px] font-medium text-red-600 focus:text-red-600"
+                                onClick={() => deleteAppt(a.id)}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" /> Remover
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </article>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Calendário + lembretes */}
+          <div className="space-y-4">
+            <section className="rounded-[14px] border border-border bg-card p-3 shadow-card">
+              <div className="flex items-baseline justify-between px-2 pb-1">
+                <h2 className="text-[14px] font-semibold capitalize text-foreground">
+                  {format(selectedDate || new Date(), "MMMM yyyy", { locale: ptBR })}
+                </h2>
+                <span className="num text-[11.5px] text-faint">
+                  {ativos.filter((a) => isWithinInterval(new Date(a.date), {
+                    start: startOfMonth(selectedDate || new Date()),
+                    end: endOfMonth(selectedDate || new Date()),
+                  })).length} agendamentos
+                </span>
+              </div>
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(d) => { setSelectedDate(d); if (d) setViewMode("day"); }}
+                month={selectedDate}
+                onMonthChange={setSelectedDate}
+                locale={ptBR}
+                className="rounded-lg"
+                // O mês já está escrito no cabeçalho da seção; repetir dentro
+                // do calendário só duplicaria a mesma palavra. As setas ficam.
+                classNames={{ caption_label: "hidden" }}
+                // Ponto azul embaixo do dia que tem compromisso: é o que
+                // permite achar o próximo sem clicar dia a dia.
+                modifiers={{ temEvento: (d: Date) => diasComEvento.has(format(d, "yyyy-MM-dd")) }}
+                modifiersClassNames={{
+                  temEvento:
+                    "relative after:absolute after:bottom-1 after:left-1/2 after:h-1 after:w-1 after:-translate-x-1/2 after:rounded-full after:bg-[#2563EB]",
+                }}
+              />
+            </section>
+
+            <section className="rounded-[14px] border border-border bg-card shadow-card">
+              <header className="flex items-center justify-between border-b border-border px-4 py-3">
+                <h2 className="linha-unica flex items-center gap-2 text-[14px] font-semibold text-foreground">
+                  <Bell className="h-4 w-4 text-primary" /> Lembretes automáticos
+                </h2>
+                <button onClick={() => navigate("/automations")} className="linha-unica text-[12.5px] text-accent-text hover:underline">
+                  Ajustar
+                </button>
+              </header>
+              <ul>
+                {LEMBRETES.map((l) => (
+                  <li key={l.campo} className="flex items-center gap-3 border-b border-border-soft px-4 py-3 last:border-0">
+                    <div className="min-w-0 flex-1">
+                      <p className="linha-unica-elipse text-[13px] font-medium text-foreground">{l.rotulo}</p>
+                      <p className="linha-unica-elipse text-[11.5px] text-faint">{l.detalhe}</p>
                     </div>
-                 </div>
-
-                 <ScrollArea className="h-[calc(100vh-320px)] pr-6">
-                    <div className="space-y-12">
-                       {Object.keys(groupedAppts).length > 0 ? (
-                         Object.keys(groupedAppts).map(dateKey => (
-                           <div key={dateKey} className="space-y-6">
-                              <div className="flex items-center gap-4">
-                                 <h2 className="text-lg font-semibold text-slate-900 tracking-tight pl-2">{getDateLabel(dateKey)}</h2>
-                                 <div className="flex-1 h-px bg-slate-100" />
-                              </div>
-
-                              <div className="grid grid-cols-1 gap-4">
-                                 {groupedAppts[dateKey].map((appt: Appointment) => (
-                                   <Card key={appt.id} className="group border-none shadow-sm hover:shadow-sm rounded-2xl bg-white transition-all duration-500 overflow-hidden hover:translate-x-2 border-l-8 border-emerald-500">
-                                      <div className="p-8 flex flex-col md:flex-row items-center justify-between gap-6">
-                                         <div className="flex items-center gap-8 w-full md:w-auto">
-                                            <div className="flex flex-col items-center justify-center min-w-[80px]">
-                                               <span className="text-3xl font-semibold text-slate-900 tracking-tight -mb-1">
-                                                 {(() => {
-                                                   try { return format(new Date(appt.date), "HH:mm"); } catch(e) { return "--:--"; }
-                                                 })()}
-                                               </span>
-                                               <span className="text-xs font-semibold text-slate-300 ">
-                                                 {(() => {
-                                                   try { return format(new Date(appt.date), "aaa"); } catch(e) { return ""; }
-                                                 })()}
-                                               </span>
-                                            </div>
-                                            
-                                            <div className="h-10 w-px bg-slate-100 hidden md:block" />
-
-                                            <div className="space-y-1">
-                                               <h3 className="text-xl font-semibold text-slate-900 tracking-tight leading-none group-hover:text-[#2563EB] transition-colors">{appt.title}</h3>
-                                               <div className="flex items-center gap-3">
-                                                  <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 rounded-full border border-slate-100">
-                                                     <User className="w-3 h-3 text-slate-400" />
-                                                     <span className="text-xs font-bold text-slate-500 uppercase">{appt.lead?.name || "Contato"}</span>
-                                                  </div>
-                                                  <Badge className={cn(
-                                                    "text-xs font-semibold tracking-tight px-2 h-5 border-none",
-                                                    appt.status === "SCHEDULED" ? "bg-indigo-500 text-white" :
-                                                    appt.status === "COMPLETED" ? "bg-[#2563EB] text-white" :
-                                                    appt.status === "CANCELLED" ? "bg-red-500 text-white" :
-                                                    appt.status === "NOSHOW" ? "bg-orange-500 text-white" :
-                                                    "bg-slate-200 text-slate-600"
-                                                  )}>
-                                                    {appt.status === "SCHEDULED" ? "Agendado" : 
-                                                     appt.status === "COMPLETED" ? "Concluído" :
-                                                     appt.status === "CANCELLED" ? "Cancelado" :
-                                                     appt.status === "NOSHOW" ? "No-Show" : "Pendente"}
-                                                  </Badge>
-                                               </div>
-                                               {/* O link fica no card, ao lado de quem e quando: é onde
-                                                   se olha na hora de entrar ou de repassar para alguém. */}
-                                               {appt.meetLink && (
-                                                 <div className="pt-1.5">
-                                                   <MeetLink url={appt.meetLink} />
-                                                 </div>
-                                               )}
-                                            </div>
-                                         </div>
-
-                                         <div className="flex items-center gap-4 w-full md:w-auto justify-end">
-                                            <Button 
-                                              onClick={() => toggleComplete(appt)}
-                                              className={cn(
-                                                "px-5 py-2.5 rounded-2xl font-semibold uppercase text-xs  shadow-sm transition-all",
-                                                appt.status === "COMPLETED" 
-                                                  ? "bg-[#2563EB] text-white hover:bg-[#1D4ED8]" 
-                                                  : "bg-slate-100 text-slate-500 hover:bg-[#2563EB] hover:text-white"
-                                              )}
-                                            >
-                                               {appt.status === "COMPLETED" ? <><CheckCircle2 className="w-3 h-3 mr-2" /> Concluído</> : "Marcar Concluído"}
-                                            </Button>
-                                            <Button variant="ghost" size="icon" className="w-10 h-10 rounded-2xl hover:bg-red-50 hover:text-red-500 transition-all text-slate-200" onClick={() => deleteAppt(appt.id)}>
-                                               <Trash2 className="w-5 h-5" />
-                                            </Button>
-                                         </div>
-                                      </div>
-                                   </Card>
-                                 ))}
-                              </div>
-                           </div>
-                         ))
-                       ) : (
-                         <div className="py-24 text-center border-4 border-dashed border-slate-100 rounded-[60px] flex flex-col items-center justify-center gap-8 bg-white/50">
-                            <div className="w-24 h-24 bg-slate-50 rounded-2xl flex items-center justify-center relative">
-                               <LucideCalendar className="w-10 h-10 text-slate-200" />
-                               <div className="absolute top-0 right-0 w-6 h-6 bg-[#2563EB] rounded-full border-4 border-white animate-pulse" />
-                            </div>
-                            <div className="space-y-2">
-                               <p className="text-lg font-semibold text-slate-900 tracking-tight uppercase">Nenhum agendamento encontrado</p>
-                               <p className="text-xs font-bold text-slate-400 px-12">Experimente mudar o filtro de data ou criar uma nova reunião.</p>
-                            </div>
-                            <Button onClick={() => setIsAddModalOpen(true)} variant="outline" className="h-10 border-2 border-slate-100 rounded-2xl px-8 font-semibold uppercase text-xs hover:bg-slate-900 hover:text-white transition-all">
-                               Agendar Agora
-                            </Button>
-                         </div>
-                       )}
-                    </div>
-                 </ScrollArea>
-              </Tabs>
-           </div>
+                    <Switch
+                      checked={config?.[l.campo] !== false && config?.remindersEnabled !== false}
+                      disabled={!config || config.remindersEnabled === false}
+                      onCheckedChange={(v) => alternarLembrete(l.campo, v)}
+                      aria-label={l.rotulo}
+                    />
+                  </li>
+                ))}
+              </ul>
+              {config && config.remindersEnabled === false && (
+                <p className="border-t border-border-soft px-4 py-2.5 text-[11.5px] text-amber-700">
+                  Os lembretes estão desligados por completo em Lembretes — os interruptores acima não valem enquanto isso.
+                </p>
+              )}
+            </section>
+          </div>
         </div>
       </div>
 
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-        <DialogContent className="rounded-2xl p-10 max-w-lg border-none shadow-sm bg-white overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-[#2563EB]/5 blur-3xl rounded-full" />
+        <DialogContent className="max-w-lg rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-3xl font-semibold text-slate-900 tracking-tight uppercase leading-none mb-2">
-              Nova <span className="text-[#2563EB]">Reunião</span>
+            <DialogTitle className="flex items-center gap-2 text-[17px] font-semibold">
+              <LucideCalendar className="h-4 w-4 text-primary" /> Novo agendamento
             </DialogTitle>
-            <DialogDescription className="text-xs font-bold text-slate-400 ">Preencha os detalhes para travar a agenda do SDR.</DialogDescription>
+            <DialogDescription className="text-[12.5px]">
+              O convite no Google e os lembretes saem sozinhos depois de salvar.
+            </DialogDescription>
           </DialogHeader>
-          
-          <div className="grid gap-6 py-8">
-            <div className="space-y-3">
-              <Label className="font-semibold text-xs text-slate-400 pl-1">Título do Compromisso</Label>
-              <Input 
-                value={newAppt.title} 
-                onChange={e => setNewAppt({...newAppt, title: e.target.value})} 
-                className="h-10 rounded-2xl border-none bg-slate-50 font-bold text-slate-900 px-6 focus:ring-2 focus:ring-emerald-500 transition-all" 
-                placeholder="Ex: Call de Fechamento Vendas" 
+
+          <div className="grid gap-4 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-[12px] font-medium text-muted-foreground">O que é</Label>
+              <Input
+                value={newAppt.title}
+                onChange={(e) => setNewAppt({ ...newAppt, title: e.target.value })}
+                className="h-10"
+                placeholder="Ex: Avaliação inicial"
               />
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               <div className="space-y-3">
-                 <Label className="font-semibold text-xs text-slate-400 pl-1">Data e Hora</Label>
-                 <Input 
-                   type="datetime-local" 
-                   value={newAppt.date} 
-                   onChange={e => setNewAppt({...newAppt, date: e.target.value})} 
-                   className="h-10 rounded-2xl border-none bg-slate-50 font-bold text-slate-900 px-6 focus:ring-2 focus:ring-emerald-500 transition-all" 
-                 />
-               </div>
-               
-               <div className="space-y-3">
-                 <Label className="font-semibold text-xs text-slate-400 pl-1">Vincular Lead</Label>
-                 <Select value={newAppt.leadId} onValueChange={v => setNewAppt({...newAppt, leadId: v})}>
-                   <SelectTrigger className="h-10 rounded-2xl border-none bg-slate-50 font-bold text-slate-900 px-6 focus:ring-2 focus:ring-emerald-500 transition-all">
-                     <SelectValue placeholder="Selecione..." />
-                   </SelectTrigger>
-                   <SelectContent className="rounded-2xl border-slate-100 shadow-sm">
-                     {leads.map(l => (
-                       <SelectItem key={l.id} value={l.id} className="font-bold py-3">
-                         {l.name}
-                       </SelectItem>
-                     ))}
-                   </SelectContent>
-                 </Select>
-               </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-[12px] font-medium text-muted-foreground">Data e hora</Label>
+                <Input
+                  type="datetime-local"
+                  value={newAppt.date}
+                  onChange={(e) => setNewAppt({ ...newAppt, date: e.target.value })}
+                  className="h-10"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[12px] font-medium text-muted-foreground">Cliente</Label>
+                <Select value={newAppt.leadId} onValueChange={(v) => setNewAppt({ ...newAppt, leadId: v })}>
+                  <SelectTrigger className="h-10"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    {leads.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-
-            <div className="space-y-3">
-              <Label className="font-semibold text-xs text-slate-400 pl-1">Notas Adicionais</Label>
-              <Input 
-                value={newAppt.notes} 
-                onChange={e => setNewAppt({...newAppt, notes: e.target.value})} 
-                className="h-10 rounded-2xl border-none bg-slate-50 font-bold text-slate-900 px-6 focus:ring-2 focus:ring-emerald-500 transition-all" 
-                placeholder="Observações importantes..." 
+            <div className="space-y-1.5">
+              <Label className="text-[12px] font-medium text-muted-foreground">Observações</Label>
+              <Input
+                value={newAppt.notes}
+                onChange={(e) => setNewAppt({ ...newAppt, notes: e.target.value })}
+                className="h-10"
+                placeholder="O que precisa ser lembrado na hora"
               />
             </div>
           </div>
 
-          <DialogFooter className="mt-4">
-             <Button 
-               onClick={handleCreateAppt} 
-               className="w-full h-11 bg-slate-900 hover:bg-black text-white font-semibold rounded-2xl text-sm transition-all shadow-sm hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3"
-             >
-               <Save className="w-5 h-5 text-[#2DD4BF]" /> Confirmar e Salvar
-             </Button>
+          <DialogFooter>
+            <Button onClick={handleCreateAppt} className="w-full">Agendar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </DashboardLayout>
+  );
+}
+
+function KpiAgenda({
+  rotulo, valor, detalhe, verde, laranja,
+}: { rotulo: string; valor: string; detalhe: string; verde?: boolean; laranja?: boolean }) {
+  return (
+    <article className="rounded-[14px] border border-border bg-card p-4 shadow-card">
+      <p className="linha-unica-elipse text-[12px] text-muted-foreground">{rotulo}</p>
+      <p
+        className={`num mt-1 text-[30px] font-bold leading-none tracking-[-0.04em] ${
+          laranja
+            ? "text-amber-600 dark:text-amber-500"
+            : verde
+            ? "text-emerald-600 dark:text-emerald-400"
+            : "text-foreground"
+        }`}
+      >
+        {valor}
+      </p>
+      <p className="mt-2 text-[11.5px] text-faint">{detalhe}</p>
+    </article>
   );
 }
