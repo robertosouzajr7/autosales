@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
+import { IdentificacaoVisitante, type Visitante } from "@/components/public/IdentificacaoVisitante";
 
 export default function PublicWebchat() {
   const { tenantId } = useParams();
@@ -26,6 +27,12 @@ export default function PublicWebchat() {
   });
   
   const [sending, setSending] = useState(false);
+  // Quem está do outro lado. Sem isso a conversa chega ao painel como
+  // "Visitante do site", sem um jeito de retomar depois que ele fecha a aba.
+  const [visitante, setVisitante] = useState<Visitante | null>(() => {
+    const salvo = sessionStorage.getItem(`webchat_visitante_${tenantId}`);
+    return salvo ? JSON.parse(salvo) : null;
+  });
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -73,7 +80,10 @@ export default function PublicWebchat() {
           sdrId: data?.sdr?.id,
           message: userMsg,
           history: chatHistory,
-          leadId: leadId
+          leadId: leadId,
+          name: visitante?.name,
+          email: visitante?.email,
+          phone: visitante?.phone,
         })
       });
       const resJson = await res.json();
@@ -226,6 +236,19 @@ export default function PublicWebchat() {
             </div>
 
             {/* INPUT AREA */}
+            {!visitante ? (
+              <div className="p-6 md:p-10 pt-0">
+                <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl">
+                  <IdentificacaoVisitante
+                    tema="escuro"
+                    onPronto={(v) => {
+                      setVisitante(v);
+                      sessionStorage.setItem(`webchat_visitante_${tenantId}`, JSON.stringify(v));
+                    }}
+                  />
+                </div>
+              </div>
+            ) : (
             <div className="p-6 md:p-10 pt-0">
                <div className="relative group">
                   <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-blue-500/20 rounded-2xl blur opacity-0 group-focus-within:opacity-100 transition-opacity" />
@@ -248,6 +271,7 @@ export default function PublicWebchat() {
                </div>
                <p className="text-center text-xs font-bold text-white/20 mt-6">Powered by Agentes Virtuais Neural Engine v4.0</p>
             </div>
+            )}
          </div>
       </Card>
     </div>

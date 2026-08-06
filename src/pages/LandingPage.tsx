@@ -9,6 +9,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { DashboardMockup } from "@/components/landing/DashboardMockup";
 import { Logo } from "@/components/Logo";
+import { IdentificacaoVisitante, type Visitante } from "@/components/public/IdentificacaoVisitante";
 
 /**
  * Landing pública.
@@ -137,6 +138,12 @@ export default function LandingPage() {
     return saved ? JSON.parse(saved) : [];
   });
   const [loadingChat, setLoadingChat] = useState(false);
+  // Quem está do outro lado. Guardado na sessão para não perguntar de novo a
+  // cada mensagem — e para a conversa chegar identificada no painel.
+  const [visitante, setVisitante] = useState<Visitante | null>(() => {
+    const salvo = sessionStorage.getItem("landing_visitante");
+    return salvo ? JSON.parse(salvo) : null;
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -174,7 +181,15 @@ export default function LandingPage() {
       const res = await fetch("/api/public/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sdrId: settings.selectedSdrId, message: userMsg, history: chatHistory, leadId }),
+        body: JSON.stringify({
+          sdrId: settings.selectedSdrId,
+          message: userMsg,
+          history: chatHistory,
+          leadId,
+          name: visitante?.name,
+          email: visitante?.email,
+          phone: visitante?.phone,
+        }),
       });
       const data = await res.json();
       if (data.leadId && !leadId) {
@@ -890,18 +905,27 @@ export default function LandingPage() {
             ))}
             {loadingChat && <p className="pl-1 text-[12px] font-semibold text-[#2563EB]">digitando…</p>}
           </div>
-          <div className="flex gap-2 border-t border-[#E9EEF5] p-3">
-            <input
-              value={chatMessage}
-              onChange={(e) => setChatMessage(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-              placeholder="Tire suas dúvidas…"
-              className="h-11 flex-1 rounded-xl bg-[#F1F5F9] px-4 text-[13px] outline-none transition focus:ring-2 focus:ring-[#2563EB]/30"
+          {visitante ? (
+            <div className="flex gap-2 border-t border-[#E9EEF5] p-3">
+              <input
+                value={chatMessage}
+                onChange={(e) => setChatMessage(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                placeholder="Tire suas dúvidas…"
+                className="h-11 flex-1 rounded-xl bg-[#F1F5F9] px-4 text-[13px] outline-none transition focus:ring-2 focus:ring-[#2563EB]/30"
+              />
+              <Button onClick={handleSendMessage} disabled={loadingChat} className="h-11 w-11 shrink-0 rounded-xl bg-[#2563EB] p-0 hover:bg-[#1D4ED8]">
+                <Send className="h-5 w-5" />
+              </Button>
+            </div>
+          ) : (
+            <IdentificacaoVisitante
+              onPronto={(v) => {
+                setVisitante(v);
+                sessionStorage.setItem("landing_visitante", JSON.stringify(v));
+              }}
             />
-            <Button onClick={handleSendMessage} disabled={loadingChat} className="h-11 w-11 shrink-0 rounded-xl bg-[#2563EB] p-0 hover:bg-[#1D4ED8]">
-              <Send className="h-5 w-5" />
-            </Button>
-          </div>
+          )}
         </div>
       )}
     </div>
