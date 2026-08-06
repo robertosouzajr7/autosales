@@ -57,24 +57,19 @@ export const deleteProduct = async (req, res) => {
 
 // Upload de mídia. Recebe um arquivo (multer memoryStorage) e grava em
 // public/uploads/<tenant>/. Devolve a URL pública para salvar no produto.
-const MAX_BYTES = 25 * 1024 * 1024; // 25 MB
-const MIME_KIND = {
-  image: ["image/jpeg", "image/png", "image/webp", "image/gif"],
-  audio: ["audio/mpeg", "audio/mp3", "audio/ogg", "audio/wav", "audio/mp4", "audio/aac"],
-  video: ["video/mp4", "video/quicktime", "video/webm"],
-};
-
 export const uploadMedia = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "Nenhum arquivo enviado." });
-    if (req.file.size > MAX_BYTES) return res.status(400).json({ error: "Arquivo maior que 25 MB." });
 
-    // Determina o tipo (image/audio/video) pelo mimetype.
-    let kind = null;
-    for (const [k, mimes] of Object.entries(MIME_KIND)) {
-      if (mimes.includes(req.file.mimetype)) { kind = k; break; }
+    // Pelo mimetype ou pela extensão: o navegador manda octet-stream sempre
+    // que o sistema não reconhece o arquivo, e uma foto boa era recusada.
+    const { tipoDoArquivo } = await import("../middlewares/upload.js");
+    const kind = tipoDoArquivo(req.file.originalname, req.file.mimetype);
+    if (!kind || kind === "document") {
+      return res.status(415).json({
+        error: `"${req.file.originalname}" não é imagem, áudio nem vídeo. O catálogo aceita só mídia.`,
+      });
     }
-    if (!kind) return res.status(400).json({ error: "Formato não suportado. Use imagem, áudio ou vídeo." });
 
     const ext = (req.file.originalname.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "");
     const publicBase = `${req.protocol}://${req.get("host")}`;

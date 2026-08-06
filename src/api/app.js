@@ -163,11 +163,24 @@ app.use("/api", apiRouter);
 app.use("/api/v2", apiRouter);
 app.use("/", publicRouter);
 
+// Rota de API que não existe responde JSON, não a página de erro do Express.
+// Era daí que vinha o "Unexpected token '<'" na tela: o navegador recebia
+// "<html>Cannot POST /api/…</html>" e tentava lê-lo como JSON, escondendo o
+// problema real (caminho errado ou proxy que não encaminhou).
+app.use("/api", (req, res) => {
+  res.status(404).json({ error: `Endpoint não encontrado: ${req.method} ${req.originalUrl}` });
+});
+
 // Error-handling middleware final: qualquer erro não tratado nas rotas é
 // reportado (Sentry se configurado) e vira uma resposta 500 limpa.
 app.use((err, req, res, _next) => {
   captureException(err, { path: req.path, method: req.method, tenantId: req.tenantId });
   if (res.headersSent) return;
+  // Corpo maior que o aceito pelo express.json: sem este caso, um envio
+  // grande virava "Erro interno." e ninguém descobria que era tamanho.
+  if (err.type === "entity.too.large") {
+    return res.status(413).json({ error: "Conteúdo grande demais para esta requisição." });
+  }
   res.status(err.status || 500).json({ error: "Erro interno." });
 });
 

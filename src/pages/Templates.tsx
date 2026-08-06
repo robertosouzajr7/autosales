@@ -14,6 +14,7 @@ import {
   FileText, Plus, RefreshCw, Copy, Trash2, Send, Save, AlertCircle, CheckCircle2, Clock, XCircle, Info, Eye,
 } from "lucide-react";
 import { TemplatePreview } from "@/components/templates/TemplatePreview";
+import { enviarArquivo } from "@/lib/enviarArquivo";
 
 /** Espelha os status da Meta; só APPROVED pode ser disparado. */
 const STATUS = {
@@ -153,12 +154,12 @@ export default function Templates() {
   const uploadHeader = async (file: File) => {
     setUploadingHeader(true);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      if (form.accountId) fd.append("accountId", form.accountId);
-      const res = await fetch("/api/templates/header-media", { method: "POST", headers: auth(), body: fd });
-      const d = await res.json();
-      if (!res.ok) throw new Error(d.error);
+      const envio = await enviarArquivo<any>(
+        "/api/templates/header-media", file,
+        form.accountId ? { accountId: form.accountId } : {}
+      );
+      if (!envio.ok) throw new Error(envio.erro);
+      const d = envio.dados;
       setForm((f) => ({
         ...f, headerType: d.headerType, headerHandle: d.handle, mediaUrl: d.url, headerFileName: d.name || file.name,
       }));

@@ -13,7 +13,6 @@ import * as AdminController from "../controllers/AdminController.js";
 import * as GoogleCalendarController from "../controllers/GoogleCalendarController.js";
 import * as MetaOAuthController from "../controllers/MetaOAuthController.js";
 import * as AppointmentController from "../controllers/AppointmentController.js";
-import multer from "multer";
 import * as WhatsAppController from "../controllers/WhatsAppController.js";
 import * as AutomationController from "../controllers/AutomationController.js";
 import * as SdrController from "../controllers/SdrController.js";
@@ -44,7 +43,7 @@ import {
   requireUserSlot,
 } from "../middlewares/planLimits.js";
 
-const upload = multer({ storage: multer.memoryStorage() });
+import { receberArquivo } from "../middlewares/upload.js";
 
 const router = express.Router();
 
@@ -197,7 +196,7 @@ router.get("/contacts/:id/identities", requirePermission("contacts"), ContactCon
 router.get("/contacts/search", ContactController.searchContacts);
 router.get("/contacts/search-ids", ContactController.searchContactIds);
 router.get("/contacts/tags", ContactController.listTags);
-router.post("/contacts/import-csv", upload.single("file"), ContactController.importContactsCsv);
+router.post("/contacts/import-csv", receberArquivo("file", "planilha"), ContactController.importContactsCsv);
 router.get("/campaigns/:id/report", CampaignController.campaignReport);
 
 router.get("/campaigns", requirePermission("campaigns"), CampaignController.listCampaigns);
@@ -212,12 +211,12 @@ router.delete("/campaigns/:id", CampaignController.deleteCampaign);
 router.get("/templates", TemplateController.listTemplates);
 router.post("/templates", requirePermission("templates"), TemplateController.createTemplate);
 router.post("/templates/sync", TemplateController.syncTemplates);
-router.post("/templates/header-media", upload.single("file"), TemplateController.uploadHeaderMedia);
+router.post("/templates/header-media", receberArquivo("file", "midia"), TemplateController.uploadHeaderMedia);
 router.put("/templates/:id", requirePermission("templates"), TemplateController.updateTemplate);
 router.post("/templates/:id/duplicate", TemplateController.duplicateTemplate);
 router.delete("/templates/:id", requirePermission("templates"), TemplateController.deleteTemplate);
 
-router.post("/messages/upload", requirePermission("conversations"), upload.single("file"), MessageController.uploadAttachment);
+router.post("/messages/upload", requirePermission("conversations"), receberArquivo("file", "midia"), MessageController.uploadAttachment);
 router.post("/messages/template", requirePermission("conversations"), MessageController.sendTemplateToLead);
 router.get("/conversations", requirePermission("conversations"), MessageController.getConversations);
 router.put("/conversations/:leadId/read", requirePermission("conversations"), MessageController.markRead);
@@ -283,7 +282,7 @@ router.get("/sdrs", SdrController.getSdrs);
 router.post("/sdrs", requirePermission("agents"), SdrController.createSdr);
 router.put("/sdrs/:id", requirePermission("agents"), SdrController.updateSdr);
 router.delete("/sdrs/:id", requirePermission("agents"), SdrController.deleteSdr);
-router.post("/sdrs/:id/training", requirePermission("agents"), upload.single("file"), SdrController.trainSdr);
+router.post("/sdrs/:id/training", requirePermission("agents"), receberArquivo("file", "documento"), SdrController.trainSdr);
 // Simulador: conversa de teste com o agente, sem gravar nada na conta.
 router.post("/sdrs/:id/simulate", requirePermission("agents"), SdrController.simulateSdr);
 
@@ -319,7 +318,7 @@ router.get("/products", ProductController.getProducts);
 router.post("/products", requirePermission("catalog"), ProductController.createProduct);
 router.put("/products/:id", requirePermission("catalog"), ProductController.updateProduct);
 router.delete("/products/:id", requirePermission("catalog"), ProductController.deleteProduct);
-router.post("/products/upload", upload.single("file"), ProductController.uploadMedia);
+router.post("/products/upload", receberArquivo("file", "midia"), ProductController.uploadMedia);
 
 // Admin / SaaS Central (Required for AdminDashboard.tsx)
 router.get("/admin/tenants", adminMiddleware, AdminController.getTenants);

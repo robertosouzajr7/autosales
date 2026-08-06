@@ -603,34 +603,27 @@ export const sendTemplateToLead = async (req, res) => {
  * sentido e por isso não é aceito.
  */
 export const uploadAttachment = async (req, res) => {
-  const MAX_BYTES = 25 * 1024 * 1024; // limite prático do WhatsApp
-  const PERMITIDOS = [
-    "image/jpeg", "image/png", "image/webp", "image/gif",
-    "video/mp4", "video/3gpp",
-    "audio/ogg", "audio/mpeg", "audio/mp4", "audio/aac",
-    // Gravação do navegador: convertida para OGG/Opus antes de sair.
-    "audio/webm", "audio/webm;codecs=opus", "audio/wav", "audio/x-wav",
-    "application/pdf",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.ms-excel",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "text/plain", "text/csv",
-  ];
-
   try {
     if (!req.file) return res.status(400).json({ error: "Nenhum arquivo enviado." });
-    if (req.file.size > MAX_BYTES) return res.status(400).json({ error: "Arquivo maior que 25 MB." });
 
     const mime = req.file.mimetype;
-    if (!PERMITIDOS.includes(mime)) {
-      return res.status(400).json({ error: `Formato não suportado pelo WhatsApp: ${mime}` });
+    // A lista de mimetypes sozinha recusava arquivo bom: o navegador manda
+    // `application/octet-stream` sempre que o sistema não reconhece a
+    // extensão, e aí um .ogg ou um .webp legítimo era barrado. O tipo agora
+    // sai do mimetype OU da extensão — o formato em si já foi conferido pelo
+    // middleware que recebeu o arquivo.
+    const { tipoDoArquivo } = await import("../middlewares/upload.js");
+    const tipo = tipoDoArquivo(req.file.originalname, mime);
+    if (!tipo) {
+      return res.status(415).json({
+        error: `Não reconheci o formato de "${req.file.originalname}". Envie imagem, vídeo, áudio ou documento.`,
+      });
     }
 
     const ext = (req.file.originalname?.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "");
 
     // Áudio precisa sair em OGG/Opus, senão o WhatsApp mostra como arquivo.
-    if (mime.startsWith("audio/")) {
+    if (tipo === "audio") {
       const { default: VoiceService } = await import("../services/VoiceService.js");
       const { url, opus } = await VoiceService.bufferToOpus(req.file.buffer, ext);
       if (!opus) {
@@ -642,8 +635,7 @@ export const uploadAttachment = async (req, res) => {
     const { saveMedia } = await import("../services/StorageService.js");
     const url = await saveMedia(req.file.buffer, ext, mime, req.tenantId, `${req.protocol}://${req.get("host")}`);
 
-    const kind = mime.startsWith("image/") ? "IMAGE"
-      : mime.startsWith("video/") ? "VIDEO" : "DOCUMENT";
+    const kind = tipo === "image" ? "IMAGE" : tipo === "video" ? "VIDEO" : "DOCUMENT";
 
     res.json({ url, kind, name: req.file.originalname });
   } catch (e) {
