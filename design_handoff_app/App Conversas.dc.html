@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#EEF1F6;color:#0F172A;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#2563EB;text-decoration:none}
+a:hover{color:#1D4ED8}
+@keyframes pulseDot{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+</helmet>
+
+<section style="padding:56px 64px 96px;display:flex;flex-direction:column;gap:64px">
+
+  <header style="display:flex;flex-direction:column;gap:12px;max-width:760px">
+    <span style="display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#64748B">Turno 1 · App do atendente</span>
+    <h1 style="margin:0;font-size:38px;font-weight:700;letter-spacing:-0.04em">App de conversas — iPhone</h1>
+    <p style="margin:0;font-size:16px;line-height:1.65;color:#475569">O atendente atende do celular: vê quem está esperando, assume a conversa que a IA passou, responde com um toque, envia item do catálogo e agenda. Duas direções para a caixa de entrada — <a href="#1a">1a</a> prioriza a fila no topo, <a href="#1b">1b</a> separa por abas de estado.</p>
+  </header>
+
+  <div style="display:flex;flex-wrap:wrap;gap:56px;align-items:flex-start">
+
+    <div id="1a" style="display:flex;flex-direction:column;gap:24px;max-width:1560px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="display:inline-flex;align-items:center;justify-content:center;height:28px;padding:0 12px;border-radius:8px;background:#2563EB;color:#fff;font-size:13px;font-weight:700;letter-spacing:0.02em">1a</span>
+        <h2 style="margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em">Fluxo principal · fila no topo da caixa de entrada</h2>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;gap:40px">
+
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <p style="margin:0;font-size:13px;font-weight:600;color:#475569">Entrar</p>
+          <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ larg }}" height="{{ alt }}" hint-size="402px,874px">
+            <div style="height:100%;display:flex;flex-direction:column;background:#fff;padding:0 24px;box-sizing:border-box">
+              <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:32px;padding-bottom:40px">
+                <div style="display:flex;flex-direction:column;gap:20px">
+                  <span style="display:grid;place-items:center;width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#2563EB,#7C5CFF);box-shadow:0 14px 28px -10px rgba(37,99,235,0.6)">
+                    <svg viewBox="0 0 64 64" width="28" height="28" fill="#fff"><path fill-rule="evenodd" clip-rule="evenodd" d="M32 6 L58 56 L6 56 Z M32 30 L45.5 56 L18.5 56 Z"></path></svg>
+                  </span>
+                  <div>
+                    <h2 style="margin:0;font-size:30px;font-weight:700;letter-spacing:-0.04em;line-height:1.1">Atendimento<br>na sua mão</h2>
+                    <p style="margin:10px 0 0;font-size:15px;line-height:1.55;color:rgba(60,60,67,0.6)">Entre com a conta do seu negócio para assumir as conversas de onde a IA parou.</p>
+                  </div>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:14px">
+                  <div>
+                    <label style="display:block;margin-bottom:8px;font-size:13px;font-weight:600;color:rgba(60,60,67,0.6)">E-mail</label>
+                    <div style="height:52px;border-radius:14px;background:#F2F2F7;display:flex;align-items:center;padding:0 16px;font-size:16px;font-weight:500">diego@vidaplena.com.br</div>
+                  </div>
+                  <div>
+                    <label style="display:block;margin-bottom:8px;font-size:13px;font-weight:600;color:rgba(60,60,67,0.6)">Senha</label>
+                    <div style="height:52px;border-radius:14px;background:#F2F2F7;display:flex;align-items:center;padding:0 16px;gap:12px">
+                      <span style="flex:1;font-size:18px;letter-spacing:0.2em;color:rgba(60,60,67,0.6)">••••••••</span>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(60,60,67,0.45)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:14px">
+                  <div style="height:52px;border-radius:14px;background:#2563EB;color:#fff;display:grid;place-items:center;font-size:17px;font-weight:600;box-shadow:0 14px 28px -12px rgba(37,99,235,0.7)">Entrar</div>
+                  <div style="height:52px;border-radius:14px;background:#F2F2F7;display:flex;align-items:center;justify-content:center;gap:10px;font-size:16px;font-weight:600;color:#0F172A">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    Entrar com Face ID
+                  </div>
+                  <p style="margin:4px 0 0;text-align:center;font-size:14px;color:rgba(60,60,67,0.6)">Esqueceu a senha? <a href="#">Recuperar</a></p>
+                </div>
+              </div>
+            </div>
+          </x-import>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <p style="margin:0;font-size:13px;font-weight:600;color:#475569">Caixa de entrada · fila no topo</p>
+          <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ larg }}" height="{{ alt }}" hint-size="402px,874px">
+            <div style="height:100%;display:flex;flex-direction:column;background:#F2F2F7">
+              <div style="flex-shrink:0;padding:58px 20px 12px;background:rgba(255,255,255,0.86);backdrop-filter:blur(20px);border-bottom:0.5px solid rgba(60,60,67,0.12)">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+                  <div>
+                    <h2 style="margin:0;font-size:28px;font-weight:700;letter-spacing:-0.04em">Conversas</h2>
+                    <p style="margin:3px 0 0;font-size:13px;color:rgba(60,60,67,0.6)">Clínica Vida Plena · 42 abertas</p>
+                  </div>
+                  <span style="display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;border-radius:999px;background:rgba(34,160,107,0.12);color:#15803D;font-size:13px;font-weight:600;white-space:nowrap">
+                    <span style="width:7px;height:7px;border-radius:50%;background:#22A06B;animation:pulseDot 2s infinite"></span>Online
+                  </span>
+                </div>
+                <div style="margin-top:14px;height:38px;border-radius:11px;background:#EDEDF2;display:flex;align-items:center;gap:9px;padding:0 12px">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(60,60,67,0.45)" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="M21 21l-4.3-4.3"></path></svg>
+                  <span style="font-size:15px;color:rgba(60,60,67,0.45)">Buscar cliente ou mensagem</span>
+                </div>
+                <div style="margin-top:12px;display:flex;gap:8px;overflow:hidden">
+                  <sc-for list="{{ filtrosCanal }}" as="f" hint-placeholder-count="4">
+                    <span style="height:34px;display:inline-flex;align-items:center;gap:7px;padding:0 13px;border-radius:999px;background:{{ f.bg }};color:{{ f.color }};border:1px solid {{ f.border }};font-size:13.5px;font-weight:600;white-space:nowrap">{{ f.icon }}{{ f.label }}</span>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="flex:1;overflow-y:auto;padding-bottom:110px">
+                <div style="margin:14px 16px 0;border-radius:18px;background:#fff;border:1px solid rgba(245,158,11,0.4);overflow:hidden;box-shadow:0 6px 18px -12px rgba(15,23,42,0.3)">
+                  <div style="padding:13px 16px;display:flex;align-items:center;gap:9px;background:#FEF6E7">
+                    <span style="width:8px;height:8px;border-radius:50%;background:#F59E0B;animation:pulseDot 2s infinite"></span>
+                    <span style="flex:1;font-size:14px;font-weight:700;color:#B45309">Esperando você · 3</span>
+                    <span style="font-size:13px;font-weight:600;color:#B45309">Ver fila</span>
+                  </div>
+                  <sc-for list="{{ espera }}" as="e" hint-placeholder-count="2">
+                    <div style="padding:13px 16px;display:flex;align-items:center;gap:12px;border-top:0.5px solid rgba(60,60,67,0.1)">
+                      <div style="position:relative;flex-shrink:0">
+                        <span style="width:42px;height:42px;border-radius:50%;background:#F2F2F7;display:grid;place-items:center;font-size:14px;font-weight:700;color:rgba(60,60,67,0.6)">{{ e.ini }}</span>
+                        <span style="position:absolute;bottom:-2px;right:-2px;width:17px;height:17px;border-radius:50%;background:{{ e.chBg }};display:grid;place-items:center;border:2px solid #fff">{{ e.chIcon }}</span>
+                      </div>
+                      <div style="min-width:0;flex:1">
+                        <p style="margin:0;font-size:15.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ e.nome }}</p>
+                        <p style="margin:3px 0 0;font-size:13.5px;color:rgba(60,60,67,0.6);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ e.motivo }}</p>
+                      </div>
+                      <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+                        <span style="font-size:12px;font-weight:700;color:#B45309;white-space:nowrap">{{ e.tempo }}</span>
+                        <span style="height:32px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:#2563EB;color:#fff;font-size:13px;font-weight:600;white-space:nowrap">Assumir</span>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <p style="margin:22px 20px 8px;font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:rgba(60,60,67,0.5)">A IA está cuidando</p>
+                <div style="margin:0 16px;border-radius:18px;background:#fff;overflow:hidden">
+                  <sc-for list="{{ conversas }}" as="c" hint-placeholder-count="6">
+                    <div style="padding:13px 16px;display:flex;align-items:center;gap:12px;border-bottom:0.5px solid rgba(60,60,67,0.1);background:{{ c.bg }}">
+                      <div style="position:relative;flex-shrink:0">
+                        <span style="width:44px;height:44px;border-radius:50%;background:#F2F2F7;display:grid;place-items:center;font-size:14px;font-weight:700;color:rgba(60,60,67,0.6)">{{ c.ini }}</span>
+                        <span style="position:absolute;bottom:-2px;right:-2px;width:17px;height:17px;border-radius:50%;background:{{ c.chBg }};display:grid;place-items:center;border:2px solid #fff">{{ c.chIcon }}</span>
+                      </div>
+                      <div style="min-width:0;flex:1">
+                        <div style="display:flex;align-items:baseline;gap:8px">
+                          <p style="margin:0;flex:1;min-width:0;font-size:15.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.nome }}</p>
+                          <span style="font-size:12.5px;color:rgba(60,60,67,0.45);white-space:nowrap">{{ c.hora }}</span>
+                        </div>
+                        <p style="margin:3px 0 0;font-size:13.5px;color:rgba(60,60,67,0.6);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.msg }}</p>
+                        <div style="margin-top:7px;display:flex;align-items:center;gap:7px">
+                          <span style="font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:6px;background:{{ c.tagBg }};color:{{ c.tagColor }};white-space:nowrap">{{ c.tag }}</span>
+                          {{ c.badge }}
+                        </div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="position:absolute;bottom:0;left:0;right:0;padding:10px 12px 34px;background:rgba(255,255,255,0.9);backdrop-filter:blur(20px);border-top:0.5px solid rgba(60,60,67,0.12);display:flex">
+                <sc-for list="{{ tabsConversas }}" as="t" hint-placeholder-count="4">
+                  <div style="flex:1;min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:{{ t.color }}">
+                    <div style="position:relative;display:grid;place-items:center">{{ t.icon }}{{ t.badge }}</div>
+                    <span style="font-size:11px;font-weight:600;white-space:nowrap">{{ t.label }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </x-import>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <p style="margin:0;font-size:13px;font-weight:600;color:#475569">Fila de espera</p>
+          <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ larg }}" height="{{ alt }}" hint-size="402px,874px">
+            <div style="height:100%;display:flex;flex-direction:column;background:#F2F2F7">
+              <div style="flex-shrink:0;padding:58px 20px 14px;background:rgba(255,255,255,0.86);backdrop-filter:blur(20px);border-bottom:0.5px solid rgba(60,60,67,0.12)">
+                <h2 style="margin:0;font-size:28px;font-weight:700;letter-spacing:-0.04em">Fila</h2>
+                <p style="margin:3px 0 0;font-size:13px;color:rgba(60,60,67,0.6)">Ordenada por quem espera há mais tempo</p>
+              </div>
+              <div style="flex:1;overflow-y:auto;padding:16px 16px 120px;display:flex;flex-direction:column;gap:12px">
+                <sc-for list="{{ fila }}" as="f" hint-placeholder-count="3">
+                  <div style="border-radius:18px;background:#fff;border:1px solid {{ f.borda }};overflow:hidden">
+                    <div style="padding:14px 16px;display:flex;align-items:center;gap:12px">
+                      <div style="position:relative;flex-shrink:0">
+                        <span style="width:46px;height:46px;border-radius:50%;background:{{ f.avBg }};display:grid;place-items:center;font-size:15px;font-weight:700;color:{{ f.avColor }}">{{ f.ini }}</span>
+                        <span style="position:absolute;bottom:-2px;right:-2px;width:18px;height:18px;border-radius:50%;background:{{ f.chBg }};display:grid;place-items:center;border:2px solid #fff">{{ f.chIcon }}</span>
+                      </div>
+                      <div style="min-width:0;flex:1">
+                        <p style="margin:0;font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.nome }}</p>
+                        <p style="margin:4px 0 0;font-size:13px;font-weight:600;color:{{ f.tempoColor }};white-space:nowrap">{{ f.tempo }}</p>
+                      </div>
+                      <span style="flex-shrink:0;font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:7px;background:{{ f.tagBg }};color:{{ f.tagColor }};white-space:nowrap">{{ f.tag }}</span>
+                    </div>
+                    <div style="padding:0 16px 14px">
+                      <div style="border-radius:12px;background:#F7F7FA;padding:12px 13px;font-size:14px;line-height:1.55;color:#0F172A">{{ f.mensagem }}</div>
+                      <div style="margin-top:12px;display:flex;gap:9px">
+                        <div style="flex:1;min-height:44px;border-radius:12px;background:#2563EB;color:#fff;display:grid;place-items:center;font-size:15px;font-weight:600;white-space:nowrap">Assumir conversa</div>
+                        <div style="width:52px;min-height:44px;border-radius:12px;background:#F2F2F7;display:grid;place-items:center;color:rgba(60,60,67,0.6)">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 11l-3 3-3-3"></path></svg>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </sc-for>
+
+                <div style="margin-top:8px;border-radius:18px;background:#fff;padding:18px 16px;display:flex;flex-direction:column;gap:14px">
+                  <p style="margin:0;font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:rgba(60,60,67,0.5)">Seu turno hoje</p>
+                  <div style="display:flex;gap:12px">
+                    <sc-for list="{{ turno }}" as="t" hint-placeholder-count="3">
+                      <div style="flex:1">
+                        <p style="margin:0;font-size:22px;font-weight:700;letter-spacing:-0.03em;font-variant-numeric:tabular-nums;color:{{ t.color }}">{{ t.v }}</p>
+                        <p style="margin:4px 0 0;font-size:12.5px;line-height:1.4;color:rgba(60,60,67,0.6)">{{ t.k }}</p>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+
+              <div style="position:absolute;bottom:0;left:0;right:0;padding:10px 12px 34px;background:rgba(255,255,255,0.9);backdrop-filter:blur(20px);border-top:0.5px solid rgba(60,60,67,0.12);display:flex">
+                <sc-for list="{{ tabsFila }}" as="t" hint-placeholder-count="4">
+                  <div style="flex:1;min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:{{ t.color }}">
+                    <div style="position:relative;display:grid;place-items:center">{{ t.icon }}{{ t.badge }}</div>
+                    <span style="font-size:11px;font-weight:600;white-space:nowrap">{{ t.label }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </x-import>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <p style="margin:0;font-size:13px;font-weight:600;color:#475569">Chat · IA atendendo, com sugestão</p>
+          <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ larg }}" height="{{ alt }}" hint-size="402px,874px">
+            <div style="height:100%;display:flex;flex-direction:column;background:#F2F2F7">
+              <div style="flex-shrink:0;padding:56px 14px 11px;background:rgba(255,255,255,0.88);backdrop-filter:blur(20px);border-bottom:0.5px solid rgba(60,60,67,0.12);display:flex;align-items:center;gap:10px">
+                <span style="width:44px;height:44px;display:grid;place-items:center;color:#2563EB;flex-shrink:0">
+                  <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 2L2 10l8 8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                </span>
+                <span style="width:38px;height:38px;border-radius:50%;background:#EFF6FF;display:grid;place-items:center;font-size:13px;font-weight:700;color:#2563EB;flex-shrink:0">MC</span>
+                <div style="flex:1;min-width:0">
+                  <p style="margin:0;font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Marina Costa</p>
+                  <p style="margin:2px 0 0;font-size:12px;color:#15803D;display:flex;align-items:center;gap:5px;white-space:nowrap"><span style="width:6px;height:6px;border-radius:50%;background:#22A06B;animation:pulseDot 2s infinite"></span>IA atendendo · WhatsApp</p>
+                </div>
+                <span style="width:44px;height:44px;display:grid;place-items:center;color:#2563EB;flex-shrink:0">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg>
+                </span>
+              </div>
+
+              <div style="flex:1;overflow-y:auto;padding:16px 14px 8px;display:flex;flex-direction:column;gap:10px">
+                <span style="align-self:center;font-size:11.5px;font-weight:600;color:rgba(60,60,67,0.5);background:rgba(255,255,255,0.8);border-radius:999px;padding:4px 12px">Hoje</span>
+                <sc-for list="{{ mensagens }}" as="m" hint-placeholder-count="5">
+                  <div style="max-width:76%;align-self:{{ m.align }};display:flex;flex-direction:column;gap:4px">
+                    <div style="background:{{ m.bg }};color:{{ m.color }};border-radius:{{ m.radius }};padding:11px 14px;font-size:15px;line-height:1.45;box-shadow:0 1px 2px rgba(15,23,42,0.06)">{{ m.texto }}</div>
+                    <span style="font-size:11px;color:rgba(60,60,67,0.45);align-self:{{ m.align }};white-space:nowrap">{{ m.hora }}</span>
+                  </div>
+                </sc-for>
+                <div style="align-self:flex-end;max-width:76%;display:flex;flex-direction:column;gap:4px">
+                  <div style="border-radius:18px;overflow:hidden;background:#fff;box-shadow:0 1px 2px rgba(15,23,42,0.06);width:230px">
+                    <div style="height:118px;background:linear-gradient(135deg,#2563EB,#60A5FA);display:grid;place-items:center;color:rgba(255,255,255,0.85);font-size:11.5px">foto do catálogo</div>
+                    <div style="padding:11px 13px">
+                      <p style="margin:0;font-size:14px;font-weight:600">Clareamento a Laser</p>
+                      <p style="margin:3px 0 0;font-size:14px;font-weight:700;color:#2563EB">R$ 1.400 · 3 sessões</p>
+                    </div>
+                  </div>
+                  <span style="font-size:11px;color:rgba(60,60,67,0.45);align-self:flex-end;white-space:nowrap">14:32 · enviado pela IA</span>
+                </div>
+              </div>
+
+              <div style="flex-shrink:0;margin:0 14px 10px;border-radius:18px;background:#fff;border:1px solid rgba(37,99,235,0.35);padding:14px;box-shadow:0 8px 22px -14px rgba(37,99,235,0.6)">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                  <span style="width:24px;height:24px;border-radius:7px;background:#EFF6FF;color:#2563EB;display:grid;place-items:center;flex-shrink:0">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 8V4H8"></path><rect x="4" y="8" width="16" height="12" rx="2"></rect><path d="M2 14h2M20 14h2M15 13v2M9 13v2"></path></svg>
+                  </span>
+                  <span style="flex:1;font-size:12.5px;font-weight:700;color:#2563EB;white-space:nowrap">Sugestão da IA</span>
+                  <span style="font-size:12.5px;font-weight:600;color:rgba(60,60,67,0.5);white-space:nowrap">Editar</span>
+                </div>
+                <p style="margin:0;font-size:14.5px;line-height:1.55;color:#0F172A">Perfeito, Marina! Reservei <b>quinta às 10h</b>. Vou te mandar a confirmação e o endereço. Precisa de mais alguma coisa?</p>
+                <div style="margin-top:12px;display:flex;gap:9px">
+                  <div style="flex:1;min-height:44px;border-radius:12px;background:#2563EB;color:#fff;display:grid;place-items:center;font-size:15px;font-weight:600;white-space:nowrap">Enviar</div>
+                  <div style="min-width:100px;min-height:44px;border-radius:12px;background:#F2F2F7;color:#0F172A;display:grid;place-items:center;font-size:15px;font-weight:600;white-space:nowrap">Assumir</div>
+                </div>
+              </div>
+
+              <div style="flex-shrink:0;padding:10px 14px 34px;background:rgba(255,255,255,0.9);backdrop-filter:blur(20px);border-top:0.5px solid rgba(60,60,67,0.12);display:flex;align-items:center;gap:9px">
+                <span style="width:44px;height:44px;border-radius:50%;background:#F2F2F7;display:grid;place-items:center;color:#2563EB;flex-shrink:0">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+                </span>
+                <div style="flex:1;min-height:44px;border-radius:22px;background:#F2F2F7;display:flex;align-items:center;padding:0 16px;font-size:15px;color:rgba(60,60,67,0.45)">Mensagem</div>
+                <span style="width:44px;height:44px;border-radius:50%;background:#F2F2F7;display:grid;place-items:center;color:#2563EB;flex-shrink:0">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"></path><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 19v3"></path></svg>
+                </span>
+              </div>
+            </div>
+          </x-import>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <p style="margin:0;font-size:13px;font-weight:600;color:#475569">Chat · atendente assumiu</p>
+          <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ larg }}" height="{{ alt }}" keyboard="{{ true }}" hint-size="402px,874px">
+            <div style="height:100%;display:flex;flex-direction:column;background:#F2F2F7">
+              <div style="flex-shrink:0;padding:56px 14px 11px;background:rgba(255,255,255,0.88);backdrop-filter:blur(20px);border-bottom:0.5px solid rgba(60,60,67,0.12);display:flex;align-items:center;gap:10px">
+                <span style="width:44px;height:44px;display:grid;place-items:center;color:#2563EB;flex-shrink:0">
+                  <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 2L2 10l8 8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                </span>
+                <span style="width:38px;height:38px;border-radius:50%;background:#FDF0E3;display:grid;place-items:center;font-size:13px;font-weight:700;color:#B45309;flex-shrink:0">CN</span>
+                <div style="flex:1;min-width:0">
+                  <p style="margin:0;font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Carla Nogueira</p>
+                  <p style="margin:2px 0 0;font-size:12px;color:#2563EB;font-weight:600;white-space:nowrap">Você está atendendo</p>
+                </div>
+                <span style="flex-shrink:0;height:32px;display:inline-flex;align-items:center;padding:0 12px;border-radius:999px;background:#F2F2F7;color:#0F172A;font-size:12.5px;font-weight:600;white-space:nowrap">Devolver à IA</span>
+              </div>
+
+              <div style="flex:1;overflow-y:auto;padding:14px 14px 6px;display:flex;flex-direction:column;gap:10px">
+                <div style="align-self:center;display:inline-flex;align-items:center;gap:7px;background:rgba(37,99,235,0.1);color:#1D4ED8;border-radius:999px;padding:6px 13px;font-size:11.5px;font-weight:600;text-align:center">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 6L9 17l-5-5"></path></svg>
+                  Você assumiu esta conversa
+                </div>
+                <sc-for list="{{ mensagensHumano }}" as="m" hint-placeholder-count="4">
+                  <div style="max-width:76%;align-self:{{ m.align }};display:flex;flex-direction:column;gap:4px">
+                    <div style="background:{{ m.bg }};color:{{ m.color }};border-radius:{{ m.radius }};padding:11px 14px;font-size:15px;line-height:1.45;box-shadow:0 1px 2px rgba(15,23,42,0.06)">{{ m.texto }}</div>
+                    <span style="font-size:11px;color:rgba(60,60,67,0.45);align-self:{{ m.align }};white-space:nowrap">{{ m.hora }}</span>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="flex-shrink:0;padding:9px 0;display:flex;gap:8px;overflow:hidden;padding-left:14px">
+                <sc-for list="{{ atalhos }}" as="a" hint-placeholder-count="4">
+                  <span style="height:36px;display:inline-flex;align-items:center;gap:7px;padding:0 13px;border-radius:999px;background:#fff;border:1px solid rgba(60,60,67,0.12);font-size:13.5px;font-weight:600;color:#0F172A;white-space:nowrap">{{ a.icon }}{{ a.label }}</span>
+                </sc-for>
+              </div>
+
+              <div style="flex-shrink:0;padding:9px 14px 10px;background:rgba(255,255,255,0.9);border-top:0.5px solid rgba(60,60,67,0.12);display:flex;align-items:center;gap:9px">
+                <span style="width:44px;height:44px;border-radius:50%;background:#F2F2F7;display:grid;place-items:center;color:#2563EB;flex-shrink:0">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+                </span>
+                <div style="flex:1;min-height:44px;border-radius:22px;background:#fff;border:1px solid rgba(60,60,67,0.15);display:flex;align-items:center;padding:0 16px;font-size:15px;color:#0F172A">Consigo parcelar em 3x sem</div>
+                <span style="width:44px;height:44px;border-radius:50%;background:#2563EB;display:grid;place-items:center;color:#fff;flex-shrink:0">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"></path></svg>
+                </span>
+              </div>
+            </div>
+          </x-import>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <p style="margin:0;font-size:13px;font-weight:600;color:#475569">Respostas rápidas</p>
+          <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ larg }}" height="{{ alt }}" hint-size="402px,874px">
+            <div style="height:100%;position:relative;background:#8A8A8E">
+              <div style="position:absolute;inset:0;background:#F2F2F7;opacity:0.45"></div>
+              <div style="position:absolute;left:0;right:0;bottom:0;height:74%;border-radius:26px 26px 0 0;background:#F7F7FA;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -20px 50px rgba(0,0,0,0.25)">
+                <div style="padding:10px 0 6px;display:grid;place-items:center;flex-shrink:0">
+                  <span style="width:38px;height:5px;border-radius:999px;background:rgba(60,60,67,0.3)"></span>
+                </div>
+                <div style="padding:6px 20px 14px;flex-shrink:0">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+                    <h3 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-0.03em">Respostas rápidas</h3>
+                    <span style="font-size:16px;font-weight:600;color:#2563EB;white-space:nowrap">Nova</span>
+                  </div>
+                  <div style="margin-top:12px;height:38px;border-radius:11px;background:#EDEDF2;display:flex;align-items:center;gap:9px;padding:0 12px">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(60,60,67,0.45)" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="M21 21l-4.3-4.3"></path></svg>
+                    <span style="font-size:15px;color:rgba(60,60,67,0.45)">Buscar por atalho ou texto</span>
+                  </div>
+                  <div style="margin-top:12px;display:flex;gap:8px;overflow:hidden">
+                    <sc-for list="{{ categoriasRespostas }}" as="c" hint-placeholder-count="4">
+                      <span style="height:32px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:{{ c.bg }};color:{{ c.color }};font-size:13px;font-weight:600;white-space:nowrap">{{ c.label }}</span>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="flex:1;overflow-y:auto;padding:0 16px 34px;display:flex;flex-direction:column;gap:10px">
+                  <sc-for list="{{ respostas }}" as="r" hint-placeholder-count="5">
+                    <div style="border-radius:16px;background:#fff;padding:14px 16px">
+                      <div style="display:flex;align-items:center;gap:9px">
+                        <span style="font-size:12.5px;font-weight:700;color:#2563EB;font-family:ui-monospace,Menlo,monospace;white-space:nowrap">{{ r.atalho }}</span>
+                        <span style="flex:1;font-size:15.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.titulo }}</span>
+                        <span style="font-size:11.5px;color:rgba(60,60,67,0.45);white-space:nowrap">{{ r.uso }}</span>
+                      </div>
+                      <p style="margin:9px 0 0;font-size:14px;line-height:1.55;color:rgba(60,60,67,0.6)">{{ r.texto }}</p>
+                      <div style="margin-top:12px;display:flex;gap:9px">
+                        <div style="flex:1;min-height:44px;border-radius:12px;background:#2563EB;color:#fff;display:grid;place-items:center;font-size:15px;font-weight:600;white-space:nowrap">Enviar agora</div>
+                        <div style="min-width:96px;min-height:44px;border-radius:12px;background:#F2F2F7;color:#0F172A;display:grid;place-items:center;font-size:15px;font-weight:600;white-space:nowrap">Editar</div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </x-import>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <p style="margin:0;font-size:13px;font-weight:600;color:#475569">Enviar item do catálogo</p>
+          <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ larg }}" height="{{ alt }}" hint-size="402px,874px">
+            <div style="height:100%;position:relative;background:#8A8A8E">
+              <div style="position:absolute;inset:0;background:#F2F2F7;opacity:0.45"></div>
+              <div style="position:absolute;left:0;right:0;bottom:0;height:80%;border-radius:26px 26px 0 0;background:#F7F7FA;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -20px 50px rgba(0,0,0,0.25)">
+                <div style="padding:10px 0 6px;display:grid;place-items:center;flex-shrink:0">
+                  <span style="width:38px;height:5px;border-radius:999px;background:rgba(60,60,67,0.3)"></span>
+                </div>
+                <div style="padding:6px 20px 14px;flex-shrink:0">
+                  <h3 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-0.03em">Catálogo</h3>
+                  <p style="margin:4px 0 0;font-size:13.5px;color:rgba(60,60,67,0.6)">Escolha o item para enviar na conversa com Marina</p>
+                  <div style="margin-top:12px;display:flex;gap:8px;overflow:hidden">
+                    <sc-for list="{{ categoriasCatalogo }}" as="c" hint-placeholder-count="4">
+                      <span style="height:32px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:{{ c.bg }};color:{{ c.color }};font-size:13px;font-weight:600;white-space:nowrap">{{ c.label }}</span>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="flex:1;overflow-y:auto;padding:0 16px 12px;display:flex;flex-direction:column;gap:10px">
+                  <sc-for list="{{ itensCatalogo }}" as="i" hint-placeholder-count="5">
+                    <div style="border-radius:16px;background:#fff;padding:12px;display:flex;align-items:center;gap:13px;border:1px solid {{ i.borda }}">
+                      <div style="width:64px;height:64px;border-radius:12px;background:{{ i.midiaBg }};flex-shrink:0;display:grid;place-items:center;color:rgba(255,255,255,0.85)">{{ i.midiaIcon }}</div>
+                      <div style="min-width:0;flex:1">
+                        <p style="margin:0;font-size:15.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ i.nome }}</p>
+                        <p style="margin:3px 0 0;font-size:14px;font-weight:700;color:#2563EB;white-space:nowrap">{{ i.preco }}</p>
+                        <p style="margin:3px 0 0;font-size:12.5px;color:rgba(60,60,67,0.5);white-space:nowrap">{{ i.detalhe }}</p>
+                      </div>
+                      <span style="width:26px;height:26px;border-radius:50%;background:{{ i.checkBg }};border:1.5px solid {{ i.checkBorda }};display:grid;place-items:center;flex-shrink:0">{{ i.check }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="flex-shrink:0;padding:12px 16px 34px;background:rgba(255,255,255,0.92);border-top:0.5px solid rgba(60,60,67,0.12)">
+                  <div style="min-height:50px;border-radius:14px;background:#2563EB;color:#fff;display:grid;place-items:center;font-size:16px;font-weight:600;white-space:nowrap">Enviar 1 item com foto e preço</div>
+                </div>
+              </div>
+            </div>
+          </x-import>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <p style="margin:0;font-size:13px;font-weight:600;color:#475569">Agendar pelo app</p>
+          <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ larg }}" height="{{ alt }}" hint-size="402px,874px">
+            <div style="height:100%;position:relative;background:#8A8A8E">
+              <div style="position:absolute;inset:0;background:#F2F2F7;opacity:0.45"></div>
+              <div style="position:absolute;left:0;right:0;bottom:0;height:84%;border-radius:26px 26px 0 0;background:#F7F7FA;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -20px 50px rgba(0,0,0,0.25)">
+                <div style="padding:10px 0 6px;display:grid;place-items:center;flex-shrink:0">
+                  <span style="width:38px;height:5px;border-radius:999px;background:rgba(60,60,67,0.3)"></span>
+                </div>
+                <div style="padding:6px 20px 16px;flex-shrink:0">
+                  <h3 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-0.03em">Agendar</h3>
+                  <p style="margin:4px 0 0;font-size:13.5px;color:rgba(60,60,67,0.6)">Marina Costa · Clareamento a Laser</p>
+                </div>
+                <div style="flex:1;overflow-y:auto;padding:0 16px 12px;display:flex;flex-direction:column;gap:14px">
+                  <div style="border-radius:16px;background:#fff;padding:16px">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+                      <p style="margin:0;font-size:15.5px;font-weight:600">Agosto 2026</p>
+                      <div style="display:flex;gap:6px">
+                        <span style="width:32px;height:32px;border-radius:8px;background:#F2F2F7;display:grid;place-items:center;color:rgba(60,60,67,0.6)">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"></path></svg>
+                        </span>
+                        <span style="width:32px;height:32px;border-radius:8px;background:#F2F2F7;display:grid;place-items:center;color:rgba(60,60,67,0.6)">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"></path></svg>
+                        </span>
+                      </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;font-size:11.5px;color:rgba(60,60,67,0.45);text-align:center;margin-bottom:7px">
+                      <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px">
+                      <sc-for list="{{ diasMes }}" as="d" hint-placeholder-count="35">
+                        <div style="aspect-ratio:1;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:14px;font-weight:{{ d.peso }};background:{{ d.bg }};color:{{ d.color }}">{{ d.n }}{{ d.dot }}</div>
+                      </sc-for>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p style="margin:0 0 10px 4px;font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:rgba(60,60,67,0.5)">Quinta, 6 de agosto</p>
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px">
+                      <sc-for list="{{ horarios }}" as="h" hint-placeholder-count="9">
+                        <div style="min-height:48px;border-radius:12px;background:{{ h.bg }};color:{{ h.color }};border:1px solid {{ h.borda }};display:grid;place-items:center;font-size:15px;font-weight:600;text-decoration:{{ h.deco }};white-space:nowrap">{{ h.hora }}</div>
+                      </sc-for>
+                    </div>
+                  </div>
+
+                  <div style="border-radius:16px;background:#fff;padding:14px 16px;display:flex;flex-direction:column;gap:12px">
+                    <sc-for list="{{ opcoesAgenda }}" as="o" hint-placeholder-count="2">
+                      <div style="display:flex;align-items:center;gap:12px">
+                        <div style="min-width:0;flex:1">
+                          <p style="margin:0;font-size:15px;font-weight:600">{{ o.t }}</p>
+                          <p style="margin:3px 0 0;font-size:12.5px;color:rgba(60,60,67,0.6)">{{ o.d }}</p>
+                        </div>
+                        <span style="width:44px;height:26px;border-radius:999px;background:{{ o.switchBg }};position:relative;flex-shrink:0"><span style="position:absolute;top:3px;{{ o.knobSide }}:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></span></span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="flex-shrink:0;padding:12px 16px 34px;background:rgba(255,255,255,0.92);border-top:0.5px solid rgba(60,60,67,0.12)">
+                  <div style="min-height:50px;border-radius:14px;background:#2563EB;color:#fff;display:grid;place-items:center;font-size:16px;font-weight:600;white-space:nowrap">Confirmar quinta, 10:00</div>
+                </div>
+              </div>
+            </div>
+          </x-import>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <p style="margin:0;font-size:13px;font-weight:600;color:#475569">Ficha do cliente</p>
+          <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ larg }}" height="{{ alt }}" hint-size="402px,874px">
+            <div style="height:100%;display:flex;flex-direction:column;background:#F2F2F7">
+              <div style="flex-shrink:0;padding:56px 14px 11px;background:rgba(255,255,255,0.88);backdrop-filter:blur(20px);border-bottom:0.5px solid rgba(60,60,67,0.12);display:flex;align-items:center;gap:8px">
+                <span style="width:44px;height:44px;display:grid;place-items:center;color:#2563EB;flex-shrink:0">
+                  <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 2L2 10l8 8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                </span>
+                <p style="margin:0;flex:1;font-size:16px;font-weight:600;text-align:center;white-space:nowrap">Ficha do cliente</p>
+                <span style="width:44px;height:44px;display:grid;place-items:center;font-size:15px;font-weight:600;color:#2563EB;flex-shrink:0">Editar</span>
+              </div>
+
+              <div style="flex:1;overflow-y:auto;padding:20px 16px 34px;display:flex;flex-direction:column;gap:14px">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:8px 0 4px">
+                  <span style="width:76px;height:76px;border-radius:50%;background:#EFF6FF;display:grid;place-items:center;font-size:26px;font-weight:700;color:#2563EB">MC</span>
+                  <div style="text-align:center">
+                    <p style="margin:0;font-size:22px;font-weight:700;letter-spacing:-0.03em">Marina Costa</p>
+                    <p style="margin:5px 0 0;font-size:13.5px;color:rgba(60,60,67,0.6)">Cliente desde março de 2026 · 7 conversas</p>
+                  </div>
+                  <div style="display:flex;gap:7px">
+                    <span style="font-size:12px;font-weight:600;padding:5px 11px;border-radius:8px;background:#EFF6FF;color:#2563EB;white-space:nowrap">vip</span>
+                    <span style="font-size:12px;font-weight:600;padding:5px 11px;border-radius:8px;background:#fff;color:rgba(60,60,67,0.6);white-space:nowrap">estética</span>
+                  </div>
+                </div>
+
+                <div style="display:flex;gap:9px">
+                  <sc-for list="{{ acoesFicha }}" as="a" hint-placeholder-count="3">
+                    <div style="flex:1;min-height:64px;border-radius:14px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#2563EB">
+                      {{ a.icon }}
+                      <span style="font-size:12px;font-weight:600;color:#0F172A;white-space:nowrap">{{ a.label }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <div style="border-radius:16px;background:#fff;overflow:hidden">
+                  <sc-for list="{{ dadosCliente }}" as="d" hint-placeholder-count="5">
+                    <div style="min-height:50px;padding:13px 16px;display:flex;align-items:center;gap:12px;border-bottom:0.5px solid rgba(60,60,67,0.1)">
+                      <span style="font-size:15px;color:rgba(60,60,67,0.6);white-space:nowrap">{{ d.k }}</span>
+                      <span style="margin-left:auto;font-size:15px;font-weight:600;text-align:right">{{ d.v }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <div style="border-radius:16px;background:#fff;padding:16px">
+                  <p style="margin:0 0 12px;font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:rgba(60,60,67,0.5)">Etapa no funil</p>
+                  <div style="display:flex;align-items:center;gap:6px">
+                    <sc-for list="{{ etapasFunil }}" as="e" hint-placeholder-count="5">
+                      <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+                        <span style="height:5px;border-radius:999px;background:{{ e.cor }}"></span>
+                        <span style="font-size:10px;font-weight:600;color:{{ e.textColor }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ e.label }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+
+                <div style="border-radius:16px;background:#fff;padding:16px">
+                  <p style="margin:0 0 12px;font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:rgba(60,60,67,0.5)">Próximo agendamento</p>
+                  <div style="display:flex;align-items:center;gap:13px">
+                    <div style="width:52px;height:52px;border-radius:12px;background:#EFF6FF;color:#2563EB;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0">
+                      <span style="font-size:10px;font-weight:700;letter-spacing:0.04em">QUI</span>
+                      <span style="font-size:19px;font-weight:700;line-height:1">06</span>
+                    </div>
+                    <div style="min-width:0;flex:1">
+                      <p style="margin:0;font-size:15.5px;font-weight:600">10:00 · 3 sessões</p>
+                      <p style="margin:3px 0 0;font-size:13px;color:rgba(60,60,67,0.6)">Clareamento a laser · 1ª sessão</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="border-radius:16px;background:#fff;padding:16px">
+                  <p style="margin:0 0 10px;font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:rgba(60,60,67,0.5)">Anotações da equipe</p>
+                  <p style="margin:0;font-size:14.5px;line-height:1.6;color:rgba(60,60,67,0.7)">Prefere horários pela manhã. Já perguntou sobre parcelamento em 3x.</p>
+                </div>
+              </div>
+            </div>
+          </x-import>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <p style="margin:0;font-size:13px;font-weight:600;color:#475569">Busca</p>
+          <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ larg }}" height="{{ alt }}" hint-size="402px,874px">
+            <div style="height:100%;display:flex;flex-direction:column;background:#F2F2F7">
+              <div style="flex-shrink:0;padding:58px 16px 12px;background:rgba(255,255,255,0.88);backdrop-filter:blur(20px);border-bottom:0.5px solid rgba(60,60,67,0.12)">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div style="flex:1;min-height:40px;border-radius:11px;background:#EDEDF2;display:flex;align-items:center;gap:9px;padding:0 12px">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(60,60,67,0.45)" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="M21 21l-4.3-4.3"></path></svg>
+                    <span style="flex:1;font-size:15px;color:#0F172A">clareamento</span>
+                    <span style="width:18px;height:18px;border-radius:50%;background:rgba(60,60,67,0.25);display:grid;place-items:center">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+                    </span>
+                  </div>
+                  <span style="font-size:16px;font-weight:600;color:#2563EB;white-space:nowrap">Cancelar</span>
+                </div>
+                <div style="margin-top:12px;display:flex;gap:8px;overflow:hidden">
+                  <sc-for list="{{ escoposBusca }}" as="e" hint-placeholder-count="4">
+                    <span style="height:32px;display:inline-flex;align-items:center;gap:6px;padding:0 13px;border-radius:999px;background:{{ e.bg }};color:{{ e.color }};font-size:13px;font-weight:600;white-space:nowrap">{{ e.label }}<span style="opacity:0.65">{{ e.n }}</span></span>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="flex:1;overflow-y:auto;padding-bottom:110px">
+                <p style="margin:18px 20px 8px;font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:rgba(60,60,67,0.5)">Mensagens · 12</p>
+                <div style="margin:0 16px;border-radius:16px;background:#fff;overflow:hidden">
+                  <sc-for list="{{ resultadosBusca }}" as="r" hint-placeholder-count="4">
+                    <div style="padding:13px 16px;display:flex;gap:12px;align-items:flex-start;border-bottom:0.5px solid rgba(60,60,67,0.1)">
+                      <span style="width:38px;height:38px;border-radius:50%;background:#F2F2F7;display:grid;place-items:center;font-size:13px;font-weight:700;color:rgba(60,60,67,0.6);flex-shrink:0">{{ r.ini }}</span>
+                      <div style="min-width:0;flex:1">
+                        <div style="display:flex;align-items:baseline;gap:8px">
+                          <p style="margin:0;flex:1;min-width:0;font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.nome }}</p>
+                          <span style="font-size:12px;color:rgba(60,60,67,0.45);white-space:nowrap">{{ r.quando }}</span>
+                        </div>
+                        <p style="margin:4px 0 0;font-size:14px;line-height:1.5;color:rgba(60,60,67,0.65)">{{ r.trecho }}</p>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <p style="margin:20px 20px 8px;font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:rgba(60,60,67,0.5)">Itens do catálogo · 2</p>
+                <div style="margin:0 16px;border-radius:16px;background:#fff;overflow:hidden">
+                  <sc-for list="{{ catalogoBusca }}" as="c" hint-placeholder-count="2">
+                    <div style="padding:12px 16px;display:flex;align-items:center;gap:12px;border-bottom:0.5px solid rgba(60,60,67,0.1)">
+                      <div style="width:44px;height:44px;border-radius:10px;background:{{ c.bg }};flex-shrink:0"></div>
+                      <div style="min-width:0;flex:1">
+                        <p style="margin:0;font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.nome }}</p>
+                        <p style="margin:3px 0 0;font-size:13.5px;font-weight:700;color:#2563EB;white-space:nowrap">{{ c.preco }}</p>
+                      </div>
+                      <span style="height:34px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:#F2F2F7;color:#2563EB;font-size:13px;font-weight:600;white-space:nowrap">Enviar</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="position:absolute;bottom:0;left:0;right:0;padding:10px 12px 34px;background:rgba(255,255,255,0.9);backdrop-filter:blur(20px);border-top:0.5px solid rgba(60,60,67,0.12);display:flex">
+                <sc-for list="{{ tabsBuscar }}" as="t" hint-placeholder-count="4">
+                  <div style="flex:1;min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:{{ t.color }}">
+                    <div style="position:relative;display:grid;place-items:center">{{ t.icon }}{{ t.badge }}</div>
+                    <span style="font-size:11px;font-weight:600;white-space:nowrap">{{ t.label }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </x-import>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <p style="margin:0;font-size:13px;font-weight:600;color:#475569">Notificações</p>
+          <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ larg }}" height="{{ alt }}" hint-size="402px,874px">
+            <div style="height:100%;display:flex;flex-direction:column;background:#F2F2F7">
+              <div style="flex-shrink:0;padding:58px 20px 14px;background:rgba(255,255,255,0.86);backdrop-filter:blur(20px);border-bottom:0.5px solid rgba(60,60,67,0.12);display:flex;align-items:flex-end;justify-content:space-between;gap:12px">
+                <h2 style="margin:0;font-size:28px;font-weight:700;letter-spacing:-0.04em">Avisos</h2>
+                <span style="font-size:15px;font-weight:600;color:#2563EB;white-space:nowrap">Marcar lidos</span>
+              </div>
+              <div style="flex:1;overflow-y:auto;padding:16px 16px 34px;display:flex;flex-direction:column;gap:16px">
+                <div>
+                  <p style="margin:0 0 8px 4px;font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:rgba(60,60,67,0.5)">Agora</p>
+                  <div style="border-radius:16px;background:#fff;overflow:hidden">
+                    <sc-for list="{{ avisosAgora }}" as="a" hint-placeholder-count="3">
+                      <div style="padding:14px 16px;display:flex;gap:12px;align-items:flex-start;border-bottom:0.5px solid rgba(60,60,67,0.1);background:{{ a.bg }}">
+                        <span style="width:36px;height:36px;border-radius:10px;background:{{ a.iconBg }};color:{{ a.iconColor }};display:grid;place-items:center;flex-shrink:0">{{ a.icon }}</span>
+                        <div style="min-width:0;flex:1">
+                          <div style="display:flex;align-items:baseline;gap:8px">
+                            <p style="margin:0;flex:1;min-width:0;font-size:15px;font-weight:600">{{ a.t }}</p>
+                            <span style="font-size:12px;color:rgba(60,60,67,0.45);white-space:nowrap">{{ a.quando }}</span>
+                          </div>
+                          <p style="margin:4px 0 0;font-size:14px;line-height:1.5;color:rgba(60,60,67,0.65)">{{ a.d }}</p>
+                          {{ a.acao }}
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+                <div>
+                  <p style="margin:0 0 8px 4px;font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:rgba(60,60,67,0.5)">Mais cedo</p>
+                  <div style="border-radius:16px;background:#fff;overflow:hidden">
+                    <sc-for list="{{ avisosAntes }}" as="a" hint-placeholder-count="3">
+                      <div style="padding:14px 16px;display:flex;gap:12px;align-items:flex-start;border-bottom:0.5px solid rgba(60,60,67,0.1)">
+                        <span style="width:36px;height:36px;border-radius:10px;background:{{ a.iconBg }};color:{{ a.iconColor }};display:grid;place-items:center;flex-shrink:0">{{ a.icon }}</span>
+                        <div style="min-width:0;flex:1">
+                          <div style="display:flex;align-items:baseline;gap:8px">
+                            <p style="margin:0;flex:1;min-width:0;font-size:15px;font-weight:600">{{ a.t }}</p>
+                            <span style="font-size:12px;color:rgba(60,60,67,0.45);white-space:nowrap">{{ a.quando }}</span>
+                          </div>
+                          <p style="margin:4px 0 0;font-size:14px;line-height:1.5;color:rgba(60,60,67,0.65)">{{ a.d }}</p>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </x-import>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <p style="margin:0;font-size:13px;font-weight:600;color:#475569">Perfil e disponibilidade · modo escuro</p>
+          <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ larg }}" height="{{ alt }}" dark="{{ true }}" hint-size="402px,874px">
+            <div style="height:100%;display:flex;flex-direction:column;background:#000">
+              <div style="flex-shrink:0;padding:58px 20px 14px;background:rgba(28,28,30,0.86);backdrop-filter:blur(20px);border-bottom:0.5px solid rgba(84,84,88,0.5)">
+                <h2 style="margin:0;font-size:28px;font-weight:700;letter-spacing:-0.04em;color:#fff">Você</h2>
+              </div>
+              <div style="flex:1;overflow-y:auto;padding:18px 16px 120px;display:flex;flex-direction:column;gap:16px">
+                <div style="border-radius:18px;background:#1C1C1E;padding:18px;display:flex;align-items:center;gap:14px">
+                  <span style="width:56px;height:56px;border-radius:50%;background:#2563EB;display:grid;place-items:center;font-size:20px;font-weight:700;color:#fff;flex-shrink:0">DL</span>
+                  <div style="min-width:0;flex:1">
+                    <p style="margin:0;font-size:18px;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Diego Lopes</p>
+                    <p style="margin:4px 0 0;font-size:13.5px;color:rgba(235,235,245,0.6);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Atendente · Clínica Vida Plena</p>
+                  </div>
+                  <svg width="8" height="14" viewBox="0 0 8 14" style="flex-shrink:0"><path d="M1 1l6 6-6 6" stroke="rgba(235,235,245,0.3)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                </div>
+
+                <div>
+                  <p style="margin:0 0 8px 4px;font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:rgba(235,235,245,0.5)">Disponibilidade</p>
+                  <div style="border-radius:18px;background:#1C1C1E;overflow:hidden">
+                    <sc-for list="{{ disponibilidade }}" as="d" hint-placeholder-count="3">
+                      <div style="min-height:56px;padding:14px 16px;display:flex;align-items:center;gap:13px;border-bottom:0.5px solid rgba(84,84,88,0.5);background:{{ d.bg }}">
+                        <span style="width:11px;height:11px;border-radius:50%;background:{{ d.dot }};flex-shrink:0"></span>
+                        <div style="min-width:0;flex:1">
+                          <p style="margin:0;font-size:16px;font-weight:600;color:#fff">{{ d.t }}</p>
+                          <p style="margin:3px 0 0;font-size:13px;color:rgba(235,235,245,0.6)">{{ d.d }}</p>
+                        </div>
+                        {{ d.check }}
+                      </div>
+                    </sc-for>
+                  </div>
+                  <p style="margin:8px 4px 0;font-size:12.5px;line-height:1.5;color:rgba(235,235,245,0.5)">Em pausa você continua vendo as conversas, mas novas transferências vão para outro colega.</p>
+                </div>
+
+                <div>
+                  <p style="margin:0 0 8px 4px;font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:rgba(235,235,245,0.5)">Notificações no celular</p>
+                  <div style="border-radius:18px;background:#1C1C1E;overflow:hidden">
+                    <sc-for list="{{ prefsNotificacao }}" as="p" hint-placeholder-count="4">
+                      <div style="min-height:54px;padding:13px 16px;display:flex;align-items:center;gap:13px;border-bottom:0.5px solid rgba(84,84,88,0.5)">
+                        <div style="min-width:0;flex:1">
+                          <p style="margin:0;font-size:16px;color:#fff">{{ p.t }}</p>
+                          <p style="margin:3px 0 0;font-size:12.5px;color:rgba(235,235,245,0.6)">{{ p.d }}</p>
+                        </div>
+                        <span style="width:44px;height:26px;border-radius:999px;background:{{ p.switchBg }};position:relative;flex-shrink:0"><span style="position:absolute;top:3px;{{ p.knobSide }}:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.4)"></span></span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+
+                <div style="border-radius:18px;background:#1C1C1E;overflow:hidden">
+                  <sc-for list="{{ menuPerfil }}" as="m" hint-placeholder-count="4">
+                    <div style="min-height:52px;padding:13px 16px;display:flex;align-items:center;gap:13px;border-bottom:0.5px solid rgba(84,84,88,0.5)">
+                      <span style="width:30px;height:30px;border-radius:8px;background:rgba(120,120,128,0.24);color:{{ m.iconColor }};display:grid;place-items:center;flex-shrink:0">{{ m.icon }}</span>
+                      <span style="flex:1;font-size:16px;color:{{ m.textColor }}">{{ m.label }}</span>
+                      <svg width="8" height="14" viewBox="0 0 8 14" style="flex-shrink:0"><path d="M1 1l6 6-6 6" stroke="rgba(235,235,245,0.3)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="position:absolute;bottom:0;left:0;right:0;padding:10px 12px 34px;background:rgba(28,28,30,0.92);backdrop-filter:blur(20px);border-top:0.5px solid rgba(84,84,88,0.5);display:flex">
+                <sc-for list="{{ tabsPerfil }}" as="t" hint-placeholder-count="4">
+                  <div style="flex:1;min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:{{ t.color }}">
+                    <div style="position:relative;display:grid;place-items:center">{{ t.icon }}{{ t.badge }}</div>
+                    <span style="font-size:11px;font-weight:600;white-space:nowrap">{{ t.label }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </x-import>
+        </div>
+      </div>
+    </div>
+
+    <div id="1b" style="display:flex;flex-direction:column;gap:24px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="display:inline-flex;align-items:center;justify-content:center;height:28px;padding:0 12px;border-radius:8px;background:#0F172A;color:#fff;font-size:13px;font-weight:700;letter-spacing:0.02em">1b</span>
+        <h2 style="margin:0;font-size:20px;font-weight:600;letter-spacing:-0.02em">Caixa de entrada · abas por estado</h2>
+      </div>
+      <p style="margin:0;max-width:380px;font-size:14px;line-height:1.6;color:#475569">Mesma informação, hierarquia diferente: em vez de um bloco de fila no topo, o estado vira aba. Bom para quem trabalha zerando a fila, ruim para ver o todo de relance.</p>
+
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ larg }}" height="{{ alt }}" hint-size="402px,874px">
+        <div style="height:100%;display:flex;flex-direction:column;background:#F2F2F7">
+          <div style="flex-shrink:0;padding:58px 0 0;background:rgba(255,255,255,0.86);backdrop-filter:blur(20px);border-bottom:0.5px solid rgba(60,60,67,0.12)">
+            <div style="padding:0 20px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+              <h2 style="margin:0;font-size:28px;font-weight:700;letter-spacing:-0.04em">Conversas</h2>
+              <span style="display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;border-radius:999px;background:rgba(34,160,107,0.12);color:#15803D;font-size:13px;font-weight:600;white-space:nowrap">
+                <span style="width:7px;height:7px;border-radius:50%;background:#22A06B"></span>Online
+              </span>
+            </div>
+            <div style="margin:14px 20px 0;height:38px;border-radius:11px;background:#EDEDF2;display:flex;align-items:center;gap:9px;padding:0 12px">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(60,60,67,0.45)" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="M21 21l-4.3-4.3"></path></svg>
+              <span style="font-size:15px;color:rgba(60,60,67,0.45)">Buscar cliente ou mensagem</span>
+            </div>
+            <div style="margin-top:14px;padding:0 20px;display:flex;gap:22px">
+              <sc-for list="{{ abasEstado }}" as="a" hint-placeholder-count="3">
+                <div style="padding-bottom:11px;border-bottom:2.5px solid {{ a.borda }};display:flex;align-items:center;gap:7px">
+                  <span style="font-size:15px;font-weight:600;color:{{ a.color }};white-space:nowrap">{{ a.label }}</span>
+                  <span style="min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:{{ a.badgeBg }};color:{{ a.badgeColor }};font-size:11.5px;font-weight:700;display:grid;place-items:center;box-sizing:border-box">{{ a.n }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="flex:1;overflow-y:auto;padding:12px 16px 110px;display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ cardsEstado }}" as="c" hint-placeholder-count="4">
+              <div style="border-radius:18px;background:#fff;padding:14px 16px;border-left:4px solid {{ c.marca }}">
+                <div style="display:flex;align-items:center;gap:12px">
+                  <div style="position:relative;flex-shrink:0">
+                    <span style="width:44px;height:44px;border-radius:50%;background:#F2F2F7;display:grid;place-items:center;font-size:14px;font-weight:700;color:rgba(60,60,67,0.6)">{{ c.ini }}</span>
+                    <span style="position:absolute;bottom:-2px;right:-2px;width:17px;height:17px;border-radius:50%;background:{{ c.chBg }};display:grid;place-items:center;border:2px solid #fff">{{ c.chIcon }}</span>
+                  </div>
+                  <div style="min-width:0;flex:1">
+                    <p style="margin:0;font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.nome }}</p>
+                    <p style="margin:4px 0 0;font-size:12.5px;font-weight:600;color:{{ c.tempoColor }};white-space:nowrap">{{ c.tempo }}</p>
+                  </div>
+                  <span style="flex-shrink:0;font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:7px;background:{{ c.tagBg }};color:{{ c.tagColor }};white-space:nowrap">{{ c.tag }}</span>
+                </div>
+                <p style="margin:12px 0 0;font-size:14.5px;line-height:1.5;color:rgba(60,60,67,0.7)">{{ c.msg }}</p>
+                <div style="margin-top:13px;display:flex;gap:9px">
+                  <div style="flex:1;min-height:44px;border-radius:12px;background:#2563EB;color:#fff;display:grid;place-items:center;font-size:15px;font-weight:600;white-space:nowrap">Assumir</div>
+                  <div style="min-width:112px;min-height:44px;border-radius:12px;background:#F2F2F7;color:#0F172A;display:grid;place-items:center;font-size:15px;font-weight:600;white-space:nowrap">Resposta rápida</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="position:absolute;bottom:0;left:0;right:0;padding:10px 12px 34px;background:rgba(255,255,255,0.9);backdrop-filter:blur(20px);border-top:0.5px solid rgba(60,60,67,0.12);display:flex">
+            <sc-for list="{{ tabsConversas }}" as="t" hint-placeholder-count="4">
+              <div style="flex:1;min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:{{ t.color }}">
+                <div style="position:relative;display:grid;place-items:center">{{ t.icon }}{{ t.badge }}</div>
+                <span style="font-size:11px;font-weight:600;white-space:nowrap">{{ t.label }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </x-import>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1600}}">
+const h = React.createElement;
+function svg(paths, size, opts) {
+  return h('svg', Object.assign({ width: size || 18, height: size || 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }, opts || {}),
+    paths.map((d, i) => h('path', { key: i, d })));
+}
+const P = {
+  message: ['M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'],
+  inbox: ['M22 12h-6l-2 3h-4l-2-3H2', 'M5.5 5.1L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z'],
+  clockUsers: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M12 6v6l4 2'],
+  search: ['M21 21l-4.3-4.3', 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z'],
+  user: ['M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2', 'M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'],
+  phone: ['M5 2h14a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z', 'M12 18h.01'],
+  instagram: ['M2 7a5 5 0 0 1 5-5h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5z', 'M16 11.4A4 4 0 1 1 12.6 8a4 4 0 0 1 3.4 3.4z'],
+  globe: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M2 12h20', 'M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z'],
+  layers: ['M12 2L2 7l10 5 10-5z', 'M2 17l10 5 10-5', 'M2 12l10 5 10-5'],
+  calendar: ['M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', 'M16 2v4', 'M8 2v4', 'M3 10h18'],
+  zap: ['M13 2L3 14h9l-1 8 10-12h-9z'],
+  package: ['M21 8l-9-5-9 5 9 5 9-5z', 'M3 8v8l9 5 9-5V8', 'M12 13v8'],
+  image: ['M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', 'M8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z', 'M21 15l-5-5L5 21'],
+  video: ['M23 7l-7 5 7 5z', 'M1 7a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2z'],
+  check: ['M20 6L9 17l-5-5'],
+  bot: ['M12 8V4H8', 'M4 8h16v12H4z', 'M2 14h2', 'M20 14h2', 'M15 13v2', 'M9 13v2'],
+  alert: ['M12 9v4', 'M12 17h.01', 'M10.3 3.9L2 18a2 2 0 0 0 1.7 3h16.6A2 2 0 0 0 22 18L13.7 3.9a2 2 0 0 0-3.4 0z'],
+  handoff: ['M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2', 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M22 11l-3 3-3-3'],
+  bell: ['M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9', 'M13.7 21a2 2 0 0 1-3.4 0'],
+  moon: ['M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z'],
+  book: ['M4 19.5A2.5 2.5 0 0 1 6.5 17H20', 'M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z'],
+  logout: ['M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4', 'M16 17l5-5-5-5', 'M21 12H9'],
+  star: ['M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.9-6.2-3.3-6.2 3.3L7 14.2l-5-4.9 6.9-1z'],
+};
+const WA = { bg: '#22A06B', icon: svg(P.phone, 9, { stroke: '#fff' }) };
+const IG = { bg: '#DB2777', icon: svg(P.instagram, 9, { stroke: '#fff' }) };
+const SITE = { bg: '#2563EB', icon: svg(P.globe, 9, { stroke: '#fff' }) };
+
+function tabs(ativa, escuro) {
+  const inativo = escuro ? 'rgba(235,235,245,0.5)' : 'rgba(60,60,67,0.5)';
+  const def = [
+    { key: 'conversas', label: 'Conversas', paths: P.message, n: 3, badgeCor: '#F59E0B' },
+    { key: 'fila', label: 'Fila', paths: P.clockUsers, n: 3, badgeCor: '#EF4444' },
+    { key: 'buscar', label: 'Buscar', paths: P.search },
+    { key: 'perfil', label: 'Você', paths: P.user },
+  ];
+  return def.map((t) => {
+    const on = t.key === ativa;
+    return {
+      label: t.label,
+      color: on ? '#2563EB' : inativo,
+      icon: svg(t.paths, 24, { strokeWidth: on ? 2.3 : 1.9 }),
+      badge: t.n ? h('span', {
+        style: {
+          position: 'absolute', top: -3, right: -7, minWidth: 17, height: 17, padding: '0 5px',
+          borderRadius: 999, background: t.badgeCor, color: '#fff', fontSize: 10.5, fontWeight: 700,
+          display: 'grid', placeItems: 'center', boxSizing: 'border-box',
+        },
+      }, t.n) : null,
+    };
+  });
+}
+function bolha(texto, hora, saida) {
+  return {
+    texto, hora,
+    align: saida ? 'flex-end' : 'flex-start',
+    bg: saida ? '#2563EB' : '#FFFFFF',
+    color: saida ? '#fff' : '#0F172A',
+    radius: saida ? '20px 20px 6px 20px' : '20px 20px 20px 6px',
+  };
+}
+function chip(label, ativo, icon) {
+  return {
+    label, icon: icon || null,
+    bg: ativo ? '#2563EB' : '#fff',
+    color: ativo ? '#fff' : 'rgba(60,60,67,0.7)',
+    border: ativo ? '#2563EB' : 'rgba(60,60,67,0.12)',
+  };
+}
+function chipSuave(label, ativo) {
+  return { label, bg: ativo ? '#2563EB' : '#EDEDF2', color: ativo ? '#fff' : 'rgba(60,60,67,0.7)' };
+}
+
+class Component extends DCLogic {
+  renderVals() {
+    const larg = 402, alt = 874;
+    const dias = [];
+    for (let i = -4; i <= 30; i++) {
+      const valido = i >= 1 && i <= 31;
+      const sel = i === 6;
+      const temEvento = valido && [4, 7, 11, 13, 18, 20, 25, 27].indexOf(i) >= 0;
+      dias.push({
+        n: valido ? String(i) : '',
+        peso: sel ? 700 : 500,
+        bg: sel ? '#2563EB' : 'transparent',
+        color: sel ? '#fff' : (valido ? '#0F172A' : 'transparent'),
+        dot: temEvento ? h('span', { style: { width: 4, height: 4, borderRadius: '50%', background: '#2563EB' } }) : null,
+      });
+    }
+    const hora = (t, estado) => {
+      if (estado === 'sel') return { hora: t, bg: '#2563EB', color: '#fff', borda: '#2563EB', deco: 'none' };
+      if (estado === 'off') return { hora: t, bg: '#EDEDF2', color: 'rgba(60,60,67,0.35)', borda: 'transparent', deco: 'line-through' };
+      return { hora: t, bg: '#fff', color: '#0F172A', borda: 'rgba(60,60,67,0.12)', deco: 'none' };
+    };
+    return {
+      larg, alt,
+      tabsConversas: tabs('conversas'),
+      tabsFila: tabs('fila'),
+      tabsBuscar: tabs('buscar'),
+      tabsPerfil: tabs('perfil', true),
+
+      filtrosCanal: [
+        chip('Todos', true),
+        chip('WhatsApp', false, svg(P.phone, 13, { stroke: '#22A06B' })),
+        chip('Instagram', false, svg(P.instagram, 13, { stroke: '#DB2777' })),
+        chip('Site', false, svg(P.globe, 13, { stroke: '#2563EB' })),
+      ],
+      espera: [
+        { ini: 'CN', nome: 'Carla Nogueira', motivo: 'Pediu para falar com uma pessoa', tempo: 'há 12 min', chBg: WA.bg, chIcon: WA.icon },
+        { ini: 'LF', nome: '@lucas.fit', motivo: 'A IA não soube responder sobre 12x', tempo: 'há 6 min', chBg: IG.bg, chIcon: IG.icon },
+      ],
+      conversas: [
+        { ini: 'MC', nome: 'Marina Costa', msg: 'Quinta 10h 🙌', hora: 'agora', bg: '#fff', chBg: WA.bg, chIcon: WA.icon, tag: 'IA atendendo', tagBg: 'rgba(37,99,235,0.12)', tagColor: '#1D4ED8', badge: h('span', { style: { marginLeft: 'auto', minWidth: 20, height: 20, padding: '0 6px', borderRadius: 999, background: '#2563EB', color: '#fff', fontSize: 11, fontWeight: 700, display: 'grid', placeItems: 'center', boxSizing: 'border-box' } }, '2') },
+        { ini: 'VS', nome: 'Visitante do site', msg: 'Vocês atendem sábado?', hora: '25 min', bg: '#fff', chBg: SITE.bg, chIcon: SITE.icon, tag: 'IA atendendo', tagBg: 'rgba(37,99,235,0.12)', tagColor: '#1D4ED8', badge: null },
+        { ini: 'RA', nome: 'Roberto Alves', msg: 'Perfeito, obrigado!', hora: '1 h', bg: '#fff', chBg: WA.bg, chIcon: WA.icon, tag: 'Agendado', tagBg: 'rgba(34,160,107,0.12)', tagColor: '#15803D', badge: null },
+        { ini: 'AM', nome: 'Ana Martins', msg: 'Confirmo sexta 15h30', hora: '2 h', bg: '#fff', chBg: WA.bg, chIcon: WA.icon, tag: 'Agendado', tagBg: 'rgba(34,160,107,0.12)', tagColor: '#15803D', badge: null },
+        { ini: 'JP', nome: 'João Pereira', msg: 'Vou pensar e te aviso', hora: 'ontem', bg: '#fff', chBg: WA.bg, chIcon: WA.icon, tag: 'Proposta', tagBg: 'rgba(168,85,247,0.12)', tagColor: '#7E22CE', badge: null },
+        { ini: 'TS', nome: 'Tatiana Silva', msg: 'Recebi a tabela, obrigada', hora: 'ontem', bg: '#fff', chBg: SITE.bg, chIcon: SITE.icon, tag: 'Novo', tagBg: '#F2F2F7', tagColor: 'rgba(60,60,67,0.6)', badge: null },
+      ],
+
+      fila: [
+        { ini: 'CN', nome: 'Carla Nogueira', tempo: 'Esperando há 12 minutos', tempoColor: '#B45309', tag: 'Proposta', tagBg: 'rgba(168,85,247,0.12)', tagColor: '#7E22CE', mensagem: 'Quero falar com alguém sobre o orçamento de R$ 2.400. Consigo parcelar?', borda: 'rgba(245,158,11,0.45)', avBg: '#FDF0E3', avColor: '#B45309', chBg: WA.bg, chIcon: WA.icon },
+        { ini: 'LF', nome: '@lucas.fit', tempo: 'Esperando há 6 minutos', tempoColor: '#B45309', tag: 'IA travou', tagBg: 'rgba(239,68,68,0.12)', tagColor: '#B91C1C', mensagem: 'A IA não soube responder sobre parcelamento em 12x no cartão.', borda: 'rgba(239,68,68,0.35)', avBg: '#FDE7EF', avColor: '#BE185D', chBg: IG.bg, chIcon: IG.icon },
+        { ini: 'VS', nome: 'Visitante do site', tempo: 'Esperando há 2 minutos', tempoColor: 'rgba(60,60,67,0.6)', tag: 'Transferida', tagBg: 'rgba(37,99,235,0.12)', tagColor: '#1D4ED8', mensagem: 'Pediu para falar com um atendente humano sobre horário de sábado.', borda: 'rgba(60,60,67,0.12)', avBg: '#EFF6FF', avColor: '#2563EB', chBg: SITE.bg, chIcon: SITE.icon },
+      ],
+      turno: [
+        { v: '18', k: 'conversas que você atendeu', color: '#0F172A' },
+        { v: '4', k: 'horários que você marcou', color: '#0F172A' },
+        { v: '2min', k: 'sua resposta média', color: '#15803D' },
+      ],
+
+      mensagens: [
+        bolha('Oi! Vi o clareamento de vocês, quanto fica?', '14:28', false),
+        bolha('Oi, Marina! O clareamento a laser sai R$ 1.400 em 3 sessões. Posso te mostrar como fica?', '14:29', true),
+        bolha('Adorei! Consigo essa semana?', '14:33', false),
+        bolha('Tenho quinta 10h ou sexta 15h30. Qual fica melhor?', '14:34', true),
+        bolha('Quinta 10h 🙌', '14:35', false),
+      ],
+      mensagensHumano: [
+        bolha('Quero falar com alguém sobre o orçamento de R$ 2.400', '15:02', false),
+        bolha('Oi, Carla! Aqui é o Diego, da Vida Plena. Vi seu orçamento aqui.', '15:03', true),
+        bolha('Consigo parcelar? Fica pesado de uma vez', '15:04', false),
+      ],
+      atalhos: [
+        { label: 'Respostas rápidas', icon: svg(P.zap, 14, { stroke: '#2563EB' }) },
+        { label: 'Catálogo', icon: svg(P.package, 14, { stroke: '#2563EB' }) },
+        { label: 'Agendar', icon: svg(P.calendar, 14, { stroke: '#2563EB' }) },
+        { label: 'Transferir', icon: svg(P.handoff, 14, { stroke: '#2563EB' }) },
+      ],
+
+      categoriasRespostas: [chipSuave('Mais usadas', true), chipSuave('Preço'), chipSuave('Agenda'), chipSuave('Pagamento')],
+      respostas: [
+        { atalho: '/precos', titulo: 'Tabela de preços', uso: '84 usos', texto: 'Nossos valores: avaliação R$ 150, limpeza R$ 280 e clareamento a laser R$ 1.400 em 3 sessões. Quer que eu detalhe algum?' },
+        { atalho: '/parcela', titulo: 'Parcelamento', uso: '61 usos', texto: 'Pode parcelar em até 3x sem juros no crédito, ou 5% de desconto no Pix. Qual funciona melhor pra você?' },
+        { atalho: '/endereco', titulo: 'Endereço e estacionamento', uso: '47 usos', texto: 'Estamos na Rua Vereador Zezeu Ribeiro, 1117, Boca da Mata. Tem estacionamento gratuito na porta.' },
+        { atalho: '/remarcar', titulo: 'Remarcar horário', uso: '38 usos', texto: 'Sem problema! Tenho estes horários livres esta semana. Qual prefere?' },
+        { atalho: '/espera', titulo: 'Pedir um minuto', uso: '22 usos', texto: 'Vou confirmar essa informação com a equipe e já te respondo, tudo bem?' },
+      ],
+
+      categoriasCatalogo: [chipSuave('Todos', true), chipSuave('Estética'), chipSuave('Clínico'), chipSuave('Pacotes')],
+      itensCatalogo: [
+        { nome: 'Clareamento a Laser', preco: 'R$ 1.400', detalhe: '3 sessões · foto e vídeo', midiaBg: 'linear-gradient(135deg,#2563EB,#60A5FA)', midiaIcon: svg(P.video, 20), borda: '#2563EB', checkBg: '#2563EB', checkBorda: '#2563EB', check: svg(P.check, 14, { stroke: '#fff', strokeWidth: 3 }) },
+        { nome: 'Facetas de Porcelana', preco: 'R$ 2.400', detalhe: 'por dente · 6 fotos', midiaBg: 'linear-gradient(135deg,#1D4ED8,#3B82F6)', midiaIcon: svg(P.image, 20), borda: 'transparent', checkBg: 'transparent', checkBorda: 'rgba(60,60,67,0.25)', check: null },
+        { nome: 'Limpeza + Profilaxia', preco: 'R$ 280', detalhe: '45 min · 2 fotos', midiaBg: 'linear-gradient(135deg,#0E7490,#22D3EE)', midiaIcon: svg(P.image, 20), borda: 'transparent', checkBg: 'transparent', checkBorda: 'rgba(60,60,67,0.25)', check: null },
+        { nome: 'Alinhador Invisível', preco: 'R$ 9.800', detalhe: '12 meses · foto e vídeo', midiaBg: 'linear-gradient(135deg,#7C3AED,#A855F7)', midiaIcon: svg(P.video, 20), borda: 'transparent', checkBg: 'transparent', checkBorda: 'rgba(60,60,67,0.25)', check: null },
+        { nome: 'Pacote Noiva', preco: 'R$ 1.850', detalhe: '4 sessões · foto e áudio', midiaBg: 'linear-gradient(135deg,#BE185D,#F472B6)', midiaIcon: svg(P.image, 20), borda: 'transparent', checkBg: 'transparent', checkBorda: 'rgba(60,60,67,0.25)', check: null },
+      ],
+
+      diasMes: dias,
+      horarios: [
+        hora('08:00', 'off'), hora('09:00', 'off'), hora('10:00', 'sel'),
+        hora('11:00'), hora('13:30'), hora('14:00'),
+        hora('15:30', 'off'), hora('16:15'), hora('17:30'),
+      ],
+      opcoesAgenda: [
+        { t: 'Enviar confirmação agora', d: 'Mensagem com data, hora e endereço', switchBg: '#22A06B', knobSide: 'right' },
+        { t: 'Criar no Google Calendar', d: 'Verifica conflito antes de salvar', switchBg: '#22A06B', knobSide: 'right' },
+      ],
+
+      acoesFicha: [
+        { label: 'Conversar', icon: svg(P.message, 20) },
+        { label: 'Agendar', icon: svg(P.calendar, 20) },
+        { label: 'Ligar', icon: svg(P.phone, 20) },
+      ],
+      dadosCliente: [
+        { k: 'Telefone', v: '+55 71 98812-4477' },
+        { k: 'E-mail', v: 'marina@email.com' },
+        { k: 'Canal de origem', v: 'Anúncio Instagram' },
+        { k: 'Última conversa', v: 'hoje, 14:35' },
+        { k: 'Total gasto', v: 'R$ 2.180' },
+      ],
+      etapasFunil: [
+        { label: 'Novo', cor: '#2563EB', textColor: '#2563EB' },
+        { label: 'Qualif.', cor: '#2563EB', textColor: '#2563EB' },
+        { label: 'Proposta', cor: '#2563EB', textColor: '#2563EB' },
+        { label: 'Agendado', cor: '#2563EB', textColor: '#2563EB' },
+        { label: 'Fechado', cor: '#E5E7EB', textColor: 'rgba(60,60,67,0.45)' },
+      ],
+
+      escoposBusca: [
+        { label: 'Tudo', n: '18', bg: '#2563EB', color: '#fff' },
+        { label: 'Mensagens', n: '12', bg: '#EDEDF2', color: 'rgba(60,60,67,0.7)' },
+        { label: 'Clientes', n: '4', bg: '#EDEDF2', color: 'rgba(60,60,67,0.7)' },
+        { label: 'Catálogo', n: '2', bg: '#EDEDF2', color: 'rgba(60,60,67,0.7)' },
+      ],
+      resultadosBusca: [
+        { ini: 'MC', nome: 'Marina Costa', quando: 'hoje', trecho: 'Vi o clareamento de vocês, quanto fica?' },
+        { ini: 'CN', nome: 'Carla Nogueira', quando: 'hoje', trecho: 'O clareamento sai 1.400 mesmo com as 3 sessões?' },
+        { ini: 'PR', nome: 'Paula Riani', quando: 'ontem', trecho: 'Fechei o clareamento, pago no Pix hoje.' },
+        { ini: 'TS', nome: 'Tatiana Silva', quando: '2 dias', trecho: 'Queria saber sobre clareamento e limpeza junto.' },
+      ],
+      catalogoBusca: [
+        { nome: 'Clareamento a Laser', preco: 'R$ 1.400', bg: 'linear-gradient(135deg,#2563EB,#60A5FA)' },
+        { nome: 'Pacote Noiva', preco: 'R$ 1.850', bg: 'linear-gradient(135deg,#BE185D,#F472B6)' },
+      ],
+
+      avisosAgora: [
+        { t: 'Carla Nogueira espera há 12 min', d: 'Pediu para falar com uma pessoa sobre o orçamento.', quando: 'agora', bg: '#FFFCF5', iconBg: '#FEF3C7', iconColor: '#B45309', icon: svg(P.handoff, 18), acao: h('span', { style: { display: 'inline-flex', alignItems: 'center', marginTop: 11, height: 36, padding: '0 14px', borderRadius: 999, background: '#2563EB', color: '#fff', fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap' } }, 'Assumir conversa') },
+        { t: 'A IA não soube responder', d: '@lucas.fit perguntou sobre parcelamento em 12x.', quando: '6 min', bg: '#FFFCF5', iconBg: 'rgba(239,68,68,0.12)', iconColor: '#B91C1C', icon: svg(P.alert, 18), acao: null },
+        { t: 'Risco de falta hoje', d: 'João Pereira, 15h30, não confirmou o lembrete.', quando: '20 min', bg: '#fff', iconBg: '#FEF3C7', iconColor: '#B45309', icon: svg(P.calendar, 18), acao: null },
+      ],
+      avisosAntes: [
+        { t: 'Novo agendamento', d: 'Marina Costa · quinta, 6 de agosto às 10:00.', quando: '14:35', iconBg: 'rgba(34,160,107,0.12)', iconColor: '#15803D', icon: svg(P.calendar, 18) },
+        { t: 'Avaliação 5 estrelas', d: 'Roberto Alves avaliou o atendimento de hoje.', quando: '11:20', iconBg: '#FEF3C7', iconColor: '#B45309', icon: svg(P.star, 18) },
+        { t: 'Conversa devolvida à IA', d: 'Ana Martins · você encerrou o atendimento humano.', quando: '09:48', iconBg: 'rgba(37,99,235,0.12)', iconColor: '#1D4ED8', icon: svg(P.bot, 18) },
+      ],
+
+      disponibilidade: [
+        { t: 'Online', d: 'Recebe transferências da IA', dot: '#22A06B', bg: 'rgba(37,99,235,0.14)', check: svg(P.check, 18, { stroke: '#60A5FA', strokeWidth: 2.6 }) },
+        { t: 'Em pausa', d: 'Volto em 15 minutos', dot: '#F59E0B', bg: 'transparent', check: null },
+        { t: 'Fora do turno', d: 'Não recebe nada até amanhã às 8h', dot: '#8A8A8E', bg: 'transparent', check: null },
+      ],
+      prefsNotificacao: [
+        { t: 'Cliente pedindo uma pessoa', d: 'Sempre, com som', switchBg: '#22A06B', knobSide: 'right' },
+        { t: 'Nova mensagem em conversa minha', d: 'Só quando o app está fechado', switchBg: '#22A06B', knobSide: 'right' },
+        { t: 'Risco de falta na agenda', d: 'Uma vez por dia, às 8h', switchBg: '#22A06B', knobSide: 'right' },
+        { t: 'Resumo do turno', d: 'Ao fim do expediente', switchBg: 'rgba(120,120,128,0.32)', knobSide: 'left' },
+      ],
+      menuPerfil: [
+        { label: 'Trocar de negócio', icon: svg(P.layers, 16), iconColor: '#60A5FA', textColor: '#fff' },
+        { label: 'Aparência', icon: svg(P.moon, 16), iconColor: '#60A5FA', textColor: '#fff' },
+        { label: 'Base de conhecimento', icon: svg(P.book, 16), iconColor: '#60A5FA', textColor: '#fff' },
+        { label: 'Sair da conta', icon: svg(P.logout, 16), iconColor: '#FF6B6B', textColor: '#FF6B6B' },
+      ],
+
+      abasEstado: [
+        { label: 'Esperando', n: '3', color: '#0F172A', borda: '#2563EB', badgeBg: '#F59E0B', badgeColor: '#fff' },
+        { label: 'Minhas', n: '5', color: 'rgba(60,60,67,0.5)', borda: 'transparent', badgeBg: '#EDEDF2', badgeColor: 'rgba(60,60,67,0.6)' },
+        { label: 'IA', n: '34', color: 'rgba(60,60,67,0.5)', borda: 'transparent', badgeBg: '#EDEDF2', badgeColor: 'rgba(60,60,67,0.6)' },
+      ],
+      cardsEstado: [
+        { ini: 'CN', nome: 'Carla Nogueira', tempo: 'há 12 min na fila', tempoColor: '#B45309', tag: 'Proposta', tagBg: 'rgba(168,85,247,0.12)', tagColor: '#7E22CE', msg: 'Quero falar com alguém sobre o orçamento de R$ 2.400. Consigo parcelar?', marca: '#F59E0B', chBg: WA.bg, chIcon: WA.icon },
+        { ini: 'LF', nome: '@lucas.fit', tempo: 'há 6 min na fila', tempoColor: '#B45309', tag: 'IA travou', tagBg: 'rgba(239,68,68,0.12)', tagColor: '#B91C1C', msg: 'A IA não soube responder sobre parcelamento em 12x no cartão.', marca: '#EF4444', chBg: IG.bg, chIcon: IG.icon },
+        { ini: 'VS', nome: 'Visitante do site', tempo: 'há 2 min na fila', tempoColor: 'rgba(60,60,67,0.6)', tag: 'Transferida', tagBg: 'rgba(37,99,235,0.12)', tagColor: '#1D4ED8', msg: 'Pediu para falar com um atendente humano sobre horário de sábado.', marca: '#2563EB', chBg: SITE.bg, chIcon: SITE.icon },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

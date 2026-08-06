@@ -1,0 +1,47 @@
+/* Generated from Figma Variables. First mode = :root default.
+   FLOAT tokens are unitless — multiply by 1px in calc() where a length is needed. */
+
+:root {
+  --azul-500: rgb(59,130,246); /* @kind color */
+  --azul-600: rgb(37,99,235); /* @kind color */
+  --branco: rgb(255,255,255); /* @kind color */
+  --cor-acao-primaria-2: var(--azul-500); /* @kind color */
+  --cor-acao-primaria: var(--azul-600); /* @kind color */
+  --cor-borda-padrao-2: var(--slate-800); /* @kind color */
+  --cor-borda-padrao: var(--slate-200); /* @kind color */
+  --cor-feedback-destrutivo-2: var(--vermelho-900); /* @kind color */
+  --cor-feedback-destrutivo: var(--vermelho-500); /* @kind color */
+  --cor-fundo-pagina-2: var(--slate-950); /* @kind color */
+  --cor-fundo-pagina: var(--slate-50); /* @kind color */
+  --cor-fundo-superficie-2: var(--slate-superficie-escura); /* @kind color */
+  --cor-fundo-superficie: var(--branco); /* @kind color */
+  --cor-fundo-sutil-2: var(--slate-800); /* @kind color */
+  --cor-fundo-sutil: var(--slate-100); /* @kind color */
+  --cor-texto-primario-2: var(--slate-50); /* @kind color */
+  --cor-texto-primario: var(--slate-900); /* @kind color */
+  --cor-texto-secundario-2: var(--slate-400); /* @kind color */
+  --cor-texto-secundario: var(--slate-500); /* @kind color */
+  --cor-texto-sobre-acao-2: var(--slate-900); /* @kind color */
+  --cor-texto-sobre-acao: var(--branco); /* @kind color */
+  --raio-card: 16;
+  --raio-controle: 12;
+  --raio-pilula: 9999;
+  --slate-100: rgb(241,245,249); /* @kind color */
+  --slate-200: rgb(226,232,240); /* @kind color */
+  --slate-400: rgb(148,163,184); /* @kind color */
+  --slate-500: rgb(100,116,139); /* @kind color */
+  --slate-50: rgb(248,250,252); /* @kind color */
+  --slate-800: rgb(30,41,59); /* @kind color */
+  --slate-900: rgb(15,23,42); /* @kind color */
+  --slate-950: rgb(8,12,22); /* @kind color */
+  --slate-superficie-escura: rgb(14,21,37); /* @kind color */
+  --tamanho-2xl: 24;
+  --tamanho-3xl: 30;
+  --tamanho-base: 16;
+  --tamanho-lg: 18;
+  --tamanho-sm: 14;
+  --tamanho-xl: 20;
+  --tamanho-xs: 12;
+  --vermelho-500: rgb(239,68,68); /* @kind color */
+  --vermelho-900: rgb(127,29,29); /* @kind color */
+}
