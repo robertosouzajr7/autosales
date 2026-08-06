@@ -4,29 +4,50 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  CalendarDays, MessageSquare, CheckCircle2, Timer, ArrowRight,
-  Smartphone, Bot, ChevronRight, Building2, Target,
+  CalendarDays, MessageSquare, CheckCircle2, Timer, ArrowRight, ArrowUpRight, ArrowDownRight,
+  Smartphone, Bot, ChevronRight, Building2, Target, Instagram, Globe, Plug, AlertTriangle,
 } from "lucide-react";
 
 /**
  * Home do painel.
  *
  * A ordem de leitura é deliberada e vem do handoff: saudação → o que falta
- * configurar → números → o que exige ação → agenda → funil. Quem abre o
- * painel não vem saber quantas conversas teve; vem saber o que fazer agora.
- * Por isso a fila de espera aparece antes da agenda, e ambas antes do funil.
+ * configurar → números → o que exige ação → agenda → funil e conexões. Quem
+ * abre o painel não vem saber quantas conversas teve; vem saber o que fazer
+ * agora. Por isso a fila de espera aparece antes da agenda, e ambas antes do
+ * funil.
  */
 
-interface Results {
-  appointmentsScheduled: number;
-  appointmentsCompleted: number;
-  conversationsHandled: number;
-  avgResponseSeconds: number | null;
+interface Serie { dia: string; total: number }
+interface Home {
+  periodDays: number;
+  conversas: { total: number; delta: number | null; ia: number; equipe: number; serie: Serie[] };
+  agendamentos: { total: number; delta: number | null };
+  comparecimento: { taxa: number | null; delta: number | null; concluidos: number; faltas: number };
+  resposta: { segundos: number | null; delta: number | null };
+  funil: {
+    etapas: { id: string; nome: string; cor?: string | null; total: number; valor: number }[];
+    emNegociacao: number; fechado: number; ticketMedio: number;
+  };
 }
-interface Appt { id: string; title: string; date: string; status: string; lead?: { name?: string } }
-interface Conversa { botActive: boolean; messages?: any[] }
-interface Lead { id: string; name: string; phone?: string; stageId?: string | null; conversations?: Conversa[] }
-interface Etapa { id: string; name: string; order: number }
+interface Lembrete { kind: string; status: string }
+interface Appt {
+  id: string; title: string; date: string; status: string;
+  confirmedAt?: string | null; lead?: { name?: string }; reminders?: Lembrete[];
+}
+interface Conversa {
+  id: string; leadId: string; name: string; channel?: string; phase?: string;
+  lastMessagePreview?: string; lastMessageAt?: string; queuedAt?: string | null;
+  handoffReason?: string | null; unreadCount?: number;
+}
+interface Conexao { id: string; name?: string; phone?: string; channel?: string; status?: string }
+
+const CANAL: Record<string, { label: string; selo: string; Icon: any }> = {
+  WHATSAPP: { label: "WhatsApp", selo: "bg-[#22A06B]", Icon: MessageSquare },
+  INSTAGRAM: { label: "Instagram", selo: "bg-[#DB2777]", Icon: Instagram },
+  SITE: { label: "Site", selo: "bg-[#2563EB]", Icon: Globe },
+};
+const canal = (c?: string) => CANAL[(c || "WHATSAPP").toUpperCase()] || CANAL.WHATSAPP;
 
 function primeiroNome(v?: string) {
   return (v || "").trim().split(" ")[0] || "";
@@ -44,14 +65,27 @@ function tempoResposta(sec: number | null) {
   const resto = min % 60;
   return resto ? `${h}h ${resto}min` : `${h}h`;
 }
+/** "há 12 min" — quanto tempo a conversa está parada esperando. */
+function esperaDesde(iso?: string | null) {
+  if (!iso) return "";
+  const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (min < 1) return "agora";
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.floor(h / 24)}d`;
+}
+const reais = (v: number) =>
+  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [results, setResults] = useState<Results | null>(null);
+  const [home, setHome] = useState<Home | null>(null);
   const [appts, setAppts] = useState<Appt[]>([]);
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [etapas, setEtapas] = useState<Etapa[]>([]);
+  const [conversas, setConversas] = useState<Conversa[]>([]);
+  const [conexoes, setConexoes] = useState<Conexao[]>([]);
+  const [google, setGoogle] = useState<any>(null);
   const [setup, setSetup] = useState({ whatsapp: false, agent: false, business: false });
 
   const buscar = useCallback(async () => {
@@ -61,30 +95,35 @@ export default function Dashboard() {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const [rRes, aRes, lRes, sRes, bRes, eRes] = await Promise.all([
-        fetch("/api/stats/results?days=30", { headers }),
+      const respostas = await Promise.all([
+        fetch("/api/stats/home?days=30", { headers }),
         fetch("/api/appointments", { headers }),
-        fetch("/api/leads", { headers }),
+        fetch("/api/conversations", { headers }),
         fetch("/api/settings", { headers }),
         fetch("/api/business", { headers }),
-        fetch("/api/pipeline-stages", { headers }),
+        fetch("/api/whatsapp/accounts", { headers }),
+        fetch("/api/google/status", { headers }),
       ]);
-      const [r, a, l, s, b, e] = await Promise.all([
-        rRes.json(), aRes.json(), lRes.json(), sRes.json(), bRes.json(), eRes.json(),
-      ]);
+      // Rota sem permissão devolve 403; virar lista vazia é o certo aqui —
+      // um colaborador sem acesso a conexões vê a home sem essa seção, não
+      // uma home quebrada.
+      const [h, a, c, s, b, w, g] = await Promise.all(
+        respostas.map((r) => (r.ok ? r.json().catch(() => null) : null))
+      );
 
-      setResults(r && !r.error ? r : null);
+      setHome(h && !h.error ? h : null);
       setAppts(Array.isArray(a) ? a : []);
-      setLeads(Array.isArray(l) ? l : []);
-      setEtapas(Array.isArray(e) ? e : []);
+      setConversas(Array.isArray(c) ? c : []);
+      setConexoes(Array.isArray(w) ? w : []);
+      setGoogle(g || null);
 
       // Sem tipo de negócio o painel não tem o que mostrar: vai para o wizard.
       const businessType = b?.profile?.businessType;
       if (!businessType) return navigate("/onboarding");
 
       setSetup({
-        whatsapp: !!s.hasWhatsAppConnection,
-        agent: !!s.hasSdr,
+        whatsapp: !!s?.hasWhatsAppConnection,
+        agent: !!s?.hasSdr,
         business: !!businessType,
       });
     } catch (e) {
@@ -104,10 +143,11 @@ export default function Dashboard() {
     .filter((a) => ehHoje(a.date) && a.status !== "CANCELLED")
     .sort((x, y) => new Date(x.date).getTime() - new Date(y.date).getTime());
 
-  // Conversa com o agente desligado = alguém assumiu e ela espera resposta.
-  const esperando = leads.filter((l) =>
-    (l.conversations || []).some((c) => c.botActive === false && (c.messages?.length || 0) > 0)
-  );
+  // Espera humana é a fila de atendimento, não "bot desligado": desligar o
+  // agente numa conversa já resolvida não põe ninguém esperando.
+  const esperando = conversas
+    .filter((c) => c.phase === "QUEUE")
+    .sort((x, y) => new Date(x.queuedAt || 0).getTime() - new Date(y.queuedAt || 0).getTime());
 
   const passos = [
     { feito: setup.business, rotulo: "Configurar seu negócio", icone: Building2, destino: "/negocio" },
@@ -131,13 +171,9 @@ export default function Dashboard() {
   ].filter(Boolean);
   const linhaAtencao = partes.length ? `${partes.join(" e ")}.` : "Nada pendente no momento.";
 
-  // Funil por etapa. Contagem e conversão são reais; valor em R$ não existe —
-  // o modelo Lead não tem campo de valor, então o painel não inventa um.
-  const funil = etapas
-    .slice()
-    .sort((a, b) => a.order - b.order)
-    .map((et) => ({ nome: et.name, total: leads.filter((l) => l.stageId === et.id).length }));
+  const funil = home?.funil?.etapas || [];
   const topoFunil = funil[0]?.total ?? 0;
+  const temValor = (home?.funil?.emNegociacao || 0) + (home?.funil?.fechado || 0) > 0;
 
   return (
     <DashboardLayout>
@@ -199,39 +235,63 @@ export default function Dashboard() {
         {/* 3. KPIs — o principal ocupa mais espaço porque é o que se olha antes */}
         <section className="mb-4 grid gap-4 lg:grid-cols-[1.55fr_1fr_1fr_1fr]">
           {loading ? (
-            Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[132px] rounded-[14px]" />)
+            Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[196px] rounded-[14px]" />)
           ) : (
             <>
-              <article className="rounded-[14px] border border-border bg-card p-5 shadow-card">
+              <article className="flex flex-col rounded-[14px] border border-border bg-card p-5 shadow-card">
                 <div className="flex items-center gap-2">
                   <h3 className="text-[14px] font-semibold text-foreground">Conversas atendidas</h3>
-                  <span className="linha-unica rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">30 dias</span>
+                  <span className="linha-unica rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                    {home?.periodDays ?? 30} dias
+                  </span>
                 </div>
-                <p className="num mt-2 text-[46px] font-bold leading-none tracking-[-0.045em] text-foreground">
-                  {(results?.conversationsHandled ?? 0).toLocaleString("pt-BR")}
-                </p>
+                <div className="mt-2 flex items-end gap-3">
+                  <p className="num text-[46px] font-bold leading-none tracking-[-0.045em] text-foreground">
+                    {(home?.conversas.total ?? 0).toLocaleString("pt-BR")}
+                  </p>
+                  <Delta valor={home?.conversas.delta ?? null} />
+                </div>
+                <Sparkline serie={home?.conversas.serie || []} />
                 <p className="mt-3 text-[12.5px] text-muted-foreground">
-                  {esperando.length > 0
-                    ? `${esperando.length} ${esperando.length === 1 ? "está" : "estão"} com a equipe agora.`
-                    : "Nenhuma com a equipe agora — o agente está dando conta."}
+                  {home && home.conversas.total > 0 ? (
+                    <>
+                      <strong className="font-semibold text-foreground">{home.conversas.ia.toLocaleString("pt-BR")}</strong>{" "}
+                      resolvidas pela IA ·{" "}
+                      <strong className="font-semibold text-foreground">{home.conversas.equipe.toLocaleString("pt-BR")}</strong>{" "}
+                      {home.conversas.equipe === 1 ? "passou" : "passaram"} para a equipe
+                    </>
+                  ) : (
+                    "Nenhuma conversa no período."
+                  )}
                 </p>
               </article>
 
               <Kpi
                 rotulo="Agendamentos"
-                valor={(results?.appointmentsScheduled ?? 0).toLocaleString("pt-BR")}
-                contexto="marcados em 30 dias"
+                valor={(home?.agendamentos.total ?? 0).toLocaleString("pt-BR")}
+                delta={home?.agendamentos.delta ?? null}
+                contexto="marcados no período"
                 icone={<CalendarDays className="h-4 w-4" />}
               />
               <Kpi
                 rotulo="Comparecimento"
-                valor={(results?.appointmentsCompleted ?? 0).toLocaleString("pt-BR")}
-                contexto="agendamentos concluídos"
+                valor={home?.comparecimento.taxa !== null && home?.comparecimento.taxa !== undefined ? `${home.comparecimento.taxa}%` : "—"}
+                delta={home?.comparecimento.delta ?? null}
+                unidadeDelta="p.p."
+                contexto={
+                  home?.comparecimento.taxa === null || home?.comparecimento.taxa === undefined
+                    ? "sem compromissos vencidos ainda"
+                    : `${home.comparecimento.concluidos} de ${home.comparecimento.concluidos + home.comparecimento.faltas} compareceram`
+                }
                 icone={<CheckCircle2 className="h-4 w-4" />}
               />
               <Kpi
                 rotulo="1ª resposta"
-                valor={tempoResposta(results?.avgResponseSeconds ?? null)}
+                valor={tempoResposta(home?.resposta.segundos ?? null)}
+                delta={home?.resposta.delta ?? null}
+                // Aqui menos é melhor: cair 20% é uma boa notícia, e pintar
+                // isso de vermelho diria o contrário.
+                menorEhMelhor
                 contexto="mediana no período"
                 icone={<Timer className="h-4 w-4" />}
               />
@@ -255,22 +315,39 @@ export default function Dashboard() {
               <Vazio icone={<CheckCircle2 className="h-6 w-6 text-emerald-600" />} texto="Tudo em dia. O agente está cuidando das conversas." />
             ) : (
               <ul>
-                {esperando.slice(0, 5).map((l) => (
-                  <li
-                    key={l.id}
-                    onClick={() => navigate("/conversations")}
-                    className="flex cursor-pointer items-center gap-3 border-b border-border-soft px-4 py-3 last:border-0 hover:bg-surface-2"
-                  >
-                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-amber-500/15 text-[13px] font-semibold text-amber-700 dark:text-amber-500">
-                      {(l.name?.charAt(0) || "?").toUpperCase()}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="linha-unica-elipse text-[13.5px] font-medium text-foreground">{l.name || l.phone}</p>
-                      <p className="linha-unica text-[11.5px] text-amber-600 dark:text-amber-500">Aguardando resposta da equipe</p>
-                    </div>
-                    <ArrowRight className="h-4 w-4 shrink-0 text-faint" />
-                  </li>
-                ))}
+                {esperando.slice(0, 5).map((c) => {
+                  const m = canal(c.channel);
+                  return (
+                    <li
+                      key={c.id}
+                      className="flex items-center gap-3 border-b border-border-soft px-4 py-3 last:border-0 hover:bg-surface-2"
+                    >
+                      <span className="relative shrink-0">
+                        <span className="grid h-9 w-9 place-items-center rounded-full bg-amber-500/15 text-[13px] font-semibold text-amber-700 dark:text-amber-500">
+                          {(c.name?.charAt(0) || "?").toUpperCase()}
+                        </span>
+                        <span className={`absolute -bottom-0.5 -right-0.5 grid h-[15px] w-[15px] place-items-center rounded-full ring-2 ring-card ${m.selo}`}>
+                          <m.Icon className="h-2 w-2 text-white" />
+                        </span>
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline gap-2">
+                          <p className="linha-unica-elipse text-[13.5px] font-medium text-foreground">{c.name}</p>
+                          <span className="num shrink-0 text-[11px] text-faint">{esperaDesde(c.queuedAt)}</span>
+                        </div>
+                        <p className="linha-unica-elipse text-[11.5px] text-muted-foreground">
+                          {c.lastMessagePreview || c.handoffReason || "Aguardando atendimento"}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => navigate("/conversations")}
+                        className="linha-unica h-8 shrink-0 rounded-lg border border-accent-text/30 bg-accent-soft px-3 text-[12px] font-semibold text-accent-text hover:bg-accent-soft/70"
+                      >
+                        Responder
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </Painel>
@@ -288,24 +365,29 @@ export default function Dashboard() {
               <Vazio icone={<CalendarDays className="h-6 w-6 text-faint" />} texto="Nenhum agendamento marcado para hoje." />
             ) : (
               <ul>
-                {agendaHoje.slice(0, 5).map((a) => (
-                  <li key={a.id} className="flex items-center gap-3 border-b border-border-soft px-4 py-3 last:border-0 hover:bg-surface-2">
-                    <span className="num shrink-0 text-[13px] font-semibold text-foreground">{hora(a.date)}</span>
-                    <span className={`h-8 w-[3px] shrink-0 rounded-full ${corDoEstado(a.status)}`} />
-                    <div className="min-w-0 flex-1">
-                      <p className="linha-unica-elipse text-[13.5px] font-medium text-foreground">{a.lead?.name || a.title}</p>
-                      <p className="linha-unica-elipse text-[11.5px] text-muted-foreground">{a.title}</p>
-                    </div>
-                    <PilulaEstado status={a.status} />
-                  </li>
-                ))}
+                {agendaHoje.slice(0, 5).map((a) => {
+                  const estado = estadoDoCompromisso(a);
+                  return (
+                    <li key={a.id} className="flex items-center gap-3 border-b border-border-soft px-4 py-3 last:border-0 hover:bg-surface-2">
+                      <span className="num shrink-0 text-[13px] font-semibold tabular-nums text-foreground">{hora(a.date)}</span>
+                      <span className={`h-8 w-[3px] shrink-0 rounded-full ${estado.barra}`} />
+                      <div className="min-w-0 flex-1">
+                        <p className="linha-unica-elipse text-[13.5px] font-medium text-foreground">{a.lead?.name || a.title}</p>
+                        <p className="linha-unica-elipse text-[11.5px] text-muted-foreground">{a.title}</p>
+                      </div>
+                      <span className={`linha-unica shrink-0 rounded-full px-2.5 py-0.5 text-[11.5px] font-medium ${estado.pilula}`}>
+                        {estado.rotulo}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </Painel>
         </div>
 
-        {/* 6. Funil */}
-        {!loading && funil.length > 0 && (
+        {/* 6 e 7. Funil e conexões */}
+        <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
           <section className="rounded-[14px] border border-border bg-card shadow-card">
             <header className="flex items-center justify-between border-b border-border px-5 py-3.5">
               <h2 className="linha-unica flex items-center gap-2 text-[14px] font-semibold text-foreground">
@@ -315,35 +397,214 @@ export default function Dashboard() {
                 Abrir funil <ChevronRight className="h-3.5 w-3.5" />
               </button>
             </header>
-            <div className="space-y-2.5 p-5">
-              {funil.map((et, i) => {
-                const largura = topoFunil > 0 ? Math.max(6, Math.round((et.total / topoFunil) * 100)) : 6;
-                // Conversão sempre contra a etapa anterior: contra o topo, toda
-                // etapa parece ruim e a comparação perde utilidade.
-                const anterior = i > 0 ? funil[i - 1].total : null;
-                const taxa = anterior && anterior > 0 ? Math.round((et.total / anterior) * 100) : null;
-                return (
-                  <div key={et.nome} className="flex items-center gap-3">
-                    <span className="linha-unica-elipse w-[124px] shrink-0 text-[12.5px] text-muted-foreground">{et.nome}</span>
-                    <div className="h-7 flex-1 overflow-hidden rounded-lg bg-surface-2">
-                      <div
-                        className="flex h-full items-center rounded-lg bg-primary px-2.5 transition-[width] duration-500"
-                        style={{ width: `${largura}%` }}
-                      >
-                        <span className="num text-[12px] font-bold text-primary-foreground">{et.total}</span>
+
+            {loading ? (
+              <Carregando />
+            ) : funil.length === 0 ? (
+              <Vazio icone={<Target className="h-6 w-6 text-faint" />} texto="Nenhuma etapa criada no funil ainda." />
+            ) : (
+              <>
+                <div className="space-y-2.5 p-5">
+                  {funil.map((et, i) => {
+                    const largura = topoFunil > 0 ? Math.max(6, Math.round((et.total / topoFunil) * 100)) : 6;
+                    // Conversão sempre contra a etapa anterior: contra o topo,
+                    // toda etapa parece ruim e a comparação perde utilidade.
+                    const anterior = i > 0 ? funil[i - 1].total : null;
+                    const taxa = anterior && anterior > 0 ? Math.round((et.total / anterior) * 100) : null;
+                    return (
+                      <div key={et.id} className="flex items-center gap-3">
+                        <span className="linha-unica-elipse w-[124px] shrink-0 text-[12.5px] text-muted-foreground">{et.nome}</span>
+                        <div className="h-7 flex-1 overflow-hidden rounded-lg bg-surface-2">
+                          <div
+                            className="flex h-full items-center rounded-lg bg-primary px-2.5 transition-[width] duration-500"
+                            style={{ width: `${largura}%` }}
+                          >
+                            <span className="num text-[12px] font-bold text-primary-foreground">{et.total}</span>
+                          </div>
+                        </div>
+                        <span className="num w-[52px] shrink-0 text-right text-[12px] text-faint">
+                          {taxa !== null ? `${taxa}%` : ""}
+                        </span>
                       </div>
-                    </div>
-                    <span className="num w-[52px] shrink-0 text-right text-[12px] text-faint">
-                      {taxa !== null ? `${taxa}%` : ""}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+                    );
+                  })}
+                </div>
+
+                {/* O rodapé de valores só aparece quando há valor preenchido:
+                    exibir "R$ 0" para quem nunca usou o campo passaria a
+                    impressão de que o funil está zerado, e não vazio. */}
+                {temValor ? (
+                  <footer className="grid grid-cols-3 divide-x divide-border border-t border-border">
+                    <ValorFunil rotulo="Em negociação" valor={reais(home!.funil.emNegociacao)} />
+                    <ValorFunil rotulo="Fechado" valor={reais(home!.funil.fechado)} destaque />
+                    <ValorFunil rotulo="Ticket médio" valor={reais(home!.funil.ticketMedio)} />
+                  </footer>
+                ) : (
+                  <footer className="border-t border-border px-5 py-3">
+                    <p className="text-[12px] text-faint">
+                      Preencha o valor dos contatos no funil para ver aqui quanto está em negociação e o ticket médio.
+                    </p>
+                  </footer>
+                )}
+              </>
+            )}
           </section>
-        )}
+
+          {/* Canais e conexões */}
+          <section className="rounded-[14px] border border-border bg-card shadow-card">
+            <header className="flex items-center justify-between border-b border-border px-5 py-3.5">
+              <h2 className="linha-unica flex items-center gap-2 text-[14px] font-semibold text-foreground">
+                <Plug className="h-4 w-4 text-primary" /> Canais e conexões
+              </h2>
+              <button onClick={() => navigate("/connections")} className="linha-unica flex items-center gap-1 text-[13px] text-accent-text hover:underline">
+                Gerenciar <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </header>
+            {loading ? (
+              <Carregando />
+            ) : (
+              <ul>
+                {conexoes.slice(0, 4).map((c) => {
+                  const m = canal(c.channel);
+                  const ligado = c.status === "CONNECTED";
+                  return (
+                    <li key={c.id} className="flex items-center gap-3 border-b border-border-soft px-4 py-3 last:border-0">
+                      <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${m.selo}`}>
+                        <m.Icon className="h-4 w-4 text-white" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="linha-unica-elipse text-[13px] font-medium text-foreground">{c.name || m.label}</p>
+                        <p className="linha-unica-elipse text-[11.5px] text-faint">{c.phone || m.label}</p>
+                      </div>
+                      <Pilula ok={ligado} rotulo={ligado ? "Conectado" : "Desconectado"} />
+                    </li>
+                  );
+                })}
+
+                {/* Google: "conectado" aqui não é ter token salvo, é não haver
+                    erro registrado — token revogado continua salvo. */}
+                <li className="flex items-center gap-3 border-b border-border-soft px-4 py-3 last:border-0">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#4285F4]">
+                    <CalendarDays className="h-4 w-4 text-white" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="linha-unica-elipse text-[13px] font-medium text-foreground">Google Agenda</p>
+                    <p className="linha-unica-elipse text-[11.5px] text-faint">
+                      {google?.lastError ? google.lastError : google?.connected ? "Agenda sincronizada" : "Não conectada"}
+                    </p>
+                  </div>
+                  {google?.connected && google?.lastError ? (
+                    <Pilula alerta rotulo="Renovar" />
+                  ) : (
+                    <Pilula ok={!!google?.connected} rotulo={google?.connected ? "Conectado" : "Conectar"} />
+                  )}
+                </li>
+
+                {conexoes.length === 0 && !google?.connected && (
+                  <li className="px-4 py-6 text-center">
+                    <p className="text-[12.5px] text-muted-foreground">Nenhum canal conectado ainda.</p>
+                  </li>
+                )}
+              </ul>
+            )}
+          </section>
+        </div>
       </div>
     </DashboardLayout>
+  );
+}
+
+/**
+ * Estado do compromisso na agenda de hoje.
+ *
+ * "Risco de falta" não é um status do banco: é o cruzamento de compromisso
+ * ainda agendado, não confirmado pelo cliente, com o lembrete de confirmação
+ * já enviado. Ou seja, foi perguntado e ninguém respondeu — que é exatamente
+ * quando vale a pena alguém ligar.
+ */
+function estadoDoCompromisso(a: Appt) {
+  const inicio = new Date(a.date).getTime();
+  const agora = Date.now();
+
+  if (a.status === "COMPLETED") {
+    return { rotulo: "Concluída", barra: "bg-emerald-500", pilula: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400" };
+  }
+  if (a.status === "NOSHOW") {
+    return { rotulo: "Faltou", barra: "bg-rose-500", pilula: "bg-rose-500/12 text-rose-700 dark:text-rose-400" };
+  }
+  // Uma hora de janela: é a duração padrão de um compromisso no produto.
+  if (inicio <= agora && agora < inicio + 60 * 60000) {
+    return { rotulo: "Agora", barra: "bg-primary", pilula: "bg-primary/12 text-accent-text" };
+  }
+  const confirmacaoEnviada = (a.reminders || []).some((r) => r.kind === "CONFIRM" && r.status === "SENT");
+  if (!a.confirmedAt && confirmacaoEnviada && inicio > agora) {
+    return { rotulo: "Risco de falta", barra: "bg-amber-500", pilula: "bg-amber-500/12 text-amber-700 dark:text-amber-500" };
+  }
+  if (a.confirmedAt) {
+    return { rotulo: "Confirmada", barra: "bg-emerald-500", pilula: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400" };
+  }
+  return { rotulo: "Agendada", barra: "bg-primary", pilula: "bg-surface-2 text-muted-foreground" };
+}
+
+/** Variação contra o período anterior. Nula quando não havia com o que comparar. */
+function Delta({ valor, unidade = "%", menorEhMelhor }: { valor: number | null; unidade?: string; menorEhMelhor?: boolean }) {
+  if (valor === null || valor === undefined) {
+    // Um traço em vez da frase inteira: sem período anterior não há o que
+    // dizer, e escrever isso por extenso ao lado do número roubava a atenção
+    // dele. O motivo fica no title, para quem quiser saber.
+    return (
+      <span className="linha-unica pb-1.5 text-[12.5px] text-faint" title="Sem período anterior para comparar">—</span>
+    );
+  }
+  const subiu = valor > 0;
+  const bom = menorEhMelhor ? !subiu : subiu;
+  const neutro = valor === 0;
+  const Icone = subiu ? ArrowUpRight : ArrowDownRight;
+  return (
+    <span
+      className={`linha-unica flex items-center gap-0.5 pb-1.5 text-[12.5px] font-semibold ${
+        neutro ? "text-faint" : bom ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+      }`}
+    >
+      {!neutro && <Icone className="h-3.5 w-3.5" />}
+      {valor > 0 ? "+" : ""}{valor.toLocaleString("pt-BR")}{unidade}
+    </span>
+  );
+}
+
+/**
+ * Gráfico da série diária de conversas.
+ *
+ * SVG a mão, sem biblioteca de gráfico: é uma linha e um preenchimento, e
+ * puxar uma dependência de charts para isso custaria mais no bundle do que a
+ * página inteira.
+ */
+function Sparkline({ serie }: { serie: Serie[] }) {
+  const L = 300, A = 64;
+  if (serie.length < 2) return <div className="mt-4 h-16" />;
+
+  const maximo = Math.max(...serie.map((p) => p.total), 1);
+  const pontos = serie.map((p, i) => {
+    const x = (i / (serie.length - 1)) * L;
+    // 4px de folga em cima e embaixo para a linha não encostar na borda.
+    const y = A - 4 - (p.total / maximo) * (A - 8);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  const linha = `M ${pontos.join(" L ")}`;
+  const area = `${linha} L ${L},${A} L 0,${A} Z`;
+  const id = "grad-conversas";
+
+  return (
+    <svg viewBox={`0 0 ${L} ${A}`} preserveAspectRatio="none" className="mt-4 h-16 w-full" role="img" aria-label="Conversas por dia no período">
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#2563EB" stopOpacity="0.28" />
+          <stop offset="100%" stopColor="#2563EB" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={area} fill={`url(#${id})`} />
+      <path d={linha} fill="none" stroke="#2563EB" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+    </svg>
   );
 }
 
@@ -370,16 +631,49 @@ function AnelProgresso({ feitos, total }: { feitos: number; total: number }) {
   );
 }
 
-function Kpi({ rotulo, valor, contexto, icone }: { rotulo: string; valor: string; contexto: string; icone: React.ReactNode }) {
+function Kpi({
+  rotulo, valor, contexto, icone, delta, unidadeDelta, menorEhMelhor,
+}: {
+  rotulo: string; valor: string; contexto: string; icone: React.ReactNode;
+  delta: number | null; unidadeDelta?: string; menorEhMelhor?: boolean;
+}) {
   return (
-    <article className="rounded-[14px] border border-border bg-card p-5 shadow-card">
+    <article className="flex flex-col rounded-[14px] border border-border bg-card p-5 shadow-card">
       <div className="flex items-center justify-between gap-2">
         <h3 className="linha-unica-elipse text-[13px] font-medium text-muted-foreground">{rotulo}</h3>
         <span className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-lg bg-accent-soft text-accent-text">{icone}</span>
       </div>
       <p className="num mt-2 text-[32px] font-bold leading-none tracking-[-0.04em] text-foreground">{valor}</p>
-      <p className="mt-2 text-[12px] text-faint">{contexto}</p>
+      <div className="mt-2">
+        <Delta valor={delta} unidade={unidadeDelta ?? "%"} menorEhMelhor={menorEhMelhor} />
+      </div>
+      <p className="mt-auto pt-2 text-[12px] text-faint">{contexto}</p>
     </article>
+  );
+}
+
+function ValorFunil({ rotulo, valor, destaque }: { rotulo: string; valor: string; destaque?: boolean }) {
+  return (
+    <div className="px-5 py-3.5">
+      <p className="text-[11.5px] text-faint">{rotulo}</p>
+      <p className={`num mt-0.5 text-[15px] font-bold tracking-[-0.02em] ${destaque ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"}`}>
+        {valor}
+      </p>
+    </div>
+  );
+}
+
+function Pilula({ ok, alerta, rotulo }: { ok?: boolean; alerta?: boolean; rotulo: string }) {
+  const cls = alerta
+    ? "bg-amber-500/12 text-amber-700 dark:text-amber-500"
+    : ok
+    ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400"
+    : "bg-surface-2 text-muted-foreground";
+  return (
+    <span className={`linha-unica flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-[11.5px] font-medium ${cls}`}>
+      {alerta && <AlertTriangle className="h-3 w-3" />}
+      {rotulo}
+    </span>
   );
 }
 
@@ -426,23 +720,4 @@ function Vazio({ icone, texto }: { icone: React.ReactNode; texto: string }) {
       <p className="text-[13px] text-muted-foreground">{texto}</p>
     </div>
   );
-}
-
-function corDoEstado(status: string) {
-  return {
-    COMPLETED: "bg-emerald-500",
-    CANCELLED: "bg-rose-500",
-    NOSHOW: "bg-amber-500",
-  }[status] || "bg-primary";
-}
-
-function PilulaEstado({ status }: { status: string }) {
-  const mapa: Record<string, { rotulo: string; cls: string }> = {
-    SCHEDULED: { rotulo: "Agendada", cls: "bg-surface-2 text-muted-foreground" },
-    PENDING: { rotulo: "Pendente", cls: "bg-amber-500/12 text-amber-700 dark:text-amber-500" },
-    COMPLETED: { rotulo: "Concluída", cls: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400" },
-    NOSHOW: { rotulo: "Faltou", cls: "bg-amber-500/12 text-amber-700 dark:text-amber-500" },
-  };
-  const e = mapa[status] || { rotulo: status, cls: "bg-surface-2 text-muted-foreground" };
-  return <span className={`linha-unica shrink-0 rounded-full px-2.5 py-0.5 text-[11.5px] font-medium ${e.cls}`}>{e.rotulo}</span>;
 }

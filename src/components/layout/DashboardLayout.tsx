@@ -547,6 +547,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   // null = ainda não sabemos; a pílula só aparece quando há resposta, para o
   // header não piscar "desconectado" durante o carregamento.
   const [conexaoAtiva, setConexaoAtiva] = useState<boolean | null>(null);
+  // Conversas paradas esperando gente: é o número do badge ao abrir o painel.
+  const [esperando, setEsperando] = useState(0);
   const [busca, setBusca] = useState("");
   const campoBusca = useRef<HTMLInputElement>(null);
 
@@ -655,6 +657,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         setConexaoAtiva(zap.some((c: any) => c.status === "CONNECTED" || c.connected === true || !!c.phoneId));
       })
       .catch(() => setConexaoAtiva(null));
+
+    // Badge do menu. Também uma chamada por montagem do shell; a rota só
+    // devolve dois números. Sem permissão de atendimento, fica em zero.
+    fetch("/api/conversations/pending-count", { headers })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d) setEsperando(d.pending || 0); })
+      .catch(() => {});
   }, []);
 
   const handleLogout = () => {
@@ -664,11 +673,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     navigate("/login");
   };
 
-  // Contador da sidebar. Vem do mesmo fluxo de notificações que já roda por
-  // SSE — nenhuma requisição a mais por página só para pintar um número.
-  // Agendamentos ainda não tem contador: exigiria um endpoint de contagem, e
-  // um badge não justifica uma chamada em toda navegação.
-  const badges = unreadCount > 0 ? { "/conversations": unreadCount } : undefined;
+  // Contador da sidebar.
+  //
+  // Antes vinha só das notificações da sessão (SSE), o que deixava o badge
+  // sempre vazio ao abrir o painel: nada tinha chegado ainda, e as conversas
+  // já paradas na fila não apareciam. Agora a carga inicial vem do servidor,
+  // por uma rota de contagem que não traz linha nenhuma, e o SSE apenas soma
+  // por cima enquanto a aba fica aberta.
+  const pendentes = Math.max(esperando, unreadCount);
+  const badges = pendentes > 0 ? { "/conversations": pendentes } : undefined;
 
   const currentPage =
     navItems.find((item) => item.href === hrefAtivo(location.pathname, navItems))?.label ?? "Dashboard";

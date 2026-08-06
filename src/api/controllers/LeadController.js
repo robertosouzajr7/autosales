@@ -143,7 +143,7 @@ export const updateLead = async (req, res) => {
     const oldLead = await prisma.lead.findFirst({ where: { id: req.params.id, tenantId: req.tenantId } });
     if (!oldLead) return res.status(404).json({ error: "Lead não encontrado" });
 
-    const { name, phone, email, notes, status, source, stageId, isToEnrich, qualificationScore, extractedData, lastIntentClassification } = req.body;
+    const { name, phone, email, notes, status, source, stageId, value, isToEnrich, qualificationScore, extractedData, lastIntentClassification } = req.body;
     
     // Build update data with only defined scalar fields (tags is a relation — cannot be set as string)
     const dataToUpdate = {};
@@ -155,6 +155,13 @@ export const updateLead = async (req, res) => {
     if (notes !== undefined) dataToUpdate.notes = notes;
     if (status !== undefined) dataToUpdate.status = status;
     if (source !== undefined) dataToUpdate.source = source;
+    // Valor da oportunidade. Vazio limpa o campo em vez de virar 0: um contato
+    // sem valor informado não é um contato que vale zero, e a diferença muda o
+    // ticket médio do funil.
+    if (value !== undefined) {
+      const n = value === null || value === "" ? null : Number(value);
+      dataToUpdate.value = n === null || Number.isNaN(n) ? null : n;
+    }
     if (isToEnrich !== undefined) dataToUpdate.isToEnrich = isToEnrich;
     if (qualificationScore !== undefined) dataToUpdate.qualificationScore = qualificationScore;
     if (extractedData !== undefined) dataToUpdate.extractedData = extractedData;

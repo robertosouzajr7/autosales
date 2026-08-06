@@ -1,21 +1,23 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   MessageSquare, Send, Search,
   Circle, MoreVertical, Smartphone, Bot,
-  Phone, Mail, User,
+  Phone, Mail, User, Copy, Video, ArrowLeft,
   ChevronRight, Calendar, Mic, MicOff, Play, Pause, Volume2,
   Instagram, Globe, Clock, FileText, Paperclip, ArrowRightLeft, Users, XCircle
 } from "lucide-react";
 import { TemplatePreview } from "@/components/templates/TemplatePreview";
 
 // Metadados de canal para o inbox multicanal (ícone, rótulo e cor).
-const CHANNEL_META: Record<string, { label: string; cls: string; Icon: any }> = {
-  WHATSAPP: { label: "WhatsApp", cls: "text-emerald-600 bg-emerald-50", Icon: MessageSquare },
-  INSTAGRAM: { label: "Instagram", cls: "text-pink-600 bg-pink-50", Icon: Instagram },
-  SITE: { label: "Site", cls: "text-blue-600 bg-blue-50", Icon: Globe },
+// `selo` é a cor cheia do carimbo sobre o avatar; `cls` é a versão clara,
+// para chips e pílulas.
+const CHANNEL_META: Record<string, { label: string; cls: string; selo: string; Icon: any }> = {
+  WHATSAPP: { label: "WhatsApp", cls: "text-emerald-600 bg-emerald-50", selo: "bg-[#22A06B]", Icon: MessageSquare },
+  INSTAGRAM: { label: "Instagram", cls: "text-pink-600 bg-pink-50", selo: "bg-[#DB2777]", Icon: Instagram },
+  SITE: { label: "Site", cls: "text-blue-600 bg-blue-50", selo: "bg-[#2563EB]", Icon: Globe },
 };
 /** Selo curto da fase do atendimento, usado na lista de conversas. */
 function faseSelo(chat: any, meuId: string) {
@@ -53,10 +55,52 @@ function faseSelo(chat: any, meuId: string) {
 function channelMeta(ch?: string) {
   return CHANNEL_META[(ch || "WHATSAPP").toUpperCase()] || CHANNEL_META.WHATSAPP;
 }
+
+/**
+ * Linha de estado do cabeçalho da conversa: quem está conduzindo agora.
+ *
+ * É a mesma informação do selo da lista, só que por extenso — inclusive o
+ * motivo de a IA estar calada quando um fluxo assumiu.
+ */
+function estadoDaConversa(chat: any, meuId: string) {
+  const fase = chat?.phase || "BOT";
+  if (fase === "QUEUE") {
+    const detalhes = [
+      chat.queue?.name ? `fila "${chat.queue.name}"` : null,
+      chat.queuePosition ? `posição ${chat.queuePosition}` : null,
+      chat.handoffReason || null,
+    ].filter(Boolean);
+    return {
+      texto: `Aguardando atendente${detalhes.length ? ` · ${detalhes.join(" · ")}` : ""}`,
+      cor: "text-amber-600",
+      ponto: "fill-amber-500 text-amber-500",
+    };
+  }
+  if (fase === "HUMAN") {
+    const quem = chat.assignedTo?.id === meuId ? "você" : chat.assignedTo?.name || "um atendente";
+    return { texto: `Em atendimento com ${quem}`, cor: "text-accent-text", ponto: "fill-[#2563EB] text-[#2563EB]" };
+  }
+  if (fase === "CLOSED") {
+    return { texto: "Atendimento encerrado", cor: "text-faint", ponto: "fill-slate-300 text-slate-300" };
+  }
+  if (chat?.activeFlow) {
+    const situacao =
+      chat.activeFlow.status === "WAITING_INPUT" ? "esperando resposta"
+      : chat.activeFlow.status === "WAITING_DELAY" ? "em pausa programada"
+      : "executando";
+    return {
+      texto: `Fluxo "${chat.activeFlow.name}" conduzindo · ${situacao}`,
+      cor: "text-violet-600",
+      ponto: "fill-violet-500 text-violet-500",
+    };
+  }
+  return { texto: "IA atendendo", cor: "text-emerald-600", ponto: "fill-emerald-500 text-emerald-500" };
+}
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,7 +112,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { notificationStore } from "@/lib/notifications";
 
 // Helper para formatar tempo
 const formatTime = (seconds: number) => {
@@ -176,12 +219,43 @@ function fmtWhen(iso: string) {
   const d = new Date(iso);
   const hoje = new Date();
   const mesmoDia = d.toDateString() === hoje.toDateString();
-  if (mesmoDia) return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  if (mesmoDia) return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   const ontem = new Date(hoje);
   ontem.setDate(hoje.getDate() - 1);
   if (d.toDateString() === ontem.toDateString()) return "Ontem";
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 }
+
+/** Rótulo do separador de dia dentro da thread. */
+function fmtDia(iso: string) {
+  const d = new Date(iso);
+  const hoje = new Date();
+  if (d.toDateString() === hoje.toDateString()) return "Hoje";
+  const ontem = new Date(hoje);
+  ontem.setDate(hoje.getDate() - 1);
+  if (d.toDateString() === ontem.toDateString()) return "Ontem";
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: d.getFullYear() === hoje.getFullYear() ? undefined : "numeric" });
+}
+
+/** "Cliente desde março de 2026" — só o mês e o ano, o dia não importa aqui. */
+function desdeQuando(iso?: string) {
+  if (!iso) return null;
+  return new Date(iso).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+}
+
+/**
+ * Respostas rápidas do composer.
+ *
+ * São trechos locais: clicar preenche o campo para o atendente revisar e
+ * enviar, nunca dispara sozinho. Não vêm do banco porque o produto ainda não
+ * tem cadastro de respostas prontas — quando tiver, é só trocar a origem.
+ */
+const RESPOSTAS_RAPIDAS = [
+  { rotulo: "Confirmar horário", texto: "Consigo confirmar seu horário. Qual dia e período ficam melhores para você?" },
+  { rotulo: "Enviar valores", texto: "Vou te passar os valores agora mesmo." },
+  { rotulo: "Pedir documento", texto: "Para seguir, você pode me enviar o documento por aqui?" },
+  { rotulo: "Um momento", texto: "Só um momento, já verifico isso para você." },
+];
 
 export default function Conversations() {
   const [chats, setChats] = useState<any[]>([]);
@@ -205,7 +279,6 @@ export default function Conversations() {
   const [messages, setMessages] = useState<any[]>([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
-  const [sdrTyping, setSdrTyping] = useState(false);
   const [hasWhatsApp, setHasWhatsApp] = useState<boolean>(false);
   const messagesEndRef = useRef<any>(null);
   const { toast } = useToast();
@@ -219,9 +292,13 @@ export default function Conversations() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  // Unread
-  const [countOfUnread, setCountOfUnread] = useState(0);
   const selectedChatRef = useRef(selectedChat);
+  // Ficha do contato (terceiro painel): etapa do funil, tags, próximo
+  // agendamento e anotação interna.
+  const [ficha, setFicha] = useState<any>(null);
+  const [etapas, setEtapas] = useState<any[]>([]);
+  const [anotacao, setAnotacao] = useState("");
+  const [salvandoAnotacao, setSalvandoAnotacao] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -234,13 +311,14 @@ export default function Conversations() {
   const fetchData = async () => {
     try {
       const token = localStorage.getItem("token");
-      const [convRes, settingsRes, connRes, tplRes, agentsRes, queuesRes] = await Promise.all([
+      const [convRes, settingsRes, connRes, tplRes, agentsRes, queuesRes, etapasRes] = await Promise.all([
         fetch("/api/conversations", { headers: { "Authorization": `Bearer ${token}` } }),
         fetch("/api/settings", { headers: { "Authorization": `Bearer ${token}` } }),
         fetch("/api/whatsapp/accounts", { headers: { "Authorization": `Bearer ${token}` } }),
         fetch("/api/templates", { headers: { "Authorization": `Bearer ${token}` } }),
         fetch("/api/attendance/agents", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch("/api/queues", { headers: { "Authorization": `Bearer ${token}` } })
+        fetch("/api/queues", { headers: { "Authorization": `Bearer ${token}` } }),
+        fetch("/api/pipeline-stages", { headers: { "Authorization": `Bearer ${token}` } })
       ]);
 
       const convData = convRes.ok ? await convRes.json() : [];
@@ -249,6 +327,8 @@ export default function Conversations() {
       const tplData = tplRes.ok ? await tplRes.json() : [];
       setAgents(agentsRes.ok ? await agentsRes.json() : []);
       setQueues(queuesRes.ok ? await queuesRes.json() : []);
+      const etapasData = etapasRes.ok ? await etapasRes.json() : [];
+      setEtapas(Array.isArray(etapasData) ? etapasData : []);
 
       // O endpoint já devolve ordenado por última mensagem. `id` vira o leadId
       // porque o resto da tela (mensagens, toggle do bot) trabalha com ele.
@@ -547,9 +627,48 @@ export default function Conversations() {
         }).catch(() => {});
         setChats((prev) => prev.map((c) => (c.id === selectedChat.id ? { ...c, unreadCount: 0 } : c)));
       }
-      setCountOfUnread(0);
     }
   }, [selectedChat]);
+
+  // Ficha do contato. Depende só do id: `selectedChat` é recriado a cada
+  // atualização da lista, e um efeito no objeto inteiro recarregaria a ficha
+  // (perdendo a anotação em edição) a cada mensagem que chega.
+  useEffect(() => {
+    const leadId = selectedChat?.id;
+    if (!leadId) { setFicha(null); setAnotacao(""); return; }
+    let cancelado = false;
+    const token = localStorage.getItem("token");
+    fetch(`/api/conversations/${leadId}/contact`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (cancelado || !d) return;
+        setFicha(d);
+        setAnotacao(d.notes || "");
+      })
+      .catch(() => {});
+    return () => { cancelado = true; };
+  }, [selectedChat?.id]);
+
+  /** Grava etapa ou anotação da ficha. */
+  const salvarFicha = async (campos: any) => {
+    const leadId = selectedChat?.id;
+    if (!leadId) return;
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(`/api/conversations/${leadId}/contact`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(campos),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || "Não foi possível salvar.");
+      setFicha((f: any) => (f ? { ...f, ...d } : f));
+      return true;
+    } catch (e: any) {
+      toast({ title: e.message, variant: "destructive" });
+      return false;
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -594,12 +713,7 @@ export default function Conversations() {
           }
         }
 
-        // Chat não está aberto → incrementa unread (apenas local para badge da lista se quiser)
-        if (message.role === 'USER') {
-          setCountOfUnread(c => c + 1);
-        }
-
-        // Atualiza preview da lista
+        // Chat fechado: o recarregar abaixo já traz o não-lidas do servidor.
         fetchData();
       } catch {}
     };
@@ -640,523 +754,699 @@ export default function Conversations() {
     return true;
   });
 
+  const iniciais = (nome?: string) => (nome || "?").trim().substring(0, 2).toUpperCase();
+  const estadoAtual = estadoDaConversa(selectedChat, meuId);
+  // O toggle reflete o botActive da conversa aberta; sem registro, a IA está
+  // ligada (é o padrão do backend).
+  const agenteAtivo = selectedChat?.conversations?.[0]?.botActive ?? true;
+
+  const copiar = (texto: string, aviso: string) => {
+    navigator.clipboard.writeText(texto).then(() => toast({ title: aviso })).catch(() => {});
+  };
+
   return (
     <DashboardLayout>
-      <div className="h-[calc(100vh-140px)] flex gap-6 p-2 animate-in fade-in duration-500">
+      {/* Três painéis, sem rolagem na página: cada coluna rola por conta. */}
+      <div className="flex h-[calc(100vh-60px)] overflow-hidden bg-surface-2">
 
-        {/* LISTA DE CONVERSAS */}
-        <Card className="w-96 border-none shadow-sm rounded-2xl bg-white overflow-hidden flex flex-col">
-          <div className="p-8 border-b border-slate-50 bg-slate-50/30 space-y-6">
-             <div className="flex items-center justify-between">
-                <h3 className="text-xl font-semibold text-slate-800 tracking-tight">Conversas</h3>
-                <Badge className={`${hasWhatsApp ? "bg-[#2563EB]/10 text-[#2563EB]" : "bg-red-500/10 text-red-600"} border-none font-bold text-xs `}>
-                  {hasWhatsApp ? "WhatsApp Conectado" : "WhatsApp Desconectado"}
-                </Badge>
-             </div>
-             {!hasWhatsApp && (
-               <div className="p-4 bg-red-50 rounded-2xl border border-red-100 mb-4">
-                 <p className="text-xs font-semibold text-red-600 mb-1 flex items-center gap-2">
-                   <Smartphone className="w-4 h-4" /> Conexão Necessária
-                 </p>
-                 <p className="text-xs text-red-500 font-bold leading-relaxed uppercase">
-                   Seu WhatsApp não está conectado. As mensagens não serão recebidas nem enviadas até que você estabeleça uma conexão.
-                 </p>
-                 <Button 
-                   onClick={() => window.location.href = "/connections"} 
-                   variant="link" 
-                   className="p-0 h-auto text-xs font-semibold text-red-600 uppercase mt-2 underline"
-                 >
-                   Ir para Conexões
-                 </Button>
-               </div>
-             )}
-             <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                <Input
-                  placeholder="Buscar chat..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="h-11 pl-10 border-slate-200 rounded-2xl bg-white text-xs font-bold"
-                />
-             </div>
+        {/* ───────── LISTA DE CONVERSAS ───────── */}
+        <aside
+          className={`${selectedChat ? "hidden lg:flex" : "flex"} w-full shrink-0 flex-col border-r border-border-soft bg-background lg:w-[330px] lg:min-w-[260px]`}
+        >
+          <div className="space-y-3 border-b border-border-soft px-4 py-4">
+            {/* Sem título: o cabeçalho do painel já diz "Conversas". */}
+            <div className="flex items-center justify-between">
+              <span className="num text-[11px] font-semibold uppercase tracking-wide text-faint">
+                {visibleChats.length} {visibleChats.length === 1 ? "conversa" : "conversas"}
+              </span>
+            </div>
 
-             {/* Abas por fase: a fila humana precisa saltar aos olhos. */}
-             <div className="flex flex-wrap gap-1.5">
-               {ABAS.map((aba) => {
-                 const n = contaFase(aba.id);
-                 const ativa = phaseFilter === aba.id;
-                 const destaque = aba.id === "QUEUE" && n > 0;
-                 return (
-                   <button
-                     key={aba.id}
-                     onClick={() => setPhaseFilter(aba.id)}
-                     className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors flex items-center gap-1 ${
-                       ativa
-                         ? "bg-slate-900 text-white"
-                         : destaque
-                         ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
-                         : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-                     }`}
-                   >
-                     {aba.label}
-                     {n > 0 && (
-                       <span className={`px-1 rounded-full text-[10px] ${ativa ? "bg-white/20" : "bg-white/70"}`}>{n}</span>
-                     )}
-                   </button>
-                 );
-               })}
-             </div>
+            {!hasWhatsApp && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                <p className="flex items-center gap-1.5 text-[12px] font-semibold text-amber-900">
+                  <Smartphone className="h-3.5 w-3.5" /> WhatsApp desconectado
+                </p>
+                <p className="mt-1 text-[11px] leading-relaxed text-amber-700">
+                  Nada entra nem sai enquanto não houver um aparelho conectado.
+                </p>
+                <button
+                  onClick={() => navigate("/connections")}
+                  className="mt-2 text-[11px] font-semibold text-amber-900 underline underline-offset-2"
+                >
+                  Ir para Conexões
+                </button>
+              </div>
+            )}
 
-             {/* Filtro por canal / conexão (só aparece se houver >1 origem) */}
-             {(connections.length > 0) && (
-               <div className="flex flex-wrap gap-1.5 mt-3">
-                 <button
-                   onClick={() => setChannelFilter("ALL")}
-                   className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${channelFilter === "ALL" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}
-                 >
-                   Todos
-                 </button>
-                 {connections.map((c: any) => {
-                   const m = channelMeta(c.channel);
-                   const active = channelFilter === c.id;
-                   return (
-                     <button
-                       key={c.id}
-                       onClick={() => setChannelFilter(c.id)}
-                       className={`px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1 transition-colors ${active ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}
-                       title={c.channel}
-                     >
-                       <m.Icon className="w-3 h-3" /> {c.name || c.phoneNumber || m.label}
-                     </button>
-                   );
-                 })}
-                 <button
-                   onClick={() => setChannelFilter("SITE")}
-                   className={`px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1 transition-colors ${channelFilter === "SITE" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}
-                 >
-                   <Globe className="w-3 h-3" /> Site
-                 </button>
-               </div>
-             )}
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-faint" />
+              <Input
+                placeholder="Buscar chat..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-9 rounded-lg border-border-soft bg-surface-2 pl-9 text-[13px] placeholder:text-faint"
+              />
+            </div>
+
+            {/* Abas por fase: a fila humana precisa saltar aos olhos. */}
+            <div className="flex flex-wrap gap-1.5">
+              {ABAS.map((aba) => {
+                const n = contaFase(aba.id);
+                const ativa = phaseFilter === aba.id;
+                const espera = aba.id === "QUEUE" && n > 0;
+                return (
+                  <button
+                    key={aba.id}
+                    onClick={() => setPhaseFilter(aba.id)}
+                    className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                      ativa
+                        ? "border-accent-text/30 bg-accent-soft text-accent-text"
+                        : espera
+                        ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                        : "border-transparent bg-surface-2 text-faint hover:text-foreground"
+                    }`}
+                  >
+                    {aba.label}
+                    {n > 0 && <span className="num opacity-70">{n}</span>}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Filtro por canal / conexão (só aparece se houver origem cadastrada) */}
+            {connections.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  onClick={() => setChannelFilter("ALL")}
+                  className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                    channelFilter === "ALL"
+                      ? "border-accent-text/30 bg-accent-soft text-accent-text"
+                      : "border-transparent bg-surface-2 text-faint hover:text-foreground"
+                  }`}
+                >
+                  Todos os canais
+                </button>
+                {connections.map((c: any) => {
+                  const m = channelMeta(c.channel);
+                  const ativo = channelFilter === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => setChannelFilter(c.id)}
+                      title={c.channel}
+                      className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                        ativo
+                          ? "border-accent-text/30 bg-accent-soft text-accent-text"
+                          : "border-transparent bg-surface-2 text-faint hover:text-foreground"
+                      }`}
+                    >
+                      <m.Icon className="h-3 w-3" /> {c.name || c.phoneNumber || m.label}
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => setChannelFilter("SITE")}
+                  className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                    channelFilter === "SITE"
+                      ? "border-accent-text/30 bg-accent-soft text-accent-text"
+                      : "border-transparent bg-surface-2 text-faint hover:text-foreground"
+                  }`}
+                >
+                  <Globe className="h-3 w-3" /> Site
+                </button>
+              </div>
+            )}
           </div>
 
           <ScrollArea className="flex-1">
-             <div className="p-3 space-y-2">
-                {visibleChats.map(chat => (
-                  <div 
-                    key={chat.id} 
-                    onClick={() => setSelectedChat(chat)}
-                    className={`p-4 rounded-2xl transition-all cursor-pointer flex items-center gap-4 group ${selectedChat?.id === chat.id ? 'bg-slate-900 text-white shadow-sm' : 'hover:bg-slate-50 text-slate-600'}`}
-                  >
-                    <Avatar className="h-10 w-10 border-2 border-white shadow-sm ring-2 ring-emerald-500/20">
-                      <AvatarFallback className={`${selectedChat?.id === chat.id ? 'bg-[#2563EB] text-white' : 'bg-slate-100 text-slate-500'} font-semibold text-xs`}>
-                        {chat.name.substring(0,2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                       <div className="flex justify-between items-center mb-0.5">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            {(() => { const m = channelMeta(chat.channel); return (
-                              <span
-                                className={`shrink-0 inline-flex items-center justify-center h-4 w-4 rounded ${selectedChat?.id === chat.id ? 'bg-white/15 text-white' : m.cls}`}
-                                title={m.label}
-                              >
-                                <m.Icon className="w-2.5 h-2.5" />
-                              </span>
-                            ); })()}
-                            <p className="font-semibold text-sm truncate">{chat.name}</p>
-                            {chat.handle && chat.handle !== chat.name && (
-                              <span className={`text-[10px] font-medium truncate shrink-0 ${selectedChat?.id === chat.id ? 'text-white/40' : 'text-slate-400'}`}>
-                                {chat.handle}
-                              </span>
-                            )}
-                          </div>
-                          <span className={`text-xs font-bold uppercase shrink-0 ${selectedChat?.id === chat.id ? 'text-white/40' : 'text-slate-300'}`}>
-                            {chat.lastMessageAt ? fmtWhen(chat.lastMessageAt) : ""}
-                          </span>
-                       </div>
-                       <div className="flex items-center gap-1.5">
-                         <p className={`text-xs truncate flex-1 ${chat.unreadCount > 0 && selectedChat?.id !== chat.id ? 'font-bold text-slate-600' : 'font-bold'} ${selectedChat?.id === chat.id ? 'text-white/50' : chat.unreadCount > 0 ? '' : 'text-slate-400'}`}>
-                           {chat.lastMessagePreview || "Nenhuma mensagem iniciada"}
-                         </p>
-                         {chat.unreadCount > 0 && selectedChat?.id !== chat.id && (
-                           <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-emerald-500 text-white text-[10px] font-bold flex items-center justify-center">
-                             {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
-                           </span>
-                         )}
-                         {/* Fase do atendimento: quem está com a conversa agora. */}
-                         {(() => {
-                           const selo = faseSelo(chat, meuId);
-                           if (!selo) return null;
-                           return (
-                             <span
-                               title={selo.title}
-                               className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${selectedChat?.id === chat.id ? "bg-white/15 text-white" : selo.cls}`}
-                             >
-                               {selo.label}
-                             </span>
-                           );
-                         })()}
-                       </div>
+            {loading ? (
+              <div className="space-y-2 p-4">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-surface-2" />
+                    <div className="flex-1 space-y-1.5">
+                      <div className="h-3 w-2/3 animate-pulse rounded bg-surface-2" />
+                      <div className="h-2.5 w-full animate-pulse rounded bg-surface-2" />
                     </div>
                   </div>
                 ))}
-             </div>
-          </ScrollArea>
-        </Card>
+              </div>
+            ) : visibleChats.length === 0 ? (
+              <div className="px-6 py-16 text-center">
+                <MessageSquare className="mx-auto mb-3 h-8 w-8 text-border-soft" />
+                <p className="text-[13px] font-medium text-faint">
+                  {search.trim() ? "Nenhuma conversa com esse termo." : "Nenhuma conversa neste filtro."}
+                </p>
+              </div>
+            ) : (
+              <div>
+                {visibleChats.map((chat) => {
+                  const selecionado = selectedChat?.id === chat.id;
+                  const m = channelMeta(chat.channel);
+                  const selo = faseSelo(chat, meuId);
+                  const naoLidas = chat.unreadCount > 0 && !selecionado;
+                  return (
+                    <button
+                      key={chat.id}
+                      onClick={() => setSelectedChat(chat)}
+                      className={`flex w-full items-start gap-3 border-l-[3px] border-b border-b-border-soft px-3.5 py-3 text-left transition-colors ${
+                        selecionado
+                          ? "border-l-[#2563EB] bg-accent-soft"
+                          : "border-l-transparent hover:bg-surface-2"
+                      }`}
+                    >
+                      <div className="relative shrink-0">
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback className="bg-surface-2 text-[11px] font-semibold text-faint">
+                            {iniciais(chat.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        {/* Selo do canal: de onde essa conversa está chegando. */}
+                        <span
+                          title={m.label}
+                          className={`absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full ring-2 ring-background ${m.selo}`}
+                        >
+                          <m.Icon className="h-2 w-2 text-white" />
+                        </span>
+                      </div>
 
-        {/* ÁREA DO CHAT */}
-        <Card className="flex-1 border-none shadow-sm rounded-2xl bg-white overflow-hidden flex flex-col">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <p className={`truncate text-[13px] ${naoLidas ? "font-bold text-foreground" : "font-semibold text-foreground"}`}>
+                            {chat.name}
+                          </p>
+                          <span className="num shrink-0 text-[11px] text-faint">
+                            {chat.lastMessageAt ? fmtWhen(chat.lastMessageAt) : ""}
+                          </span>
+                        </div>
+                        <p className={`linha-unica-elipse mt-0.5 text-[12px] ${naoLidas ? "font-semibold text-foreground" : "text-faint"}`}>
+                          {chat.lastMessagePreview || "Nenhuma mensagem ainda"}
+                        </p>
+                        {(selo || naoLidas) && (
+                          <div className="mt-1.5 flex items-center gap-1.5">
+                            {selo && (
+                              <span title={selo.title} className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${selo.cls}`}>
+                                {selo.label}
+                              </span>
+                            )}
+                            {naoLidas && (
+                              <span className="num ml-auto flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#2563EB] px-1 text-[10px] font-bold text-white">
+                                {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </ScrollArea>
+        </aside>
+
+        {/* ───────── THREAD ───────── */}
+        <section
+          className={`${selectedChat ? "flex" : "hidden lg:flex"} min-w-0 flex-1 flex-col bg-background lg:min-w-[420px]`}
+        >
           {selectedChat ? (
             <>
-            <div className="flex-1 flex flex-col relative min-h-0 bg-slate-50/10">
-              {/* Header do Chat */}
-              <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-white px-10 shrink-0">
-                 {!hasWhatsApp && !loading && (
-                    <div className="absolute inset-0 z-50 bg-white/95 backdrop-blur-sm flex items-center justify-center p-12 text-center animate-in fade-in duration-500 rounded-2xl">
-                       <Card className="max-w-md border-none shadow-sm rounded-2xl p-12 space-y-6 bg-white">
-                          <div className="w-20 h-20 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                             <Smartphone className="w-10 h-10 text-amber-500 animate-pulse" />
-                          </div>
-                          <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">WhatsApp <span className="text-amber-500">Desconectado</span></h2>
-                          <p className="text-slate-500 font-bold text-sm leading-relaxed">Você precisa conectar um aparelho para visualizar e responder as conversas em tempo real.</p>
-                          <Button onClick={() => window.location.href = "/connections"} className="w-full h-10 bg-slate-900 hover:bg-black font-semibold rounded-2xl shadow-sm shadow-slate-200">
-                             CONECTAR AGORA
-                          </Button>
-                       </Card>
-                    </div>
-                 )}
+              {/* Cabeçalho da conversa */}
+              <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border-soft px-5 py-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <button
+                    onClick={() => setSelectedChat(null)}
+                    className="-ml-1 rounded-lg p-1.5 text-faint hover:bg-surface-2 lg:hidden"
+                    title="Voltar para a lista"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </button>
+                  <Avatar className="h-9 w-9 shrink-0">
+                    <AvatarFallback className="bg-accent-soft text-[11px] font-semibold text-accent-text">
+                      {iniciais(selectedChat.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <p className="truncate text-[14px] font-semibold text-foreground">{selectedChat.name}</p>
+                    {/* Quem está com a conversa, por onde ela chega e o contato. */}
+                    <p className="linha-unica-elipse text-[11.5px]">
+                      <span className={estadoAtual.cor}>
+                        <Circle className={`mr-1 inline h-2 w-2 ${estadoAtual.ponto}`} />
+                        {estadoAtual.texto}
+                      </span>
+                      {/* O contato não repete aqui: ele está na ficha ao lado,
+                          e nesta largura empurrava o estado para fora. */}
+                      <span className="text-faint">{" · "}{channelMeta(selectedChat.channel).label}</span>
+                    </p>
+                  </div>
+                </div>
 
-                 <div className="flex items-center gap-4">
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback className="bg-[#2563EB] text-white font-semibold text-xs">
-                        {selectedChat.name.substring(0,2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                       <div className="flex items-center gap-2">
-                         <p className="font-semibold text-slate-800 leading-none">{selectedChat.name}</p>
-                         {(() => { const m = channelMeta(selectedChat.channel); const conn = connections.find((c: any) => c.id === selectedChat.waAccountId); return (
-                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${m.cls}`}>
-                             <m.Icon className="w-2.5 h-2.5" /> {conn?.name || m.label}
-                           </span>
-                         ); })()}
-                       </div>
-                       {/* Fase do atendimento: quem está com a conversa agora. */}
-                       <p className="text-xs font-bold mt-1.5 flex items-center gap-1.5">
-                         {selectedChat.phase === "QUEUE" ? (
-                           <span className="text-amber-600 flex items-center gap-1.5">
-                             <Circle className="w-2 h-2 fill-amber-500" />
-                             Na fila{selectedChat.queue?.name ? ` "${selectedChat.queue.name}"` : ""}
-                             {selectedChat.queuePosition ? ` · posição ${selectedChat.queuePosition}` : ""}
-                             {selectedChat.handoffReason ? ` · ${selectedChat.handoffReason}` : ""}
-                           </span>
-                         ) : selectedChat.phase === "HUMAN" ? (
-                           <span className="text-[#2563EB] flex items-center gap-1.5">
-                             <Circle className="w-2 h-2 fill-[#2563EB]" />
-                             Em atendimento com {selectedChat.assignedTo?.id === meuId ? "você" : selectedChat.assignedTo?.name || "um atendente"}
-                           </span>
-                         ) : selectedChat.phase === "CLOSED" ? (
-                           <span className="text-slate-400 flex items-center gap-1.5">
-                             <Circle className="w-2 h-2 fill-slate-300" /> Atendimento encerrado
-                           </span>
-                         ) : selectedChat.activeFlow ? (
-                           <span className="text-violet-600 flex items-center gap-1.5">
-                             <Circle className="w-2 h-2 fill-violet-500" />
-                             Fluxo "{selectedChat.activeFlow.name}" conduzindo
-                             {selectedChat.activeFlow.status === "WAITING_INPUT"
-                               ? " · esperando resposta do cliente"
-                               : selectedChat.activeFlow.status === "WAITING_DELAY"
-                               ? " · em pausa programada"
-                               : " · executando"}
-                             {" · a IA volta quando terminar"}
-                           </span>
-                         ) : (
-                           <span className="text-emerald-600 flex items-center gap-1.5">
-                             <Circle className="w-2 h-2 fill-emerald-500" /> Atendimento automático (IA)
-                           </span>
-                         )}
-                       </p>
-                    </div>
-                 </div>
-                 <div className="flex gap-2">
-                    {selectedChat.phase === "CLOSED" ? (
-                      <Button
-                        onClick={() => acaoAtendimento("reopen", { comoHumano: true }, "Atendimento reaberto")}
-                        className="rounded-xl font-bold text-xs bg-[#2563EB]"
-                      >
-                        Iniciar conversa
+                <div className="flex shrink-0 items-center gap-2">
+                  {/* Agente ativo por conversa: desligar aqui cala a IA só nesta
+                      thread. O controle existia no código mas não tinha
+                      interface — o atendente não conseguia usá-lo. */}
+                  <label className="hidden items-center gap-2 rounded-lg border border-border-soft px-2.5 py-1.5 sm:flex">
+                    <span className="text-[11px] font-semibold text-faint">Agente</span>
+                    <Switch checked={agenteAtivo} onCheckedChange={toggleBot} aria-label="Agente ativo nesta conversa" />
+                  </label>
+
+                  {selectedChat.phase === "CLOSED" ? (
+                    <Button
+                      onClick={() => acaoAtendimento("reopen", { comoHumano: true }, "Atendimento reaberto")}
+                      className="h-9 rounded-lg bg-[#2563EB] px-3.5 text-[12px] font-semibold hover:bg-[#1D4ED8]"
+                    >
+                      Iniciar conversa
+                    </Button>
+                  ) : selectedChat.phase === "HUMAN" && selectedChat.assignedTo?.id === meuId ? (
+                    <Button
+                      onClick={encerrarAtendimento}
+                      variant="outline"
+                      className="h-9 rounded-lg border-border-soft px-3.5 text-[12px] font-semibold text-red-600 hover:bg-red-50"
+                    >
+                      Encerrar
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() =>
+                        acaoAtendimento("assign", {}, selectedChat.phase === "QUEUE" ? "Você assumiu o atendimento" : "Atendimento assumido")
+                      }
+                      className="h-9 rounded-lg bg-[#2563EB] px-3.5 text-[12px] font-semibold hover:bg-[#1D4ED8]"
+                    >
+                      {selectedChat.phase === "QUEUE" ? "Atender agora" : "Assumir conversa"}
+                    </Button>
+                  )}
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="icon" className="h-9 w-9 rounded-lg border-border-soft">
+                        <MoreVertical className="h-4 w-4 text-faint" />
                       </Button>
-                    ) : selectedChat.phase === "HUMAN" && selectedChat.assignedTo?.id === meuId ? (
-                      <Button
-                        onClick={encerrarAtendimento}
-                        variant="outline"
-                        className="rounded-xl border-slate-100 font-bold text-xs text-red-500 hover:bg-red-50"
-                      >
-                        Encerrar atendimento
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={() =>
-                          acaoAtendimento("assign", {}, selectedChat.phase === "QUEUE" ? "Você assumiu o atendimento" : "Atendimento assumido")
-                        }
-                        className="rounded-xl font-bold text-xs bg-[#2563EB]"
-                      >
-                        {selectedChat.phase === "QUEUE" ? "Atender agora" : "Assumir conversa"}
-                      </Button>
-                    )}
-                      <Button variant="outline" size="icon" className="rounded-xl border-slate-100 hover:bg-blue-50 hover:border-slate-300 group/call transition-colors"
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56 rounded-xl p-1.5">
+                      <DropdownMenuItem
+                        className="cursor-pointer rounded-lg text-[12px] font-medium"
                         onClick={handleOpenCallModal}
-                        title="Iniciar contato por WhatsApp"
                       >
-                        <Phone className="w-4 h-4 text-slate-400 group-hover/call:text-[#2563EB] transition-colors" />
-                      </Button>
-                     <DropdownMenu>
-                       <DropdownMenuTrigger asChild>
-                         <Button variant="outline" size="icon" className="rounded-xl border-slate-100 hover:bg-slate-50">
-                           <MoreVertical className="w-4 h-4 text-slate-400" />
-                         </Button>
-                       </DropdownMenuTrigger>
-                       <DropdownMenuContent align="end" className="rounded-2xl border-none shadow-sm p-2 w-52">
-                         <DropdownMenuItem
-                           className="rounded-xl font-bold text-xs cursor-pointer"
-                           onClick={() => navigate(`/crm?lead=${selectedChat?.id}`)}
-                         >
-                           <User className="w-4 h-4 mr-2 text-[#2563EB]" />
-                           Ver no CRM
-                         </DropdownMenuItem>
-                         <DropdownMenuItem
-                           className="rounded-xl font-bold text-xs cursor-pointer"
-                           onClick={() => {
-                             if (selectedChat?.phone) {
-                               navigator.clipboard.writeText(selectedChat.phone);
-                               toast({ title: "📋 Telefone copiado!" });
-                             }
-                           }}
-                         >
-                           <Phone className="w-4 h-4 mr-2 text-[#2563EB]" />
-                           Copiar Telefone
-                         </DropdownMenuItem>
-                         <DropdownMenuSeparator />
-                         {selectedChat.phase !== "CLOSED" && (
-                           <>
-                             <DropdownMenuItem
-                               className="rounded-xl font-bold text-xs cursor-pointer"
-                               onClick={() => { setTransferAlvo(""); setTransferOpen(true); }}
-                             >
-                               <ArrowRightLeft className="w-4 h-4 mr-2 text-[#2563EB]" />
-                               Transferir conversa
-                             </DropdownMenuItem>
-                             {selectedChat.phase !== "BOT" && (
-                               <DropdownMenuItem
-                                 className="rounded-xl font-bold text-xs cursor-pointer"
-                                 onClick={() => acaoAtendimento("return-bot", {}, "Conversa devolvida ao agente de IA")}
-                               >
-                                 <Bot className="w-4 h-4 mr-2 text-emerald-600" />
-                                 Devolver para a IA
-                               </DropdownMenuItem>
-                             )}
-                             {selectedChat.phase === "BOT" && (
-                               <DropdownMenuItem
-                                 className="rounded-xl font-bold text-xs cursor-pointer"
-                                 onClick={() => acaoAtendimento("enqueue", { reason: "Enviada manualmente para a fila" }, "Conversa enviada para a fila")}
-                               >
-                                 <Users className="w-4 h-4 mr-2 text-amber-600" />
-                                 Enviar para a fila
-                               </DropdownMenuItem>
-                             )}
-                             <DropdownMenuItem
-                               className="rounded-xl font-bold text-xs cursor-pointer"
-                               onClick={encerrarAtendimento}
-                             >
-                               <XCircle className="w-4 h-4 mr-2 text-slate-500" />
-                               Encerrar atendimento
-                             </DropdownMenuItem>
-                             <DropdownMenuSeparator />
-                           </>
-                         )}
-                         <DropdownMenuItem
-                           className="rounded-xl font-bold text-xs cursor-pointer text-red-500 focus:text-red-600"
-                           onClick={() => {
-                             if (confirm(`Apagar conversa de ${selectedChat?.name}?`)) {
-                               setSelectedChat(null);
-                             }
-                           }}
-                         >
-                           <ChevronRight className="w-4 h-4 mr-2" />
-                           Fechar Conversa
-                         </DropdownMenuItem>
-                       </DropdownMenuContent>
-                     </DropdownMenu>
-                 </div>
-              </div>
+                        <Phone className="mr-2 h-4 w-4 text-accent-text" /> Chamar no WhatsApp
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="cursor-pointer rounded-lg text-[12px] font-medium"
+                        onClick={() => navigate(`/crm?lead=${selectedChat?.id}`)}
+                      >
+                        <User className="mr-2 h-4 w-4 text-accent-text" /> Ver no funil
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="cursor-pointer rounded-lg text-[12px] font-medium"
+                        onClick={() => {
+                          if (selectedChat?.phone) {
+                            navigator.clipboard.writeText(selectedChat.phone);
+                            toast({ title: "Telefone copiado" });
+                          }
+                        }}
+                      >
+                        <Phone className="mr-2 h-4 w-4 text-accent-text" /> Copiar telefone
+                      </DropdownMenuItem>
+                      {selectedChat.phase !== "CLOSED" && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="cursor-pointer rounded-lg text-[12px] font-medium"
+                            onClick={() => { setTransferAlvo(""); setTransferOpen(true); }}
+                          >
+                            <ArrowRightLeft className="mr-2 h-4 w-4 text-accent-text" /> Transferir conversa
+                          </DropdownMenuItem>
+                          {selectedChat.phase !== "BOT" && (
+                            <DropdownMenuItem
+                              className="cursor-pointer rounded-lg text-[12px] font-medium"
+                              onClick={() => acaoAtendimento("return-bot", {}, "Conversa devolvida ao agente de IA")}
+                            >
+                              <Bot className="mr-2 h-4 w-4 text-emerald-600" /> Devolver para a IA
+                            </DropdownMenuItem>
+                          )}
+                          {selectedChat.phase === "BOT" && (
+                            <DropdownMenuItem
+                              className="cursor-pointer rounded-lg text-[12px] font-medium"
+                              onClick={() => acaoAtendimento("enqueue", { reason: "Enviada manualmente para a fila" }, "Conversa enviada para a fila")}
+                            >
+                              <Users className="mr-2 h-4 w-4 text-amber-600" /> Enviar para a fila
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem
+                            className="cursor-pointer rounded-lg text-[12px] font-medium"
+                            onClick={encerrarAtendimento}
+                          >
+                            <XCircle className="mr-2 h-4 w-4 text-faint" /> Encerrar atendimento
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="cursor-pointer rounded-lg text-[12px] font-medium"
+                        onClick={() => setSelectedChat(null)}
+                      >
+                        <ChevronRight className="mr-2 h-4 w-4 text-faint" /> Fechar conversa
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </header>
 
-              {/* Mensagens */}
-              <ScrollArea className="flex-1 p-10 bg-slate-50/30">
-                 <div className="space-y-6 max-w-4xl mx-auto flex flex-col">
-                    {messages.map(msg => {
-                      const isOut = msg.role === 'SDR' || msg.role === 'ASSISTANT';
+              {/* Corpo da conversa */}
+              <div className="relative min-h-0 flex-1">
+                {!hasWhatsApp && !loading && (
+                  <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/95 p-10 text-center backdrop-blur-sm">
+                    <div className="max-w-sm space-y-4">
+                      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50">
+                        <Smartphone className="h-8 w-8 text-amber-500" />
+                      </div>
+                      <h2 className="text-xl font-semibold tracking-tight text-foreground">WhatsApp desconectado</h2>
+                      <p className="text-[13px] leading-relaxed text-faint">
+                        Conecte um aparelho para receber e responder as conversas em tempo real.
+                      </p>
+                      <Button onClick={() => navigate("/connections")} className="h-10 w-full rounded-xl bg-[#2563EB] font-semibold hover:bg-[#1D4ED8]">
+                        Conectar agora
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                <ScrollArea className="h-full bg-surface-2 px-5 py-6">
+                  <div className="mx-auto flex max-w-3xl flex-col gap-3">
+                    {messages.map((msg, i) => {
+                      const isOut = msg.role === "SDR" || msg.role === "ASSISTANT";
+                      const anterior = messages[i - 1];
+                      const novoDia =
+                        !anterior ||
+                        new Date(anterior.createdAt).toDateString() !== new Date(msg.createdAt).toDateString();
+
                       // Marco do atendimento (entrou na fila, fulano assumiu,
-                      // encerrado): fica centralizado, sem virar fala de ninguém.
-                      if (msg.role === 'SYSTEM') {
-                        return (
-                          <div key={msg.id} className="flex justify-center">
-                            <span className="rounded-full bg-slate-200/70 px-3 py-1 text-[11px] font-bold text-slate-500">
+                      // encerrado): centralizado, sem virar fala de ninguém.
+                      const corpo =
+                        msg.role === "SYSTEM" ? (
+                          <div key={msg.id} className="flex justify-center py-1">
+                            <span className="rounded-full bg-border-soft px-3 py-1 text-[11px] font-medium text-faint">
                               {msg.content}
-                              <span className="ml-2 font-medium text-slate-400">
-                                {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </span>
                             </span>
                           </div>
-                        );
-                      }
-                      return (
-                        <div key={msg.id} className={`flex ${isOut ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[70%] p-4 rounded-2xl text-sm font-medium shadow-sm ${isOut ? 'bg-slate-900 text-white rounded-tr-none' : 'bg-white text-slate-700 rounded-tl-none border border-slate-100'}`}>
-                            {msg.messageType === 'AUDIO' && (msg.mediaUrl || (typeof msg.content === 'string' && msg.content.includes('/uploads/'))) ? (
-                              <div className="space-y-1.5">
-                                <AudioPlayer url={msg.mediaUrl || msg.content} isOut={isOut} />
-                                {/* Mostra a transcrição/legenda quando houver texto */}
-                                {msg.content && !String(msg.content).includes('/uploads/') && (
-                                  <p className="text-xs opacity-80">{msg.content}</p>
-                                )}
-                              </div>
-                            ) : msg.content}
-                            <p className={`text-xs font-bold uppercase mt-2 text-right ${isOut ? 'text-white/30' : 'text-slate-300'}`}>
-                              {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </p>
+                        ) : (
+                          <div key={msg.id} className={`flex ${isOut ? "justify-end" : "justify-start"}`}>
+                            <div
+                              className={`max-w-[76%] px-3.5 py-2.5 text-[13px] leading-relaxed ${
+                                isOut
+                                  ? "rounded-[14px_14px_4px_14px] bg-[#2563EB] text-white"
+                                  : "rounded-[14px_14px_14px_4px] border border-border-soft bg-background text-foreground"
+                              }`}
+                            >
+                              {msg.messageType === "AUDIO" && (msg.mediaUrl || (typeof msg.content === "string" && msg.content.includes("/uploads/"))) ? (
+                                <div className="space-y-1.5">
+                                  <AudioPlayer url={msg.mediaUrl || msg.content} isOut={isOut} />
+                                  {msg.content && !String(msg.content).includes("/uploads/") && (
+                                    <p className="text-[12px] opacity-80">{msg.content}</p>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="whitespace-pre-wrap">{msg.content}</span>
+                              )}
+                              <p className={`num mt-1 text-right text-[10px] ${isOut ? "text-white/50" : "text-faint"}`}>
+                                {new Date(msg.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                              </p>
+                            </div>
                           </div>
+                        );
+
+                      if (!novoDia) return corpo;
+                      return (
+                        <div key={`d-${msg.id}`} className="contents">
+                          <div className="flex justify-center py-2">
+                            <span className="rounded-full bg-background px-3 py-1 text-[11px] font-semibold text-faint shadow-card">
+                              {fmtDia(msg.createdAt)}
+                            </span>
+                          </div>
+                          {corpo}
                         </div>
                       );
                     })}
-                    
-                    {sdrTyping && (
-                      <div className="flex justify-start">
-                         <div className="max-w-[70%] p-5 rounded-2xl text-sm font-medium shadow-sm bg-slate-900 text-white rounded-tl-none">
-                            <span className="flex items-center gap-2">
-                               <Bot className="w-4 h-4" /> SDR está digitando
-                               <span className="flex space-x-1">
-                                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce"></span>
-                                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
-                                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
-                               </span>
-                            </span>
-                         </div>
-                      </div>
-                    )}
 
-                    {messages.length === 0 && !sdrTyping && (
-                      <div className="py-20 text-center text-slate-300 font-semibold uppercase text-xs ">
-                         Nenhuma mensagem trocada ainda
+                    {messages.length === 0 && (
+                      <div className="py-20 text-center text-[13px] font-medium text-faint">
+                        Nenhuma mensagem trocada ainda
                       </div>
                     )}
                     <div ref={messagesEndRef} />
-                 </div>
-              </ScrollArea>
+                  </div>
+                </ScrollArea>
+              </div>
 
-              {/* Input */}
-              <div className="p-6 px-8 bg-white border-t border-slate-50">
+              {/* Composer */}
+              <div className="shrink-0 border-t border-border-soft bg-background px-5 py-3">
                 {audioUrl ? (
-                  // Preview de áudio gravado
-                  <div className="flex items-center gap-3 bg-blue-50 p-3 pl-5 rounded-2xl border border-emerald-100">
+                  <div className="flex items-center gap-3 rounded-xl border border-border-soft bg-surface-2 p-2.5 pl-4">
                     <div className="flex-1">
-                      <p className="text-xs font-semibold text-emerald-700 mb-2">Prévia da Mensagem</p>
+                      <p className="mb-1.5 text-[11px] font-semibold text-faint">Prévia do áudio</p>
                       <AudioPlayer url={audioUrl} isOut={false} />
                     </div>
-                    <div className="flex items-center gap-2 border-l border-slate-300 pl-4 ml-2">
-                      <Button onClick={cancelAudio} variant="ghost" size="icon" className="text-slate-400 hover:text-red-500 rounded-xl"><MicOff className="w-4 h-4" /></Button>
-                      <Button onClick={sendAudio} className="h-10 px-5 bg-[#2563EB] hover:bg-[#1D4ED8] rounded-2xl text-xs font-semibold shadow-lg "><Send className="w-4 h-4 mr-1" /> Enviar</Button>
-                    </div>
+                    <Button onClick={cancelAudio} variant="ghost" size="icon" className="rounded-lg text-faint hover:text-red-500">
+                      <MicOff className="h-4 w-4" />
+                    </Button>
+                    <Button onClick={sendAudio} className="h-9 rounded-lg bg-[#2563EB] px-4 text-[12px] font-semibold hover:bg-[#1D4ED8]">
+                      <Send className="mr-1.5 h-3.5 w-3.5" /> Enviar
+                    </Button>
                   </div>
                 ) : isRecording ? (
-                  // Gravando
-                  <div className="flex items-center gap-3 bg-red-50 p-3 pl-5 rounded-2xl border border-red-100 animate-pulse">
-                    <div className="w-3 h-3 bg-red-500 rounded-full" />
-                    <p className="flex-1 text-sm font-semibold text-red-600 ">Gravando áudio...</p>
-                    <Button onClick={stopRecording} className="h-10 px-5 bg-red-500 hover:bg-red-600 rounded-2xl text-xs font-semibold text-white"><MicOff className="w-4 h-4 mr-1" /> Parar</Button>
-                    <Button onClick={cancelAudio} variant="ghost" size="icon" className="text-slate-400 rounded-xl">✕</Button>
+                  <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-2.5 pl-4">
+                    <span className="h-2.5 w-2.5 animate-pulseDot rounded-full bg-red-500" />
+                    <p className="flex-1 text-[13px] font-semibold text-red-600">Gravando áudio…</p>
+                    <Button onClick={stopRecording} className="h-9 rounded-lg bg-red-500 px-4 text-[12px] font-semibold text-white hover:bg-red-600">
+                      <MicOff className="mr-1.5 h-3.5 w-3.5" /> Parar
+                    </Button>
+                    <Button onClick={cancelAudio} variant="ghost" size="icon" className="rounded-lg text-faint">✕</Button>
                   </div>
                 ) : selectedChat.windowOpen === false ? (
                   // Fora da janela de 24h o WhatsApp recusa texto livre: em vez
                   // de deixar digitar e falhar, oferecemos o caminho válido.
-                  <div className="flex items-center gap-3 bg-amber-50 p-4 pl-5 rounded-2xl border border-amber-100">
-                    <Clock className="w-4 h-4 text-amber-600 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-amber-900">Janela de 24h encerrada</p>
+                  <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 pl-4">
+                    <Clock className="h-4 w-4 shrink-0 text-amber-600" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12px] font-semibold text-amber-900">Janela de 24h encerrada</p>
                       <p className="text-[11px] text-amber-700">
-                        O cliente precisa responder para reabrir o atendimento — ou envie um template aprovado.
+                        O cliente precisa responder para reabrir — ou envie um template aprovado.
                       </p>
                     </div>
                     <Button
                       onClick={() => setTemplateModal(true)}
-                      className="h-9 px-4 bg-amber-600 hover:bg-amber-700 rounded-2xl text-xs font-bold text-white shrink-0"
+                      className="h-9 shrink-0 rounded-lg bg-amber-600 px-3.5 text-[12px] font-semibold text-white hover:bg-amber-700"
                     >
-                      <FileText className="w-3.5 h-3.5 mr-1.5" /> Enviar template
+                      <FileText className="mr-1.5 h-3.5 w-3.5" /> Enviar template
                     </Button>
                   </div>
                 ) : (
-                  // Input normal
-                  <form onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-                    className="flex items-center gap-3 bg-slate-50 p-2 pl-5 rounded-2xl border border-slate-100 focus-within:ring-4 focus-within:ring-emerald-500/5 transition-all">
-                    <Input placeholder="Responda manualmente ou deixe a IA agir..."
-                      className="border-none bg-transparent shadow-none focus-visible:ring-0 font-bold text-xs"
-                      value={message} onChange={e => setMessage(e.target.value)} />
-                    <input
-                      type="file" id="chat-file" className="hidden"
-                      accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
-                      onChange={(e) => { const f = e.target.files?.[0]; if (f) sendFile(f); e.target.value = ""; }}
-                    />
-                    <button type="button" onClick={() => document.getElementById("chat-file")?.click()}
-                      title="Enviar imagem, vídeo ou documento"
-                      className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-[#2563EB] hover:bg-blue-50 transition-colors shrink-0">
-                      <Paperclip className="w-5 h-5" />
-                    </button>
-                    <button type="button" onClick={startRecording}
-                      className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-[#2563EB] hover:bg-blue-50 transition-colors shrink-0">
-                      <Mic className="w-5 h-5" />
-                    </button>
-                    <Button type="submit" className="h-10 w-10 bg-[#2563EB] hover:bg-[#1D4ED8] rounded-2xl shadow-lg shrink-0">
-                      <Send className="w-4 h-4 text-white" />
-                    </Button>
-                  </form>
+                  <>
+                    {/* Respostas rápidas: preenchem o campo, não enviam. */}
+                    <div className="mb-2 flex flex-wrap gap-1.5">
+                      {RESPOSTAS_RAPIDAS.map((r) => (
+                        <button
+                          key={r.rotulo}
+                          type="button"
+                          onClick={() => setMessage(r.texto)}
+                          className="rounded-full border border-border-soft bg-surface-2 px-3 py-1 text-[11px] font-semibold text-faint transition-colors hover:border-accent-text/30 hover:bg-accent-soft hover:text-accent-text"
+                        >
+                          {r.rotulo}
+                        </button>
+                      ))}
+                    </div>
+                    <form
+                      onSubmit={(e) => { e.preventDefault(); handleSend(); }}
+                      className="flex items-center gap-2 rounded-xl border border-border-soft bg-surface-2 p-1.5 pl-4 transition-shadow focus-within:border-accent-text/40"
+                    >
+                      <Input
+                        placeholder="Responda manualmente ou deixe a IA agir…"
+                        className="h-11 border-none bg-transparent text-[13px] shadow-none placeholder:text-faint focus-visible:ring-0"
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                      />
+                      <input
+                        type="file" id="chat-file" className="hidden"
+                        accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+                        onChange={(e) => { const f = e.target.files?.[0]; if (f) sendFile(f); e.target.value = ""; }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => document.getElementById("chat-file")?.click()}
+                        title="Enviar imagem, vídeo ou documento"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-faint transition-colors hover:bg-accent-soft hover:text-accent-text"
+                      >
+                        <Paperclip className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={startRecording}
+                        title="Gravar áudio"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-faint transition-colors hover:bg-accent-soft hover:text-accent-text"
+                      >
+                        <Mic className="h-4 w-4" />
+                      </button>
+                      <Button type="submit" className="h-9 w-9 shrink-0 rounded-lg bg-[#2563EB] p-0 hover:bg-[#1D4ED8]">
+                        <Send className="h-4 w-4 text-white" />
+                      </Button>
+                    </form>
+                  </>
                 )}
               </div>
-               </div>
-             </>
+            </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-slate-300 gap-4">
-               <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center">
-                  <MessageSquare className="w-10 h-10 text-slate-200" />
-               </div>
-               <p className="text-sm font-medium text-muted-foreground">Selecione uma conversa para começar</p>
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 bg-surface-2">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-background">
+                <MessageSquare className="h-8 w-8 text-border-soft" />
+              </div>
+              <p className="text-[13px] font-medium text-faint">Selecione uma conversa para começar</p>
             </div>
           )}
-        </Card>
+        </section>
 
-        {/* INFO DO PACIENTE (LATERAL DIREITA) */}
+        {/* ───────── FICHA DO CONTATO ───────── */}
         {selectedChat && (
-          <Card className="w-80 border border-border shadow-sm rounded-2xl bg-card overflow-hidden hidden xl:flex flex-col p-6">
-             <div className="space-y-6">
-                <div className="text-center space-y-3">
-                   <Avatar className="h-16 w-16 mx-auto">
-                      <AvatarFallback className="bg-primary/10 text-primary font-semibold text-lg">
-                        {selectedChat.name.substring(0,2).toUpperCase()}
-                      </AvatarFallback>
-                   </Avatar>
-                   <div>
-                      <p className="text-base font-semibold text-foreground">{selectedChat.name}</p>
-                      <p className="text-sm text-muted-foreground">Cliente</p>
-                   </div>
+          <aside className="hidden w-[300px] min-w-[240px] shrink-0 flex-col border-l border-border-soft bg-background xl:flex">
+            <ScrollArea className="flex-1">
+              <div className="space-y-5 p-5">
+                <div className="text-center">
+                  <Avatar className="mx-auto h-[60px] w-[60px]">
+                    <AvatarFallback className="bg-accent-soft text-[17px] font-semibold text-accent-text">
+                      {iniciais(selectedChat.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <p className="mt-3 text-[15px] font-semibold tracking-tight text-foreground">{selectedChat.name}</p>
+                  <p className="mt-0.5 text-[11.5px] text-faint">
+                    {desdeQuando(ficha?.firstContactAt)
+                      ? `Cliente desde ${desdeQuando(ficha?.firstContactAt)}`
+                      : "Contato recente"}
+                  </p>
+                  {ficha?.optedOut && (
+                    <p className="mt-2 inline-block rounded-md bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">
+                      Pediu para não receber mensagens
+                    </p>
+                  )}
                 </div>
 
-                <div className="space-y-4">
-                   <InfoRow icon={<Phone className="w-4 h-4" />} label="WhatsApp" value={selectedChat.phone} />
-                   <InfoRow icon={<Mail className="w-4 h-4" />} label="E-mail" value={selectedChat.email || "Não informado"} />
+                {ficha?.tags?.length > 0 && (
+                  <div className="flex flex-wrap justify-center gap-1.5">
+                    {ficha.tags.map((t: any) => (
+                      <span
+                        key={t.id}
+                        className="rounded-md px-2 py-0.5 text-[10.5px] font-semibold"
+                        style={{ backgroundColor: `${t.color || "#cbd5e1"}22`, color: t.color || "#64748b" }}
+                      >
+                        {t.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="space-y-3 border-t border-border-soft pt-4">
+                  <ParDado
+                    rotulo="Telefone"
+                    valor={selectedChat.phone || "—"}
+                    aoCopiar={selectedChat.phone ? () => copiar(selectedChat.phone, "Telefone copiado") : undefined}
+                  />
+                  <ParDado
+                    rotulo="E-mail"
+                    valor={ficha?.email || selectedChat.email || "Não informado"}
+                    aoCopiar={ficha?.email ? () => copiar(ficha.email, "E-mail copiado") : undefined}
+                  />
+                  <ParDado rotulo="Canal" valor={channelMeta(selectedChat.channel).label} />
+                  {ficha?.source && <ParDado rotulo="Origem" valor={ficha.source} />}
+                  <ParDado rotulo="Mensagens" valor={String(ficha?.messageCount ?? "—")} />
                 </div>
 
-                <Button variant="outline" className="w-full" onClick={() => navigate("/crm")}>Ver no funil de pacientes</Button>
-             </div>
-          </Card>
+                {/* Etapa do funil: mover daqui evita sair da conversa. */}
+                <div className="space-y-1.5 border-t border-border-soft pt-4">
+                  <label className="text-[10.5px] font-semibold uppercase tracking-wide text-faint">Etapa do funil</label>
+                  <select
+                    value={ficha?.stageId || ""}
+                    onChange={(e) => salvarFicha({ stageId: e.target.value || null })}
+                    disabled={!ficha}
+                    className="h-9 w-full rounded-lg border border-border-soft bg-background px-2.5 text-[12.5px] font-medium text-foreground disabled:opacity-50"
+                  >
+                    <option value="">Sem etapa</option>
+                    {etapas.map((e: any) => (
+                      <option key={e.id} value={e.id}>{e.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Próximo agendamento, com o link da reunião à mão. */}
+                <div className="space-y-2 border-t border-border-soft pt-4">
+                  <p className="text-[10.5px] font-semibold uppercase tracking-wide text-faint">Próximo agendamento</p>
+                  {ficha?.nextAppointment ? (
+                    <div className="rounded-xl border border-border-soft bg-surface-2 p-3">
+                      <p className="text-[12.5px] font-semibold text-foreground">{ficha.nextAppointment.title}</p>
+                      <p className="num mt-0.5 flex items-center gap-1.5 text-[11.5px] text-faint">
+                        <Calendar className="h-3 w-3" />
+                        {new Date(ficha.nextAppointment.date).toLocaleString("pt-BR", {
+                          day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
+                        })}
+                      </p>
+                      {ficha.nextAppointment.meetLink && (
+                        <div className="mt-2 flex gap-1.5">
+                          <a
+                            href={ficha.nextAppointment.meetLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#2563EB] px-2 py-1.5 text-[11px] font-semibold text-white hover:bg-[#1D4ED8]"
+                          >
+                            <Video className="h-3 w-3" /> Abrir reunião
+                          </a>
+                          <button
+                            onClick={() => copiar(ficha.nextAppointment.meetLink, "Link da reunião copiado")}
+                            title="Copiar link da reunião"
+                            className="rounded-lg border border-border-soft px-2 text-faint hover:text-accent-text"
+                          >
+                            <Copy className="h-3 w-3" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-[12px] text-faint">Nenhum agendamento futuro.</p>
+                  )}
+                </div>
+
+                {/* Anotações internas: o cliente nunca vê. */}
+                <div className="space-y-1.5 border-t border-border-soft pt-4">
+                  <label className="text-[10.5px] font-semibold uppercase tracking-wide text-faint">Anotações</label>
+                  <Textarea
+                    value={anotacao}
+                    onChange={(e) => setAnotacao(e.target.value)}
+                    placeholder="Só a equipe vê o que for escrito aqui."
+                    rows={4}
+                    disabled={!ficha}
+                    className="resize-none rounded-lg border-border-soft bg-surface-2 text-[12.5px] placeholder:text-faint"
+                  />
+                  {anotacao !== (ficha?.notes || "") && (
+                    <Button
+                      onClick={async () => {
+                        setSalvandoAnotacao(true);
+                        const ok = await salvarFicha({ notes: anotacao });
+                        setSalvandoAnotacao(false);
+                        if (ok) toast({ title: "Anotação salva" });
+                      }}
+                      disabled={salvandoAnotacao}
+                      className="h-8 w-full rounded-lg bg-[#2563EB] text-[12px] font-semibold hover:bg-[#1D4ED8]"
+                    >
+                      {salvandoAnotacao ? "Salvando…" : "Salvar anotação"}
+                    </Button>
+                  )}
+                </div>
+
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(`/crm?lead=${selectedChat.id}`)}
+                  className="h-9 w-full rounded-lg border-border-soft text-[12px] font-semibold"
+                >
+                  Ver no funil de clientes
+                </Button>
+              </div>
+            </ScrollArea>
+          </aside>
         )}
       </div>
 
@@ -1347,14 +1637,19 @@ export default function Conversations() {
   );
 }
 
-function InfoRow({ icon, label, value }: { icon: any, label: string, value: string }) {
+/** Par rótulo/valor da ficha, com botão de copiar quando faz sentido. */
+function ParDado({ rotulo, valor, aoCopiar }: { rotulo: string; valor: string; aoCopiar?: () => void }) {
   return (
-    <div className="space-y-1">
-       <p className="text-xs font-medium text-muted-foreground">{label}</p>
-       <div className="flex items-center gap-2 text-sm text-foreground">
-          <div className="text-primary">{icon}</div>
-          <span className="truncate">{value}</span>
-       </div>
+    <div className="flex items-baseline justify-between gap-3">
+      <span className="shrink-0 text-[11.5px] text-faint">{rotulo}</span>
+      <span className="flex min-w-0 items-center gap-1.5">
+        <span className="truncate text-[12.5px] font-medium text-foreground" title={valor}>{valor}</span>
+        {aoCopiar && (
+          <button onClick={aoCopiar} title={`Copiar ${rotulo.toLowerCase()}`} className="shrink-0 text-faint hover:text-accent-text">
+            <Copy className="h-3 w-3" />
+          </button>
+        )}
+      </span>
     </div>
   );
 }
