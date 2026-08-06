@@ -75,34 +75,54 @@ interface NodeTypeDef {
   id: string; label: string; icon: JSX.Element; color: string; category: string;
 }
 
-const NODE_TYPES_DEF: NodeTypeDef[] = [
-  { id: "SEND_MSG", label: "Enviar Texto", icon: <MessageCircle className="w-4 h-4" />, color: "#10b981", category: "action" },
-  { id: "AI_RESPONSE", label: "Chamar IA", icon: <Bot className="w-4 h-4" />, color: "#2563EB", category: "action" },
-  { id: "COLLECT_INPUT", label: "Coletar Resposta", icon: <Inbox className="w-4 h-4" />, color: "#06b6d4", category: "action" },
-  { id: "SEND_BUTTONS", label: "Enviar Botões", icon: <MousePointerClick className="w-4 h-4" />, color: "#8b5cf6", category: "action" },
-  { id: "SEND_LIST", label: "Enviar Menu (lista)", icon: <List className="w-4 h-4" />, color: "#7c3aed", category: "action" },
-  { id: "SEND_TEMPLATE", label: "Enviar Template", icon: <FileText className="w-4 h-4" />, color: "#0ea5e9", category: "action" },
-  { id: "SEND_MEDIA", label: "Enviar Mídia", icon: <Image className="w-4 h-4" />, color: "#059669", category: "action" },
-  { id: "WAIT", label: "Aguardar Tempo", icon: <Timer className="w-4 h-4" />, color: "#3b82f6", category: "action" },
-  { id: "ADD_TAG", label: "Adicionar Tag", icon: <Tag className="w-4 h-4" />, color: "#f59e0b", category: "action" },
-  { id: "MOVE_STAGE", label: "Mover Etapa", icon: <MoveRight className="w-4 h-4" />, color: "#6366f1", category: "action" },
-  { id: "TRANSFER_HUMAN", label: "Transferir Humano", icon: <Users className="w-4 h-4" />, color: "#ef4444", category: "action" },
-  { id: "SCHEDULE_APPOINTMENT", label: "Agendar Reunião", icon: <Calendar className="w-4 h-4" />, color: "#14b8a6", category: "action" },
-  { id: "UPDATE_LEAD", label: "Atualizar Lead", icon: <FileEdit className="w-4 h-4" />, color: "#0284c7", category: "action" },
-  { id: "HTTP_REQUEST", label: "Webhook / API", icon: <Globe className="w-4 h-4" />, color: "#334155", category: "action" },
-  // Fase 3 — IA Avançada
-  { id: "AI_TOOLS", label: "IA + Ferramentas", icon: <Wrench className="w-4 h-4" />, color: "#9333ea", category: "ai" },
-  { id: "EXTRACT_DATA", label: "Extrair Dados (NER)", icon: <ScanText className="w-4 h-4" />, color: "#0891b2", category: "ai" },
-  { id: "CLASSIFY_INTENT", label: "Classificar Intent", icon: <GitBranch className="w-4 h-4" />, color: "#c026d3", category: "ai" },
-  { id: "AB_TEST", label: "Teste A/B", icon: <Shuffle className="w-4 h-4" />, color: "#ea580c", category: "ai" },
-  { id: "AI_SCORE", label: "Score IA", icon: <BarChart3 className="w-4 h-4" />, color: "#16a34a", category: "ai" },
-  // Fase 4 — Escalabilidade
-  { id: "SUBFLOW", label: "Subfluxo", icon: <Workflow className="w-4 h-4" />, color: "#2563EB", category: "logic" },
-  { id: "SEND_MEDIA", label: "Enviar Mídia", icon: <Image className="w-4 h-4" />, color: "#059669", category: "action" },
-  // Lógica
-  { id: "CONDITION", label: "Condição IF/ELSE", icon: <Split className="w-4 h-4" />, color: "#f97316", category: "logic" },
-  { id: "END", label: "Fim do Fluxo", icon: <StopCircle className="w-4 h-4" />, color: "#94a3b8", category: "logic" },
+/**
+ * Categorias do handoff, cada uma com a própria cor: a cor do bloco no
+ * canvas é a mesma da seção na paleta, então dá para ler o desenho de longe
+ * sem abrir nada.
+ *
+ * Antes cada bloco tinha uma cor própria — vinte cores diferentes num
+ * fluxo de dez nós, sem nenhuma delas significar coisa alguma.
+ */
+export const CATEGORIAS = [
+  { id: "envio", label: "Envio", cor: "#2563EB", hint: "O que sai para o contato" },
+  { id: "ia", label: "Inteligência", cor: "#7C3AED", hint: "Onde a IA entra" },
+  { id: "fluxo", label: "Fluxo", cor: "#F59E0B", hint: "Caminho e espera" },
+  { id: "acao", label: "Ação", cor: "#22A06B", hint: "O que muda no sistema" },
 ];
+const COR = Object.fromEntries(CATEGORIAS.map((c) => [c.id, c.cor]));
+
+const NODE_TYPES_DEF: NodeTypeDef[] = [
+  // ── Envio ──
+  { id: "SEND_MSG", label: "Enviar texto", icon: <MessageCircle className="w-4 h-4" />, color: COR.envio, category: "envio" },
+  { id: "SEND_BUTTONS", label: "Enviar botões", icon: <MousePointerClick className="w-4 h-4" />, color: COR.envio, category: "envio" },
+  { id: "SEND_LIST", label: "Enviar menu", icon: <List className="w-4 h-4" />, color: COR.envio, category: "envio" },
+  { id: "SEND_TEMPLATE", label: "Enviar template", icon: <FileText className="w-4 h-4" />, color: COR.envio, category: "envio" },
+  { id: "SEND_MEDIA", label: "Enviar mídia", icon: <Image className="w-4 h-4" />, color: COR.envio, category: "envio" },
+
+  // ── Inteligência ──
+  { id: "AI_RESPONSE", label: "Chamar IA", icon: <Bot className="w-4 h-4" />, color: COR.ia, category: "ia" },
+  { id: "AI_TOOLS", label: "IA + ferramentas", icon: <Wrench className="w-4 h-4" />, color: COR.ia, category: "ia" },
+  { id: "EXTRACT_DATA", label: "Extrair dados", icon: <ScanText className="w-4 h-4" />, color: COR.ia, category: "ia" },
+  { id: "CLASSIFY_INTENT", label: "Classificar intenção", icon: <GitBranch className="w-4 h-4" />, color: COR.ia, category: "ia" },
+  { id: "AI_SCORE", label: "Score do lead", icon: <BarChart3 className="w-4 h-4" />, color: COR.ia, category: "ia" },
+
+  // ── Fluxo ──
+  { id: "COLLECT_INPUT", label: "Coletar resposta", icon: <Inbox className="w-4 h-4" />, color: COR.fluxo, category: "fluxo" },
+  { id: "CONDITION", label: "Condição", icon: <Split className="w-4 h-4" />, color: COR.fluxo, category: "fluxo" },
+  { id: "WAIT", label: "Aguardar", icon: <Timer className="w-4 h-4" />, color: COR.fluxo, category: "fluxo" },
+  { id: "AB_TEST", label: "Teste A/B", icon: <Shuffle className="w-4 h-4" />, color: COR.fluxo, category: "fluxo" },
+  { id: "SUBFLOW", label: "Subfluxo", icon: <Workflow className="w-4 h-4" />, color: COR.fluxo, category: "fluxo" },
+  { id: "END", label: "Fim do fluxo", icon: <StopCircle className="w-4 h-4" />, color: COR.fluxo, category: "fluxo" },
+
+  // ── Ação ──
+  { id: "ADD_TAG", label: "Adicionar tag", icon: <Tag className="w-4 h-4" />, color: COR.acao, category: "acao" },
+  { id: "MOVE_STAGE", label: "Mover etapa", icon: <MoveRight className="w-4 h-4" />, color: COR.acao, category: "acao" },
+  { id: "TRANSFER_HUMAN", label: "Transferir para humano", icon: <Users className="w-4 h-4" />, color: COR.acao, category: "acao" },
+  { id: "SCHEDULE_APPOINTMENT", label: "Agendar", icon: <Calendar className="w-4 h-4" />, color: COR.acao, category: "acao" },
+  { id: "UPDATE_LEAD", label: "Atualizar contato", icon: <FileEdit className="w-4 h-4" />, color: COR.acao, category: "acao" },
+  { id: "HTTP_REQUEST", label: "Webhook / API", icon: <Globe className="w-4 h-4" />, color: COR.acao, category: "acao" },
+];
+
 
 /**
  * O que cada bloco faz e o que ele deixa disponível para os próximos.
@@ -336,61 +356,84 @@ function AutomationNode({ data, selected }: any) {
     <div className={`relative transition-all duration-200 ${selected ? 'scale-105' : ''}`}>
       <Handle type="target" position={Position.Top} className="!w-3 !h-3 !bg-slate-300 !border-2 !border-white" />
 
-      <div className={`min-w-[220px] max-w-[280px] rounded-2xl bg-white shadow-sm border-2 transition-all ${selected ? 'border-emerald-400 ' : 'border-slate-100 hover:border-slate-300'}`}>
-        <div className="flex items-center gap-3 p-4">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg shrink-0" style={{ backgroundColor: typeDef?.color || "#64748b" }}>
-            {typeDef?.icon || <Zap className="w-4 h-4" />}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-slate-300 ">{nodeType}</p>
-            <p className="text-xs font-semibold text-slate-900 truncate">{data.label || typeDef?.label || "Bloco"}</p>
-          </div>
+      {/* 180px com header colorido pelo tipo: a cor é a da categoria na
+          paleta, e o rótulo em caixa alta diz o que o bloco é antes de
+          qualquer leitura do corpo. */}
+      <div
+        className={`w-[180px] overflow-hidden rounded-xl bg-card shadow-card transition-all ${
+          selected ? "ring-2 ring-[#2563EB] ring-offset-2" : "border border-border-soft"
+        }`}
+      >
+        <div
+          className="flex items-center gap-1.5 px-2.5 py-1.5 text-white"
+          style={{ backgroundColor: typeDef?.color || "#64748b" }}
+        >
+          <span className="shrink-0 [&>svg]:h-3 [&>svg]:w-3">{typeDef?.icon || <Zap className="h-3 w-3" />}</span>
+          <span className="linha-unica-elipse text-[11.5px] font-bold uppercase tracking-wide">
+            {typeDef?.label || nodeType}
+          </span>
         </div>
 
-        {config.message && (
-          <div className="px-4 pb-3">
-            <p className="text-xs text-slate-400 bg-slate-50 rounded-lg p-2 truncate font-medium">
-              💬 {String(config.message).substring(0, 50)}...
-            </p>
-          </div>
-        )}
+        <div className="p-2.5">
+          <p className="linha-unica-elipse text-[12.5px] font-semibold text-foreground">
+            {data.label || typeDef?.label || "Bloco"}
+          </p>
+          {(() => {
+            // Descrição: o que o bloco faz de fato, com o conteúdo já
+            // configurado quando existe. Um nó sem isso é uma caixa muda.
+            const resumo =
+              config.message || config.prompt || config.question || config.url ||
+              config.tag || config.stageName || NODE_HELP[nodeType]?.o_que;
+            return resumo ? (
+              <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-muted-foreground">
+                {String(resumo)}
+              </p>
+            ) : null;
+          })()}
+        </div>
 
-        {config.prompt && !['SEND_MSG', 'AB_TEST'].includes(nodeType) && (
-          <div className="px-4 pb-3">
-            <p className="text-xs text-slate-500 bg-blue-50 rounded-lg p-2 truncate font-medium">
-              🤖 {String(config.prompt).substring(0, 50)}...
-            </p>
-          </div>
-        )}
-
+        {/* Rótulos das saídas: o nó tem mais de um ponto embaixo, e sem isso
+            não dá para saber qual é qual antes de arrastar a ligação. */}
         {isCondition && (
-          <div className="px-4 pb-3 grid grid-cols-2 gap-2">
-            <div className="text-center p-1.5 rounded-lg text-xs font-semibold uppercase bg-blue-50 text-[#2563EB]">✅ SIM</div>
-            <div className="text-center p-1.5 rounded-lg text-xs font-semibold uppercase bg-red-50 text-red-500">❌ NÃO</div>
+          <div className="grid grid-cols-2 gap-1 border-t border-border-soft px-2.5 py-1.5">
+            <span className="rounded bg-emerald-50 py-0.5 text-center text-[10px] font-bold uppercase text-emerald-700">Sim</span>
+            <span className="rounded bg-rose-50 py-0.5 text-center text-[10px] font-bold uppercase text-rose-600">Não</span>
           </div>
         )}
 
         {isClassifyIntent && (
-          <div className="px-4 pb-3">
-            <div className="flex flex-wrap gap-1">
-              {(config.intents || [{id:'comprar'},{id:'duvida'},{id:'outro'}]).slice(0, 4).map((i: any) => (
-                <span key={i?.id || Math.random()} className="text-xs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full font-semibold uppercase">{i?.id || "OUTRO"}</span>
-              ))}
-            </div>
+          <div className="flex flex-wrap gap-1 border-t border-border-soft px-2.5 py-1.5">
+            {(config.intents || [{ id: "comprar" }, { id: "duvida" }, { id: "outro" }]).slice(0, 4).map((i: any, k: number) => (
+              <span key={i?.id || k} className="rounded bg-accent-soft px-1.5 py-0.5 text-[10px] font-semibold text-accent-text">
+                {i?.id || "outro"}
+              </span>
+            ))}
           </div>
         )}
 
         {isAIScore && (
-          <div className="px-4 pb-3 grid grid-cols-3 gap-1">
-            <div className="text-center p-1 rounded-lg text-xs font-semibold uppercase bg-red-50 text-red-500">🥶 Frio</div>
-            <div className="text-center p-1 rounded-lg text-xs font-semibold uppercase bg-amber-50 text-amber-600">☀️ Morno</div>
-            <div className="text-center p-1 rounded-lg text-xs font-semibold uppercase bg-blue-50 text-[#2563EB]">🔥 Quente</div>
+          <div className="grid grid-cols-3 gap-1 border-t border-border-soft px-2.5 py-1.5">
+            <span className="rounded bg-sky-50 py-0.5 text-center text-[10px] font-bold uppercase text-sky-700">Frio</span>
+            <span className="rounded bg-amber-50 py-0.5 text-center text-[10px] font-bold uppercase text-amber-700">Morno</span>
+            <span className="rounded bg-rose-50 py-0.5 text-center text-[10px] font-bold uppercase text-rose-600">Quente</span>
           </div>
         )}
 
-        {isABTest && config.variants && (
-          <div className="px-4 pb-3">
-            <p className="text-xs text-orange-500 font-bold">{Array.isArray(config.variants) ? config.variants.length : 0} variantes</p>
+        {isABTest && Array.isArray(config.variants) && config.variants.length > 0 && (
+          <div className="border-t border-border-soft px-2.5 py-1.5">
+            <span className="num text-[10.5px] font-semibold text-muted-foreground">
+              {config.variants.length} variantes
+            </span>
+          </div>
+        )}
+
+        {isInteractive && opcoes.length > 0 && (
+          <div className="flex flex-wrap gap-1 border-t border-border-soft px-2.5 py-1.5">
+            {opcoes.slice(0, 4).map((o: any, k: number) => (
+              <span key={o?.id || k} className="linha-unica-elipse max-w-full rounded bg-surface-2 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                {o?.title || o?.label || `Opção ${k + 1}`}
+              </span>
+            ))}
           </div>
         )}
       </div>
@@ -490,9 +533,10 @@ export default function Automations() {
   }), []);
 
   const defaultEdgeOptions = useMemo(() => ({
-    animated: true,
-    style: { stroke: "#94a3b8", strokeWidth: 2 },
-    markerEnd: { type: MarkerType.ArrowClosed, color: "#94a3b8" },
+    animated: false,
+    type: "smoothstep",
+    style: { stroke: "#94A3B8", strokeWidth: 1.6 },
+    markerEnd: { type: MarkerType.ArrowClosed, color: "#94A3B8", width: 16, height: 16 },
   }), []);
 
   // -------- FETCH --------
@@ -699,7 +743,7 @@ export default function Automations() {
   };
 
   const onConnect = useCallback((connection: Connection) => {
-    setEdges(eds => addEdge({ ...connection, animated: true, markerEnd: { type: MarkerType.ArrowClosed, color: "#94a3b8" } }, eds));
+    setEdges(eds => addEdge({ ...connection, animated: false, type: "smoothstep", style: { stroke: "#94A3B8", strokeWidth: 1.6 }, markerEnd: { type: MarkerType.ArrowClosed, color: "#94A3B8", width: 16, height: 16 } }, eds));
   }, [setEdges]);
 
   // Ligação feita não era mais editável: só dava para apagar e refazer.
@@ -961,28 +1005,32 @@ export default function Automations() {
 
   const edgesRender = useMemo(
     () =>
-      edges.map((e) =>
-        e.id === selectedEdgeId
-          ? { ...e, style: { ...(e.style || {}), stroke: "#2563EB", strokeWidth: 3 }, animated: true }
-          : e
-      ),
+      edges.map((e) => {
+        if (e.id === selectedEdgeId) {
+          return { ...e, style: { ...(e.style || {}), stroke: "#2563EB", strokeWidth: 3 }, animated: true };
+        }
+        // O caminho "falso" do condicional vai tracejado: num fluxo com
+        // vários ramos, é a diferença entre ler o desenho e ter que clicar
+        // em cada ligação para descobrir qual é qual.
+        const ehFalso = String(e.sourceHandle || "").toLowerCase() === "false";
+        return ehFalso
+          ? { ...e, style: { ...(e.style || {}), stroke: "#94A3B8", strokeWidth: 1.6, strokeDasharray: "4 4" } }
+          : e;
+      }),
     [edges, selectedEdgeId]
   );
 
   // =================== RENDER ===================
   return (
     <DashboardLayout>
-      <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-8 p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
+      <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 px-4 pb-10 pt-5 sm:px-6">
 
         {/* HEADER */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-1">
-            <h1 className="text-3xl font-semibold text-slate-900 tracking-tight uppercase flex items-center gap-3">
-              <Zap className="w-8 h-8 text-[#2563EB]" />
-              Hub de <span className="text-[#2563EB]">Automações</span>
-            </h1>
-            <p className="text-slate-400 font-bold text-xs">
-              Builder Visual Drag & Drop — Powered by ReactFlow
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-[26px] font-bold tracking-[-0.03em] text-foreground">Fluxos</h1>
+            <p className="mt-0.5 max-w-lg text-[13.5px] text-muted-foreground">
+              Conversas que seguem um roteiro: o agente executa os blocos na ordem que você montar.
             </p>
           </div>
 
@@ -1286,60 +1334,59 @@ export default function Automations() {
 
           <div className="flex-1 flex overflow-hidden">
             {/* SIDEBAR */}
-            <div className="w-56 bg-white border-r border-slate-100 p-3 flex flex-col gap-3 overflow-y-auto shrink-0">
-              <h4 className="text-xs font-semibold text-slate-300 px-2">Ações — arraste ou clique</h4>
-              {NODE_TYPES_DEF.filter(t => t.category === "action").map(st => (
-                <div
-                  key={st.id}
-                  draggable
-                  onDragStart={e => onDragStart(e, st.id)}
-                  onClick={() => addNodeClick(st.id)}
-                  className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-slate-50 active:scale-95 transition-all cursor-grab active:cursor-grabbing border border-transparent hover:border-slate-100"
-                >
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-md shrink-0" style={{ backgroundColor: st.color }}>{st.icon}</div>
-                  <div className="flex flex-1 items-center justify-between">
-                     <span className="text-xs font-semibold uppercase text-slate-600 tracking-tight">{st.label}</span>
-                     {(st.id === "HTTP_REQUEST" && !tenantLimits?.webhookEnabled) && <Lock className="w-3 h-3 text-red-400" />}
+            <div className="flex w-[236px] shrink-0 flex-col gap-2 overflow-y-auto border-r border-border bg-card p-3">
+              {CATEGORIAS.map((cat) => {
+                const blocos = NODE_TYPES_DEF.filter((t) => t.category === cat.id);
+                if (blocos.length === 0) return null;
+                return (
+                  <div key={cat.id} className="mb-1">
+                    <div className="flex items-center gap-1.5 px-1 pb-1.5">
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: cat.cor }} />
+                      <h4 className="text-[11px] font-semibold uppercase tracking-wide text-faint">{cat.label}</h4>
+                    </div>
+                    <div className="space-y-1">
+                      {blocos.map((st) => {
+                        const travado =
+                          (st.id === "HTTP_REQUEST" && !tenantLimits?.webhookEnabled) ||
+                          (cat.id === "ia" && !tenantLimits?.aiEnabled);
+                        return (
+                          <div
+                            key={st.id}
+                            draggable
+                            onDragStart={(e) => onDragStart(e, st.id)}
+                            onClick={() => addNodeClick(st.id)}
+                            className="flex cursor-grab items-center gap-2.5 rounded-lg border border-transparent p-2 transition-colors hover:border-border-soft hover:bg-surface-2 active:cursor-grabbing"
+                          >
+                            <span
+                              className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-white"
+                              style={{ backgroundColor: st.color }}
+                            >
+                              {st.icon}
+                            </span>
+                            <span className="linha-unica-elipse flex-1 text-[12.5px] font-medium text-foreground">{st.label}</span>
+                            {travado && <Lock className="h-3 w-3 shrink-0 text-amber-500" />}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
-              <h4 className="text-xs font-semibold text-slate-500 px-2 mt-2">⚡ IA Avançada</h4>
-              {NODE_TYPES_DEF.filter(t => t.category === "ai").map(st => (
-                <div
-                  key={st.id}
-                  draggable
-                  onDragStart={e => onDragStart(e, st.id)}
-                  onClick={() => addNodeClick(st.id)}
-                  className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-blue-50 active:scale-95 transition-all cursor-grab active:cursor-grabbing border border-transparent hover:border-slate-200"
-                >
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-md shrink-0" style={{ backgroundColor: st.color }}>{st.icon}</div>
-                  <div className="flex flex-1 items-center justify-between">
-                    <span className="text-xs font-semibold uppercase text-slate-600 tracking-tight">{st.label}</span>
-                    {!tenantLimits.aiEnabled && <Lock className="w-3 h-3 text-red-400" />}
-                  </div>
-                </div>
-              ))}
-              <h4 className="text-xs font-semibold text-slate-300 px-2 mt-2">Lógica</h4>
-              {NODE_TYPES_DEF.filter(t => t.category === "logic").map(st => (
-                <div
-                  key={st.id}
-                  draggable
-                  onDragStart={e => onDragStart(e, st.id)}
-                  onClick={() => addNodeClick(st.id)}
-                  className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-slate-50 active:scale-95 transition-all cursor-grab active:cursor-grabbing border border-transparent hover:border-slate-100"
-                >
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-md shrink-0" style={{ backgroundColor: st.color }}>{st.icon}</div>
-                  <span className="text-xs font-semibold uppercase text-slate-600 tracking-tight">{st.label}</span>
-                </div>
-              ))}
+                );
+              })}
 
-              <div className="mt-auto p-3 bg-blue-50 border border-slate-200 rounded-xl">
-                <p className="text-xs font-semibold text-blue-700 mb-2">Variáveis</p>
+
+              <div className="mt-auto rounded-xl border border-border-soft bg-surface-2 p-3">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-faint">
+                  Variáveis — clique para copiar
+                </p>
                 <div className="flex flex-wrap gap-1">
-                  {VARIABLE_HINTS.slice(0, 10).map(v => (
-                    <span key={v} className="text-xs bg-slate-200 text-blue-600 px-1.5 py-0.5 rounded-full font-bold cursor-pointer hover:bg-slate-300" onClick={() => navigator.clipboard.writeText(v)}>
+                  {VARIABLE_HINTS.slice(0, 10).map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => navigator.clipboard.writeText(v)}
+                      className="rounded-md bg-card px-1.5 py-0.5 font-mono text-[10.5px] text-accent-text hover:bg-accent-soft"
+                    >
                       {v}
-                    </span>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -1368,7 +1415,7 @@ export default function Automations() {
                 className="react-flow"
                 deleteKeyCode={["Backspace", "Delete"]}
               >
-                <Background color="#e2e8f0" gap={20} size={1} />
+                <Background color="#CBD5E1" gap={22} size={1.4} />
                 <Controls className="!rounded-xl !shadow-sm !border-none" />
                 <MiniMap
                   nodeColor={(node) => {
