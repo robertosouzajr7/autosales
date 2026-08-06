@@ -20,11 +20,22 @@ export async function extractText(buffer, filename = "", mimetype = "") {
   const ext = name.includes(".") ? name.split(".").pop() : "";
 
   // PDF
+  //
+  // O pdf-parse 2.x deixou de exportar uma função: agora é a classe PDFParse,
+  // e a chamada antiga (`pdfParse(buffer)`) estourava com "pdfParse is not a
+  // function" em todo upload de PDF. O `destroy()` importa — sem ele o worker
+  // do pdf.js fica de pé e o processo vaza memória a cada documento.
   if (ext === "pdf" || mimetype.includes("pdf")) {
-    const mod = await import("pdf-parse");
-    const pdfParse = mod.default || mod;
-    const data = await pdfParse(buffer);
-    return clean(data.text);
+    const { PDFParse } = await import("pdf-parse");
+    const leitor = new PDFParse({ data: buffer });
+    try {
+      const { text } = await leitor.getText();
+      // O rodapé "-- N of M --" é separador de página da biblioteca, não
+      // conteúdo do documento: iria para o prompt do agente como se fosse.
+      return clean(String(text || "").replace(/^-{2}\s*\d+\s+of\s+\d+\s*-{2}$/gm, ""));
+    } finally {
+      await leitor.destroy().catch(() => {});
+    }
   }
 
   // DOCX
@@ -36,7 +47,8 @@ export async function extractText(buffer, filename = "", mimetype = "") {
 
   // Planilhas binárias (XLSX/XLS) → texto tabular legível
   if (["xlsx", "xls"].includes(ext) || mimetype.includes("spreadsheet") || mimetype.includes("excel")) {
-    const XLSX = (await import("xlsx")).default || (await import("xlsx"));
+    const mod = await import("xlsx");
+    const XLSX = mod.default || mod;
     const wb = XLSX.read(buffer, { type: "buffer", codepage: 65001 });
     const parts = [];
     for (const sheetName of wb.SheetNames) {
@@ -51,7 +63,13 @@ export async function extractText(buffer, filename = "", mimetype = "") {
     return clean(buffer.toString("utf8"));
   }
 
-  throw new Error("Formato não suportado. Envie PDF, DOCX, XLSX, CSV ou TXT.");
+  // .doc (Word 97-2003) é um formato binário diferente do .docx e o mammoth
+  // não lê — dizer só "formato não suportado" mandaria a pessoa tentar de novo.
+  if (ext === "doc") {
+    throw new Error("O formato .doc (Word antigo) não é lido. Salve como .docx ou PDF e envie de novo.");
+  }
+
+  throw new Error(`Não sei ler arquivos ${ext ? `.${ext}` : "deste tipo"}. Envie PDF, DOCX, XLSX, CSV ou TXT.`);
 }
 
 export default { extractText };

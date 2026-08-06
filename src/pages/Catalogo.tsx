@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Package, Plus, Pencil, Trash2, Loader2, ImageIcon, Music, Video, Upload, X, Search,
 } from "lucide-react";
+import { enviarArquivo } from "@/lib/enviarArquivo";
 
 function authHeaders() {
   const token = localStorage.getItem("token");
@@ -62,23 +63,15 @@ export default function Catalogo() {
   const uploadFile = async (file: File, field: "imageUrl" | "audioUrl" | "videoUrl") => {
     setUploading(field);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const token = localStorage.getItem("token");
-      const res = await fetch("/api/products/upload", {
-        method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        body: fd,
-      });
-      const d = await res.json();
-      if (res.ok) {
-        setForm((f: any) => ({ ...f, [field]: d.url }));
+      const envio = await enviarArquivo<{ url: string }>("/api/products/upload", file);
+      if (envio.ok) {
+        setForm((f: any) => ({ ...f, [field]: envio.dados.url }));
         toast({ title: "Mídia enviada" });
       } else {
-        toast({ title: "Erro no upload", description: d.error, variant: "destructive" });
+        toast({ title: "Erro no upload", description: envio.erro, variant: "destructive" });
       }
-    } catch {
-      toast({ title: "Erro no upload", variant: "destructive" });
+    } catch (e: any) {
+      toast({ title: "Erro no upload", description: e.message, variant: "destructive" });
     }
     setUploading(null);
   };

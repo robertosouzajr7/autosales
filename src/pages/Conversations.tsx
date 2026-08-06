@@ -110,6 +110,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/components/ui/use-toast";
 import { assinarEventos } from "@/lib/eventosDoPainel";
+import { enviarArquivo } from "@/lib/enviarArquivo";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -506,11 +507,10 @@ export default function Conversations() {
     if (!selectedChat) return;
     const token = localStorage.getItem("token");
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const up = await fetch("/api/messages/upload", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: fd });
-      const upData = await up.json();
-      if (!up.ok || !upData.url) throw new Error(upData.error || "Falha no upload");
+      const envio = await enviarArquivo<{ url: string; kind: string }>("/api/messages/upload", file);
+      if (!envio.ok) throw new Error(envio.erro);
+      const upData = envio.dados;
+      if (!upData?.url) throw new Error("O servidor não devolveu o endereço do arquivo.");
 
       const res = await fetch("/api/messages", {
         method: "POST",
@@ -629,13 +629,11 @@ export default function Conversations() {
     try {
       // Sobe o arquivo e deixa o servidor converter para OGG/Opus. Antes isso
       // ia como data-URL base64 no corpo JSON e sem token: nunca chegava.
-      const fd = new FormData();
-      fd.append("file", audioBlob, "gravacao.webm");
-      const up = await fetch("/api/messages/upload", {
-        method: "POST", headers: { Authorization: `Bearer ${token}` }, body: fd,
-      });
-      const upData = await up.json().catch(() => ({}));
-      if (!up.ok || !upData.url) throw new Error(upData.error || "Falha ao subir o áudio");
+      const gravacao = new File([audioBlob], "gravacao.webm", { type: audioBlob.type || "audio/webm" });
+      const envio = await enviarArquivo<{ url: string }>("/api/messages/upload", gravacao);
+      if (!envio.ok) throw new Error(envio.erro);
+      const upData = envio.dados;
+      if (!upData?.url) throw new Error("O servidor não devolveu o endereço do áudio.");
 
       const res = await fetch("/api/messages", {
         method: "POST",

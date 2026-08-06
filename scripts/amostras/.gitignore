@@ -1,0 +1,6 @@
+# Amostras são geradas por gerar-amostras.py — não versionamos binário de teste.
+*.pdf
+*.docx
+*.txt
+*.csv
+*.png

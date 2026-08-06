@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Search, Upload, Check, Users, AlertTriangle, RefreshCw, X, ChevronLeft, ChevronRight,
 } from "lucide-react";
+import { enviarArquivo } from "@/lib/enviarArquivo";
 
 interface Props {
   /** Ids selecionados (controlado pelo pai). */
@@ -112,11 +113,9 @@ export function AudiencePicker({ value, onChange }: Props) {
   const importarCsv = async (file: File) => {
     setImportando(true);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/contacts/import-csv", { method: "POST", headers: auth(), body: fd });
-      const d = await res.json();
-      if (!res.ok) throw new Error(d.error);
+      const envio = await enviarArquivo<any>("/api/contacts/import-csv", file);
+      if (!envio.ok) throw new Error(envio.erro);
+      const d = envio.dados;
 
       const partes = [`${d.criados} novo(s)`, `${d.atualizados} atualizado(s)`];
       if (d.duplicadosNoArquivo) partes.push(`${d.duplicadosNoArquivo} repetido(s) no arquivo`);

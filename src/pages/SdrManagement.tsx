@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { enviarArquivo } from "@/lib/enviarArquivo";
 
 /**
  * Agente de IA — três painéis: lista de agentes, edição e simulador.
@@ -166,12 +167,10 @@ export default function SdrManagement() {
     if (!file) return;
     if (!selecionado) return toast({ title: "Salve o agente antes de treinar", variant: "destructive" });
     setUploading(true);
-    const fd = new FormData();
-    fd.append("file", file);
     try {
-      const res = await fetch(`/api/sdrs/${selecionado.id}/training`, { method: "POST", body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const envio = await enviarArquivo<any>(`/api/sdrs/${selecionado.id}/training`, file);
+      if (!envio.ok) throw new Error(envio.erro);
+      const data = envio.dados;
       toast({
         title: "Documento aprendido",
         description: `${(data.extractedChars || 0).toLocaleString("pt-BR")} caracteres entraram na base.`,
