@@ -1,20 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { PageContainer } from "@/components/shared/PageContainer";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Clock, Bell, UserX, Save, RefreshCw, ShieldCheck, CalendarClock, AlertTriangle,
-  Handshake, X, Plus, Sliders, Video, CheckCircle2, GitBranch, Activity, Link2,
+  Handshake, X, Plus, Sliders, Video, CheckCircle2, GitBranch, Activity,
 } from "lucide-react";
 
 /**
@@ -125,67 +120,6 @@ function TagInput({ value, onChange, placeholder }: { value: string; onChange: (
   );
 }
 
-function ConfigCard({
-  icon: Icon, iconColor, iconBg, title, description, enabled, onToggle, children,
-}: {
-  icon: React.ElementType; iconColor: string; iconBg: string; title: string; description: string;
-  enabled?: boolean; onToggle?: (v: boolean) => void; children?: React.ReactNode;
-}) {
-  return (
-    <Card className="border border-slate-200 shadow-sm">
-      <CardHeader className="pb-3">
-        <div className="flex items-start gap-3">
-          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconBg}`}>
-            <Icon className={`h-5 w-5 ${iconColor}`} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <CardTitle className="text-base font-semibold text-slate-800">{title}</CardTitle>
-            <CardDescription className="text-xs mt-0.5">{description}</CardDescription>
-          </div>
-          {onToggle && <Switch checked={!!enabled} onCheckedChange={onToggle} className="mt-1 shrink-0" />}
-        </div>
-      </CardHeader>
-      {children && (
-        <CardContent className={`pt-0 transition-opacity ${onToggle && !enabled ? "opacity-40 pointer-events-none" : ""}`}>
-          {children}
-        </CardContent>
-      )}
-    </Card>
-  );
-}
-
-function NumberField({
-  id, label, unit, value, onChange, min, max, hint,
-}: {
-  id: string; label: string; unit: string; value: number; onChange: (v: number) => void;
-  min?: number; max?: number; hint?: string;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id} className="text-sm font-medium text-slate-700">{label}</Label>
-      <div className="flex items-center gap-2">
-        <Input id={id} type="number" min={min ?? 0} max={max ?? 9999} value={value}
-          onChange={(e) => onChange(Number(e.target.value))} className="h-9 w-28 text-sm" />
-        <span className="text-sm text-slate-500">{unit}</span>
-      </div>
-      {hint && <p className="text-xs text-slate-400">{hint}</p>}
-    </div>
-  );
-}
-
-function MsgField({ label, value, onChange, hint, rows = 4 }: {
-  label: string; value: string; onChange: (v: string) => void; hint: string; rows?: number;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-sm font-medium text-slate-700">{label}</Label>
-      <Textarea value={value} onChange={(e) => onChange(e.target.value)}
-        className="text-xs text-slate-700 resize-none bg-white border-2" style={{ height: rows * 26 }} />
-      <p className="text-xs text-slate-400">{hint}</p>
-    </div>
-  );
-}
-
 const quando = (iso: string) =>
   new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 
@@ -197,6 +131,7 @@ export default function AutomationConfig() {
   const [config, setConfig] = useState<Config>(PADRAO);
   const [templates, setTemplates] = useState<any[]>([]);
   const [status, setStatus] = useState<any>(null);
+  const [aba, setAba] = useState("regua");
 
   const set = <K extends keyof Config>(k: K, v: Config[K]) => setConfig((c) => ({ ...c, [k]: v }));
 
@@ -269,293 +204,362 @@ export default function AutomationConfig() {
     );
   }
 
+  // As cinco abas do handoff. Cada regra carrega a mensagem literal que sai
+  // para o cliente: quem liga um lembrete precisa ver o texto antes, não
+  // depois de alguém receber.
+  const ABAS = [
+    { id: "regua", rotulo: "Régua do agendamento", Icone: CalendarClock },
+    { id: "faltas", rotulo: "Faltas e pós-atendimento", Icone: UserX },
+    { id: "funil", rotulo: "Funil", Icone: GitBranch },
+    { id: "handoff", rotulo: "Handoff humano", Icone: Handshake },
+    { id: "status", rotulo: "Status", Icone: Activity },
+  ];
+
+  const REGRAS: Record<string, any[]> = {
+    regua: [
+      {
+        Icone: CheckCircle2, cor: "text-emerald-600", fundo: "bg-emerald-50",
+        titulo: "Confirmação do agendamento", quando: "Assim que o horário é marcado",
+        desc: "Agradece, resume data e hora e manda o link da reunião quando existe.",
+        campo: "bookedEnabled", texto: "bookedMsgTemplate",
+      },
+      {
+        Icone: Bell, cor: "text-blue-600", fundo: "bg-blue-50",
+        titulo: "Pedido de confirmação", quando: `${config.autoConfirmHours}h antes`,
+        desc: "Pergunta se o cliente confirma. Quem não responde vira “risco de falta” na agenda.",
+        campo: "confirmEnabled", texto: "confirmMsgTemplate",
+        numero: { campo: "autoConfirmHours", rotulo: "Horas antes" },
+      },
+      {
+        Icone: Video, cor: "text-violet-600", fundo: "bg-violet-50",
+        titulo: "Link da reunião", quando: `${config.meetLinkMinutes} min antes`,
+        desc: "Envia o link do Meet pouco antes da hora, para ninguém procurar no histórico.",
+        campo: "meetLinkEnabled", texto: "meetMsgTemplate",
+        numero: { campo: "meetLinkMinutes", rotulo: "Minutos antes" },
+      },
+      {
+        Icone: Clock, cor: "text-amber-600", fundo: "bg-amber-50",
+        titulo: "Lembrete final", quando: "Na hora marcada",
+        desc: "Avisa que é agora.",
+        campo: "finalEnabled", texto: "finalMsgTemplate",
+      },
+    ],
+    faltas: [
+      {
+        Icone: UserX, cor: "text-rose-600", fundo: "bg-rose-50",
+        titulo: "Falta (no-show)", quando: `${config.lateToleranceMin} min de tolerância`,
+        desc: "Se ninguém confirmou presença depois da tolerância, pergunta o que houve e oferece remarcar.",
+        campo: "noShowEnabled", texto: "lateMsgTemplate",
+        numero: { campo: "lateToleranceMin", rotulo: "Minutos de tolerância" },
+      },
+      {
+        Icone: ShieldCheck, cor: "text-emerald-600", fundo: "bg-emerald-50",
+        titulo: "Pós-atendimento", quando: `${config.postServiceHours}h depois`,
+        desc: "Pergunta como foi. É a pesquisa de satisfação, sem formulário.",
+        campo: "postServiceEnabled", texto: "postServiceMsgTemplate",
+        numero: { campo: "postServiceHours", rotulo: "Horas depois" },
+      },
+    ],
+  };
+
+  const totalRegras = [
+    config.bookedEnabled, config.confirmEnabled, config.meetLinkEnabled,
+    config.finalEnabled, config.noShowEnabled, config.postServiceEnabled,
+  ].filter(Boolean).length;
+
   return (
     <DashboardLayout>
-      <PageContainer>
-      <div className="space-y-6 pb-20">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Lembretes e rotinas</h1>
-            <p className="text-sm text-slate-500 mt-0.5">
-              A régua completa do agendamento: confirmação, lembrete 24h antes, link da reunião e aviso final.
+      <div className="mx-auto max-w-[1500px] px-4 pb-10 pt-5 sm:px-6">
+
+        <header className="mb-4 flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-[26px] font-bold tracking-[-0.03em] text-foreground">Lembretes e rotinas</h1>
+            <p className="mt-0.5 max-w-lg text-[13.5px] text-muted-foreground">
+              A régua completa do agendamento: confirmação, lembrete antes da hora, link da reunião,
+              aviso final e o que fazer quando alguém falta.
             </p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/automations/builder")} className="text-muted-foreground gap-1.5">
+          <div className="flex shrink-0 gap-2">
+            <Button variant="outline" onClick={() => navigate("/automations/builder")} className="h-10 gap-2">
               <Sliders className="h-4 w-4" /> Fluxos avançados
             </Button>
-            <Button onClick={handleSave} disabled={saving} className="gap-2">
+            <Button onClick={handleSave} disabled={saving} className="h-10 gap-2">
               {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               {saving ? "Salvando…" : "Salvar"}
             </Button>
           </div>
-        </div>
+        </header>
 
         {!config.remindersEnabled && (
-          <div className="flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            <AlertTriangle className="h-4 w-4 shrink-0" />
-            A régua de lembretes está desligada — nenhum aviso automático sai enquanto isso.
-            <Button size="sm" variant="outline" className="ml-auto" onClick={() => set("remindersEnabled", true)}>
-              Ligar
+          <div className="mb-4 flex flex-wrap items-center gap-3 rounded-[14px] border border-amber-200 bg-amber-50 px-4 py-3">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+            <p className="flex-1 text-[13px] text-amber-900">
+              A régua está desligada por completo — nenhum aviso automático sai enquanto isso,
+              mesmo com as regras abaixo ligadas.
+            </p>
+            <Button size="sm" onClick={() => set("remindersEnabled", true)} className="bg-amber-600 hover:bg-amber-700">
+              Ligar a régua
             </Button>
           </div>
         )}
 
-        <Tabs defaultValue="regua">
-          <TabsList className="bg-slate-100 border border-slate-200 flex-wrap h-auto">
-            <TabsTrigger value="regua" className="gap-1.5 text-xs sm:text-sm"><CalendarClock className="h-3.5 w-3.5" /> Régua do agendamento</TabsTrigger>
-            <TabsTrigger value="pos" className="gap-1.5 text-xs sm:text-sm"><UserX className="h-3.5 w-3.5" /> Faltas e pós-atendimento</TabsTrigger>
-            <TabsTrigger value="funil" className="gap-1.5 text-xs sm:text-sm"><GitBranch className="h-3.5 w-3.5" /> Funil</TabsTrigger>
-            <TabsTrigger value="handoff" className="gap-1.5 text-xs sm:text-sm"><ShieldCheck className="h-3.5 w-3.5" /> Handoff humano</TabsTrigger>
-            <TabsTrigger value="status" className="gap-1.5 text-xs sm:text-sm"><Activity className="h-3.5 w-3.5" /> Status</TabsTrigger>
-          </TabsList>
+        <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_330px]">
+          {/* ───── Card principal ───── */}
+          <div className="min-w-0 rounded-[14px] border border-border bg-card shadow-card">
+            <nav className="flex gap-1 overflow-x-auto border-b border-border px-3 py-2">
+              {ABAS.map((a) => (
+                <button
+                  key={a.id}
+                  onClick={() => setAba(a.id)}
+                  className={`flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[12.5px] font-semibold transition-colors ${
+                    aba === a.id ? "bg-accent-soft text-accent-text" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <a.Icone className="h-3.5 w-3.5" /> {a.rotulo}
+                </button>
+              ))}
+            </nav>
 
-          {/* ── Régua do agendamento ───────────────────────────── */}
-          <TabsContent value="regua" className="mt-4 space-y-4">
-            <ConfigCard
-              icon={CheckCircle2} iconColor="text-emerald-600" iconBg="bg-emerald-50"
-              title="1. Assim que o cliente agenda"
-              description="Agradece, manda o resumo do agendamento e oferece o botão de encerrar o atendimento."
-              enabled={config.bookedEnabled} onToggle={(v) => set("bookedEnabled", v)}
-            >
-              <MsgField
-                label="Mensagem de confirmação do agendamento"
-                value={config.bookedMsgTemplate}
-                onChange={(v) => set("bookedMsgTemplate", v)}
-                hint="{name}, {date}, {time}, {title} e {link_block} (linha do link da reunião, quando existir)."
-                rows={5}
-              />
-              <p className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2.5 text-xs text-emerald-800">
-                <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-                Vai com os botões “Tenho uma dúvida” e “Encerrar atendimento”.
-              </p>
-            </ConfigCard>
-
-            <ConfigCard
-              icon={Bell} iconColor="text-blue-600" iconBg="bg-blue-50"
-              title="2. Antes do compromisso — pedido de confirmação"
-              description="Pergunta se está confirmado, com botões de confirmar e remarcar."
-              enabled={config.confirmEnabled} onToggle={(v) => set("confirmEnabled", v)}
-            >
-              <div className="space-y-4">
-                <NumberField
-                  id="autoConfirmHours" label="Antecedência" unit="horas antes"
-                  value={config.autoConfirmHours} onChange={(v) => set("autoConfirmHours", v)}
-                  min={1} max={168} hint="24h é o padrão. Agendamentos marcados com menos antecedência pulam este aviso."
-                />
-                <MsgField
-                  label="Mensagem" value={config.confirmMsgTemplate}
-                  onChange={(v) => set("confirmMsgTemplate", v)} hint="{name}, {date}, {time}." rows={3}
-                />
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-medium text-slate-700">Template para janela fechada</Label>
-                  <Select value={config.confirmTemplateId || "NONE"} onValueChange={(v) => set("confirmTemplateId", v === "NONE" ? "" : v)}>
-                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Escolha um template aprovado" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="NONE">Nenhum</SelectItem>
-                      {templates.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>{t.name} · {t.variableCount || 0} variável(is)</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-slate-400">
-                    Se o cliente não fala com você há mais de 24h, o WhatsApp só aceita template aprovado.
-                    Sem um template escolhido aqui, esse lembrete falha — e o motivo aparece na aba Status.
-                    {templates.length === 0 && (
-                      <> Você ainda não tem template aprovado: <a href="/templates" className="underline font-semibold">crie um</a>.</>
-                    )}
-                  </p>
-                </div>
-              </div>
-            </ConfigCard>
-
-            <ConfigCard
-              icon={Video} iconColor="text-indigo-600" iconBg="bg-indigo-50"
-              title="3. Pouco antes — link da reunião"
-              description="Envia o link do Google Meet no WhatsApp e no e-mail do contato."
-              enabled={config.meetLinkEnabled} onToggle={(v) => set("meetLinkEnabled", v)}
-            >
-              <div className="space-y-4">
-                <NumberField
-                  id="meetLinkMinutes" label="Antecedência" unit="minutos antes"
-                  value={config.meetLinkMinutes} onChange={(v) => set("meetLinkMinutes", v)}
-                  min={1} max={120} hint="O link do Meet é criado junto com o evento no Google Calendar."
-                />
-                <MsgField
-                  label="Mensagem" value={config.meetMsgTemplate}
-                  onChange={(v) => set("meetMsgTemplate", v)} hint="{name}, {minutes}, {link}, {date}, {time}." rows={3}
-                />
-                <p className="flex items-start gap-2 rounded-lg bg-indigo-50 px-3 py-2.5 text-xs text-indigo-800">
-                  <Link2 className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                  Sem o Google Calendar conectado não existe link de Meet, e este lembrete é pulado.
-                  Conecte em <a href="/connections" className="underline font-semibold">Conexões</a>.
-                </p>
-              </div>
-            </ConfigCard>
-
-            <ConfigCard
-              icon={Clock} iconColor="text-orange-600" iconBg="bg-orange-50"
-              title="4. Na hora — lembrete final"
-              description="“Sua reunião é agora”, com o link junto."
-              enabled={config.finalEnabled} onToggle={(v) => set("finalEnabled", v)}
-            >
-              <MsgField
-                label="Mensagem" value={config.finalMsgTemplate}
-                onChange={(v) => set("finalMsgTemplate", v)} hint="{name}, {link}, {link_block}, {time}." rows={3}
-              />
-            </ConfigCard>
-          </TabsContent>
-
-          {/* ── Faltas e pós-atendimento ───────────────────────── */}
-          <TabsContent value="pos" className="mt-4 space-y-4">
-            <ConfigCard
-              icon={AlertTriangle} iconColor="text-amber-600" iconBg="bg-amber-50"
-              title="Falta (no-show)"
-              description="Depois da tolerância, pergunta o que aconteceu e oferece remarcar."
-              enabled={config.noShowEnabled} onToggle={(v) => set("noShowEnabled", v)}
-            >
-              <div className="space-y-4">
-                <NumberField
-                  id="lateToleranceMin" label="Tolerância" unit="minutos após o horário"
-                  value={config.lateToleranceMin} onChange={(v) => set("lateToleranceMin", v)}
-                  min={5} max={240} hint="Quem confirmou presença pelo botão não recebe este aviso."
-                />
-                <MsgField label="Mensagem" value={config.lateMsgTemplate}
-                  onChange={(v) => set("lateMsgTemplate", v)} hint="{name}, {time}, {date}." rows={3} />
-              </div>
-            </ConfigCard>
-
-            <ConfigCard
-              icon={Handshake} iconColor="text-[#2563EB]" iconBg="bg-blue-50"
-              title="Pós-atendimento"
-              description="Pesquisa de satisfação depois do atendimento concluído."
-              enabled={config.postServiceEnabled} onToggle={(v) => set("postServiceEnabled", v)}
-            >
-              <div className="space-y-4">
-                <NumberField
-                  id="postServiceHours" label="Enviar depois de" unit="horas do atendimento"
-                  value={config.postServiceHours} onChange={(v) => set("postServiceHours", v)}
-                  min={1} max={168} hint="Só sai para agendamento marcado como concluído."
-                />
-                <MsgField label="Mensagem" value={config.postServiceMsgTemplate}
-                  onChange={(v) => set("postServiceMsgTemplate", v)} hint="{name}, {date}." rows={3} />
-              </div>
-            </ConfigCard>
-          </TabsContent>
-
-          {/* ── Funil ──────────────────────────────────────────── */}
-          <TabsContent value="funil" className="mt-4 space-y-4">
-            <ConfigCard
-              icon={GitBranch} iconColor="text-violet-600" iconBg="bg-violet-50"
-              title="Movimentação automática no funil"
-              description="Cada evento do atendimento empurra o contato para a etapa correspondente."
-              enabled={config.pipelineAutoEnabled} onToggle={(v) => set("pipelineAutoEnabled", v)}
-            >
-              <div className="space-y-2 text-sm">
-                {[
-                  ["Agendou", "Agendado"],
-                  ["Confirmou presença", "Confirmado / Agendado"],
-                  ["Atendimento concluído", "Atendido / Ganho"],
-                  ["Faltou", "No-show / Perdido"],
-                  ["Cancelou ou pediu para remarcar", "Contato / Qualificando"],
-                ].map(([evento, etapa]) => (
-                  <div key={evento} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
-                    <span className="text-slate-600">{evento}</span>
-                    <Badge variant="outline" className="font-semibold text-xs">{etapa}</Badge>
-                  </div>
-                ))}
-                <p className="text-xs text-slate-400 pt-1">
-                  A etapa é encontrada pelo nome no seu funil. Se nenhuma casar, o contato fica onde está —
-                  renomeie as etapas em <a href="/crm" className="underline font-semibold">CRM</a> para ativar o encaixe.
-                </p>
-              </div>
-            </ConfigCard>
-          </TabsContent>
-
-          {/* ── Handoff ────────────────────────────────────────── */}
-          <TabsContent value="handoff" className="mt-4 space-y-4">
-            <ConfigCard
-              icon={ShieldCheck} iconColor="text-red-600" iconBg="bg-red-50"
-              title="Transferência para atendente humano"
-              description="Palavras que, ao aparecerem na conversa, pausam o bot e chamam um humano."
-            >
-              <div className="space-y-4">
-                <TagInput value={config.humanHandoffTags} onChange={(v) => set("humanHandoffTags", v)}
-                  placeholder="Adicione palavras de emergência…" />
-                <p className="flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2.5 text-xs text-red-700">
-                  <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                  Ao detectar uma dessas palavras o bot avisa que vai chamar a equipe e a conversa aparece
-                  destacada no painel de Conversas.
-                </p>
-              </div>
-            </ConfigCard>
-          </TabsContent>
-
-          {/* ── Status ─────────────────────────────────────────── */}
-          <TabsContent value="status" className="mt-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-slate-500">
-                {status ? `${status.enviadosNaSemana} lembrete(s) enviados nos últimos 7 dias.` : "Sem dados ainda."}
-              </p>
-              <Button variant="outline" size="sm" onClick={carregarStatus} className="gap-1.5">
-                <RefreshCw className="h-3.5 w-3.5" /> Atualizar
-              </Button>
-            </div>
-
-            <Card className="border border-slate-200 shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-semibold text-slate-800">Próximos envios</CardTitle>
-                <CardDescription className="text-xs">O que está na fila, na ordem em que vai sair.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {!status?.proximos?.length ? (
-                  <p className="text-sm text-slate-400 py-6 text-center">Nenhum lembrete programado.</p>
-                ) : status.proximos.map((r: any) => (
-                  <div key={r.id} className="flex items-center gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm">
-                    <Badge variant="outline" className="text-[11px] font-bold shrink-0">{KIND_LABEL[r.kind] || r.kind}</Badge>
-                    <span className="truncate text-slate-600">{r.appointment?.lead?.name || "Contato"}</span>
-                    <span className="ml-auto text-xs text-slate-400 shrink-0">{quando(r.runAt)}</span>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            <Card className="border border-slate-200 shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-semibold text-slate-800">Falhas recentes</CardTitle>
-                <CardDescription className="text-xs">Cada linha traz o motivo — e dá para reenviar.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {!status?.falhas?.length ? (
-                  <p className="text-sm text-slate-400 py-6 text-center">Nenhuma falha nos últimos 7 dias. 🎉</p>
-                ) : status.falhas.map((r: any) => (
-                  <div key={r.id} className="rounded-lg bg-red-50 px-3 py-2.5 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-[11px] font-bold shrink-0">{KIND_LABEL[r.kind] || r.kind}</Badge>
-                      <span className="truncate text-slate-700">{r.appointment?.lead?.name || "Contato"}</span>
-                      <Button size="sm" variant="ghost" className="ml-auto h-7 text-xs font-bold" onClick={() => retry(r.id)}>
-                        Tentar de novo
-                      </Button>
+            <div className="space-y-3 p-5">
+              {(aba === "regua" || aba === "faltas") && REGRAS[aba].map((r) => (
+                <article key={r.campo} className="rounded-xl border border-border-soft p-4">
+                  <div className="flex flex-wrap items-start gap-3">
+                    <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${r.fundo}`}>
+                      <r.Icone className={`h-4 w-4 ${r.cor}`} />
+                    </span>
+                    <div className="min-w-[180px] flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-[14px] font-semibold text-foreground">{r.titulo}</h3>
+                        <span className="rounded-md bg-surface-2 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                          {r.quando}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground">{r.desc}</p>
                     </div>
-                    <p className="text-xs text-red-700 mt-1">{r.error || "Sem detalhe do erro."}</p>
+                    <Switch
+                      checked={!!config[r.campo as keyof Config]}
+                      onCheckedChange={(v) => set(r.campo as keyof Config, v as any)}
+                      aria-label={r.titulo}
+                    />
                   </div>
-                ))}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
 
-        <div className="sticky bottom-0 bg-white/90 backdrop-blur border-t border-slate-200 -mx-4 px-4 py-3 flex items-center justify-between sm:-mx-8 sm:px-8">
-          <p className="text-xs text-slate-400">
-            Vale para <strong>toda a conta</strong>. Mudanças de horário recalculam a régua dos agendamentos futuros.
-          </p>
-          <Button onClick={handleSave} disabled={saving} className="bg-[#1D4ED8] gap-2" size="sm">
-            {saving ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-            {saving ? "Salvando…" : "Salvar"}
-          </Button>
+                  {/* A mensagem literal, editável: é o que o cliente recebe. */}
+                  <div className="mt-3 rounded-lg bg-surface-2 p-3">
+                    <Label className="text-[11px] font-semibold uppercase tracking-wide text-faint">
+                      Mensagem enviada
+                    </Label>
+                    <Textarea
+                      value={String(config[r.texto as keyof Config] ?? "")}
+                      onChange={(e) => set(r.texto as keyof Config, e.target.value as any)}
+                      rows={4}
+                      className="mt-1.5 resize-none border-border-soft bg-background text-[13px]"
+                    />
+                    <p className="mt-1.5 text-[11px] text-faint">
+                      {"{name}"} vira o nome · {"{date}"} a data · {"{time}"} a hora · {"{link_block}"} o link do Meet
+                      (some sozinho quando não há).
+                    </p>
+                  </div>
+
+                  {r.numero && (
+                    <div className="mt-3 flex items-center gap-3">
+                      <Label className="text-[12px] font-medium text-muted-foreground">{r.numero.rotulo}</Label>
+                      <Input
+                        type="number" min="0"
+                        value={Number(config[r.numero.campo as keyof Config] ?? 0)}
+                        onChange={(e) => set(r.numero.campo as keyof Config, Number(e.target.value) as any)}
+                        className="h-9 w-24"
+                      />
+                    </div>
+                  )}
+                </article>
+              ))}
+
+              {aba === "funil" && (
+                <article className="rounded-xl border border-border-soft p-4">
+                  <div className="flex flex-wrap items-start gap-3">
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-violet-50">
+                      <GitBranch className="h-4 w-4 text-violet-600" />
+                    </span>
+                    <div className="min-w-[180px] flex-1">
+                      <h3 className="text-[14px] font-semibold text-foreground">Mover o contato no funil sozinho</h3>
+                      <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground">
+                        Quando o agendamento é marcado, confirmado ou o cliente falta, o card anda de etapa
+                        sem ninguém arrastar.
+                      </p>
+                    </div>
+                    <Switch checked={config.pipelineAutoEnabled} onCheckedChange={(v) => set("pipelineAutoEnabled", v)} />
+                  </div>
+                  <p className="mt-3 rounded-lg bg-surface-2 p-3 text-[12.5px] text-muted-foreground">
+                    As etapas de destino são casadas pelo nome do que já existe no seu funil. Renomeou uma
+                    etapa? Confira em <button onClick={() => navigate("/crm")} className="font-semibold text-accent-text hover:underline">Funil de clientes</button>.
+                  </p>
+                </article>
+              )}
+
+              {aba === "handoff" && (
+                <article className="rounded-xl border border-border-soft p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-blue-50">
+                      <Handshake className="h-4 w-4 text-blue-600" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-[14px] font-semibold text-foreground">Palavras que chamam um humano</h3>
+                      <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground">
+                        Ao ouvir qualquer uma delas, o agente para de responder e joga a conversa na fila
+                        de atendimento.
+                      </p>
+                      <div className="mt-3">
+                        <TagInput
+                          value={config.humanHandoffTags}
+                          onChange={(v) => set("humanHandoffTags", v)}
+                          placeholder="ex.: reclamação"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              )}
+
+              {aba === "status" && (
+                <div className="space-y-3">
+                  {(status?.falhas || []).length === 0 && (status?.proximos || []).length === 0 ? (
+                    <div className="grid place-items-center gap-2 py-12 text-center">
+                      <Activity className="h-7 w-7 text-border-soft" />
+                      <p className="text-[13px] text-muted-foreground">Nenhum lembrete na fila nem falha nos últimos 7 dias.</p>
+                    </div>
+                  ) : (
+                    <>
+                      {(status?.falhas || []).length > 0 && (
+                        <section>
+                          <h3 className="mb-2 text-[13px] font-semibold text-foreground">Falhas dos últimos 7 dias</h3>
+                          <div className="space-y-2">
+                            {status.falhas.map((f: any) => (
+                              <div key={f.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-3">
+                                <div className="min-w-[160px] flex-1">
+                                  <p className="text-[13px] font-semibold text-red-900">
+                                    {KIND_LABEL[f.kind] || f.kind} · {f.appointment?.lead?.name || "Contato"}
+                                  </p>
+                                  <p className="mt-0.5 text-[12px] leading-relaxed text-red-700">
+                                    {f.error || "Falha sem motivo registrado."}
+                                  </p>
+                                </div>
+                                <Button size="sm" variant="outline" onClick={() => retry(f.id)} className="bg-card">
+                                  Reenviar
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </section>
+                      )}
+                      {(status?.proximos || []).length > 0 && (
+                        <section>
+                          <h3 className="mb-2 mt-4 text-[13px] font-semibold text-foreground">Na fila</h3>
+                          <div className="divide-y divide-border-soft rounded-xl border border-border-soft">
+                            {status.proximos.map((p: any) => (
+                              <div key={p.id} className="flex items-center gap-3 px-3.5 py-2.5">
+                                <span className="num shrink-0 text-[12.5px] font-semibold text-accent-text">{quando(p.runAt)}</span>
+                                <span className="linha-unica-elipse min-w-0 flex-1 text-[12.5px] text-foreground">
+                                  {KIND_LABEL[p.kind] || p.kind}
+                                </span>
+                                <span className="linha-unica-elipse shrink-0 text-[12px] text-faint">
+                                  {p.appointment?.lead?.name || "Contato"}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </section>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ───── Lateral ───── */}
+          <div className="space-y-4">
+            <section className="rounded-[14px] border border-border bg-card shadow-card">
+              <header className="border-b border-border px-4 py-3">
+                <h2 className="text-[14px] font-semibold text-foreground">Próximos envios</h2>
+              </header>
+              {(status?.proximos || []).length === 0 ? (
+                <p className="px-4 py-8 text-center text-[12.5px] text-muted-foreground">Nada na fila agora.</p>
+              ) : (
+                <ul className="divide-y divide-border-soft">
+                  {status.proximos.slice(0, 6).map((p: any) => (
+                    <li key={p.id} className="flex items-center gap-3 px-4 py-2.5">
+                      <span className="num shrink-0 text-[12px] font-semibold text-accent-text">{quando(p.runAt)}</span>
+                      <span className="linha-unica-elipse min-w-0 flex-1 text-[12.5px] text-foreground">
+                        {KIND_LABEL[p.kind] || p.kind}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            <section className="rounded-[14px] border border-border bg-card shadow-card">
+              <header className="flex items-center justify-between border-b border-border px-4 py-3">
+                <h2 className="text-[14px] font-semibold text-foreground">Falhas recentes</h2>
+                {(status?.falhas || []).length > 0 && (
+                  <span className="num rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-bold text-red-600">
+                    {status.falhas.length}
+                  </span>
+                )}
+              </header>
+              {(status?.falhas || []).length === 0 ? (
+                <p className="px-4 py-8 text-center text-[12.5px] text-muted-foreground">Nenhuma falha em 7 dias.</p>
+              ) : (
+                <ul className="divide-y divide-border-soft">
+                  {status.falhas.slice(0, 4).map((f: any) => (
+                    <li key={f.id} className="px-4 py-3">
+                      <p className="linha-unica-elipse text-[12.5px] font-semibold text-foreground">
+                        {f.appointment?.lead?.name || "Contato"}
+                      </p>
+                      <p className="mt-0.5 text-[11.5px] leading-relaxed text-red-600">
+                        {f.error || "Falha sem motivo registrado."}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            <section className="rounded-[14px] border border-border bg-card p-4 shadow-card">
+              <h2 className="text-[14px] font-semibold text-foreground">Impacto na semana</h2>
+              <div className="mt-4 space-y-3">
+                {[
+                  { r: "Lembretes enviados", v: status?.enviadosNaSemana || 0, cor: "bg-[#2563EB]" },
+                  { r: "Na fila", v: (status?.proximos || []).length, cor: "bg-emerald-500" },
+                  { r: "Falharam", v: (status?.falhas || []).length, cor: "bg-red-500" },
+                ].map((b) => {
+                  const teto = Math.max(
+                    status?.enviadosNaSemana || 0,
+                    (status?.proximos || []).length,
+                    (status?.falhas || []).length,
+                    1
+                  );
+                  return (
+                    <div key={b.r}>
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-[12.5px] text-muted-foreground">{b.r}</span>
+                        <span className="num text-[13px] font-bold text-foreground">{b.v}</span>
+                      </div>
+                      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-2">
+                        <div className={`h-full rounded-full ${b.cor}`} style={{ width: `${(b.v / teto) * 100}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="mt-4 text-[11.5px] leading-relaxed text-faint">
+                {totalRegras} de 6 regras ligadas.
+                {!config.remindersEnabled && " A régua geral está desligada — nada sai."}
+              </p>
+            </section>
+          </div>
         </div>
       </div>
-      </PageContainer>
     </DashboardLayout>
   );
 }
