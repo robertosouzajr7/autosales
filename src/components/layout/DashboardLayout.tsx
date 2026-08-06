@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -75,6 +75,8 @@ interface NavItem {
   permission?: string;
   adminOnly?: boolean;
   feature?: string;
+  /** Contador em laranja em vez de azul: fila parada, não novidade. */
+  badgeAtencao?: boolean;
 }
 
 interface NavGroup {
@@ -108,7 +110,7 @@ function hrefAtivo(pathname: string, items: NavItem[]): string | null {
  */
 const navGroups: NavGroup[] = [
   {
-    title: null,
+    title: "Painel",
     items: [
       { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard", permission: "dashboard" },
       { label: "Relatórios", icon: BarChart3, href: "/analytics", permission: "analytics" },
@@ -117,7 +119,7 @@ const navGroups: NavGroup[] = [
   {
     title: "Atendimento",
     items: [
-      { label: "Conversas", icon: MessageSquare, href: "/conversations", permission: "conversations" },
+      { label: "Conversas", icon: MessageSquare, href: "/conversations", permission: "conversations", badgeAtencao: true },
       { label: "Agendamentos", icon: Calendar, href: "/appointments", permission: "appointments", feature: "calendar" },
       { label: "Funil de clientes", icon: Target, href: "/crm", permission: "crm" },
       { label: "Clientes", icon: BookUser, href: "/contacts", permission: "contacts" },
@@ -170,10 +172,12 @@ interface SidebarNavProps {
   /** Seções que o usuário fechou (guardadas entre sessões). */
   fechados?: string[];
   onToggleGroup?: (titulo: string) => void;
+  /** Contadores por rota, ex.: { "/conversations": 3 }. */
+  badges?: Record<string, number>;
 }
 
 function SidebarNav({
-  collapsed, onNavClick, features, permissions, fechados = [], onToggleGroup,
+  collapsed, onNavClick, features, permissions, fechados = [], onToggleGroup, badges,
 }: SidebarNavProps & { features: any; permissions: string[] | null }) {
   const location = useLocation();
   const ativo = hrefAtivo(location.pathname, navItems);
@@ -205,11 +209,11 @@ function SidebarNav({
         <div key={grupo.title ?? "topo"} className="flex flex-col gap-0.5">
           {grupo.title &&
             (collapsed ? (
-              <div className="mx-auto my-2 h-px w-6 bg-slate-700/60" />
+              <div className="mx-auto my-2 h-px w-[22px] bg-white/10" />
             ) : (
               <button
                 onClick={() => onToggleGroup?.(grupo.title!)}
-                className="group flex w-full items-center gap-1 rounded-lg px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 transition-colors hover:text-slate-300"
+                className="linha-unica group flex w-full items-center gap-1 rounded-lg px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#475569] transition-colors hover:text-slate-300"
               >
                 <ChevronRight
                   className={cn(
@@ -227,27 +231,50 @@ function SidebarNav({
             const Icon = item.icon;
             const isActive = item.href === ativo;
 
+            // Contador à direita. Amber quando é fila esperando por alguém —
+            // um número laranja lê como "isto está parado", que é o ponto.
+            const badge = badges?.[item.href];
+
             const linkContent = (
               <Link
                 to={item.href}
                 onClick={onNavClick}
+                title={collapsed ? item.label : undefined}
                 className={cn(
-                  "relative flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors duration-150",
+                  // 38px de altura e padding lateral de 11px, do handoff.
+                  "linha-unica relative flex h-[38px] items-center gap-3 rounded-lg px-[11px] text-[13px] font-medium transition-colors duration-150",
                   "hover:bg-white/[0.06] hover:text-white",
-                  isActive ? "bg-white/[0.08] text-white" : "text-slate-400",
-                  collapsed && "justify-center px-2"
+                  isActive ? "bg-white/[0.09] text-white" : "text-[#94A3B8]",
+                  collapsed && "justify-center px-0"
                 )}
               >
-                {isActive && !collapsed && (
-                  <span className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-primary" />
-                )}
                 <Icon
                   className={cn(
-                    "h-4 w-4 shrink-0 transition-colors duration-150",
-                    isActive ? "text-primary" : "text-slate-500"
+                    "h-[18px] w-[18px] shrink-0 transition-colors duration-150",
+                    // Ícone ativo usa o azul de TEXTO, não o de ação: aqui ele
+                    // está sobre fundo escuro.
+                    isActive ? "text-accent-text" : "text-[#64748B]"
                   )}
                 />
-                {!collapsed && <span className="truncate">{item.label}</span>}
+                {!collapsed && <span className="linha-unica-elipse flex-1">{item.label}</span>}
+                {!collapsed && badge ? (
+                  <span
+                    className={cn(
+                      "num grid h-[18px] min-w-[18px] shrink-0 place-items-center rounded-full px-1 text-[10px] font-bold text-white",
+                      item.badgeAtencao ? "bg-[#F59E0B]" : "bg-primary"
+                    )}
+                  >
+                    {badge > 99 ? "99+" : badge}
+                  </span>
+                ) : null}
+                {collapsed && badge ? (
+                  <span
+                    className={cn(
+                      "absolute right-2 top-2 h-1.5 w-1.5 rounded-full",
+                      item.badgeAtencao ? "bg-[#F59E0B]" : "bg-primary"
+                    )}
+                  />
+                ) : null}
               </Link>
             );
 
@@ -298,17 +325,19 @@ function SidebarContent({
   permissions,
   fechados,
   onToggleGroup,
+  badges,
 }: SidebarContentProps & {
   features: any; planName: string; planData: any; navigate: any;
   permissions: string[] | null; fechados: string[]; onToggleGroup: (t: string) => void;
+  badges?: Record<string, number>;
 }) {
   return (
-    <div className="flex h-full flex-col font-sans bg-slate-900 bg-[radial-gradient(130%_55%_at_0%_0%,rgba(37,99,235,0.24),transparent_58%)]">
-      {/* Logo e Info da Conta */}
+    <div className="flex h-full flex-col font-sans bg-rail bg-rail-glow">
+      {/* Marca — 64px, conforme o handoff. */}
       <div
         className={cn(
-          "flex flex-col justify-center border-b border-slate-700/60 px-4",
-          collapsed ? "h-14 items-center" : "h-16 items-start gap-0.5"
+          "flex shrink-0 flex-col justify-center border-b border-white/[0.07] px-4",
+          collapsed ? "h-16 items-center px-0" : "h-16 items-start gap-0.5"
         )}
       >
         <div className="flex items-center gap-2.5 w-full">
@@ -319,42 +348,32 @@ function SidebarContent({
               <TooltipTrigger asChild>
                 <button
                   onClick={onToggleCollapse}
-                  className="group relative grid h-8 w-8 place-items-center rounded-lg transition-colors hover:bg-white/10"
+                  className="group relative grid h-[30px] w-[30px] place-items-center rounded-[9px] bg-gradient-to-br from-[#2563EB] to-[#7C5CFF] shadow-[0_8px_18px_-6px_rgba(37,99,235,0.7)] transition-transform hover:scale-105"
                   aria-label="Expandir menu"
                 >
-                  <LogoIcon className="h-7 w-7 transition-opacity group-hover:opacity-0" />
+                  <LogoIcon className="h-[18px] w-[18px] text-white transition-opacity group-hover:opacity-0" />
                   <ChevronRight className="absolute h-4 w-4 text-white opacity-0 transition-opacity group-hover:opacity-100" />
                 </button>
               </TooltipTrigger>
               <TooltipContent side="right" className="font-medium">Expandir menu</TooltipContent>
             </Tooltip>
           ) : (
-            <LogoIcon className="w-7 h-7 shrink-0" />
+            /* Quadrado 30×30 em gradiente com sombra azul — o handoff é
+               específico aqui, e é o que dá identidade ao canto superior. */
+            <div className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-[9px] bg-gradient-to-br from-[#2563EB] to-[#7C5CFF] shadow-[0_8px_18px_-6px_rgba(37,99,235,0.7)]">
+              <LogoIcon className="h-[18px] w-[18px] text-white" />
+            </div>
           )}
           {!collapsed && (
-            <span className="truncate whitespace-nowrap text-[15px] font-bold tracking-tight text-white">
-              Agentes <span className="text-primary">Virtuais</span>
+            <span className="linha-unica-elipse text-[13.5px] font-bold tracking-tight text-white">
+              Agentes <span className="text-accent-text">Virtuais</span>
             </span>
           )}
-          {!collapsed && showCollapseButton && (
-            <Tooltip delayDuration={300}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onToggleCollapse}
-                  aria-label="Recolher menu"
-                  className="ml-auto h-7 w-7 text-slate-400 hover:bg-slate-700 hover:text-white"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="font-medium">Recolher menu</TooltipContent>
-            </Tooltip>
-          )}
+          {/* O controle de recolher vive só no rodapé, como o handoff define.
+              Dois botões para a mesma ação na mesma barra é ruído. */}
         </div>
         {!collapsed && (
-          <p className="w-full truncate text-left text-xs text-slate-500 leading-tight">
+          <p className="linha-unica-elipse w-full text-left text-[11px] leading-tight text-slate-500">
             {localStorage.getItem("companyName") || "Minha Empresa"}
           </p>
         )}
@@ -369,6 +388,7 @@ function SidebarContent({
           permissions={permissions}
           fechados={fechados}
           onToggleGroup={onToggleGroup}
+          badges={badges}
         />
       </div>
 
@@ -382,14 +402,14 @@ function SidebarContent({
         const near = pct >= 90;
         return (
           <div className="px-3 pb-3 pt-2">
-            <div className="rounded-xl bg-slate-800/50 p-3 space-y-2">
+            <div className="space-y-2 rounded-xl bg-white/[0.05] p-3">
               <div className="flex items-center justify-between">
                 <p className="text-[11px] font-medium text-slate-400">Créditos de IA</p>
                 <Badge className="max-w-[110px] truncate bg-primary/15 px-2 text-[11px] font-medium text-primary border-none">
                   {planName || "Básico"}
                 </Badge>
               </div>
-              <div className="h-1 overflow-hidden rounded-full bg-slate-700">
+              <div className="h-[5px] overflow-hidden rounded-full bg-white/10">
                 <div
                   className={cn("h-full rounded-full transition-all duration-700", near ? "bg-amber-400" : "bg-primary")}
                   style={{ width: `${pct}%` }}
@@ -411,23 +431,37 @@ function SidebarContent({
         );
       })()}
 
+      {/* Recolher: o handoff pede o rótulo junto do chevron. Um ícone sozinho
+          num canto escuro não é descoberto por quem nunca clicou nele. */}
+      {showCollapseButton && !collapsed && (
+        <div className="shrink-0 px-3 pb-2">
+          <button
+            onClick={onToggleCollapse}
+            className="linha-unica flex h-[34px] w-full items-center justify-center gap-2 rounded-lg text-[12px] font-medium text-[#94A3B8] transition-colors hover:bg-white/[0.06] hover:text-white"
+          >
+            <ChevronLeft className="h-4 w-4 shrink-0" />
+            Recolher menu
+          </button>
+        </div>
+      )}
+
       {/* Quem está logado (não a empresa — essa já aparece no topo). */}
-      <div className="border-t border-slate-700/60 p-2">
+      <div className="shrink-0 border-t border-white/[0.07] p-2">
           <div className={cn("flex items-center gap-3 rounded-xl px-2 py-1.5 transition-colors hover:bg-white/5", collapsed && "justify-center")}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2.5 w-full outline-none">
-                  <Avatar className="h-7 w-7 shrink-0 border border-slate-700">
+                  <Avatar className="h-[30px] w-[30px] shrink-0">
                     <AvatarFallback className="bg-primary text-[11px] font-semibold text-white">
                       {(localStorage.getItem("userName")?.charAt(0) || "U").toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   {!collapsed && (
                     <div className="min-w-0 flex-1 text-left">
-                      <p className="truncate text-[13px] font-medium text-white">
+                      <p className="linha-unica-elipse text-[12.5px] font-medium text-white">
                         {localStorage.getItem("userName") || "Minha conta"}
                       </p>
-                      <p className="truncate text-[11px] text-slate-500">
+                      <p className="linha-unica-elipse text-[11px] text-[#64748B]">
                         {localStorage.getItem("userProfileLabel") || "Colaborador"}
                       </p>
                     </div>
@@ -510,6 +544,24 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const location = useLocation();
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<any[]>([]);
+  // null = ainda não sabemos; a pílula só aparece quando há resposta, para o
+  // header não piscar "desconectado" durante o carregamento.
+  const [conexaoAtiva, setConexaoAtiva] = useState<boolean | null>(null);
+  const [busca, setBusca] = useState("");
+  const campoBusca = useRef<HTMLInputElement>(null);
+
+  // ⌘K / Ctrl+K foca a busca. Anunciar o atalho no campo e não implementá-lo
+  // seria pior do que não anunciar.
+  useEffect(() => {
+    const aoTeclar = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        campoBusca.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", aoTeclar);
+    return () => window.removeEventListener("keydown", aoTeclar);
+  }, []);
   const unreadCount = notifications.filter(n => !n.read).length;
 
   // O painel ainda é sempre claro. Não é escolha de design: 1.227 utilitários
@@ -584,6 +636,25 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         }
       })
       .catch(console.error);
+
+    // Status do canal para a pílula do header. Uma chamada por montagem do
+    // shell, não por navegação — o layout não remonta ao trocar de rota.
+    fetch("/api/whatsapp/accounts", { headers })
+      .then((r) => {
+        // A rota exige o módulo "connections". Quem não o tem recebe 403 — e
+        // transformar isso em lista vazia faria o header afirmar "WhatsApp
+        // desconectado" para um colaborador de atendimento, com o canal no ar.
+        // Sem permissão de ver, o estado é desconhecido, não é negativo.
+        if (!r.ok) return null;
+        return r.json();
+      })
+      .then((contas) => {
+        if (contas === null) return setConexaoAtiva(null);
+        const lista = Array.isArray(contas) ? contas : [];
+        const zap = lista.filter((c: any) => String(c.channel || "").toUpperCase() !== "INSTAGRAM");
+        setConexaoAtiva(zap.some((c: any) => c.status === "CONNECTED" || c.connected === true || !!c.phoneId));
+      })
+      .catch(() => setConexaoAtiva(null));
   }, []);
 
   const handleLogout = () => {
@@ -592,6 +663,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     localStorage.removeItem("userPlan");
     navigate("/login");
   };
+
+  // Contador da sidebar. Vem do mesmo fluxo de notificações que já roda por
+  // SSE — nenhuma requisição a mais por página só para pintar um número.
+  // Agendamentos ainda não tem contador: exigiria um endpoint de contagem, e
+  // um badge não justifica uma chamada em toda navegação.
+  const badges = unreadCount > 0 ? { "/conversations": unreadCount } : undefined;
 
   const currentPage =
     navItems.find((item) => item.href === hrefAtivo(location.pathname, navItems))?.label ?? "Dashboard";
@@ -605,9 +682,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Desktop Sidebar */}
       <aside
         className={cn(
-          "relative hidden flex-col border-r border-slate-200 dark:border-slate-900/40 lg:flex",
-          "transition-[width] duration-300 ease-in-out",
-          collapsed ? "w-[64px]" : "w-[244px]"
+          "relative hidden flex-col lg:flex",
+          // Larguras e curva vêm do handoff. A sidebar não tem borda: ela é
+          // escura nos dois temas, então o próprio contraste já a separa.
+          "transition-[width] duration-[220ms] ease-rail",
+          collapsed ? "w-[68px]" : "w-[236px]"
         )}
       >
         <SidebarContent
@@ -621,6 +700,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           permissions={permissions}
           fechados={gruposFechados}
           onToggleGroup={alternarGrupo}
+          badges={badges}
         />
       </aside>
 
@@ -641,6 +721,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             permissions={permissions}
             fechados={gruposFechados}
             onToggleGroup={alternarGrupo}
+            badges={badges}
           />
         </SheetContent>
       </Sheet>
@@ -648,7 +729,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="flex h-14 shrink-0 items-center gap-4 border-b border-slate-200 bg-white/80 backdrop-blur-xl px-4 md:px-6">
+        {/* 60px de altura e 24px de padding lateral, do handoff. */}
+        <header className="flex h-[60px] shrink-0 items-center gap-3 border-b border-border bg-card px-4 md:px-6">
           {/* Mobile hamburger */}
           <Button
             variant="ghost"
@@ -659,11 +741,61 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <Menu className="h-5 w-5" />
           </Button>
 
-          {/* Page title */}
-          <div className="flex flex-1 items-center gap-2 min-w-0">
-            <h1 className="text-base font-semibold tracking-tight text-slate-900 dark:text-white truncate">
-              {currentPage}
-            </h1>
+          {/* Título da tela — 15,5px/600, do handoff. */}
+          <h1 className="linha-unica-elipse min-w-0 text-[15.5px] font-semibold tracking-[-0.025em] text-foreground">
+            {currentPage}
+          </h1>
+
+          {/* Busca. O atalho é anunciado no próprio campo: um ⌘K escondido não
+              é atalho, é curiosidade.
+
+              O rótulo promete só o que a busca entrega hoje — clientes. O
+              handoff pede "cliente, conversa ou agendamento", mas conversa e
+              agendamento ainda não têm busca por URL; prometer as três e
+              entregar uma é pior do que prometer uma. O texto cresce quando as
+              telas ganharem o parâmetro. */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const q = busca.trim();
+              if (q) navigate(`/contacts?q=${encodeURIComponent(q)}`);
+            }}
+            className="relative ml-4 hidden min-w-0 max-w-[340px] flex-1 md:block"
+          >
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-faint" />
+            <Input
+              ref={campoBusca}
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar cliente"
+              aria-label="Buscar cliente"
+              className="linha-unica h-9 rounded-[11px] border-border bg-surface-2 pl-9 pr-14 text-[13px] placeholder:text-faint"
+            />
+            <kbd className="num pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-border bg-card px-1.5 py-0.5 text-[10px] font-semibold text-faint">
+              ⌘K
+            </kbd>
+          </form>
+
+          <div className="ml-auto flex items-center gap-2">
+            {/* Status do canal: o ponto pulsa porque o dado é de agora. */}
+            {conexaoAtiva !== null && (
+              <div
+                className={cn(
+                  "linha-unica hidden items-center gap-2 rounded-full px-3 py-1.5 text-[12px] font-semibold lg:flex",
+                  conexaoAtiva
+                    ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                    : "bg-amber-500/10 text-amber-700 dark:text-amber-500"
+                )}
+              >
+                <span
+                  className={cn(
+                    "h-1.5 w-1.5 rounded-full",
+                    conexaoAtiva ? "animate-pulseDot bg-emerald-500" : "bg-amber-500"
+                  )}
+                />
+                {conexaoAtiva ? "WhatsApp conectado" : "WhatsApp desconectado"}
+              </div>
+            )}
           </div>
 
           {/* Notification bell */}
