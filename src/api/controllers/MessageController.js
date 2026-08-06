@@ -359,6 +359,140 @@ export const markRead = async (req, res) => {
 };
 
 /**
+ * Contagem do que espera atenção humana, para o badge do menu.
+ *
+ * Existe como rota própria porque o menu aparece em toda tela: carregar a
+ * lista inteira de conversas só para somar um número seria caro em cada
+ * navegação. São duas agregações sobre índices, sem trazer linha nenhuma.
+ */
+export const getPendingCount = async (req, res) => {
+  const tenantId = req.tenantId;
+  if (!tenantId) return res.json({ pending: 0, queue: 0 });
+
+  try {
+    // `pending` conta conversas, não mensagens: uma conversa na fila com três
+    // mensagens não lidas é um item para o atendente, não três. Somar fila +
+    // não lidas contaria a mesma conversa duas vezes, porque quem está na
+    // fila quase sempre também tem mensagem por ler.
+    const [pendentes, naFila] = await Promise.all([
+      prisma.conversation.count({
+        where: {
+          tenantId,
+          phase: { not: "CLOSED" },
+          OR: [{ phase: "QUEUE" }, { unreadCount: { gt: 0 } }],
+        },
+      }),
+      prisma.conversation.count({ where: { tenantId, phase: "QUEUE" } }),
+    ]);
+    res.json({ pending: pendentes, queue: naFila });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Ficha do contato, exibida ao lado da conversa aberta.
+ *
+ * Fica aqui, e não em /leads/:id, porque quem atende no inbox tem a permissão
+ * "conversations" e nem sempre a de "contacts" — e a ficha é parte da tela de
+ * atendimento, não do CRM. Os dados que a lista de conversas já devolve não
+ * são repetidos à toa: aqui vêm só os que exigem consulta extra (etapa, tags,
+ * próximo agendamento, anotações).
+ */
+export const getConversationContact = async (req, res) => {
+  const tenantId = req.tenantId;
+  const { leadId } = req.params;
+
+  try {
+    const lead = await prisma.lead.findFirst({
+      where: { id: leadId, tenantId },
+      select: {
+        id: true, name: true, phone: true, email: true, channel: true,
+        igUsername: true, externalId: true, source: true, notes: true,
+        optedOut: true, createdAt: true, stageId: true,
+        stage: { select: { id: true, name: true, color: true } },
+        tags: { select: { id: true, name: true, color: true } },
+      },
+    });
+    if (!lead) return res.status(404).json({ error: "Contato não encontrado" });
+
+    // Próximo compromisso a partir de agora; um cancelado não conta.
+    const proximo = await prisma.appointment.findFirst({
+      where: {
+        leadId, tenantId,
+        date: { gte: new Date() },
+        status: { notIn: ["CANCELLED", "NO_SHOW"] },
+      },
+      orderBy: { date: "asc" },
+      select: { id: true, title: true, date: true, status: true, meetLink: true },
+    });
+
+    const conversa = await prisma.conversation.findFirst({
+      where: { leadId, tenantId },
+      select: { id: true, createdAt: true, _count: { select: { messages: true } } },
+    });
+
+    res.json({
+      ...lead,
+      handle: contactHandle(lead),
+      nextAppointment: proximo || null,
+      messageCount: conversa?._count?.messages || 0,
+      firstContactAt: conversa?.createdAt || lead.createdAt,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Grava o que a ficha deixa editar: etapa do funil e anotação interna.
+ *
+ * A lista de campos é fechada de propósito — o corpo da requisição não vira
+ * um `data` livre para o Prisma, senão qualquer campo do Lead (inclusive
+ * tenantId) viraria editável por quem só deveria mexer na ficha.
+ */
+export const updateConversationContact = async (req, res) => {
+  const tenantId = req.tenantId;
+  const { leadId } = req.params;
+  const { stageId, notes } = req.body || {};
+
+  try {
+    const lead = await prisma.lead.findFirst({ where: { id: leadId, tenantId }, select: { id: true } });
+    if (!lead) return res.status(404).json({ error: "Contato não encontrado" });
+
+    const data = {};
+    if (stageId !== undefined) {
+      if (stageId === null || stageId === "") {
+        data.stageId = null;
+      } else {
+        // A etapa precisa ser do próprio tenant: aceitar o id cru deixaria
+        // mover um contato para o funil de outra conta.
+        const etapa = await prisma.pipelineStage.findFirst({
+          where: { id: stageId, tenantId }, select: { id: true },
+        });
+        if (!etapa) return res.status(400).json({ error: "Etapa inválida" });
+        data.stageId = etapa.id;
+      }
+    }
+    if (notes !== undefined) data.notes = String(notes || "").slice(0, 5000) || null;
+
+    if (Object.keys(data).length === 0) return res.json({ success: true });
+
+    const atualizado = await prisma.lead.update({
+      where: { id: leadId },
+      data,
+      select: {
+        id: true, notes: true, stageId: true,
+        stage: { select: { id: true, name: true, color: true } },
+      },
+    });
+    res.json(atualizado);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
  * Envia um template aprovado para o lead. É o único caminho para reabrir a
  * conversa depois que a janela de 24h fechou.
  */

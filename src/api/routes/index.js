@@ -221,6 +221,11 @@ router.post("/messages/template", requirePermission("conversations"), MessageCon
 router.get("/conversations", requirePermission("conversations"), MessageController.getConversations);
 router.put("/conversations/:leadId/read", requirePermission("conversations"), MessageController.markRead);
 router.put("/conversations/:leadId/toggle-bot", requirePermission("conversations"), MessageController.toggleBot);
+// Badge do menu: quantas conversas esperam atenção humana.
+router.get("/conversations/pending-count", requirePermission("conversations"), MessageController.getPendingCount);
+// Ficha do contato, ao lado da conversa aberta.
+router.get("/conversations/:leadId/contact", requirePermission("conversations"), MessageController.getConversationContact);
+router.put("/conversations/:leadId/contact", requirePermission("conversations"), MessageController.updateConversationContact);
 // Filas de atendimento e fases da conversa
 router.get("/queues", requirePermission("queues"), AttendanceController.listQueues);
 router.post("/queues", requirePermission("queues"), AttendanceController.createQueue);
