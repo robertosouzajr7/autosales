@@ -963,6 +963,12 @@ model LandingPageSettings {
   // Plans to show (comma separated IDs)
   visiblePlanIds String? @default("")
 
+  // Depoimentos da landing, em JSON: [{ nome, papel, texto, nota }].
+  // Fica no banco, e não escrito no código, porque depoimento é declaração de
+  // um cliente real — inventar um para preencher o layout seria publicar uma
+  // avaliação falsa. Vazio, a seção mostra só os números do produto.
+  testimonials String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
