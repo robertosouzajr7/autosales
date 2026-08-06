@@ -1,4 +1,5 @@
 import prisma from "../config/prisma.js";
+import jwt from "jsonwebtoken";
 import { touchConversation } from "../services/ConversationService.js";
 import { buildIdentity, findOrCreateLead, normalizePhone, resolveContact } from "../services/ContactIdentity.js";
 import MessagingService from "../services/MessagingService.js";
@@ -287,6 +288,10 @@ export const submitChat = async (req, res) => {
       }
     });
     await touchConversation(newMessage);
+    // O inbox escuta a mesma fonte: sem isto, mensagem vinda do site só
+    // aparecia para a equipe quando alguém recarregava a tela.
+    const { messageEvents } = await import("./MessageController.js");
+    messageEvents.emit("new_message", { tenantId: resolvedTenantId, message: newMessage });
 
     // 4. Generate AI SDR response
     const aiResponse = await AutomationEngine.callAI(null, lead, { tenantId: resolvedTenantId });
@@ -302,13 +307,18 @@ export const submitChat = async (req, res) => {
         }
       });
       await touchConversation(assistantMsg);
+      messageEvents.emit("new_message", { tenantId: resolvedTenantId, message: assistantMsg });
     }
 
-    res.json({ 
-      success: true, 
-      message: newMessage, 
+    res.json({
+      success: true,
+      message: newMessage,
       leadId: lead.id,
-      response: aiResponse || "Desculpe, não consegui processar a resposta agora." 
+      // Credencial da conversa: é com ela que o visitante lê o histórico e
+      // escuta as respostas. O leadId sozinho não serve — ele viaja no
+      // navegador e qualquer um que o adivinhasse leria a conversa alheia.
+      chatToken: assinarTokenDoChat(lead.id, resolvedTenantId),
+      response: aiResponse || "Desculpe, não consegui processar a resposta agora.",
     });
   } catch (error) {
     console.error("[PublicWebchat] Erro ao enviar mensagem:", error);
@@ -316,6 +326,101 @@ export const submitChat = async (req, res) => {
   }
 };
 
+
+/**
+ * Credencial da conversa do site.
+ *
+ * Assinada com o mesmo segredo do painel, mas com `tipo` próprio: um token
+ * de webchat nunca pode ser confundido com um login. Vale 12h — o suficiente
+ * para o visitante voltar à aba no mesmo dia e continuar de onde parou.
+ */
+function assinarTokenDoChat(leadId, tenantId) {
+  return jwt.sign({ tipo: "webchat", leadId, tenantId }, process.env.JWT_SECRET, { expiresIn: "12h" });
+}
+
+function lerTokenDoChat(token) {
+  try {
+    const dados = jwt.verify(String(token || ""), process.env.JWT_SECRET);
+    return dados?.tipo === "webchat" && dados.leadId && dados.tenantId ? dados : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Histórico da conversa do site.
+ *
+ * O visitante guardava as mensagens no próprio navegador, então tudo que o
+ * atendente respondesse enquanto a aba estava fechada simplesmente não
+ * existia para ele. Agora a conversa vem do servidor.
+ */
+export const getChatHistory = async (req, res) => {
+  try {
+    const dados = lerTokenDoChat(req.query.token);
+    if (!dados) return res.status(401).json({ error: "Sessão de chat expirada. Recarregue a página." });
+
+    const conversa = await prisma.conversation.findFirst({
+      where: { leadId: dados.leadId, tenantId: dados.tenantId },
+      select: { id: true },
+    });
+    if (!conversa) return res.json({ messages: [] });
+
+    const messages = await prisma.message.findMany({
+      where: { conversationId: conversa.id, role: { not: "SYSTEM" } },
+      orderBy: { createdAt: "asc" },
+      take: 200,
+      select: { id: true, role: true, content: true, mediaUrl: true, messageType: true, createdAt: true },
+    });
+    res.json({ messages });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Respostas chegando ao visitante em tempo real.
+ *
+ * Mesma fonte que o inbox escuta (messageEvents), filtrada pela conversa do
+ * token. Só sai o que NÃO é do próprio visitante: a fala dele já está na
+ * tela desde antes de o servidor confirmar.
+ */
+export const streamChat = async (req, res) => {
+  const dados = lerTokenDoChat(req.query.token);
+  if (!dados) return res.status(401).json({ error: "Sessão de chat expirada." });
+
+  const conversa = await prisma.conversation.findFirst({
+    where: { leadId: dados.leadId, tenantId: dados.tenantId },
+    select: { id: true },
+  });
+  if (!conversa) return res.status(404).json({ error: "Conversa não encontrada." });
+
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+    // Sem isto o nginx segura o fluxo em buffer e o "tempo real" chega em lotes.
+    "X-Accel-Buffering": "no",
+  });
+  res.write(": conectado\n\n");
+
+  const { messageEvents } = await import("./MessageController.js");
+  const aoReceber = (evento) => {
+    const m = evento?.message;
+    if (!m || evento.tenantId !== dados.tenantId) return;
+    if (m.conversationId !== conversa.id) return;
+    if (m.role === "USER") return;
+    res.write(`data: ${JSON.stringify(m)}\n\n`);
+  };
+  messageEvents.on("new_message", aoReceber);
+
+  // Proxies derrubam conexão ociosa; o comentário periódico mantém viva.
+  const batida = setInterval(() => res.write(": ping\n\n"), 25000);
+
+  req.on("close", () => {
+    clearInterval(batida);
+    messageEvents.off("new_message", aoReceber);
+  });
+};
 
 /**
  * Agendamento pelo link público.

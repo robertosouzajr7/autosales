@@ -220,7 +220,7 @@ export default function Analytics() {
               <section className="rounded-[14px] border border-border bg-card p-5 shadow-card">
                 <h2 className="text-[15px] font-semibold text-foreground">Quem atendeu</h2>
                 <p className="mb-4 text-[12.5px] text-muted-foreground">
-                  Conversas sob responsabilidade de cada pessoa hoje.
+                  Conversas por que cada pessoa passou — quem atendeu e transferiu continua contando.
                 </p>
                 {dados.equipe.length === 0 ? (
                   <Vazio texto="Nenhuma conversa assumida por pessoa no período — a IA deu conta." />

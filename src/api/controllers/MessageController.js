@@ -47,12 +47,14 @@ export const sendMessage = async (req, res) => {
       where: { leadId },
       select: { lastInboundAt: true },
     });
-    if (conv && !isWindowOpen(conv.lastInboundAt)) {
+    // A janela de 24h é regra da Meta. O chat do site é canal próprio: não
+    // existe janela para fechar nem template para reabrir.
+    const canalDoContato = String(lead.channel || "WHATSAPP").toUpperCase();
+    if (canalDoContato !== "SITE" && conv && !isWindowOpen(conv.lastInboundAt)) {
       // A saída da janela é diferente em cada canal: no WhatsApp existe o
       // template aprovado, no Instagram não existe nada — só esperar.
-      const canal = String(lead.channel || "WHATSAPP").toUpperCase();
       return res.status(409).json({
-        error: canal === "INSTAGRAM"
+        error: canalDoContato === "INSTAGRAM"
           ? "Passaram-se mais de 24h desde a última mensagem do contato. O Instagram só permite responder de novo quando ele escrever."
           : "A janela de 24h fechou. Use um template aprovado para reabrir a conversa.",
         windowClosed: true,

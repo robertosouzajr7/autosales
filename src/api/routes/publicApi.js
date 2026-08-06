@@ -18,6 +18,10 @@ router.patch("/leads/:id", PublicController.saveLeadAnswers);
 
 router.get("/webchat/:id", PublicController.getWebchat);
 router.post("/chat", PublicController.submitChat);
+// Conversa do site: histórico e respostas em tempo real. A credencial é o
+// token devolvido por /chat — não há sessão de painel aqui.
+router.get("/chat/history", PublicController.getChatHistory);
+router.get("/chat/stream", PublicController.streamChat);
 router.post("/book", PublicController.bookAppointment);
 router.post("/waitlist", PublicController.addToWaitlist);
 
