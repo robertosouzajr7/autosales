@@ -36,8 +36,23 @@ import Comecar from "./pages/Comecar";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import { Toaster } from "@/components/ui/toaster";
+import { ehApp } from "@/mobile/plataforma";
+import MobileShell from "@/mobile/MobileShell";
 
 function App() {
+  // O app do atendente é outra aplicação em cima do mesmo código: telas
+  // próprias, navegação por abas, sem roteador. `ehApp()` só é verdadeiro
+  // dentro do empacotamento nativo (ou com `?app=1`, para conferência), então
+  // no navegador — desktop e celular — nada abaixo desta linha muda.
+  if (ehApp()) {
+    return (
+      <>
+        <MobileShell />
+        <Toaster />
+      </>
+    );
+  }
+
   return (
     <Router>
       <Routes>
