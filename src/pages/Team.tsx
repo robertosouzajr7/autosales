@@ -1,19 +1,19 @@
 import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { PageContainer } from "@/components/shared/PageContainer";
-import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/components/ui/use-toast";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Plus, Save, KeyRound, Power, Trash2, ShieldCheck, Info } from "lucide-react";
+import { Users, Plus, Save, KeyRound, Power, Trash2, ShieldCheck, Info, MoreVertical, Check, X } from "lucide-react";
 
 /**
  * Colaboradores: cadastro, perfil de acesso e quais áreas cada pessoa vê.
@@ -175,74 +175,163 @@ export default function Team() {
 
   const grupos = [...new Set(catalogo.modules.map((m) => m.grupo))];
 
+  // Cor do perfil: proprietário e administrador se distinguem à primeira
+  // vista porque são os que mexem em cobrança e em acesso.
+  const CORES: Record<string, string> = {
+    OWNER: "bg-accent-soft text-accent-text",
+    ADMIN: "bg-violet-100 text-violet-700",
+  };
+  const corPerfil = (id: string) => CORES[id] || "bg-surface-2 text-muted-foreground";
+
+  const perfis = catalogo.profiles || [];
+  const modulos = catalogo.modules || [];
+
   return (
     <DashboardLayout>
-      <PageContainer>
-      <PageHeader
-        title="Colaboradores"
-        subtitle="Quem tem acesso à conta, com qual perfil e o que cada um enxerga."
-        actions={
-          <Button onClick={abrirNovo} className="rounded-2xl font-bold bg-[#2563EB]">
-            <Plus className="w-4 h-4 mr-2" /> Novo colaborador
-          </Button>
-        }
-      />
+      <div className="mx-auto max-w-[1240px] px-4 pb-10 pt-5 sm:px-6">
 
-      {loading ? (
-        <div className="text-slate-400 p-10 text-center">Carregando…</div>
-      ) : users.length === 0 ? (
-        <Card><CardContent className="p-16 text-center">
-          <Users className="w-10 h-10 mx-auto text-slate-300 mb-4" />
-          <p className="font-bold text-slate-600">Nenhum colaborador ainda</p>
-        </CardContent></Card>
-      ) : (
-        <div className="grid gap-3">
-          {users.map((u) => (
-            <Card key={u.id} className={u.active === false ? "opacity-60" : ""}>
-              <CardContent className="p-5 flex items-start gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-slate-800">{u.name}</span>
-                    <Badge className="bg-slate-100 text-slate-600 border-none font-bold text-[11px]">
-                      {u.isAdmin && <ShieldCheck className="w-3 h-3 mr-1" />}
-                      {u.profileLabel}
-                    </Badge>
-                    {u.active === false && (
-                      <Badge className="bg-red-100 text-red-700 border-none font-bold text-[11px]">Desativado</Badge>
-                    )}
-                    {u.id === meuId && <span className="text-[11px] font-bold text-slate-400">(você)</span>}
-                  </div>
-                  <p className="text-sm text-slate-500 mt-1">
-                    {u.email}
-                    {u.jobTitle ? ` · ${u.jobTitle}` : ""}
-                  </p>
-                  <p className="text-[11px] text-slate-400 mt-1.5">
-                    {u.permissions?.length || 0} área(s) liberada(s)
-                    {u.queues?.length ? ` · filas: ${u.queues.map((q: any) => q.name).join(", ")}` : " · sem fila atribuída"}
-                  </p>
+        <header className="mb-4 flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-[26px] font-bold tracking-[-0.03em] text-foreground">Colaboradores</h1>
+            <p className="mt-0.5 max-w-lg text-[13.5px] text-muted-foreground">
+              Quem tem acesso à conta, com qual perfil e o que cada um enxerga.
+            </p>
+          </div>
+          <Button onClick={abrirNovo} className="h-10 gap-2"><Plus className="h-4 w-4" /> Novo colaborador</Button>
+        </header>
+
+        {loading ? (
+          <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-14 rounded-lg" />)}</div>
+        ) : users.length === 0 ? (
+          <div className="grid place-items-center gap-3 rounded-[14px] border border-border bg-card px-6 py-20 text-center shadow-card">
+            <Users className="h-8 w-8 text-border-soft" />
+            <p className="text-[14px] font-semibold text-foreground">Nenhum colaborador ainda</p>
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-card">
+            <div className="overflow-x-auto">
+              <div className="min-w-[720px]">
+                <div className="grid grid-cols-[2fr_1.2fr_1fr_1.1fr_40px] gap-3 border-b border-border bg-surface-2 px-4 py-2.5">
+                  {["Pessoa", "Perfil", "Estado", "Filas", ""].map((h, i) => (
+                    <span key={i} className="linha-unica text-[11px] font-semibold uppercase tracking-wide text-faint">{h}</span>
+                  ))}
                 </div>
-                <div className="flex gap-1 shrink-0">
-                  <Button size="sm" variant="ghost" onClick={() => abrirEdicao(u)} className="rounded-xl" title="Editar">
-                    <Save className="w-4 h-4" />
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => novaSenha(u)} className="rounded-xl" title="Definir nova senha">
-                    <KeyRound className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    size="sm" variant="ghost" onClick={() => alternarAtivo(u)} className="rounded-xl"
-                    title={u.active === false ? "Reativar acesso" : "Desativar acesso"}
+                {users.map((u) => (
+                  <div
+                    key={u.id}
+                    className={`grid grid-cols-[2fr_1.2fr_1fr_1.1fr_40px] items-center gap-3 border-b border-border-soft px-4 py-3 last:border-0 hover:bg-surface-2 ${
+                      u.active === false ? "opacity-60" : ""
+                    }`}
                   >
-                    <Power className={`w-4 h-4 ${u.active === false ? "text-emerald-500" : "text-amber-500"}`} />
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => remover(u)} className="rounded-xl text-red-500" title="Excluir">
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent-soft text-[10px] font-bold text-accent-text">
+                        {(u.name || "?").substring(0, 2).toUpperCase()}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="linha-unica-elipse text-[13px] font-semibold text-foreground">
+                          {u.name}
+                          {u.id === meuId && <span className="ml-1.5 font-normal text-faint">(você)</span>}
+                        </p>
+                        <p className="linha-unica-elipse text-[11.5px] text-faint">{u.email}</p>
+                      </div>
+                    </div>
+
+                    <span className={`linha-unica flex w-fit items-center gap-1 rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold ${corPerfil(u.role)}`}>
+                      {u.isAdmin && <ShieldCheck className="h-3 w-3" />}
+                      {u.profileLabel}
+                    </span>
+
+                    <span className="linha-unica flex items-center gap-1.5 text-[12.5px]">
+                      <span className={`h-2 w-2 shrink-0 rounded-full ${
+                        u.active === false ? "bg-rose-500" : u.emailVerified === false ? "bg-amber-500" : "bg-emerald-500"
+                      }`} />
+                      <span className={u.active === false ? "text-rose-600" : u.emailVerified === false ? "text-amber-700" : "text-muted-foreground"}>
+                        {u.active === false ? "Desativado" : u.emailVerified === false ? "Convite pendente" : "Ativo"}
+                      </span>
+                    </span>
+
+                    <span className="linha-unica-elipse text-[12.5px] text-muted-foreground">
+                      {u.queues?.length ? u.queues.map((q: any) => q.name).join(", ") : <span className="text-faint">Sem fila</span>}
+                    </span>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="grid h-8 w-8 place-items-center rounded-lg text-faint hover:bg-card hover:text-foreground">
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-52 rounded-xl p-1.5">
+                        <DropdownMenuItem className="cursor-pointer rounded-lg text-[12px] font-medium" onClick={() => abrirEdicao(u)}>
+                          <Save className="mr-2 h-4 w-4 text-accent-text" /> Editar acesso
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="cursor-pointer rounded-lg text-[12px] font-medium" onClick={() => novaSenha(u)}>
+                          <KeyRound className="mr-2 h-4 w-4 text-accent-text" /> Definir nova senha
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="cursor-pointer rounded-lg text-[12px] font-medium" onClick={() => alternarAtivo(u)}>
+                          <Power className={`mr-2 h-4 w-4 ${u.active === false ? "text-emerald-600" : "text-amber-600"}`} />
+                          {u.active === false ? "Reativar acesso" : "Desativar acesso"}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="cursor-pointer rounded-lg text-[12px] font-medium text-red-600 focus:text-red-600"
+                          onClick={() => remover(u)}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Matriz de permissões: o que cada perfil enxerga, lado a lado. */}
+        {!loading && perfis.length > 0 && modulos.length > 0 && (
+          <section className="mt-4 overflow-hidden rounded-[14px] border border-border bg-card shadow-card">
+            <header className="border-b border-border px-5 py-3.5">
+              <h2 className="text-[14px] font-semibold text-foreground">O que cada perfil enxerga</h2>
+              <p className="mt-0.5 text-[12.5px] text-muted-foreground">
+                É o padrão da função. Ao editar uma pessoa dá para liberar ou esconder áreas uma a uma.
+              </p>
+            </header>
+            <div className="overflow-x-auto">
+              <div className="min-w-[640px]">
+                <div
+                  className="grid gap-3 border-b border-border bg-surface-2 px-5 py-2.5"
+                  style={{ gridTemplateColumns: `1.6fr repeat(${perfis.length}, 1fr)` }}
+                >
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-faint">Área</span>
+                  {perfis.map((p: any) => (
+                    <span key={p.id} className="linha-unica text-center text-[11px] font-semibold uppercase tracking-wide text-faint">
+                      {p.label}
+                    </span>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                {modulos.map((m: any) => (
+                  <div
+                    key={m.id}
+                    className="grid items-center gap-3 border-b border-border-soft px-5 py-2.5 last:border-0"
+                    style={{ gridTemplateColumns: `1.6fr repeat(${perfis.length}, 1fr)` }}
+                  >
+                    <span className="linha-unica-elipse text-[12.5px] text-foreground">{m.label}</span>
+                    {perfis.map((p: any) => {
+                      const tem = (p.modules || []).includes(m.id);
+                      return (
+                        <span key={p.id} className="grid place-items-center">
+                          {tem
+                            ? <Check className="h-4 w-4 text-[#15803D]" strokeWidth={3} />
+                            : <X className="h-4 w-4 text-[#CBD5E1]" strokeWidth={3} />}
+                        </span>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+      </div>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl">
@@ -365,7 +454,6 @@ export default function Team() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      </PageContainer>
     </DashboardLayout>
   );
 }

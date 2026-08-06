@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -131,23 +130,24 @@ export default function Assinatura() {
 
   return (
     <DashboardLayout>
-      <div className="mx-auto max-w-5xl p-4 sm:p-6 lg:p-8">
-        <PageHeader
-          title="Assinatura"
-          subtitle="Gerencie seu plano, pagamento e faturas."
-          icon={<CreditCard className="w-5 h-5" />}
-        />
+      <div className="mx-auto max-w-[1240px] px-4 pb-10 pt-5 sm:px-6">
+        <header className="mb-4">
+          <h1 className="text-[26px] font-bold tracking-[-0.03em] text-foreground">Assinatura</h1>
+          <p className="mt-0.5 text-[13.5px] text-muted-foreground">
+            Seu plano, o consumo do ciclo, o pagamento e as faturas.
+          </p>
+        </header>
 
         {loading ? (
           <div className="py-24 grid place-items-center text-muted-foreground"><Loader2 className="w-7 h-7 animate-spin" /></div>
         ) : (
           <div className="space-y-6">
             {/* Status + plano atual */}
-            <Card className="p-6 rounded-2xl">
+            <Card className="rounded-[14px] border-primary/40 bg-accent-soft p-6 shadow-none">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="space-y-2">
                   <Badge className={`${STATUS[status]?.cls} border-none font-semibold`}>{STATUS[status]?.label || status}</Badge>
-                  <h2 className="text-2xl font-semibold tracking-tight">{plan?.name || "Sem plano"}</h2>
+                  <h2 className="text-[24px] font-bold tracking-[-0.03em] text-foreground">{plan?.name || "Sem plano"}</h2>
                   <p className="text-sm text-muted-foreground">
                     {plan ? `${brl(plan.priceMonthly)}/mês` : "—"}
                     {status === "TRIAL" && t?.trialEnd && ` · teste termina em ${daysLeft(t.trialEnd)} dia(s) (${fmtDate(t.trialEnd)})`}
