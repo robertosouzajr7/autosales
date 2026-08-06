@@ -421,7 +421,8 @@ export const getConversationContact = async (req, res) => {
       where: {
         leadId, tenantId,
         date: { gte: new Date() },
-        status: { notIn: ["CANCELLED", "NO_SHOW"] },
+        // O vocabulário do banco é NOSHOW (ReminderService), sem underscore.
+        status: { notIn: ["CANCELLED", "NOSHOW"] },
       },
       orderBy: { date: "asc" },
       select: { id: true, title: true, date: true, status: true, meetLink: true },

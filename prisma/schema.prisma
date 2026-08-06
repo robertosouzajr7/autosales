@@ -155,9 +155,16 @@ model Lead {
   stageId String?
   stage   PipelineStage? @relation(fields: [stageId], references: [id], onDelete: SetNull)
 
-  source   String?
-  tags     Tag[] // Many-to-Many
-  notes    String?
+  source String?
+  tags   Tag[] // Many-to-Many
+  notes  String?
+
+  // Valor da oportunidade, em reais. É o que permite ao funil somar
+  // "em negociação" e "fechado" — sem ele o board só conta cabeças.
+  // Opcional de propósito: negócio que não trabalha com ticket por contato
+  // simplesmente deixa vazio e o funil segue mostrando as contagens.
+  value Float?
+
   tenantId String
 
   // Canal de origem da conversa e a conexão (WhatsAppAccount.id) que a recebeu.

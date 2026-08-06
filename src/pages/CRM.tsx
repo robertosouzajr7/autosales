@@ -87,7 +87,8 @@ export default function CRM() {
           email: selectedLead.email,
           stageId: selectedLead.stageId,
           notes: selectedLead.notes,
-          source: selectedLead.source
+          source: selectedLead.source,
+          value: selectedLead.value,
         })
       });
       if (res.ok) {
@@ -290,6 +291,19 @@ export default function CRM() {
                           {stages.map(s => <SelectItem key={s.id} value={s.id} className="font-bold">{s.name}</SelectItem>)}
                        </SelectContent>
                     </Select>
+                 </div>
+                 {/* Valor da oportunidade: é o que alimenta "em negociação",
+                     "fechado" e o ticket médio no painel. Vazio é permitido —
+                     nem todo negócio trabalha com ticket por contato. */}
+                 <div className="col-span-2 space-y-2">
+                    <Label className="font-semibold text-xs text-slate-400">Valor da oportunidade (R$)</Label>
+                    <Input
+                      type="number" min="0" step="0.01" inputMode="decimal"
+                      value={selectedLead?.value ?? ""}
+                      onChange={e => setSelectedLead({ ...selectedLead, value: e.target.value })}
+                      placeholder="Deixe vazio se não se aplica"
+                      className="h-10 border-2 border-slate-50 rounded-2xl font-bold bg-slate-50/20"
+                    />
                  </div>
                  <div className="col-span-2 space-y-2">
                     <Label className="font-semibold text-xs text-slate-400">Anotações</Label>

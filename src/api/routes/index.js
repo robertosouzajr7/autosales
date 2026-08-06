@@ -169,6 +169,8 @@ router.post("/automations/reminders/:id/retry", requirePermission("reminders"), 
 // Stats & Analytics
 router.get("/stats/dashboard", StatsController.getDashboardStats);
 router.get("/stats/results", StatsController.getResults);
+// Números da home do painel: série, variação, IA/equipe e valores do funil.
+router.get("/stats/home", StatsController.getHomeStats);
 router.get("/analytics", requirePermission("analytics"), AnalyticsController.getAnalytics);
 
 // Messages & Conversations (Chat/Inbox)
