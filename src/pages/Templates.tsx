@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { PageContainer } from "@/components/shared/PageContainer";
-import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -179,103 +178,172 @@ export default function Templates() {
 
   const variableCount = (form.content.match(/\{\{\d+\}\}/g) || []).length;
 
+  const porStatus = (s: string) => templates.filter((t) => t.status === s).length;
+  const selecionado = previewing || templates[0] || null;
+
   return (
     <DashboardLayout>
-      <PageContainer>
-      <PageHeader
-        title="Templates de mensagem"
-        subtitle="Mensagens aprovadas pela Meta — necessárias para iniciar conversa fora da janela de 24h e para disparos em massa."
-        actions={
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={sync} disabled={syncing} className="rounded-2xl font-bold">
-              <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
-              Sincronizar com a Meta
-            </Button>
-            <Button onClick={openNew} className="rounded-2xl font-bold bg-[#2563EB]">
-              <Plus className="w-4 h-4 mr-2" /> Novo template
-            </Button>
+      <div className="mx-auto max-w-[1500px] px-4 pb-10 pt-5 sm:px-6">
+
+        <header className="mb-4 flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-[26px] font-bold tracking-[-0.03em] text-foreground">Templates de mensagem</h1>
+            <p className="mt-0.5 max-w-xl text-[13.5px] text-muted-foreground">
+              Mensagens aprovadas pela Meta — necessárias para iniciar conversa fora da janela de 24h
+              e para disparos em massa.
+            </p>
           </div>
-        }
-      />
+          <div className="flex shrink-0 gap-2">
+            <Button variant="outline" onClick={sync} disabled={syncing} className="h-10 gap-2">
+              <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} /> Sincronizar com a Meta
+            </Button>
+            <Button onClick={openNew} className="h-10 gap-2"><Plus className="h-4 w-4" /> Novo template</Button>
+          </div>
+        </header>
 
-      {connections.length === 0 && !loading && (
-        <Card className="mb-6 border-amber-200 bg-amber-50/60">
-          <CardContent className="p-5 flex gap-3 items-start">
-            <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-            <div className="text-sm text-amber-900">
-              <strong>Nenhuma conexão oficial configurada.</strong> Templates vivem na conta do WhatsApp Business
-              (WABA), então é preciso ter a API oficial conectada em <a href="/connections" className="underline font-bold">Conexões</a> antes
-              de criar ou sincronizar.
+        {connections.length === 0 && !loading && (
+          <div className="mb-4 flex gap-3 rounded-[14px] border border-amber-200 bg-amber-50 p-4">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+            <p className="text-[13px] leading-relaxed text-amber-900">
+              <strong className="font-semibold">Nenhuma conexão oficial configurada.</strong> Templates vivem na
+              conta do WhatsApp Business (WABA), então é preciso ter a API oficial conectada em{" "}
+              <a href="/connections" className="font-semibold underline">Conexões</a> antes de criar ou sincronizar.
+            </p>
+          </div>
+        )}
+
+        {/* KPIs */}
+        <section className="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <KpiTpl rotulo="Aprovados" valor={porStatus("APPROVED")} cor="text-emerald-600 dark:text-emerald-400" detalhe="prontos para disparar" />
+          <KpiTpl rotulo="Em análise" valor={porStatus("PENDING")} cor="text-amber-600 dark:text-amber-500" detalhe="aguardando a Meta" />
+          <KpiTpl rotulo="Reprovados" valor={porStatus("REJECTED")} cor="text-rose-600 dark:text-rose-400" detalhe="precisam ser refeitos" />
+          <KpiTpl rotulo="Rascunhos" valor={porStatus("DRAFT")} cor="text-foreground" detalhe="ainda não enviados" />
+        </section>
+
+        {loading ? (
+          <div className="space-y-2">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-14 rounded-lg" />)}</div>
+        ) : templates.length === 0 ? (
+          <div className="grid place-items-center gap-3 rounded-[14px] border border-border bg-card px-6 py-20 text-center shadow-card">
+            <FileText className="h-8 w-8 text-border-soft" />
+            <div>
+              <p className="text-[14px] font-semibold text-foreground">Nenhum template ainda</p>
+              <p className="mt-1 max-w-md text-[13px] text-muted-foreground">
+                Crie um aqui ou traga os que já existem na sua conta da Meta com “Sincronizar”.
+              </p>
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {loading ? (
-        <div className="text-slate-400 p-10 text-center">Carregando…</div>
-      ) : templates.length === 0 ? (
-        <Card><CardContent className="p-16 text-center">
-          <FileText className="w-10 h-10 mx-auto text-slate-300 mb-4" />
-          <p className="font-bold text-slate-600">Nenhum template ainda</p>
-          <p className="text-sm text-slate-400 mt-1 max-w-md mx-auto">
-            Crie um aqui ou traga os que já existem na sua conta da Meta usando "Sincronizar".
-          </p>
-        </CardContent></Card>
-      ) : (
-        <div className="grid gap-3">
-          {templates.map((t) => {
-            const st = (STATUS as any)[t.status] || STATUS.DRAFT;
-            const Icon = st.icon;
-            return (
-              <Card key={t.id} className="hover:shadow-sm transition">
-                <CardContent className="p-5">
-                  <div className="flex items-start gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-slate-800 truncate">{t.name}</span>
-                        <Badge className={`${st.cls} border-none font-bold text-[11px]`}>
-                          <Icon className="w-3 h-3 mr-1" />{st.label}
-                        </Badge>
-                        <Badge variant="outline" className="text-[11px] font-bold">
-                          {CATEGORIES.find((c) => c.id === t.category)?.label || t.category}
-                        </Badge>
-                        <span className="text-[11px] text-slate-400 font-medium">{t.language}</span>
-                        {t.variableCount > 0 && (
-                          <span className="text-[11px] text-slate-400 font-medium">
-                            {t.variableCount} variável(is)
-                          </span>
-                        )}
-                      </div>
-                      {t.headerText && <p className="text-xs font-bold text-slate-500 mt-2">{t.headerText}</p>}
-                      <p className="text-sm text-slate-500 mt-1 line-clamp-2 whitespace-pre-wrap">{t.content}</p>
-                      {t.footerText && <p className="text-[11px] text-slate-400 mt-1">{t.footerText}</p>}
-                      {t.status === "REJECTED" && t.rejectedReason && (
-                        <p className="text-xs text-red-600 mt-2 font-medium">Motivo: {t.rejectedReason}</p>
-                      )}
-                    </div>
-                    <div className="flex gap-1 shrink-0">
-                      <Button size="sm" variant="ghost" onClick={() => setPreviewing(t)} className="rounded-xl" title="Ver no WhatsApp">
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      {t.status === "DRAFT" && (
-                        <Button size="sm" variant="ghost" onClick={() => openEdit(t)} className="rounded-xl" title="Editar">
-                          <Save className="w-4 h-4" />
-                        </Button>
-                      )}
-                      <Button size="sm" variant="ghost" onClick={() => duplicate(t)} className="rounded-xl" title="Duplicar">
-                        <Copy className="w-4 h-4" />
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => remove(t)} className="rounded-xl text-red-500" title="Remover">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
+          </div>
+        ) : (
+          <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_330px]">
+            {/* Tabela */}
+            <div className="min-w-0 overflow-hidden rounded-[14px] border border-border bg-card shadow-card">
+              <div className="overflow-x-auto">
+                <div className="min-w-[640px]">
+                  <div className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-3 border-b border-border bg-surface-2 px-4 py-2.5">
+                    {["Template", "Categoria", "Status na Meta", "Variáveis"].map((h) => (
+                      <span key={h} className="linha-unica text-[11px] font-semibold uppercase tracking-wide text-faint">{h}</span>
+                    ))}
                   </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+                  {templates.map((t) => {
+                    const st = (STATUS as any)[t.status] || STATUS.DRAFT;
+                    const ativo = selecionado?.id === t.id;
+                    return (
+                      <div
+                        key={t.id}
+                        onClick={() => setPreviewing(t)}
+                        className={`grid cursor-pointer grid-cols-[2fr_1fr_1fr_1fr] items-center gap-3 border-b border-l-[3px] border-border-soft px-4 py-3 last:border-b-0 ${
+                          ativo ? "border-l-[#2563EB] bg-accent-soft" : "border-l-transparent hover:bg-surface-2"
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          {/* O nome vai em monoespaçado: é um identificador em
+                              snake_case, não um título — e é assim que a Meta
+                              o exibe do outro lado. */}
+                          <p className="linha-unica-elipse font-mono text-[12.5px] font-semibold text-foreground">{t.name}</p>
+                          <p className="linha-unica-elipse mt-0.5 text-[11.5px] text-muted-foreground">{t.content}</p>
+                        </div>
+                        <span className="linha-unica-elipse text-[12.5px] text-muted-foreground">
+                          {CATEGORIES.find((c) => c.id === t.category)?.label || t.category}
+                        </span>
+                        <span className="linha-unica flex items-center gap-1.5 text-[12.5px] text-muted-foreground">
+                          <span className={`h-2 w-2 shrink-0 rounded-full ${
+                            t.status === "APPROVED" ? "bg-emerald-500"
+                            : t.status === "PENDING" ? "bg-amber-500"
+                            : t.status === "REJECTED" ? "bg-rose-500" : "bg-slate-300"
+                          }`} />
+                          {st.label}
+                        </span>
+                        <span className="num text-[12.5px] text-muted-foreground">
+                          {t.variableCount || 0}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Lateral: prévia + detalhes */}
+            {selecionado && (
+              <aside className="space-y-4 lg:sticky lg:top-[76px]">
+                <section className="rounded-[14px] border border-border bg-card p-4 shadow-card">
+                  <h2 className="mb-3 text-[14px] font-semibold text-foreground">Como chega no WhatsApp</h2>
+                  <TemplatePreview template={selecionado} contactName="Marina" businessName="Sua empresa" />
+                </section>
+
+                <section className="rounded-[14px] border border-border bg-card p-4 shadow-card">
+                  <h2 className="text-[14px] font-semibold text-foreground">Detalhes</h2>
+                  <dl className="mt-3 space-y-2">
+                    {[
+                      ["Nome", selecionado.name],
+                      ["Idioma", selecionado.language],
+                      ["Categoria", CATEGORIES.find((c) => c.id === selecionado.category)?.label || selecionado.category],
+                      ["Status", ((STATUS as any)[selecionado.status] || STATUS.DRAFT).label],
+                    ].map(([k, v]) => (
+                      <div key={k as string} className="flex items-baseline justify-between gap-3">
+                        <dt className="shrink-0 text-[12px] text-muted-foreground">{k}</dt>
+                        <dd className="linha-unica-elipse text-[12.5px] font-medium text-foreground">{v}</dd>
+                      </div>
+                    ))}
+                  </dl>
+
+                  {selecionado.status === "REJECTED" && selecionado.rejectedReason && (
+                    <p className="mt-3 rounded-lg bg-rose-50 p-3 text-[12px] leading-relaxed text-rose-800">
+                      <strong className="font-semibold">Motivo da reprovação:</strong> {selecionado.rejectedReason}
+                    </p>
+                  )}
+
+                  {selecionado.variableCount > 0 && (
+                    <p className="mt-3 rounded-lg bg-accent-soft p-3 text-[12px] leading-relaxed text-accent-text">
+                      Este template tem <strong className="font-semibold">{selecionado.variableCount}</strong>{" "}
+                      {selecionado.variableCount === 1 ? "variável" : "variáveis"}. No disparo, cada{" "}
+                      <code className="rounded bg-card px-1 py-0.5 font-mono">{"{{n}}"}</code> é trocado pelo valor do contato.
+                    </p>
+                  )}
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {selecionado.status === "DRAFT" && (
+                      <Button variant="outline" size="sm" onClick={() => openEdit(selecionado)} className="gap-1.5">
+                        <Save className="h-3.5 w-3.5" /> Editar
+                      </Button>
+                    )}
+                    <Button variant="outline" size="sm" onClick={() => duplicate(selecionado)} className="gap-1.5">
+                      <Copy className="h-3.5 w-3.5" /> Duplicar
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => remove(selecionado)} className="gap-1.5 text-red-600 hover:bg-red-50">
+                      <Trash2 className="h-3.5 w-3.5" /> Remover
+                    </Button>
+                  </div>
+                  {selecionado.status !== "DRAFT" && (
+                    <p className="mt-3 text-[11.5px] leading-relaxed text-faint">
+                      Depois de enviado à Meta o template não pode mais ser editado — só duplicado.
+                    </p>
+                  )}
+                </section>
+              </aside>
+            )}
+          </div>
+        )}
+      </div>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl">
@@ -509,7 +577,16 @@ export default function Templates() {
           {previewing && <TemplatePreview template={previewing} className="py-2" />}
         </DialogContent>
       </Dialog>
-      </PageContainer>
     </DashboardLayout>
+  );
+}
+
+function KpiTpl({ rotulo, valor, cor, detalhe }: { rotulo: string; valor: number; cor: string; detalhe: string }) {
+  return (
+    <article className="rounded-[14px] border border-border bg-card p-4 shadow-card">
+      <p className="linha-unica-elipse text-[12px] text-muted-foreground">{rotulo}</p>
+      <p className={`num mt-1 text-[30px] font-bold leading-none tracking-[-0.04em] ${cor}`}>{valor}</p>
+      <p className="mt-2 text-[11.5px] text-faint">{detalhe}</p>
+    </article>
   );
 }

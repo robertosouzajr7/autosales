@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,12 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Building2, Clock, Sparkles, UserRound, CreditCard, HelpCircle,
+  Building2, Sparkles, UserRound, CreditCard, HelpCircle, Check, AlertTriangle,
   Plus, Pencil, Trash2, Save, Loader2, Wand2,
 } from "lucide-react";
 
@@ -56,6 +54,7 @@ export default function MeuNegocio() {
   const [services, setServices] = useState<any[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
   const [faqs, setFaqs] = useState<any[]>([]);
+  const [aba, setAba] = useState("info");
 
   const vertical = profile.businessType || "OTHER";
   const L = useMemo(() => VERTICAL_LABELS[vertical] || VERTICAL_LABELS.OTHER, [vertical]);
@@ -108,196 +107,344 @@ export default function MeuNegocio() {
     setApplyingTemplate(false);
   };
 
+  // Completude do perfil. Cada item é uma coisa que o agente passa a saber —
+  // por isso a barra aponta o que falta em vez de só mostrar um número.
+  const itens = [
+    { id: "tipo", rotulo: "Tipo de negócio", ok: !!profile.businessType, aba: "info", acao: "Escolher" },
+    { id: "sobre", rotulo: "Apresentação do negócio", ok: !!(profile.businessAbout || "").trim(), aba: "info", acao: "Escrever" },
+    { id: "endereco", rotulo: "Endereço", ok: !!(profile.businessAddress || "").trim(), aba: "info", acao: "Preencher" },
+    { id: "horario", rotulo: "Horário de atendimento", ok: hours.some((h) => !h.isClosed && h.openTime), aba: "info", acao: "Definir" },
+    { id: "servicos", rotulo: L.service, ok: services.length > 0, aba: "services", acao: "Cadastrar" },
+    { id: "equipe", rotulo: L.team, ok: teamMembers.length > 0, aba: "team", acao: "Cadastrar" },
+    { id: "pagamento", rotulo: L.payment, ok: paymentMethods.length > 0, aba: "pay", acao: "Cadastrar" },
+    { id: "faq", rotulo: "Perguntas frequentes", ok: faqs.length > 0, aba: "faq", acao: "Cadastrar" },
+  ];
+  const feitos = itens.filter((i) => i.ok).length;
+  const pct = Math.round((feitos / itens.length) * 100);
+  const faltando = itens.filter((i) => !i.ok);
+
   return (
     <DashboardLayout>
-      <div className="mx-auto max-w-4xl p-4 sm:p-6 lg:p-8">
-        <PageHeader
-          icon={<Building2 className="w-5 h-5" />}
-          title="Meu Negócio"
-          subtitle={`Tudo que o agente de IA precisa saber para responder seus ${L.customer} com precisão.`}
-        />
+      <div className="mx-auto max-w-[1240px] px-4 pb-10 pt-5 sm:px-6">
+
+        <header className="mb-4 flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-[26px] font-bold tracking-[-0.03em] text-foreground">Meu negócio</h1>
+            <p className="mt-0.5 max-w-lg text-[13.5px] text-muted-foreground">
+              Tudo o que o agente precisa saber para responder seus {L.customer} com precisão.
+            </p>
+          </div>
+          <Button onClick={saveProfile} disabled={savingProfile} className="h-10 gap-2">
+            {savingProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {savingProfile ? "Salvando…" : "Salvar informações"}
+          </Button>
+        </header>
 
         {loading ? (
-          <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-2xl" />)}</div>
+          <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-[14px]" />)}</div>
         ) : (
           <>
-            {/* SELETOR DE VERTICAL */}
-            <section className="rounded-2xl border border-border bg-card p-5 mb-6">
-              <div className="flex flex-col md:flex-row md:items-center gap-4 md:justify-between">
-                <div>
-                  <h2 className="text-sm font-semibold text-foreground">Tipo de negócio</h2>
-                  <p className="text-xs text-muted-foreground mt-1">Define o vocabulário do agente e sugere um modelo inicial.</p>
+            {/* Progresso do perfil */}
+            <section className="mb-4 rounded-[14px] border border-border bg-card p-5 shadow-card">
+              <div className="flex flex-wrap items-center gap-5">
+                <AnelPerfil pct={pct} />
+                <div className="min-w-[220px] flex-1">
+                  <h2 className="text-[15px] font-semibold text-foreground">
+                    {faltando.length === 0
+                      ? "Perfil completo — o agente sabe tudo o que precisa"
+                      : faltando.length === 1
+                      ? "Falta um item para o perfil ficar completo"
+                      : `Faltam ${faltando.length} itens para o perfil ficar completo`}
+                  </h2>
+                  <p className="mt-0.5 text-[13px] text-muted-foreground">
+                    {faltando.length === 0
+                      ? "Sempre que algo mudar no negócio, atualize aqui."
+                      : "Cada item preenchido é uma pergunta a menos que o agente erra."}
+                  </p>
                 </div>
-                <div className="flex gap-2 flex-1 md:justify-end">
-                  <div className="flex-1 md:max-w-xs">
-                    <Select value={vertical} onValueChange={(v) => setProfile({ ...profile, businessType: v })}>
-                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                      <SelectContent>
-                        {VERTICAL_OPTIONS.map(o => (
-                          <SelectItem key={o.value} value={o.value}>
-                            <div className="flex flex-col text-left">
-                              <span className="text-sm">{o.label}</span>
-                              <span className="text-xs text-muted-foreground">{o.hint}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                {faltando.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {faltando.slice(0, 3).map((i) => (
+                      <button
+                        key={i.id}
+                        onClick={() => setAba(i.aba)}
+                        className="flex h-9 items-center gap-1.5 rounded-lg border border-amber-300 bg-[#FEF3C7] px-3 text-[12.5px] font-semibold text-amber-900 transition-colors hover:bg-amber-200"
+                      >
+                        {i.rotulo} <span className="text-amber-700">· {i.acao}</span>
+                      </button>
+                    ))}
                   </div>
-                  <Button variant="outline" onClick={applyTemplate} disabled={applyingTemplate} className="gap-2">
-                    {applyingTemplate ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
-                    Aplicar template
-                  </Button>
-                </div>
+                )}
               </div>
             </section>
 
-            <Tabs defaultValue="info" className="space-y-6">
-              <TabsList className="bg-muted p-1 rounded-xl inline-flex h-11 w-full md:w-auto overflow-x-auto scrollbar-thin">
-                <TabsTrigger value="info" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm"><Clock className="w-4 h-4 mr-2" />Informações</TabsTrigger>
-                <TabsTrigger value="services" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm"><Sparkles className="w-4 h-4 mr-2" />{L.service}</TabsTrigger>
-                <TabsTrigger value="team" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm"><UserRound className="w-4 h-4 mr-2" />{L.team}</TabsTrigger>
-                <TabsTrigger value="pay" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm"><CreditCard className="w-4 h-4 mr-2" />{L.payment}</TabsTrigger>
-                <TabsTrigger value="faq" className="rounded-lg h-full px-4 text-sm font-medium data-[state=active]:bg-card data-[state=active]:shadow-sm"><HelpCircle className="w-4 h-4 mr-2" />FAQ</TabsTrigger>
-              </TabsList>
+            {/* Abas */}
+            <nav className="mb-4 flex gap-1 overflow-x-auto rounded-[14px] border border-border bg-card p-2 shadow-card">
+              {[
+                { id: "info", rotulo: "Informações", Icone: Building2 },
+                { id: "services", rotulo: L.service, Icone: Sparkles },
+                { id: "team", rotulo: L.team, Icone: UserRound },
+                { id: "pay", rotulo: L.payment, Icone: CreditCard },
+                { id: "faq", rotulo: "FAQ", Icone: HelpCircle },
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setAba(t.id)}
+                  className={`flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-3.5 text-[12.5px] font-semibold transition-colors ${
+                    aba === t.id ? "bg-accent-soft text-accent-text" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <t.Icone className="h-3.5 w-3.5" /> {t.rotulo}
+                </button>
+              ))}
+            </nav>
 
-              {/* INFORMAÇÕES + HORÁRIOS */}
-              <TabsContent value="info" className="space-y-6">
-                <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
-                  <h2 className="text-sm font-semibold text-foreground">Sobre {L.business.toLowerCase() === "negócio" ? "o negócio" : "a " + L.business.toLowerCase()}</h2>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Apresentação</Label>
-                    <Textarea rows={3} value={profile.businessAbout || ""} onChange={e => setProfile({ ...profile, businessAbout: e.target.value })} placeholder="Ex.: Negócio com X anos de atuação, especializado em..." />
-                  </div>
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Endereço</Label>
-                      <Input value={profile.businessAddress || ""} onChange={e => setProfile({ ...profile, businessAddress: e.target.value })} placeholder="Rua, número, bairro, cidade" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Formas de pagamento aceitas</Label>
-                      <Input value={profile.businessPayment || ""} onChange={e => setProfile({ ...profile, businessPayment: e.target.value })} placeholder="Dinheiro, Pix, cartão em até 6x" />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Outras informações (estacionamento, acessibilidade, orientações)</Label>
-                    <Textarea rows={2} value={profile.businessExtraInfo || ""} onChange={e => setProfile({ ...profile, businessExtraInfo: e.target.value })} />
-                  </div>
-                </section>
+            {aba === "info" && (
+              <div className="grid items-start gap-4 lg:grid-cols-2">
+                {/* Identificação */}
+                <section className="rounded-[14px] border border-border bg-card p-5 shadow-card">
+                  <h2 className="text-[15px] font-semibold text-foreground">Identificação</h2>
 
-                <section className="rounded-2xl border border-border bg-card p-5 space-y-3">
-                  <h2 className="text-sm font-semibold text-foreground">Horário de atendimento</h2>
-                  <div className="space-y-2">
-                    {hours.map((h, i) => (
-                      <div key={h.weekday} className="flex items-center gap-3">
-                        <span className="w-20 text-sm text-foreground">{WEEKDAYS[h.weekday]}</span>
-                        <Switch checked={!h.isClosed} onCheckedChange={v => { const n = [...hours]; n[i] = { ...h, isClosed: !v }; setHours(n); }} />
-                        {h.isClosed ? (
-                          <span className="text-sm text-muted-foreground">Fechado</span>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <Input type="time" className="w-28" value={h.openTime || ""} onChange={e => { const n = [...hours]; n[i] = { ...h, openTime: e.target.value }; setHours(n); }} />
-                            <span className="text-muted-foreground text-sm">às</span>
-                            <Input type="time" className="w-28" value={h.closeTime || ""} onChange={e => { const n = [...hours]; n[i] = { ...h, closeTime: e.target.value }; setHours(n); }} />
-                          </div>
-                        )}
+                  <div className="mt-4 space-y-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-[12px] font-medium text-muted-foreground">Tipo de negócio</Label>
+                      <div className="flex gap-2">
+                        <Select value={vertical} onValueChange={(v) => setProfile({ ...profile, businessType: v })}>
+                          <SelectTrigger className="h-10 flex-1"><SelectValue placeholder="Selecione…" /></SelectTrigger>
+                          <SelectContent>
+                            {VERTICAL_OPTIONS.map((o) => (
+                              <SelectItem key={o.value} value={o.value}>
+                                <span className="flex flex-col text-left">
+                                  <span className="text-[13px]">{o.label}</span>
+                                  <span className="text-[11.5px] text-muted-foreground">{o.hint}</span>
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button variant="outline" onClick={applyTemplate} disabled={applyingTemplate} className="h-10 shrink-0 gap-2">
+                          {applyingTemplate ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                          Modelo
+                        </Button>
                       </div>
-                    ))}
+                      <p className="text-[11.5px] text-faint">
+                        Define o vocabulário do agente. “Modelo” preenche serviços e perguntas típicas da área.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-[12px] font-medium text-muted-foreground">Apresentação</Label>
+                      <Textarea
+                        rows={3} value={profile.businessAbout || ""}
+                        onChange={(e) => setProfile({ ...profile, businessAbout: e.target.value })}
+                        className="resize-none text-[13.5px]"
+                        placeholder="Ex.: Clínica com 12 anos de atuação, especializada em odontologia estética."
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-[12px] font-medium text-muted-foreground">Endereço</Label>
+                      <Input
+                        value={profile.businessAddress || ""}
+                        onChange={(e) => setProfile({ ...profile, businessAddress: e.target.value })}
+                        className="h-10" placeholder="Rua, número, bairro, cidade"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-[12px] font-medium text-muted-foreground">Formas de pagamento aceitas</Label>
+                      <Input
+                        value={profile.businessPayment || ""}
+                        onChange={(e) => setProfile({ ...profile, businessPayment: e.target.value })}
+                        className="h-10" placeholder="Dinheiro, Pix, cartão em até 6x"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-[12px] font-medium text-muted-foreground">
+                        Outras informações (estacionamento, acessibilidade, orientações)
+                      </Label>
+                      <Textarea
+                        rows={3} value={profile.businessExtraInfo || ""}
+                        onChange={(e) => setProfile({ ...profile, businessExtraInfo: e.target.value })}
+                        className="resize-none text-[13.5px]"
+                      />
+                    </div>
                   </div>
                 </section>
 
-                <div className="flex justify-end">
-                  <Button onClick={saveProfile} disabled={savingProfile} className="gap-2">
-                    {savingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Salvar informações
-                  </Button>
+                <div className="space-y-4">
+                  {/* Horário */}
+                  <section className="rounded-[14px] border border-border bg-card p-5 shadow-card">
+                    <h2 className="text-[15px] font-semibold text-foreground">Horário de funcionamento</h2>
+                    <div className="mt-4 space-y-2">
+                      {hours.map((h, i) => (
+                        <div key={h.weekday} className="flex items-center gap-3">
+                          <span className="w-[68px] shrink-0 text-[13px] text-foreground">{WEEKDAYS[h.weekday]}</span>
+                          <Switch
+                            checked={!h.isClosed}
+                            onCheckedChange={(v) => { const n = [...hours]; n[i] = { ...h, isClosed: !v }; setHours(n); }}
+                            aria-label={WEEKDAYS[h.weekday]}
+                          />
+                          {h.isClosed ? (
+                            <span className="text-[13px] text-faint">Fechado</span>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <Input type="time" className="h-9 w-[120px]" value={h.openTime || ""}
+                                onChange={(e) => { const n = [...hours]; n[i] = { ...h, openTime: e.target.value }; setHours(n); }} />
+                              <span className="text-[12.5px] text-faint">às</span>
+                              <Input type="time" className="h-9 w-[120px]" value={h.closeTime || ""}
+                                onChange={(e) => { const n = [...hours]; n[i] = { ...h, closeTime: e.target.value }; setHours(n); }} />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  {/* O que o agente já sabe */}
+                  <section className="rounded-[14px] border border-border bg-card p-5 shadow-card">
+                    <h2 className="text-[15px] font-semibold text-foreground">O que o agente já sabe</h2>
+                    <ul className="mt-4 space-y-2">
+                      {itens.slice(4).map((i) => (
+                        <li
+                          key={i.id}
+                          className={`flex items-center gap-3 rounded-xl border p-3 ${
+                            i.ok ? "border-border-soft bg-surface-2" : "border-amber-300 bg-[#FEF3C7]"
+                          }`}
+                        >
+                          {i.ok
+                            ? <Check className="h-4 w-4 shrink-0 text-emerald-600" strokeWidth={3} />
+                            : <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />}
+                          <span className={`min-w-0 flex-1 text-[13px] font-medium ${i.ok ? "text-foreground" : "text-amber-900"}`}>
+                            {i.rotulo}
+                            {i.ok && (
+                              <span className="ml-1.5 font-normal text-faint">
+                                · {i.id === "servicos" ? services.length : i.id === "equipe" ? teamMembers.length : i.id === "pagamento" ? paymentMethods.length : faqs.length}
+                              </span>
+                            )}
+                          </span>
+                          {!i.ok && (
+                            <button
+                              onClick={() => setAba(i.aba)}
+                              className="shrink-0 rounded-lg border border-amber-400 bg-card px-2.5 py-1 text-[12px] font-semibold text-amber-900 hover:bg-amber-50"
+                            >
+                              {i.acao}
+                            </button>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
                 </div>
-              </TabsContent>
+              </div>
+            )}
 
-              <TabsContent value="services">
-                <CrudList
-                  endpoint="/api/business/services" items={services} reload={load}
-                  emptyIcon={<Sparkles className="w-6 h-6" />} emptyTitle={`Nenhum ${L.serviceSingular.toLowerCase()} cadastrado`}
-                  emptyDesc={`Cadastre ${L.service.toLowerCase()} com preço e duração para o agente informar corretamente.`}
-                  addLabel={`Novo ${L.serviceSingular.toLowerCase()}`}
-                  fields={[
-                    { key: "name", label: "Nome", required: true },
-                    { key: "price", label: "Preço (R$)", type: "number", hint: "deixe vazio para 'sob consulta'" },
-                    { key: "durationMin", label: "Duração (min)", type: "number" },
-                    { key: "description", label: "Descrição", type: "textarea" },
-                    { key: "prep", label: "Preparo / observações", type: "textarea" },
-                  ]}
-                  render={(s) => (
-                    <>
-                      <p className="text-sm font-medium text-foreground">{s.name}</p>
-                      <p className="text-xs text-muted-foreground">{s.price != null ? `R$ ${Number(s.price).toFixed(2)}` : "Sob consulta"}{s.durationMin ? ` · ${s.durationMin}min` : ""}</p>
-                    </>
-                  )}
-                />
-              </TabsContent>
+            {aba === "services" && (
+              <CrudList
+                endpoint="/api/business/services" items={services} reload={load}
+                emptyIcon={<Sparkles className="h-6 w-6" />} emptyTitle={`Nenhum ${L.serviceSingular.toLowerCase()} cadastrado`}
+                emptyDesc={`Cadastre ${L.service.toLowerCase()} com preço e duração para o agente informar corretamente.`}
+                addLabel={`Novo ${L.serviceSingular.toLowerCase()}`}
+                fields={[
+                  { key: "name", label: "Nome", required: true },
+                  { key: "price", label: "Preço (R$)", type: "number", hint: "deixe vazio para 'sob consulta'" },
+                  { key: "durationMin", label: "Duração (min)", type: "number" },
+                  { key: "description", label: "Descrição", type: "textarea" },
+                  { key: "prep", label: "Preparo / observações", type: "textarea" },
+                ]}
+                render={(s) => (
+                  <>
+                    <p className="text-[13.5px] font-medium text-foreground">{s.name}</p>
+                    <p className="text-[12px] text-muted-foreground">
+                      {s.price != null ? Number(s.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "Sob consulta"}{s.durationMin ? ` · ${s.durationMin} min` : ""}
+                    </p>
+                  </>
+                )}
+              />
+            )}
 
-              <TabsContent value="team">
-                <CrudList
-                  endpoint="/api/business/team" items={teamMembers} reload={load}
-                  emptyIcon={<UserRound className="w-6 h-6" />} emptyTitle={`Nenhum ${L.teamSingular.toLowerCase()} cadastrado`}
-                  emptyDesc={`Adicione ${L.team.toLowerCase()} para o agente indicar quem faz o quê.`}
-                  addLabel={`Novo ${L.teamSingular.toLowerCase()}`}
-                  fields={[
-                    { key: "name", label: "Nome", required: true },
-                    { key: "role", label: "Cargo / especialidade" },
-                    { key: "credentials", label: "Registro / credenciais (opcional)" },
-                    { key: "bio", label: "Sobre / diferenciais", type: "textarea" },
-                  ]}
-                  render={(p) => (
-                    <>
-                      <p className="text-sm font-medium text-foreground">{p.name}</p>
-                      <p className="text-xs text-muted-foreground">{[p.role, p.credentials].filter(Boolean).join(" · ")}</p>
-                    </>
-                  )}
-                />
-              </TabsContent>
+            {aba === "team" && (
+              <CrudList
+                endpoint="/api/business/team" items={teamMembers} reload={load}
+                emptyIcon={<UserRound className="h-6 w-6" />} emptyTitle={`Nenhum ${L.teamSingular.toLowerCase()} cadastrado`}
+                emptyDesc={`Adicione ${L.team.toLowerCase()} para o agente indicar quem faz o quê.`}
+                addLabel={`Novo ${L.teamSingular.toLowerCase()}`}
+                fields={[
+                  { key: "name", label: "Nome", required: true },
+                  { key: "role", label: "Cargo / especialidade" },
+                  { key: "credentials", label: "Registro / credenciais (opcional)" },
+                  { key: "bio", label: "Sobre / diferenciais", type: "textarea" },
+                ]}
+                render={(p) => (
+                  <>
+                    <p className="text-[13.5px] font-medium text-foreground">{p.name}</p>
+                    <p className="text-[12px] text-muted-foreground">{[p.role, p.credentials].filter(Boolean).join(" · ")}</p>
+                  </>
+                )}
+              />
+            )}
 
-              <TabsContent value="pay">
-                <CrudList
-                  endpoint="/api/business/payments" items={paymentMethods} reload={load}
-                  emptyIcon={<CreditCard className="w-6 h-6" />} emptyTitle={`Nenhum ${L.paymentSingular.toLowerCase()} cadastrado`}
-                  emptyDesc={`Liste ${L.payment.toLowerCase()} aceitos para o agente responder com precisão.`}
-                  addLabel={`Novo ${L.paymentSingular.toLowerCase()}`}
-                  fields={[
-                    { key: "name", label: "Nome", required: true },
-                    { key: "notes", label: "Observações", type: "textarea" },
-                  ]}
-                  render={(x) => (
-                    <>
-                      <p className="text-sm font-medium text-foreground">{x.name}</p>
-                      {x.notes && <p className="text-xs text-muted-foreground">{x.notes}</p>}
-                    </>
-                  )}
-                />
-              </TabsContent>
+            {aba === "pay" && (
+              <CrudList
+                endpoint="/api/business/payments" items={paymentMethods} reload={load}
+                emptyIcon={<CreditCard className="h-6 w-6" />} emptyTitle={`Nenhum ${L.paymentSingular.toLowerCase()} cadastrado`}
+                emptyDesc={`Liste ${L.payment.toLowerCase()} aceitos para o agente responder com precisão.`}
+                addLabel={`Novo ${L.paymentSingular.toLowerCase()}`}
+                fields={[
+                  { key: "name", label: "Nome", required: true },
+                  { key: "notes", label: "Observações", type: "textarea" },
+                ]}
+                render={(x) => (
+                  <>
+                    <p className="text-[13.5px] font-medium text-foreground">{x.name}</p>
+                    {x.notes && <p className="text-[12px] text-muted-foreground">{x.notes}</p>}
+                  </>
+                )}
+              />
+            )}
 
-              <TabsContent value="faq">
-                <CrudList
-                  endpoint="/api/business/faqs" items={faqs} reload={load}
-                  emptyIcon={<HelpCircle className="w-6 h-6" />} emptyTitle="Nenhuma pergunta cadastrada"
-                  emptyDesc={`Cadastre dúvidas comuns dos seus ${L.customer} com a resposta oficial.`}
-                  addLabel="Nova pergunta"
-                  fields={[
-                    { key: "question", label: "Pergunta", required: true },
-                    { key: "answer", label: "Resposta", type: "textarea", required: true },
-                  ]}
-                  render={(f) => (
-                    <>
-                      <p className="text-sm font-medium text-foreground">{f.question}</p>
-                      <p className="text-xs text-muted-foreground line-clamp-1">{f.answer}</p>
-                    </>
-                  )}
-                />
-              </TabsContent>
-            </Tabs>
+            {aba === "faq" && (
+              <CrudList
+                endpoint="/api/business/faqs" items={faqs} reload={load}
+                emptyIcon={<HelpCircle className="h-6 w-6" />} emptyTitle="Nenhuma pergunta cadastrada"
+                emptyDesc={`Cadastre dúvidas comuns dos seus ${L.customer} com a resposta oficial.`}
+                addLabel="Nova pergunta"
+                fields={[
+                  { key: "question", label: "Pergunta", required: true },
+                  { key: "answer", label: "Resposta", type: "textarea", required: true },
+                ]}
+                render={(f) => (
+                  <>
+                    <p className="text-[13.5px] font-medium text-foreground">{f.question}</p>
+                    <p className="linha-unica-elipse text-[12px] text-muted-foreground">{f.answer}</p>
+                  </>
+                )}
+              />
+            )}
           </>
         )}
       </div>
     </DashboardLayout>
+  );
+}
+
+/** Anel de completude do perfil. */
+function AnelPerfil({ pct }: { pct: number }) {
+  const r = 34;
+  const circ = 2 * Math.PI * r;
+  return (
+    <div className="relative h-[82px] w-[82px] shrink-0">
+      <svg viewBox="0 0 82 82" className="h-[82px] w-[82px] -rotate-90">
+        <circle cx="41" cy="41" r={r} fill="none" strokeWidth="6" className="stroke-primary/15" />
+        <circle
+          cx="41" cy="41" r={r} fill="none" strokeWidth="6" strokeLinecap="round"
+          className="stroke-primary transition-[stroke-dashoffset] duration-700"
+          strokeDasharray={circ} strokeDashoffset={circ * (1 - pct / 100)}
+        />
+      </svg>
+      <span className="num absolute inset-0 grid place-items-center text-[17px] font-bold text-foreground">{pct}%</span>
+    </div>
   );
 }
 

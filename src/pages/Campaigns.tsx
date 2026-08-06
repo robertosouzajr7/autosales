@@ -1,19 +1,18 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { PageContainer } from "@/components/shared/PageContainer";
-import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Megaphone, Plus, Play, Pause, Trash2, AlertTriangle, CheckCircle2, Clock, Users, Info, ArrowUpRight,
-  BarChart3, Download, XCircle,
+  BarChart3, Download, XCircle, ShieldCheck,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AudiencePicker } from "@/components/campaigns/AudiencePicker";
@@ -220,256 +219,245 @@ export default function Campaigns() {
     return null;
   })();
 
+  const rascunhos = campaigns.filter((c) => c.status === "DRAFT");
+  const anteriores = campaigns.filter((c) => c.status !== "DRAFT");
+
   return (
     <DashboardLayout>
-      <PageContainer>
-      <PageHeader
-        title="Disparos em massa"
-        subtitle="Envio de templates aprovados pela API oficial do WhatsApp."
-        actions={
+      <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6">
+
+        <header className="mb-4 flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-[26px] font-bold tracking-[-0.03em] text-foreground">Disparos em massa</h1>
+            <p className="mt-0.5 max-w-lg text-[13.5px] text-muted-foreground">
+              Envio de templates aprovados pela API oficial do WhatsApp.
+            </p>
+          </div>
           <Button
             onClick={() => setModalOpen(true)}
             disabled={semFranquia}
-            title={semFranquia ? "Seu plano não inclui disparos em massa — veja os planos abaixo." : undefined}
-            className="rounded-2xl font-bold bg-[#2563EB]"
+            title={semFranquia ? "Seu plano não inclui disparos em massa." : undefined}
+            className="h-10 gap-2"
           >
-            <Plus className="w-4 h-4 mr-2" /> Nova campanha
+            <Plus className="h-4 w-4" /> Nova campanha
           </Button>
-        }
-      />
+        </header>
 
-      {quota && (
-        <Card className="mb-6">
-          <CardContent className="p-5">
+        {/* Crédito do ciclo */}
+        {quota && (
+          <section className="mb-4 rounded-[14px] border border-border bg-card p-5 shadow-card">
             {semFranquia ? (
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="font-bold text-slate-700 text-sm">Seu plano não inclui disparos em massa</p>
-                  <p className="text-xs text-slate-500 mt-1">
+              <div className="flex flex-wrap items-center gap-3">
+                <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500" />
+                <div className="min-w-[220px] flex-1">
+                  <p className="text-[14px] font-semibold text-foreground">Seu plano não inclui disparos em massa</p>
+                  <p className="mt-0.5 text-[12.5px] text-muted-foreground">
                     Faça upgrade para liberar o envio de campanhas pela API oficial.
                   </p>
                 </div>
-                <Button size="sm" onClick={() => navigate("/assinatura")} className="rounded-2xl font-bold bg-[#2563EB]">
-                  Ver planos <ArrowUpRight className="w-3 h-3 ml-1" />
+                <Button size="sm" onClick={() => navigate("/assinatura")} className="gap-1.5">
+                  Ver planos <ArrowUpRight className="h-3 w-3" />
                 </Button>
               </div>
             ) : (
               <>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-slate-500 uppercase">Crédito de disparo do ciclo</span>
-                  <span className={`text-sm font-bold ${quota.baixo ? "text-amber-600" : "text-slate-700"}`}>
-                    {brl(quota.saldo)} <span className="font-medium text-slate-400">de {brl(quota.total)}</span>
+                <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+                  <span className="text-[12px] font-semibold uppercase tracking-wide text-faint">
+                    Crédito de disparo do ciclo
+                  </span>
+                  <span className={`num text-[14px] font-bold ${quota.baixo ? "text-amber-600" : "text-foreground"}`}>
+                    {brl(quota.saldo)} <span className="font-medium text-faint">de {brl(quota.total)}</span>
                   </span>
                 </div>
-                <Progress value={quota.percentualUsado} className="h-2" />
+                <div className="h-2 overflow-hidden rounded-full bg-surface-2">
+                  <div
+                    className={`h-full rounded-full transition-[width] ${quota.baixo ? "bg-amber-500" : "bg-primary"}`}
+                    style={{ width: `${Math.min(quota.percentualUsado || 0, 100)}%` }}
+                  />
+                </div>
 
-                {/* O saldo em dinheiro só vira decisão com a equivalência ao lado. */}
                 {quota.cobraPorMensagem ? (
                   <>
-                    <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                    {/* Saldo em dinheiro só vira decisão com a equivalência ao lado. */}
+                    <div className="mt-4 grid grid-cols-3 gap-3">
                       {[["MARKETING", "Marketing"], ["UTILITY", "Utilidade"], ["AUTHENTICATION", "Autenticação"]].map(([k, r]) => (
-                        <div key={k} className="rounded-xl bg-slate-50 py-2">
-                          <p className="text-[10px] uppercase text-slate-400">{r}</p>
-                          <p className="text-base font-bold text-slate-700 tabular-nums">
+                        <div key={k} className="rounded-xl bg-surface-2 px-3 py-2.5 text-center">
+                          <p className="text-[11px] uppercase tracking-wide text-faint">{r}</p>
+                          <p className="num mt-0.5 text-[18px] font-bold tabular-nums text-foreground">
                             {(quota.equivale?.[k] ?? 0).toLocaleString("pt-BR")}
                           </p>
-                          <p className="text-[10px] text-slate-400">{brl(quota.precos?.[k] || 0)} cada</p>
+                          <p className="num text-[11px] text-faint">{brl(quota.precos?.[k] || 0)} cada</p>
                         </div>
                       ))}
                     </div>
                     {quota.baixo && (
-                      <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-amber-50 px-3 py-2">
-                        <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                        <span className="flex-1 text-xs text-amber-900">
+                      <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-amber-50 px-3 py-2.5">
+                        <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+                        <span className="flex-1 text-[12.5px] text-amber-900">
                           {quota.esgotado
                             ? "Crédito esgotado — as campanhas ficam bloqueadas até a renovação ou uma recarga."
                             : "Resta menos de 20% do crédito. Vale recarregar antes da próxima campanha."}
                         </span>
-                        <Button size="sm" variant="outline" onClick={() => navigate("/assinatura")} className="h-7 text-xs">
+                        <Button size="sm" variant="outline" onClick={() => navigate("/assinatura")} className="h-8 bg-card text-[12px]">
                           Recarregar
                         </Button>
                       </div>
                     )}
                   </>
                 ) : (
-                  <p className="text-xs text-slate-400 mt-2">
-                    Seu plano dispara por QR Code: <strong>sem cobrança por mensagem</strong>. O crédito
-                    não é debitado neste canal.
+                  <p className="mt-3 text-[12.5px] text-muted-foreground">
+                    Seu plano dispara por QR Code: <strong className="font-semibold">sem cobrança por mensagem</strong>.
+                    O crédito não é debitado neste canal.
                   </p>
                 )}
               </>
             )}
-          </CardContent>
-        </Card>
-      )}
+          </section>
+        )}
 
-      {templates.length === 0 && !loading && !semFranquia && (
-        <Card className="mb-6 border-amber-200 bg-amber-50/60">
-          <CardContent className="p-5 flex gap-3 items-start">
-            <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-            <div className="text-sm text-amber-900 flex-1">
-              <strong>Nenhum template aprovado.</strong> Só é possível disparar mensagens que a Meta já aprovou.
-              Crie e envie um para aprovação em <a href="/templates" className="underline font-bold">Templates</a>.
-            </div>
-          </CardContent>
-        </Card>
-      )}
+        {templates.length === 0 && !loading && !semFranquia && (
+          <div className="mb-4 flex gap-3 rounded-[14px] border border-amber-200 bg-amber-50 p-4">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+            <p className="text-[13px] leading-relaxed text-amber-900">
+              <strong className="font-semibold">Nenhum template aprovado.</strong> Só é possível disparar
+              mensagens que a Meta já aprovou. Crie e envie um para aprovação em{" "}
+              <a href="/templates" className="font-semibold underline">Templates</a>.
+            </p>
+          </div>
+        )}
 
-      {loading ? (
-        <div className="text-slate-400 p-10 text-center">Carregando…</div>
-      ) : campaigns.length === 0 ? (
-        <Card><CardContent className="p-16 text-center">
-          <Megaphone className="w-10 h-10 mx-auto text-slate-300 mb-4" />
-          <p className="font-bold text-slate-600">Nenhuma campanha ainda</p>
-          <p className="text-sm text-slate-400 mt-1">Crie uma campanha para disparar um template para sua base.</p>
-        </CardContent></Card>
-      ) : (
-        <div className="grid gap-3">
-          {campaigns.map((c) => {
-            const st = STATUS[c.status] || STATUS.DRAFT;
-            const total = c.recipientCount || 0;
-            const done = (c.sentCount || 0) + (c.errorCount || 0);
-            return (
-              <Card key={c.id}>
-                <CardContent className="p-5">
-                  <div className="flex items-start gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-slate-800">{c.name}</span>
-                        <Badge className={`${st.cls} border-none font-bold text-[11px]`}>{st.label}</Badge>
-                        <span className="text-[11px] text-slate-400 font-medium">
-                          template: {c.template?.name}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-4 mt-2 text-xs text-slate-500 font-medium flex-wrap">
-                        <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {total} contato(s)</span>
-                        <span>Custo estimado: <strong>{brl(c.estimatedCost)}</strong></span>
-                        {c.status !== "DRAFT" && (
-                          <>
-                            <span className="flex items-center gap-1 text-emerald-600">
-                              <CheckCircle2 className="w-3 h-3" /> {c.sentCount || 0} enviada(s)
-                            </span>
-                            {c.errorCount > 0 && (
-                              <span className="text-red-500">{c.errorCount} falha(s)</span>
-                            )}
-                          </>
-                        )}
-                      </div>
-                      {c.status === "RUNNING" && total > 0 && (
-                        <Progress value={(done / total) * 100} className="h-1.5 mt-3" />
-                      )}
-                      {c.errorLog && c.status === "COMPLETED" && (
-                        <details className="mt-2">
-                          <summary className="text-xs text-red-500 cursor-pointer font-medium">Ver erros</summary>
-                          <pre className="text-[11px] text-slate-500 mt-1 whitespace-pre-wrap max-h-32 overflow-y-auto bg-slate-50 p-2 rounded-xl">
-                            {c.errorLog}
-                          </pre>
-                        </details>
-                      )}
-                    </div>
-                    <div className="flex gap-1 shrink-0">
-                      {(c.status === "DRAFT" || c.status === "PAUSED") && (
-                        <Button size="sm" onClick={() => act(c, "start")} className="rounded-2xl font-bold bg-[#2563EB]">
-                          <Play className="w-3.5 h-3.5 mr-1" /> Disparar
-                        </Button>
-                      )}
-                      {c.status === "RUNNING" && (
-                        <Button size="sm" variant="outline" onClick={() => act(c, "pause")} className="rounded-2xl font-bold">
-                          <Pause className="w-3.5 h-3.5 mr-1" /> Pausar
-                        </Button>
-                      )}
-                      {c.status !== "DRAFT" && (
-                        <Button size="sm" variant="outline" onClick={() => abrirRelatorio(c)}
-                          className="rounded-2xl font-bold" title="Relatório do disparo">
-                          <BarChart3 className="w-3.5 h-3.5 mr-1" /> Relatório
-                        </Button>
-                      )}
-                      {c.status !== "RUNNING" && (
-                        <Button size="sm" variant="ghost" onClick={() => remove(c)} className="rounded-xl text-red-500">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Relatório do disparo */}
-      <Dialog open={reportOpen} onOpenChange={setReportOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl">
-          <DialogHeader>
-            <DialogTitle className="font-bold">Relatório do disparo</DialogTitle>
-            <DialogDescription>{report?.campanha?.name}</DialogDescription>
-          </DialogHeader>
-
-          {report && (
-            <div className="space-y-5 py-2">
-              <div className="grid grid-cols-4 gap-3">
-                {[
-                  ["Total", report.resumo.total, "text-slate-700"],
-                  ["Enviados", report.resumo.enviados, "text-emerald-600"],
-                  ["Falhas", report.resumo.falhas, "text-red-500"],
-                  ["Sucesso", `${report.resumo.taxaSucesso}%`, "text-[#2563EB]"],
-                ].map(([rotulo, valor, cor]) => (
-                  <div key={String(rotulo)} className="rounded-2xl bg-slate-50 p-3 text-center">
-                    <p className="text-[11px] font-bold text-slate-400 uppercase">{rotulo}</p>
-                    <p className={`text-xl font-bold ${cor}`}>{valor}</p>
-                  </div>
-                ))}
+        {/* Rascunhos: o que está pronto para sair */}
+        {rascunhos.map((c) => (
+          <section key={c.id} className="mb-4 rounded-[14px] border border-accent-text/30 bg-accent-soft p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-accent-text">Rascunho</p>
+                <h2 className="mt-1 text-[17px] font-bold text-foreground">{c.name}</h2>
+                <p className="mt-0.5 text-[12.5px] text-muted-foreground">
+                  Template <span className="font-mono">{c.template?.name}</span> · {c.recipientCount || 0} contatos no público
+                </p>
               </div>
-
-              <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
-                <span>
-                  Template: <strong>{report.campanha.template}</strong> · {report.campanha.categoria}
-                  {" · "}Custo estimado: <strong>{brl(report.campanha.custoEstimado)}</strong>
-                </span>
-                <Button size="sm" variant="outline" onClick={() => baixarCsv(report.campanha.id)}
-                  className="rounded-2xl font-bold">
-                  <Download className="w-3.5 h-3.5 mr-1" /> CSV
+              <div className="flex shrink-0 gap-2">
+                <Button variant="outline" onClick={() => remove(c)} className="h-9 bg-card text-[12.5px]">Descartar</Button>
+                <Button onClick={() => act(c, "start")} className="h-9 gap-1.5 text-[12.5px]">
+                  <Play className="h-3.5 w-3.5" /> Disparar agora
                 </Button>
               </div>
+            </div>
 
-              {report.errosAgrupados?.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs font-bold text-slate-500 uppercase">Falhas por motivo</p>
-                  {report.errosAgrupados.map((e: any, i: number) => (
-                    <div key={i} className="flex gap-3 items-start rounded-2xl bg-red-50 p-3">
-                      <span className="font-bold text-red-600 text-sm shrink-0">{e.qtd}x</span>
-                      <span className="text-xs text-red-800 flex-1">{e.motivo}</span>
-                    </div>
+            <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+              {[
+                { r: "Contatos", v: (c.recipientCount || 0).toLocaleString("pt-BR") },
+                { r: "Custo estimado", v: brl(c.estimatedCost) },
+                { r: "Template", v: (c.template?.category || "").toLowerCase() === "marketing" ? "Marketing" : "Utilidade" },
+                { r: "Criada em", v: new Date(c.createdAt).toLocaleDateString("pt-BR") },
+              ].map((p) => (
+                <div key={p.r} className="rounded-xl bg-card px-3 py-2.5">
+                  <p className="text-[11px] text-faint">{p.r}</p>
+                  <p className="num mt-0.5 linha-unica-elipse text-[15px] font-bold text-foreground">{p.v}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        ))}
+
+        {loading ? (
+          <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-14 rounded-lg" />)}</div>
+        ) : campaigns.length === 0 ? (
+          <div className="grid place-items-center gap-3 rounded-[14px] border border-border bg-card px-6 py-20 text-center shadow-card">
+            <Megaphone className="h-8 w-8 text-border-soft" />
+            <div>
+              <p className="text-[14px] font-semibold text-foreground">Nenhuma campanha ainda</p>
+              <p className="mt-1 text-[13px] text-muted-foreground">Crie uma para disparar um template para a sua base.</p>
+            </div>
+          </div>
+        ) : anteriores.length > 0 && (
+          <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-card">
+            <header className="border-b border-border px-4 py-3">
+              <h2 className="text-[14px] font-semibold text-foreground">Campanhas anteriores</h2>
+            </header>
+            <div className="overflow-x-auto">
+              <div className="min-w-[760px]">
+                <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr] gap-3 border-b border-border bg-surface-2 px-4 py-2.5">
+                  {["Campanha", "Status", "Contatos", "Enviadas", "Falhas", "Custo"].map((h) => (
+                    <span key={h} className="linha-unica text-[11px] font-semibold uppercase tracking-wide text-faint">{h}</span>
                   ))}
                 </div>
-              )}
-
-              <div className="space-y-1">
-                <p className="text-xs font-bold text-slate-500 uppercase">Destinatários</p>
-                <div className="border border-slate-100 rounded-2xl divide-y divide-slate-50 max-h-64 overflow-y-auto">
-                  {report.destinatarios.map((d: any) => (
-                    <div key={d.id} className="flex items-center gap-3 px-4 py-2">
-                      {d.status === "SENT"
-                        ? <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                        : d.status === "FAILED"
-                        ? <XCircle className="w-4 h-4 text-red-500 shrink-0" />
-                        : <Clock className="w-4 h-4 text-slate-300 shrink-0" />}
-                      <span className="flex-1 min-w-0">
-                        <span className="block text-sm font-bold text-slate-700 truncate">{d.name || d.phone}</span>
-                        <span className="block text-[11px] text-slate-400 truncate">
-                          {d.phone}{d.error ? ` · ${d.error}` : ""}
+                {anteriores.map((c) => {
+                  const st = STATUS[c.status] || STATUS.DRAFT;
+                  const total = c.recipientCount || 0;
+                  const feitos = (c.sentCount || 0) + (c.errorCount || 0);
+                  return (
+                    <div key={c.id} className="border-b border-border-soft px-4 py-3 last:border-0 hover:bg-surface-2">
+                      <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr] items-center gap-3">
+                        <div className="min-w-0">
+                          <p className="linha-unica-elipse text-[13px] font-semibold text-foreground">{c.name}</p>
+                          <p className="linha-unica-elipse font-mono text-[11px] text-faint">{c.template?.name}</p>
+                        </div>
+                        <span className={`linha-unica w-fit rounded-full px-2.5 py-0.5 text-[11.5px] font-medium ${st.cls}`}>
+                          {st.label}
                         </span>
-                      </span>
+                        <span className="num text-[12.5px] text-muted-foreground">{total.toLocaleString("pt-BR")}</span>
+                        <span className="num text-[12.5px] font-semibold text-accent-text">
+                          {(c.sentCount || 0).toLocaleString("pt-BR")}
+                        </span>
+                        <span className={`num text-[12.5px] ${c.errorCount > 0 ? "font-semibold text-rose-600" : "text-faint"}`}>
+                          {c.errorCount || 0}
+                        </span>
+                        <span className="flex items-center justify-between gap-2">
+                          <span className="num text-[12.5px] text-muted-foreground">{brl(c.estimatedCost)}</span>
+                          <span className="flex shrink-0 gap-1">
+                            {c.status === "RUNNING" && (
+                              <button onClick={() => act(c, "pause")} title="Pausar"
+                                className="grid h-7 w-7 place-items-center rounded-lg text-faint hover:bg-card hover:text-foreground">
+                                <Pause className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                            {c.status === "PAUSED" && (
+                              <button onClick={() => act(c, "start")} title="Retomar"
+                                className="grid h-7 w-7 place-items-center rounded-lg text-faint hover:bg-card hover:text-accent-text">
+                                <Play className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                            <button onClick={() => abrirRelatorio(c)} title="Relatório"
+                              className="grid h-7 w-7 place-items-center rounded-lg text-faint hover:bg-card hover:text-accent-text">
+                              <BarChart3 className="h-3.5 w-3.5" />
+                            </button>
+                            {c.status !== "RUNNING" && (
+                              <button onClick={() => remove(c)} title="Remover"
+                                className="grid h-7 w-7 place-items-center rounded-lg text-faint hover:bg-red-50 hover:text-red-600">
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </span>
+                        </span>
+                      </div>
+                      {c.status === "RUNNING" && total > 0 && (
+                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-2">
+                          <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${(feitos / total) * 100}%` }} />
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+          </div>
+        )}
+
+        {/* LGPD — quem pediu para não receber não recebe, e isso é visível. */}
+        <section className="mt-4 flex flex-wrap items-center gap-3 rounded-[14px] border border-amber-200 bg-amber-50 p-4">
+          <ShieldCheck className="h-5 w-5 shrink-0 text-amber-600" />
+          <p className="min-w-[240px] flex-1 text-[12.5px] leading-relaxed text-amber-900">
+            <strong className="font-semibold">Contatos que pediram para parar ficam de fora de todo disparo.</strong>{" "}
+            A exclusão é automática e não depende de o público estar certo — nenhuma campanha alcança quem
+            se descadastrou.
+          </p>
+          <Button variant="outline" size="sm" onClick={() => navigate("/contacts")} className="bg-card text-[12px]">
+            Ver contatos
+          </Button>
+        </section>
+      </div>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl">
@@ -638,7 +626,6 @@ export default function Campaigns() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      </PageContainer>
     </DashboardLayout>
   );
 }

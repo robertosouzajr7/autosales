@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { PageHeader } from "@/components/shared/PageHeader";
-import { EmptyState } from "@/components/shared/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Package, Plus, Pencil, Trash2, Loader2, ImageIcon, Music, Video, Upload, X,
+  Package, Plus, Pencil, Trash2, Loader2, ImageIcon, Music, Video, Upload, X, Search,
 } from "lucide-react";
 
 function authHeaders() {
@@ -22,6 +20,9 @@ function authHeaders() {
   if (token) h["Authorization"] = `Bearer ${token}`;
   return h;
 }
+
+const reais = (v: number) =>
+  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 });
 
 const EMPTY = {
   id: "", name: "", type: "PRODUCT", category: "", description: "", price: "",
@@ -36,6 +37,8 @@ export default function Catalogo() {
   const [form, setForm] = useState<any>(EMPTY);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
+  const [busca, setBusca] = useState("");
+  const [filtro, setFiltro] = useState("ALL");
 
   const load = async () => {
     setLoading(true);
@@ -107,81 +110,176 @@ export default function Catalogo() {
     if (res.ok) load();
   };
 
+  const semMidia = items.filter((i) => !i.imageUrl && !i.audioUrl && !i.videoUrl).length;
+  const categorias = Array.from(new Set(items.map((i) => i.category).filter(Boolean)))
+    .filter((c: any) => !["produtos", "serviços", "servicos"].includes(String(c).toLowerCase()))
+    .slice(0, 3);
+
+  const CHIPS = [
+    { id: "ALL", rotulo: "Todos" },
+    { id: "PRODUCT", rotulo: "Produtos" },
+    { id: "SERVICE", rotulo: "Serviços" },
+    ...categorias.map((c: any) => ({ id: `cat:${c}`, rotulo: c })),
+    // Sem mídia é uma pendência, não um filtro qualquer: o agente pode citar
+    // o item, mas não tem o que enviar. Por isso o número vem em laranja.
+    { id: "SEM_MIDIA", rotulo: "Sem mídia", n: semMidia, alerta: true },
+  ];
+
+  const visiveis = items.filter((it) => {
+    if (filtro === "PRODUCT" && it.type !== "PRODUCT") return false;
+    if (filtro === "SERVICE" && it.type !== "SERVICE") return false;
+    if (filtro === "SEM_MIDIA" && (it.imageUrl || it.audioUrl || it.videoUrl)) return false;
+    if (filtro.startsWith("cat:") && it.category !== filtro.slice(4)) return false;
+    if (busca.trim() && !`${it.name || ""} ${it.description || ""} ${it.category || ""}`.toLowerCase().includes(busca.toLowerCase())) return false;
+    return true;
+  });
+
   return (
     <DashboardLayout>
-      <div className="mx-auto max-w-5xl p-4 sm:p-6 lg:p-8">
-        <PageHeader
-          icon={<Package className="w-5 h-5" />}
-          title="Catálogo"
-          subtitle="Produtos e serviços com mídia. O agente de IA pode apresentar e enviar estes itens nas conversas."
-          actions={<Button onClick={openNew} className="gap-2"><Plus className="w-4 h-4" /> Novo item</Button>}
-        />
+      <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6">
+
+        <header className="mb-4 flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-[26px] font-bold tracking-[-0.03em] text-foreground">Catálogo</h1>
+            <p className="mt-0.5 max-w-lg text-[13.5px] text-muted-foreground">
+              Produtos e serviços com mídia. O agente apresenta e envia estes itens durante a conversa.
+            </p>
+          </div>
+          <Button onClick={openNew} className="h-10 gap-2"><Plus className="h-4 w-4" /> Novo item</Button>
+        </header>
+
+        {/* Busca e filtros */}
+        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-[14px] border border-border bg-card px-3 py-2.5 shadow-card">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-faint" />
+            <Input
+              value={busca} onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar item…"
+              className="h-9 w-[220px] rounded-lg border-border-soft bg-surface-2 pl-9 text-[13px]"
+            />
+          </div>
+          {CHIPS.map((c: any) => (
+            <button
+              key={c.id}
+              onClick={() => setFiltro(c.id)}
+              className={`flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-[12.5px] font-semibold transition-colors ${
+                filtro === c.id
+                  ? "border-accent-text/30 bg-accent-soft text-accent-text"
+                  : "border-border-soft bg-card text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {c.rotulo}
+              {c.n !== undefined && c.n > 0 && (
+                <span className={`num ${c.alerta ? "text-amber-600" : "text-faint"}`}>· {c.n}</span>
+              )}
+            </button>
+          ))}
+          <span className="num ml-auto text-[12px] text-faint">
+            {visiveis.length} de {items.length}
+          </span>
+        </div>
 
         {loading ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-56 rounded-2xl" />)}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-[280px] rounded-[14px]" />)}
           </div>
         ) : items.length === 0 ? (
-          <Card className="rounded-2xl border-border">
-            <EmptyState
-              icon={<Package className="w-6 h-6" />}
-              title="Catálogo vazio"
-              description="Cadastre produtos ou serviços com foto, áudio ou vídeo para o agente apresentar aos clientes."
-              action={{ label: "Adicionar item", onClick: openNew }}
-            />
-          </Card>
+          <div className="grid place-items-center gap-3 rounded-[14px] border border-border bg-card px-6 py-20 text-center shadow-card">
+            <Package className="h-8 w-8 text-border-soft" />
+            <div>
+              <p className="text-[14px] font-semibold text-foreground">Catálogo vazio</p>
+              <p className="mt-1 text-[13px] text-muted-foreground">
+                Cadastre produtos ou serviços com foto, áudio ou vídeo para o agente apresentar.
+              </p>
+            </div>
+            <Button onClick={openNew} className="mt-1 gap-2"><Plus className="h-4 w-4" /> Adicionar item</Button>
+          </div>
+        ) : visiveis.length === 0 ? (
+          <div className="grid place-items-center gap-2 rounded-[14px] border border-border bg-card px-6 py-16 text-center shadow-card">
+            <Package className="h-7 w-7 text-border-soft" />
+            <p className="text-[13px] text-muted-foreground">Nenhum item com esse filtro.</p>
+          </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {items.map((it) => (
-              <Card key={it.id} className="rounded-2xl border-border overflow-hidden flex flex-col">
-                <div className="aspect-video bg-muted grid place-items-center overflow-hidden">
-                  {it.imageUrl ? (
-                    <img
-                      src={it.imageUrl}
-                      alt={it.name}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                      onError={(e) => {
-                        // Evita o ícone de imagem quebrada — some com o <img> e
-                        // deixa o placeholder do container aparecer.
-                        (e.currentTarget as HTMLImageElement).style.display = "none";
-                      }}
-                    />
-                  ) : it.videoUrl ? (
-                    <Video className="w-8 h-8 text-muted-foreground" />
-                  ) : it.audioUrl ? (
-                    <Music className="w-8 h-8 text-muted-foreground" />
-                  ) : (
-                    <ImageIcon className="w-8 h-8 text-muted-foreground/40" />
-                  )}
-                </div>
-                <div className="p-4 flex-1 flex flex-col gap-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-semibold text-foreground">{it.name}</p>
-                    {!it.isActive && <Badge className="bg-slate-200 text-slate-600 border-none text-xs">Inativo</Badge>}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {visiveis.map((it) => {
+              const midias = [it.imageUrl && "imagem", it.audioUrl && "áudio", it.videoUrl && "vídeo"].filter(Boolean);
+              return (
+                <article key={it.id} className="flex flex-col overflow-hidden rounded-[14px] border border-border bg-card shadow-card">
+                  {/* Faixa de mídia */}
+                  <div className="relative grid h-[132px] place-items-center overflow-hidden bg-gradient-to-br from-accent-soft to-surface-2">
+                    {it.imageUrl ? (
+                      <img
+                        src={it.imageUrl} alt={it.name} loading="lazy"
+                        className="h-full w-full object-cover"
+                        // Some com o <img> em vez de mostrar ícone quebrado.
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                      />
+                    ) : it.videoUrl ? (
+                      <Video className="h-8 w-8 text-accent-text/50" />
+                    ) : it.audioUrl ? (
+                      <Music className="h-8 w-8 text-accent-text/50" />
+                    ) : (
+                      <ImageIcon className="h-8 w-8 text-border-soft" />
+                    )}
+                    {midias.length > 0 && (
+                      <div className="absolute left-2 top-2 flex gap-1.5">
+                        <span className="rounded-md bg-slate-900/70 px-1.5 py-0.5 text-[10.5px] font-semibold capitalize text-white backdrop-blur-sm">
+                          {midias[0]}
+                        </span>
+                        {midias.length > 1 && (
+                          <span className="num rounded-md bg-slate-900/70 px-1.5 py-0.5 text-[10.5px] font-semibold text-white backdrop-blur-sm">
+                            +{midias.length - 1}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {!it.isActive && (
+                      <span className="absolute right-2 top-2 rounded-md bg-slate-900/70 px-1.5 py-0.5 text-[10.5px] font-semibold text-white backdrop-blur-sm">
+                        Inativo
+                      </span>
+                    )}
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {it.type === "SERVICE" ? "Serviço" : "Produto"}{it.category ? ` · ${it.category}` : ""}
-                  </p>
-                  <p className="text-sm font-medium text-foreground">
-                    {it.price != null ? `R$ ${Number(it.price).toFixed(2)}` : "Sob consulta"}
-                  </p>
-                  <div className="flex gap-1.5 mt-1">
-                    {it.imageUrl && <ImageIcon className="w-3.5 h-3.5 text-primary" />}
-                    {it.audioUrl && <Music className="w-3.5 h-3.5 text-primary" />}
-                    {it.videoUrl && <Video className="w-3.5 h-3.5 text-primary" />}
+
+                  <div className="flex flex-1 flex-col p-4">
+                    <div className="flex items-start gap-2">
+                      <span
+                        title={midias.length ? "Tem mídia para enviar" : "Sem mídia — o agente só cita, não envia"}
+                        className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${midias.length ? "bg-emerald-500" : "bg-amber-500"}`}
+                      />
+                      <p className="min-w-0 flex-1 text-[13.5px] font-semibold text-foreground">{it.name}</p>
+                    </div>
+                    {it.description && (
+                      <p className="mt-1.5 line-clamp-2 text-[12px] leading-relaxed text-muted-foreground">{it.description}</p>
+                    )}
+                    <p className="num mt-3 text-[15px] font-bold text-foreground">
+                      {it.price != null ? reais(Number(it.price)) : "Sob consulta"}
+                    </p>
+
+                    <div className="mt-auto flex items-center justify-between gap-2 border-t border-border-soft pt-3">
+                      <span className="linha-unica-elipse text-[11.5px] text-faint">
+                        {it.category || (it.type === "SERVICE" ? "Serviço" : "Produto")}
+                      </span>
+                      <span className="flex shrink-0 gap-1">
+                        <button
+                          onClick={() => openEdit(it)}
+                          className="grid h-8 w-8 place-items-center rounded-lg text-faint hover:bg-surface-2 hover:text-accent-text"
+                          aria-label="Editar"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => remove(it)}
+                          className="grid h-8 w-8 place-items-center rounded-lg text-faint hover:bg-red-50 hover:text-red-600"
+                          aria-label="Remover"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex gap-2 mt-auto pt-3">
-                    <Button variant="outline" size="sm" className="flex-1 gap-1.5" onClick={() => openEdit(it)}>
-                      <Pencil className="w-3.5 h-3.5" /> Editar
-                    </Button>
-                    <button onClick={() => remove(it)} className="p-2 rounded-lg text-muted-foreground hover:bg-rose-50 hover:text-rose-600">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </Card>
-            ))}
+                </article>
+              );
+            })}
           </div>
         )}
       </div>
