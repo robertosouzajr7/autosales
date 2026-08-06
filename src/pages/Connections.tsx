@@ -1002,15 +1002,27 @@ export default function Connections() {
         <DialogContent className="rounded-2xl">
           <DialogHeader>
             <DialogTitle>Nova conexão WhatsApp</DialogTitle>
-            <DialogDescription>Escolha como conectar seu número.</DialogDescription>
+            <DialogDescription>
+              {whatsappMode === "BOTH"
+                ? "Escolha como conectar seu número."
+                : whatsappMode === "BAILEYS"
+                  ? "Seu plano conecta por QR Code."
+                  : "Seu plano conecta pela API oficial da Meta."}
+            </DialogDescription>
           </DialogHeader>
 
-          <Tabs defaultValue="baileys" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 rounded-xl bg-muted p-1 mb-4">
-              <TabsTrigger value="baileys" className="rounded-lg text-xs">QR Code</TabsTrigger>
-              <TabsTrigger value="meta" className="rounded-lg text-xs">Meta Oficial (Cloud API)</TabsTrigger>
-            </TabsList>
+          {/* O plano decide o canal: com OFFICIAL não há QR Code para mostrar, e o
+              caminho contrário também vale. A key remonta as abas quando o modo
+              chega da API, para a aba inicial nascer no canal certo. */}
+          <Tabs key={whatsappMode} defaultValue={whatsappMode === "OFFICIAL" ? "meta" : "baileys"} className="w-full">
+            {whatsappMode === "BOTH" && (
+              <TabsList className="grid w-full grid-cols-2 rounded-xl bg-muted p-1 mb-4">
+                <TabsTrigger value="baileys" className="rounded-lg text-xs">QR Code</TabsTrigger>
+                <TabsTrigger value="meta" className="rounded-lg text-xs">Meta Oficial (Cloud API)</TabsTrigger>
+              </TabsList>
+            )}
 
+            {whatsappMode !== "OFFICIAL" && (
             <TabsContent value="baileys" className="space-y-3">
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Nome da conexão</Label>
@@ -1024,10 +1036,14 @@ export default function Connections() {
                 {loading ? "Gerando…" : "Gerar QR Code"}
               </Button>
               <p className="text-xs text-muted-foreground">
-                Modo simples via QR Code. Bom pra testar; para produção séria, use a Meta Oficial.
+                {whatsappMode === "BAILEYS"
+                  ? "Leia o QR com o WhatsApp do número. Mantenha o aparelho e a linha ativos para a conexão não cair."
+                  : "Modo simples via QR Code. Bom pra testar; para produção séria, use a Meta Oficial."}
               </p>
             </TabsContent>
+            )}
 
+            {whatsappMode !== "BAILEYS" && (
             <TabsContent value="meta" className="space-y-3">
               <div className="grid gap-2">
                 <Input id="meta-name" placeholder="Nome do canal" />
@@ -1072,6 +1088,7 @@ export default function Connections() {
                 {loading ? "Vinculando…" : "Vincular conta oficial"}
               </Button>
             </TabsContent>
+            )}
           </Tabs>
         </DialogContent>
       </Dialog>
