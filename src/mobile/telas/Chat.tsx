@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ChevronLeft, Loader2, Send } from "lucide-react";
+import { Bot, ChevronLeft, Loader2, Send, Sparkles, X } from "lucide-react";
 import { Avatar } from "../componentes/Avatar";
-import { Conversa, Mensagem, RESPOSTAS_RAPIDAS } from "../dados";
+import { Conversa, Mensagem, RespostaRapida, listarRespostas, marcarUsoDaResposta, pedirSugestao } from "../dados";
 import { hora } from "../tempo";
 import { baseDaApi } from "../plataforma";
 
@@ -71,6 +71,10 @@ export function Chat({
 }) {
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [respostas, setRespostas] = useState<RespostaRapida[]>([]);
+  const [sugestao, setSugestao] = useState<string | null>(null);
+  const [pedindo, setPedindo] = useState(false);
+  const [avisoDaIa, setAvisoDaIa] = useState<string | null>(null);
   const fim = useRef<HTMLDivElement>(null);
 
   const minha = conversa.phase === "HUMAN" && conversa.assignedTo?.id === localStorage.getItem("userId");
@@ -83,7 +87,37 @@ export function Chat({
     primeira.current = false;
   }, [mensagens.length]);
 
-  useEffect(() => { primeira.current = true; }, [conversa.id]);
+  useEffect(() => { primeira.current = true; setSugestao(null); }, [conversa.id]);
+
+  // As respostas rápidas são do negócio, não do código: vêm cadastradas e
+  // ordenadas pelas mais usadas. Uma carga por sessão basta.
+  useEffect(() => {
+    listarRespostas().then((r) => setRespostas(r.itens)).catch(() => { /* segue sem elas */ });
+  }, []);
+
+  /**
+   * A IA escreve, o atendente decide. Nada é enviado por aqui — a sugestão
+   * cai no campo de mensagem, para ser lida e editada antes de sair.
+   */
+  const pedirIa = async () => {
+    setPedindo(true);
+    try {
+      const r = await pedirSugestao(conversa.leadId);
+      if (r.ok && r.sugestao) setSugestao(r.sugestao);
+      else setSugestao(null);
+      if (!r.ok) setAvisoDaIa(r.motivo || "A IA não conseguiu sugerir agora.");
+      else setAvisoDaIa(null);
+    } catch (e: any) {
+      setAvisoDaIa(e.message);
+    } finally {
+      setPedindo(false);
+    }
+  };
+
+  const usarResposta = (r: RespostaRapida) => {
+    setTexto(r.texto);
+    marcarUsoDaResposta(r.id).catch(() => { /* a contagem não pode atrapalhar */ });
+  };
 
   const enviar = async () => {
     const conteudo = texto.trim();
@@ -161,15 +195,61 @@ export function Chat({
         <p className="mx-3.5 mb-2 rounded-xl bg-rose-50 px-3.5 py-2.5 text-[13px] leading-snug text-rose-700">{erro}</p>
       )}
 
+      {/* A sugestão da IA, para ler e editar — nunca para enviar sozinha. */}
+      {sugestao && (
+        <div className="mx-3.5 mb-2 shrink-0 rounded-[18px] border border-[rgba(37,99,235,0.35)] bg-white p-3.5 shadow-[0_8px_22px_-14px_rgba(37,99,235,0.6)]">
+          <div className="mb-2.5 flex items-center gap-2">
+            <span className="grid h-6 w-6 shrink-0 place-items-center rounded-[7px] bg-[#EFF6FF] text-[#2563EB]">
+              <Bot className="h-3.5 w-3.5" />
+            </span>
+            <span className="flex-1 text-[12.5px] font-bold text-[#2563EB]">Sugestão da IA</span>
+            <button onClick={() => setSugestao(null)} aria-label="Descartar" className="text-[rgba(60,60,67,0.4)]">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <p className="text-[14.5px] leading-[1.55] text-[#0F172A]">{sugestao}</p>
+          <div className="mt-3 flex gap-2.5">
+            <button
+              onClick={() => { setTexto(sugestao); setSugestao(null); }}
+              className="min-h-[44px] flex-1 rounded-xl bg-[#2563EB] text-[15px] font-semibold text-white"
+            >
+              Usar e editar
+            </button>
+            <button
+              onClick={() => { aoEnviar(sugestao).then((ok) => ok && setSugestao(null)); }}
+              className="min-h-[44px] min-w-[100px] rounded-xl bg-[#F2F2F7] text-[15px] font-semibold text-[#0F172A]"
+            >
+              Enviar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {avisoDaIa && (
+        <p className="mx-3.5 mb-2 rounded-xl bg-[#F2F2F7] px-3.5 py-2.5 text-[12.5px] leading-snug text-[rgba(60,60,67,0.7)]">
+          {avisoDaIa}
+        </p>
+      )}
+
       {minha && (
         <div className="flex shrink-0 gap-2 overflow-x-auto px-3.5 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {RESPOSTAS_RAPIDAS.map((r) => (
+          {/* Pedir à IA vem primeiro: é a ação que economiza mais digitação. */}
+          <button
+            onClick={pedirIa}
+            disabled={pedindo}
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-[rgba(37,99,235,0.3)] bg-[#EFF6FF] px-[13px] text-[13.5px] font-semibold text-[#2563EB] disabled:opacity-60"
+          >
+            {pedindo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            Sugerir resposta
+          </button>
+          {respostas.map((r) => (
             <button
-              key={r.rotulo}
-              onClick={() => setTexto(r.texto)}
-              className="inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-full border border-[rgba(60,60,67,0.12)] bg-white px-[13px] text-[13.5px] font-semibold text-[#0F172A]"
+              key={r.id}
+              onClick={() => usarResposta(r)}
+              className="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-[rgba(60,60,67,0.12)] bg-white px-[13px] text-[13.5px] font-semibold text-[#0F172A]"
             >
-              {r.rotulo}
+              {r.atalho && <span className="font-mono text-[11.5px] text-[#2563EB]">{r.atalho}</span>}
+              {r.titulo}
             </button>
           ))}
         </div>

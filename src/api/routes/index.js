@@ -18,6 +18,7 @@ import * as AutomationController from "../controllers/AutomationController.js";
 import * as SdrController from "../controllers/SdrController.js";
 import * as MessageController from "../controllers/MessageController.js";
 import * as AttendanceController from "../controllers/AttendanceController.js";
+import * as QuickReplyController from "../controllers/QuickReplyController.js";
 import * as TemplateController from "../controllers/TemplateController.js";
 import * as CampaignController from "../controllers/CampaignController.js";
 import * as AcademyController from "../controllers/AcademyController.js";
@@ -227,6 +228,14 @@ router.put("/conversations/:leadId/toggle-bot", requirePermission("conversations
 // Badge do menu: quantas conversas esperam atenção humana.
 router.get("/conversations/pending-count", requirePermission("conversations"), MessageController.getPendingCount);
 router.post("/conversations/start", requirePermission("conversations"), MessageController.startConversation);
+router.post("/conversations/:leadId/suggest", requirePermission("conversations"), MessageController.suggestReply);
+
+// Respostas rápidas do atendimento.
+router.get("/quick-replies", requirePermission("conversations"), QuickReplyController.listar);
+router.post("/quick-replies", requirePermission("conversations"), QuickReplyController.criar);
+router.put("/quick-replies/:id", requirePermission("conversations"), QuickReplyController.atualizar);
+router.delete("/quick-replies/:id", requirePermission("conversations"), QuickReplyController.remover);
+router.post("/quick-replies/:id/used", requirePermission("conversations"), QuickReplyController.registrarUso);
 // Ficha do contato, ao lado da conversa aberta.
 router.get("/conversations/:leadId/contact", requirePermission("conversations"), MessageController.getConversationContact);
 router.put("/conversations/:leadId/contact", requirePermission("conversations"), MessageController.updateConversationContact);
@@ -243,6 +252,11 @@ router.post("/queues", requirePermission("queues"), AttendanceController.createQ
 router.put("/queues/:id", requirePermission("queues"), AttendanceController.updateQueue);
 router.delete("/queues/:id", requirePermission("queues"), AttendanceController.deleteQueue);
 router.get("/attendance/agents", requirePermission("queues"), AttendanceController.listAgents);
+// Disponibilidade: só sobre si mesmo, sem exigir permissão de fila — todo
+// atendente precisa poder entrar em pausa.
+router.get("/attendance/me", AttendanceController.minhaDisponibilidade);
+router.put("/attendance/me", AttendanceController.definirDisponibilidade);
+router.get("/attendance/team", requirePermission("conversations"), AttendanceController.equipeDisponivel);
 router.get("/attendance/queue", requirePermission("queues"), AttendanceController.getQueue);
 router.get("/conversations/:id/status", requirePermission("conversations"), AttendanceController.getConversationStatus);
 router.post("/conversations/:id/enqueue", requirePermission("conversations"), AttendanceController.enqueueConversation);
