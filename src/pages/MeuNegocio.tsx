@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import {
   Building2, Sparkles, UserRound, CreditCard, HelpCircle, Check, AlertTriangle,
-  Plus, Pencil, Trash2, Save, Loader2, Wand2,
+  Plus, Pencil, Trash2, Save, Loader2, Wand2, UtensilsCrossed, FileText, Upload, ExternalLink,
 } from "lucide-react";
 
 const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
@@ -26,6 +26,10 @@ const VERTICAL_LABELS: Record<string, { business: string; team: string; teamSing
   RESTAURANT: { business: "Restaurante", team: "Equipe",        teamSingular: "Membro da equipe", service: "Cardápio",    serviceSingular: "Prato / Experiência",     payment: "Formas de pagamento", paymentSingular: "Forma de pagamento", customer: "clientes" },
   OTHER:      { business: "Negócio",     team: "Equipe",        teamSingular: "Membro",         service: "Serviços",     serviceSingular: "Serviço",                 payment: "Formas de pagamento", paymentSingular: "Forma de pagamento", customer: "clientes" },
 };
+
+// Verticais em que o cardápio em arquivo aparece. Tem de bater com
+// NICHOS_COM_CARDAPIO no MenuService do servidor.
+const NICHOS_COM_CARDAPIO = ["RESTAURANT", "FOOD"];
 
 const VERTICAL_OPTIONS = [
   { value: "CLINIC",     label: "Clínica de saúde",      hint: "Odonto, médica, veterinária, fisio, psicologia" },
@@ -55,6 +59,8 @@ export default function MeuNegocio() {
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
   const [faqs, setFaqs] = useState<any[]>([]);
   const [aba, setAba] = useState("info");
+  const [cardapio, setCardapio] = useState<any>(null);
+  const [enviandoCardapio, setEnviandoCardapio] = useState(false);
 
   const vertical = profile.businessType || "OTHER";
   const L = useMemo(() => VERTICAL_LABELS[vertical] || VERTICAL_LABELS.OTHER, [vertical]);
@@ -65,6 +71,16 @@ export default function MeuNegocio() {
       const res = await fetch("/api/business", { headers: authHeaders() });
       const d = await res.json();
       setProfile(d.profile || {});
+      setCardapio(
+        d.profile?.menuUrl
+          ? {
+              url: d.profile.menuUrl,
+              kind: d.profile.menuKind || "image",
+              fileName: d.profile.menuFileName || null,
+              atualizadoEm: d.profile.menuUpdatedAt || null,
+            }
+          : null
+      );
       const byDay = new Map((d.businessHours || []).map((h: any) => [h.weekday, h]));
       setHours(WEEKDAYS.map((_, wd) => byDay.get(wd) || { weekday: wd, openTime: "", closeTime: "", isClosed: wd === 0 }));
       setTeamMembers(d.teamMembers || []);
@@ -88,6 +104,41 @@ export default function MeuNegocio() {
       toast({ title: "Erro ao salvar", variant: "destructive" });
     }
     setSavingProfile(false);
+  };
+
+  const enviarCardapio = async (arquivo: File) => {
+    setEnviandoCardapio(true);
+    try {
+      const corpo = new FormData();
+      corpo.append("file", arquivo);
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/business/menu", {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        body: corpo,
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d?.error || "Não foi possível enviar o cardápio.");
+      setCardapio({ url: d.url, kind: d.kind, fileName: d.fileName, atualizadoEm: new Date().toISOString() });
+      toast({
+        title: "Cardápio publicado",
+        description: "O agente já entrega esse arquivo quando o cliente pedir o cardápio.",
+      });
+    } catch (e: any) {
+      toast({ title: "Erro ao enviar o cardápio", description: e?.message, variant: "destructive" });
+    }
+    setEnviandoCardapio(false);
+  };
+
+  const removerCardapio = async () => {
+    if (!confirm("Tirar o cardápio do ar? O agente deixa de enviá-lo.")) return;
+    try {
+      await fetch("/api/business/menu", { method: "DELETE", headers: authHeaders() });
+      setCardapio(null);
+      toast({ title: "Cardápio removido" });
+    } catch {
+      toast({ title: "Erro ao remover o cardápio", variant: "destructive" });
+    }
   };
 
   const applyTemplate = async () => {
@@ -336,6 +387,92 @@ export default function MeuNegocio() {
                       ))}
                     </ul>
                   </section>
+
+                  {NICHOS_COM_CARDAPIO.includes(vertical) && (
+                    <section className="rounded-[14px] border border-border bg-card p-5 shadow-card">
+                      <div className="flex items-start gap-2.5">
+                        <UtensilsCrossed className="mt-0.5 h-4 w-4 shrink-0 text-accent-text" />
+                        <div className="min-w-0">
+                          <h2 className="text-[15px] font-semibold text-foreground">Cardápio</h2>
+                          <p className="mt-0.5 text-[12.5px] text-muted-foreground">
+                            Suba a foto ou o PDF do cardápio. Quando alguém pedir o cardápio na conversa,
+                            o agente envia esse arquivo.
+                          </p>
+                        </div>
+                      </div>
+
+                      {cardapio ? (
+                        <div className="mt-4 flex items-center gap-3 rounded-xl border border-border-soft bg-surface-2 p-3">
+                          {cardapio.kind === "document" ? (
+                            <FileText className="h-8 w-8 shrink-0 text-muted-foreground" />
+                          ) : (
+                            <img
+                              src={cardapio.url}
+                              alt="Cardápio"
+                              className="h-12 w-12 shrink-0 rounded-lg object-cover"
+                            />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[13px] font-medium text-foreground">
+                              {cardapio.fileName || "Cardápio"}
+                            </p>
+                            <p className="text-[12px] text-faint">
+                              {cardapio.kind === "document" ? "PDF" : "Imagem"}
+                              {cardapio.atualizadoEm
+                                ? ` · atualizado em ${new Date(cardapio.atualizadoEm).toLocaleDateString("pt-BR")}`
+                                : ""}
+                            </p>
+                          </div>
+                          <a
+                            href={cardapio.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="shrink-0 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-semibold text-foreground hover:bg-surface-2"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </a>
+                          <button
+                            onClick={removerCardapio}
+                            className="shrink-0 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-semibold text-destructive hover:bg-surface-2"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="mt-4 rounded-xl border border-dashed border-border p-3 text-[12.5px] text-muted-foreground">
+                          Nenhum cardápio publicado. Sem o arquivo, o agente responde só com o que estiver
+                          cadastrado em {L.service}.
+                        </p>
+                      )}
+
+                      <label className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-[12.5px] font-semibold text-foreground hover:bg-surface-2">
+                        {enviandoCardapio ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Upload className="h-3.5 w-3.5" />
+                        )}
+                        {enviandoCardapio
+                          ? "Enviando…"
+                          : cardapio
+                            ? "Substituir arquivo"
+                            : "Enviar cardápio"}
+                        <input
+                          type="file"
+                          accept=".jpg,.jpeg,.png,.webp,.pdf,image/*,application/pdf"
+                          className="hidden"
+                          disabled={enviandoCardapio}
+                          onChange={(e) => {
+                            const arquivo = e.target.files?.[0];
+                            // Zera o input: sem isso, reenviar o mesmo arquivo depois
+                            // de um erro não dispara o onChange de novo.
+                            e.target.value = "";
+                            if (arquivo) enviarCardapio(arquivo);
+                          }}
+                        />
+                      </label>
+                      <p className="mt-2 text-[12px] text-faint">JPG, PNG, WEBP ou PDF, até 25 MB.</p>
+                    </section>
+                  )}
                 </div>
               </div>
             )}

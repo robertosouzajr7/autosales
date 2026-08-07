@@ -1,5 +1,7 @@
 import prisma from "../config/prisma.js";
 import { getVerticalTemplate } from "../services/VerticalTemplates.js";
+import { classificar, cardapioDe } from "../services/MenuService.js";
+import { saveMedia } from "../services/StorageService.js";
 
 /**
  * Gestão da base de conhecimento estruturada do negócio.
@@ -23,6 +25,10 @@ export const getBusiness = async (req, res) => {
           businessPayment: true,
           businessExtraInfo: true,
           labelOverrides: true,
+          menuUrl: true,
+          menuKind: true,
+          menuFileName: true,
+          menuUpdatedAt: true,
         },
       }),
       prisma.teamMember.findMany({ where: { tenantId }, orderBy: { name: "asc" } }),
@@ -73,6 +79,57 @@ export const updateProfile = async (req, res) => {
       },
     });
     res.json(tenant);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+};
+
+// ── Cardápio em arquivo ───────────────────────────────────────────
+
+// POST /api/business/menu — sobe a imagem ou o PDF do cardápio.
+export const uploadMenu = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "Nenhum arquivo enviado." });
+
+    const tipo = classificar(req.file.originalname, req.file.mimetype);
+    if (!tipo.ok) return res.status(415).json({ error: tipo.erro });
+
+    const ext = (req.file.originalname.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const publicBase = `${req.protocol}://${req.get("host")}`;
+    const url = await saveMedia(req.file.buffer, ext, req.file.mimetype, req.tenantId, publicBase);
+
+    await prisma.tenant.update({
+      where: { id: req.tenantId },
+      data: {
+        menuUrl: url,
+        menuKind: tipo.kind,
+        menuFileName: req.file.originalname,
+        menuUpdatedAt: new Date(),
+      },
+    });
+    res.json({ url, kind: tipo.kind, fileName: req.file.originalname });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+};
+
+// DELETE /api/business/menu — tira o cardápio do ar.
+export const removeMenu = async (req, res) => {
+  try {
+    await prisma.tenant.update({
+      where: { id: req.tenantId },
+      data: { menuUrl: null, menuKind: null, menuFileName: null, menuUpdatedAt: null },
+    });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+};
+
+// GET /api/business/menu — o que está publicado hoje.
+export const getMenu = async (req, res) => {
+  try {
+    res.json({ cardapio: await cardapioDe(req.tenantId) });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

@@ -394,7 +394,7 @@ export class MetaManager {
      * Aceita caminho local (/api/uploads/…) — sobe o arquivo e envia por
      * media_id — ou URL pública (envia por link).
      */
-    static async sendWhatsAppMedia(phoneId, accessToken, to, mediaUrl, type = 'image', caption = '') {
+    static async sendWhatsAppMedia(phoneId, accessToken, to, mediaUrl, type = 'image', caption = '', opts = {}) {
         try {
             const kind = ['image', 'video', 'audio', 'document'].includes(type) ? type : 'image';
             const payload = { messaging_product: 'whatsapp', recipient_type: 'individual', to, type: kind };
@@ -424,6 +424,11 @@ export class MetaManager {
 
             // Áudio não aceita caption na Cloud API.
             if (caption && kind !== 'audio') payload[kind].caption = caption;
+            // Documento sem filename chega ao cliente com um nome gerado pela Meta.
+            if (kind === 'document') {
+                const nome = opts.fileName || (mediaUrl.split('?')[0].split('/').pop() || '');
+                if (nome.includes('.')) payload[kind].filename = nome;
+            }
 
             await axios.post(
                 `https://graph.facebook.com/${GRAPH_VERSION}/${phoneId}/messages`,

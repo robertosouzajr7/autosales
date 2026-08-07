@@ -78,6 +78,18 @@ export async function resolverMidia(mediaUrl) {
     return null;
 }
 
+/**
+ * O nome do arquivo dentro de uma URL ou caminho, sem querystring.
+ * Só serve para dar ao documento um nome com extensão no celular do cliente.
+ */
+export function nomeDeArquivo(mediaUrl) {
+    if (typeof mediaUrl !== 'string') return null;
+    if (mediaUrl.startsWith('data:')) return null;
+    const semQuery = mediaUrl.split('?')[0].split('#')[0];
+    const base = semQuery.split('/').pop() || '';
+    return base.includes('.') ? base : null;
+}
+
 export class WhatsAppManager {
     /**
      * Resolve o tenantId real a partir do accountId (WhatsAppAccount.id).
@@ -638,7 +650,7 @@ export class WhatsAppManager {
     }
 
     // Envia mídia (imagem, vídeo, documento, áudio) - Fase 4
-    static async sendMedia(tenantId, phone, mediaUrl, mediaType, caption = "") {
+    static async sendMedia(tenantId, phone, mediaUrl, mediaType, caption = "", opts = {}) {
         const sessionEntry = Array.from(whatsappSessions.entries()).find(
             ([_, s]) => s.tenantId === tenantId && s.status === 'CONNECTED'
         );
@@ -659,7 +671,15 @@ export class WhatsAppManager {
                         msgContent = { video: source, caption };
                         break;
                     case 'document':
-                        msgContent = { document: source, caption, fileName: caption || 'document' };
+                        // O nome do arquivo é o que o cliente vê no WhatsApp. Usar a
+                        // legenda como nome deixava "Aqui está o nosso cardápio 🙂"
+                        // sem extensão — o celular não sabia com o que abrir.
+                        msgContent = {
+                            document: source,
+                            caption,
+                            fileName: opts.fileName || nomeDeArquivo(mediaUrl) || 'documento.pdf',
+                            ...(opts.mimetype ? { mimetype: opts.mimetype } : {}),
+                        };
                         break;
                     case 'audio':
                         msgContent = { 

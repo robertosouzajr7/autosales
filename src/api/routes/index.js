@@ -442,6 +442,15 @@ router.put("/business/hours", requirePermission("business"), BusinessController.
 router.post("/business/apply-template", requirePermission("business"), BusinessController.applyTemplate);
 router.get("/business/verticals", (_req, res) => res.json(listVerticalTemplates()));
 
+router.get("/business/menu", BusinessController.getMenu);
+router.post(
+  "/business/menu",
+  requirePermission("business"),
+  receberArquivo("file", "midia"),
+  BusinessController.uploadMenu
+);
+router.delete("/business/menu", requirePermission("business"), BusinessController.removeMenu);
+
 router.post("/business/team", requirePermission("business"), BusinessController.teamMember.create);
 router.put("/business/team/:id", requirePermission("business"), BusinessController.teamMember.update);
 router.delete("/business/team/:id", requirePermission("business"), BusinessController.teamMember.remove);

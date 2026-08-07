@@ -109,7 +109,8 @@ class MessagingService {
       const { MetaManager } = await import("../../../meta.js");
       try {
         const ok = await MetaManager.sendWhatsAppMedia(
-          account.phoneId, account.accessToken, phone, mediaUrl, mediaType, caption
+          account.phoneId, account.accessToken, phone, mediaUrl, mediaType, caption,
+          { fileName: opts.fileName }
         );
         return ok;
       } catch (e) {
@@ -120,7 +121,7 @@ class MessagingService {
 
     try {
       const { WhatsAppManager } = await import("../../../whatsapp.js");
-      return await WhatsAppManager.sendMedia(tenantId, phone, mediaUrl, mediaType, caption);
+      return await WhatsAppManager.sendMedia(tenantId, phone, mediaUrl, mediaType, caption, { fileName: opts.fileName });
     } catch (e) {
       console.error(`[Messaging] Falha na mídia via Baileys:`, e.message);
       return false;
