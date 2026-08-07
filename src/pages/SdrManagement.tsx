@@ -12,9 +12,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AssistenteDePrompt } from "@/components/agents/AssistenteDePrompt";
+import { TreinarAgente } from "@/components/agents/TreinarAgente";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { enviarArquivo } from "@/lib/enviarArquivo";
 
 /**
  * Agente de IA — três painéis: lista de agentes, edição e simulador.
@@ -54,8 +54,8 @@ export default function SdrManagement() {
   const [selecionado, setSelecionado] = useState<any>(null);
   const [form, setForm] = useState({ ...VAZIO });
   const [assistenteAberto, setAssistenteAberto] = useState(false);
+  const [treinarAberto, setTreinarAberto] = useState(false);
   const [salvando, setSalvando] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [functions, setFunctions] = useState<any[]>([]);
   const [skillsCatalog, setSkillsCatalog] = useState<any[]>([]);
   const [voices, setVoices] = useState<any[]>([]);
@@ -161,27 +161,6 @@ export default function SdrManagement() {
       toast({ title: sdr.active ? "Agente desligado" : "Agente ligado" });
       fetchData(sdr.id);
     } catch { toast({ title: "Erro ao mudar o estado", variant: "destructive" }); }
-  };
-
-  const subirArquivo = async (e: any) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    if (!selecionado) return toast({ title: "Salve o agente antes de treinar", variant: "destructive" });
-    setUploading(true);
-    try {
-      const envio = await enviarArquivo<any>(`/api/sdrs/${selecionado.id}/training`, file);
-      if (!envio.ok) throw new Error(envio.erro);
-      const data = envio.dados;
-      toast({
-        title: "Documento aprendido",
-        description: `${(data.extractedChars || 0).toLocaleString("pt-BR")} caracteres entraram na base.`,
-      });
-      setForm((f) => ({ ...f, knowledgeBase: data.sdr.knowledgeBase }));
-      fetchData(selecionado.id);
-    } catch (err: any) {
-      toast({ title: "Erro no treinamento", description: err.message, variant: "destructive" });
-    } finally { setUploading(false); }
   };
 
   const tocarAmostra = async (v: any) => {
@@ -395,20 +374,25 @@ export default function SdrManagement() {
                 </span>
               </div>
               <p className="mt-1 text-[12.5px] text-muted-foreground">
-                O agente responde com base no que estiver aqui. Suba um documento ou escreva direto.
+                O agente responde com base no que estiver aqui. Envie um material e confira o que foi
+                entendido antes de valer.
               </p>
 
-              <input type="file" id="kb-file" className="hidden" accept=".pdf,.txt,.doc,.docx,.csv" onChange={subirArquivo} />
+              {/* Documento, planilha ou voz — e o dono aprova item a item.
+                  Texto cru de PDF na base é como o agente passa a responder
+                  com o que estava no rodapé do documento. */}
               <button
-                onClick={() => document.getElementById("kb-file")?.click()}
-                disabled={uploading || !selecionado}
+                onClick={() => setTreinarAberto(true)}
+                disabled={!selecionado}
                 className="mt-4 grid w-full place-items-center gap-1.5 rounded-xl border border-dashed border-border py-8 text-faint transition-colors hover:border-accent-text/40 hover:text-accent-text disabled:opacity-50"
               >
-                {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
+                <Upload className="h-5 w-5" />
                 <span className="text-[12.5px] font-medium">
-                  {uploading ? "Processando o documento…" : "Arraste um PDF, DOCX ou TXT — ou clique para escolher"}
+                  Enviar documento, planilha ou gravar uma explicação
                 </span>
-                {!selecionado && <span className="text-[11.5px]">Salve o agente antes de treinar</span>}
+                <span className="text-[11.5px]">
+                  {selecionado ? "Você revisa cada item antes de entrar na base" : "Salve o agente antes de treinar"}
+                </span>
               </button>
 
               <Textarea
@@ -657,6 +641,12 @@ export default function SdrManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <TreinarAgente
+        open={treinarAberto}
+        onOpenChange={setTreinarAberto}
+        sdrId={selecionado?.id || ""}
+        aoConsolidar={(knowledgeBase) => setForm((f: any) => ({ ...f, knowledgeBase }))}
+      />
       <AssistenteDePrompt
         open={assistenteAberto}
         onOpenChange={setAssistenteAberto}

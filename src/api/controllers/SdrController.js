@@ -1,6 +1,7 @@
 import prisma from "../config/prisma.js";
 import { knowledgeBaseHeadroom } from "../middlewares/planLimits.js";
 import PromptBuilder, { QUESTIONARIO, SECOES } from "../services/PromptBuilder.js";
+import KnowledgeExtractor from "../services/KnowledgeExtractor.js";
 
 export const getSdrs = async (req, res) => {
   const tenantId = req.tenantId;
@@ -313,5 +314,74 @@ export const gerarPrompt = async (req, res) => {
     res.json(r);
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+};
+
+// ── Treinamento com revisão do dono ───────────────────────────────
+
+/**
+ * Lê o material e propõe o conhecimento — sem gravar na base.
+ *
+ * Aceita documento, planilha, gravação de voz ou texto colado. O que sai
+ * daqui é uma lista de itens PENDENTES para o dono revisar. Extração
+ * automática que se auto-aprova é como um preço errado vira política da casa.
+ */
+export const extrairConhecimento = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const sdr = await prisma.sdrBot.findFirst({ where: { id, tenantId: req.tenantId } });
+    if (!sdr) return res.status(404).json({ error: "Agente não encontrado." });
+
+    const texto = String(req.body?.texto || "").trim();
+    if (!req.file && !texto) {
+      return res.status(400).json({ error: "Envie um arquivo, uma gravação ou cole o texto." });
+    }
+
+    const r = await KnowledgeExtractor.extrair(req.tenantId, sdr.id, {
+      buffer: req.file?.buffer,
+      nome: req.file?.originalname,
+      mimetype: req.file?.mimetype,
+      texto: req.file ? null : texto,
+    });
+
+    const itens = await prisma.knowledgeDraft.findMany({
+      where: { lote: r.lote },
+      orderBy: { createdAt: "asc" },
+    });
+
+    res.json({ ...r, itens });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+};
+
+/** O que ainda está esperando decisão, para a tela poder retomar. */
+export const listarConhecimentoPendente = async (req, res) => {
+  try {
+    const itens = await prisma.knowledgeDraft.findMany({
+      where: { tenantId: req.tenantId, sdrId: req.params.id, status: "PENDENTE" },
+      orderBy: { createdAt: "asc" },
+    });
+    res.json({ total: itens.length, itens });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+};
+
+/**
+ * O dono decidiu: o que ele manteve entra na base, com as edições dele.
+ * O recusado fica registrado — não some, para dar para auditar depois.
+ */
+export const consolidarConhecimento = async (req, res) => {
+  try {
+    const { decisoes = [] } = req.body || {};
+    if (!Array.isArray(decisoes) || !decisoes.length) {
+      return res.status(400).json({ error: "Nenhuma decisão recebida." });
+    }
+    const r = await KnowledgeExtractor.consolidar(req.tenantId, req.params.id, decisoes);
+    const sdr = await prisma.sdrBot.findFirst({ where: { id: req.params.id, tenantId: req.tenantId } });
+    res.json({ success: true, ...r, knowledgeBase: sdr?.knowledgeBase || "" });
+  } catch (e) {
+    res.status(e.codigo === "LIMITE_DE_PLANO" ? 403 : 500).json({ error: e.message });
   }
 };

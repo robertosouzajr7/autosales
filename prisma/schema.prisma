@@ -120,6 +120,7 @@ model Tenant {
   apiKeys           ApiKey[]
   crmConnections    CrmConnection[]
   awayPeriods AwayPeriod[]
+  knowledgeDrafts KnowledgeDraft[]
 }
 
 model PipelineStage {
@@ -1004,6 +1005,36 @@ model Product {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Conhecimento extraído de um material, esperando o dono confirmar.
+//
+// Jogar o texto cru de um PDF dentro da base do agente é como ele passa a
+// responder com o que estava no rodapé do documento. Aqui o material vira
+// itens discretos — pergunta e resposta —, e nenhum entra na base sem o dono
+// ler. Ele é quem sabe se o que a máquina entendeu é o que o negócio faz.
+model KnowledgeDraft {
+  id       String @id @default(uuid())
+  tenantId String
+  sdrId    String
+
+  // Agrupa tudo que veio do mesmo material, para a revisão ser de uma vez.
+  lote    String
+  origem  String // DOCUMENTO | PLANILHA | AUDIO | TEXTO
+  arquivo String? // nome do arquivo ou rótulo da gravação
+
+  pergunta String
+  resposta String
+  trecho   String? // de onde saiu no material, para o dono conferir
+
+  status    String    @default("PENDENTE") // PENDENTE | APROVADO | RECUSADO
+  createdAt DateTime  @default(now())
+  decidedAt DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, sdrId, status])
+  @@index([lote])
 }
 
 model IcpProfile {
