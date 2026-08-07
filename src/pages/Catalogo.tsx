@@ -11,9 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Package, Plus, Pencil, Trash2, Loader2, ImageIcon, Music, Video, Upload, X, Search,
+  Package, Plus, Pencil, Trash2, Loader2, ImageIcon, Music, Video, Upload, X, Search, FileUp,
 } from "lucide-react";
 import { enviarArquivo } from "@/lib/enviarArquivo";
+import { ImportarCatalogo } from "@/components/catalog/ImportarCatalogo";
 
 function authHeaders() {
   const token = localStorage.getItem("token");
@@ -40,6 +41,8 @@ export default function Catalogo() {
   const [uploading, setUploading] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState("ALL");
+
+  const [importOpen, setImportOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -138,7 +141,12 @@ export default function Catalogo() {
               Produtos e serviços com mídia. O agente apresenta e envia estes itens durante a conversa.
             </p>
           </div>
-          <Button onClick={openNew} className="h-10 gap-2"><Plus className="h-4 w-4" /> Novo item</Button>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Button variant="outline" onClick={() => setImportOpen(true)} className="h-10 gap-2">
+              <FileUp className="h-4 w-4" /> Importar
+            </Button>
+            <Button onClick={openNew} className="h-10 gap-2"><Plus className="h-4 w-4" /> Novo item</Button>
+          </div>
         </header>
 
         {/* Busca e filtros */}
@@ -331,6 +339,7 @@ export default function Catalogo() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ImportarCatalogo open={importOpen} onOpenChange={setImportOpen} aoImportar={load} />
     </DashboardLayout>
   );
 }

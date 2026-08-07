@@ -25,6 +25,7 @@
     "test:team-access": "node scripts/test-team-access.mjs",
     "test:cdp": "node scripts/test-contacts-cdp.mjs",
     "test:cdp-auto": "node scripts/test-cdp-automatico.mjs",
+    "test:catalogo": "node scripts/test-catalogo-import.mjs",
     "test:pricing": "node scripts/test-dispatch-pricing.mjs",
     "test:usage": "node scripts/test-usage-limits.mjs",
     "test:channel": "node scripts/test-whatsapp-mode.mjs",

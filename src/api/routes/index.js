@@ -329,6 +329,13 @@ router.post("/products", requirePermission("catalog"), ProductController.createP
 router.put("/products/:id", requirePermission("catalog"), ProductController.updateProduct);
 router.delete("/products/:id", requirePermission("catalog"), ProductController.deleteProduct);
 router.post("/products/upload", receberArquivo("file", "midia"), ProductController.uploadMedia);
+router.get("/products/import/modelo", requirePermission("catalog"), ProductController.importTemplate);
+router.post(
+  "/products/import",
+  requirePermission("catalog"),
+  receberArquivo("file", "planilha"),
+  ProductController.importProducts
+);
 
 // Admin / SaaS Central (Required for AdminDashboard.tsx)
 router.get("/admin/tenants", adminMiddleware, AdminController.getTenants);
