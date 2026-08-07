@@ -26,6 +26,7 @@ import Analytics from "@/pages/Analytics";
 import AutomationConfig from "@/pages/AutomationConfig";
 import PublicBooking from "@/pages/PublicBooking";
 import PublicWebchat from "@/pages/PublicWebchat";
+import Vendas from "@/pages/Vendas";
 import PublicPix from "@/pages/PublicPix";
 import Docs from "@/pages/Docs";
 import VerifyEmail from "@/pages/VerifyEmail";
@@ -83,6 +84,7 @@ function App() {
         <Route path="/crm" element={<CRM />} />
         <Route path="/contacts" element={<Contacts />} />
         <Route path="/appointments" element={<Appointments />} />
+        <Route path="/vendas" element={<Vendas />} />
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/checkout/return" element={<CheckoutReturn />} />

@@ -46,6 +46,7 @@ import {
 
 import { receberArquivo } from "../middlewares/upload.js";
 import * as PixController from "../controllers/PixController.js";
+import * as SaleController from "../controllers/SaleController.js";
 import * as AwayController from "../controllers/AwayController.js";
 
 const router = express.Router();
@@ -454,6 +455,18 @@ router.delete("/business/menu", requirePermission("business"), BusinessControlle
 
 router.get("/business/pix", PixController.getSettings);
 router.put("/business/pix", requirePermission("business"), PixController.updateSettings);
+
+router.get("/sales", requirePermission("sales"), SaleController.list);
+router.post("/sales", requirePermission("sales"), SaleController.create);
+router.patch("/sales/:id", requirePermission("sales"), SaleController.update);
+router.delete("/sales/:id", requirePermission("sales"), SaleController.remove);
+router.post(
+  "/sales/:id/receipt",
+  requirePermission("sales"),
+  receberArquivo("file", "midia"),
+  SaleController.uploadReceipt
+);
+router.patch("/sales/receipts/:id", requirePermission("sales"), SaleController.reviewReceipt);
 
 router.get("/pix/charges", PixController.list);
 router.post("/pix/charges", PixController.create);

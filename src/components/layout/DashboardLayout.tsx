@@ -33,7 +33,8 @@ import {
   FileText,
   Megaphone,
   Workflow,
-  Inbox
+  Inbox,
+  Receipt
 } from "lucide-react";
 import { notificationStore } from "@/lib/notifications";
 
@@ -123,6 +124,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: "Conversas", icon: MessageSquare, href: "/conversations", permission: "conversations", badgeAtencao: true },
       { label: "Agendamentos", icon: Calendar, href: "/appointments", permission: "appointments", feature: "calendar" },
+      { label: "Vendas", icon: Receipt, href: "/vendas", permission: "sales" },
       { label: "Funil de clientes", icon: Target, href: "/crm", permission: "crm" },
       { label: "Clientes", icon: BookUser, href: "/contacts", permission: "contacts" },
     ],

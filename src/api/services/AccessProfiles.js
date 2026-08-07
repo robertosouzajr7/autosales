@@ -21,6 +21,7 @@ export const MODULES = [
   { id: "contacts", label: "Clientes e contatos", grupo: "Relacionamento" },
   { id: "crm", label: "Funil de clientes", grupo: "Relacionamento" },
   { id: "appointments", label: "Agendamentos", grupo: "Relacionamento" },
+  { id: "sales", label: "Vendas", grupo: "Relacionamento" },
   { id: "catalog", label: "Catálogo", grupo: "Conteúdo" },
   { id: "business", label: "Meu negócio", grupo: "Conteúdo" },
   { id: "templates", label: "Templates de mensagem", grupo: "Conteúdo" },
@@ -71,7 +72,7 @@ export const PROFILES = [
     label: "Vendas",
     hint: "Atende, acompanha o funil e usa o catálogo. Sem acesso a configurações.",
     admin: false,
-    modules: ["dashboard", "conversations", "queues", "contacts", "crm", "appointments", "catalog", "analytics"],
+    modules: ["dashboard", "conversations", "queues", "contacts", "crm", "appointments", "sales", "catalog", "analytics"],
   },
   {
     id: "MARKETING",

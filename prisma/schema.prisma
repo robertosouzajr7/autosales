@@ -129,6 +129,8 @@ model Tenant {
   businessHours  BusinessHour[]
   faqs           Faq[]
   pixCharges     PixCharge[]
+  sales          Sale[]
+  receipts       PaymentReceipt[]
   serviceQueues  ServiceQueue[]
 
   usageEvents UsageEvent[]
@@ -181,6 +183,8 @@ model Lead {
   notes  String?
 
   pixCharges PixCharge[]
+  sales      Sale[]
+  receipts   PaymentReceipt[]
 
   // Valor da oportunidade, em reais. É o que permite ao funil somar
   // "em negociação" e "fechado" — sem ele o board só conta cabeças.
@@ -1051,6 +1055,8 @@ model Product {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  saleItems SaleItem[]
 }
 
 // Aparelho onde um atendente recebe notificação.
@@ -1336,6 +1342,94 @@ model PixCharge {
 
   @@index([tenantId, status])
   @@index([leadId])
+}
+
+// Uma venda fechada. É o irmão do agendamento: o evento que o agente mapeia
+// quando o atendimento vira dinheiro, com o mesmo direito a mover o lead no
+// funil e a aparecer numa tela de gestão.
+model Sale {
+  id       String  @id @default(uuid())
+  tenantId String
+  leadId   String?
+
+  title         String? // do que é a venda
+  amount        Float
+  status        String  @default("PENDING") // PENDING | PAID | CANCELED
+  paymentMethod String? // PIX | CARD | CASH | TRANSFER | OTHER
+  notes         String?
+
+  // Quem registrou: o agente na conversa ou alguém pelo painel.
+  source    String  @default("AGENT") // AGENT | PANEL
+  createdBy String? // userId quando veio do painel
+
+  paidAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead     Lead?            @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  items    SaleItem[]
+  receipts PaymentReceipt[]
+
+  @@index([tenantId, status])
+  @@index([leadId])
+}
+
+model SaleItem {
+  id        String  @id @default(uuid())
+  saleId    String
+  productId String?
+  name      String
+  quantity  Int     @default(1)
+  unitPrice Float   @default(0)
+
+  sale    Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([saleId])
+}
+
+// O comprovante que o cliente mandou, com o que foi lido dele e o veredito.
+//
+// Guardar a leitura em campos — e não só um texto — é o que permite ao dono
+// ver POR QUE o comprovante foi recusado, e conferir na mão quando discordar.
+model PaymentReceipt {
+  id       String  @id @default(uuid())
+  tenantId String
+  saleId   String?
+  leadId   String?
+
+  fileUrl  String
+  fileKind String @default("image") // image | document
+
+  // Veredito: APPROVED (confere), REJECTED (não confere), REVIEW (precisa de
+  // olho humano). Nunca "aprovado por omissão" — o que não deu para ler cai
+  // em REVIEW.
+  status  String  @default("REVIEW")
+  reasons String? // JSON com os motivos, na ordem em que pesaram
+
+  // O que foi lido do comprovante.
+  amount       Float?
+  paidAt       DateTime?
+  pixKey       String?
+  payerName    String?
+  receiverName String?
+  receiverDoc  String?
+  endToEndId   String?
+  // Pix agendado é promessa, não pagamento. Separado de propósito: é o caso
+  // que mais passa despercebido no balcão.
+  scheduled Boolean @default(false)
+  rawText   String?
+
+  checkedAt DateTime  @default(now())
+  createdAt DateTime  @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sale   Sale?  @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  lead   Lead?  @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status])
+  @@index([saleId])
 }
 
 model Faq {

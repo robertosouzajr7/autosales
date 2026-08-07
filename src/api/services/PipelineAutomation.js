@@ -28,6 +28,10 @@ const APELIDOS = {
   LEAD_QUALIFIED: ["qualificado", "qualificando", "oportunidade"],
   LEAD_WON: ["ganho", "cliente", "fechado"],
   LEAD_LOST: ["perdido", "descartado"],
+  // Venda é evento do atendimento como o agendamento: fechar e pagar movem o
+  // card. Sem isso o funil mostra "em negociação" com o dinheiro já na conta.
+  SALE_CREATED: ["negociacao", "proposta", "fechamento", "aguardando pagamento"],
+  SALE_PAID: ["ganho", "pago", "cliente", "fechado"],
 };
 
 /**
@@ -46,6 +50,8 @@ const ETAPA_PADRAO = {
   APPOINTMENT_NOSHOW: { name: "No-show", color: "#EF4444" },
   LEAD_WON: { name: "Ganho", color: "#15803D" },
   LEAD_LOST: { name: "Perdido", color: "#94A3B8" },
+  SALE_CREATED: { name: "Aguardando pagamento", color: "#F59E0B" },
+  SALE_PAID: { name: "Ganho", color: "#15803D" },
 };
 
 const STATUS_POR_EVENTO = {
@@ -56,6 +62,9 @@ const STATUS_POR_EVENTO = {
   APPOINTMENT_CANCELLED: "CONTACTED",
   LEAD_WON: "WON",
   LEAD_LOST: "LOST",
+  // SALE_CREATED só move a etapa: não existe status de lead para "vendeu mas
+  // ainda não pagou", e inventar um faria os filtros do CRM mentirem.
+  SALE_PAID: "WON",
 };
 
 /**
