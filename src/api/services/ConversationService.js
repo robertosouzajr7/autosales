@@ -85,12 +85,24 @@ export function windowMinutesLeft(lastInboundAt) {
 }
 
 // Mídia não tem texto útil para a lista; mostra o tipo.
+/**
+ * A linha que aparece na lista de conversas.
+ *
+ * Mídia com legenda mostra a legenda junto do ícone, como o próprio WhatsApp
+ * faz: "🖼️ Imagem" não diz nada quando o que foi enviado é um item do
+ * catálogo com nome e preço. Sem legenda, ou quando o conteúdo é só o
+ * endereço do arquivo, fica só o ícone — um link truncado é pior que o
+ * rótulo genérico.
+ */
 function previewOf(message) {
   const t = message.messageType;
-  if (t === "AUDIO") return "🎙️ Áudio";
-  if (t === "IMAGE") return "🖼️ Imagem";
-  if (t === "DOCUMENT") return "📄 Documento";
-  return (message.content || "").slice(0, 120);
+  const icone = t === "AUDIO" ? "🎙️" : t === "IMAGE" ? "🖼️" : t === "VIDEO" ? "🎬" : t === "DOCUMENT" ? "📄" : null;
+  if (!icone) return (message.content || "").slice(0, 120);
+
+  const legenda = String(message.content || "").trim();
+  const ehEndereco = !legenda || /^(https?:\/\/|\/|data:)/i.test(legenda);
+  const rotulo = { AUDIO: "Áudio", IMAGE: "Imagem", VIDEO: "Vídeo", DOCUMENT: "Documento" }[t];
+  return ehEndereco ? `${icone} ${rotulo}` : `${icone} ${legenda.replace(/\*/g, "").slice(0, 110)}`;
 }
 
 export default { touchConversation, markConversationRead, isWindowOpen, windowMinutesLeft, SERVICE_WINDOW_HOURS };

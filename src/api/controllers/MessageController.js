@@ -771,3 +771,78 @@ export const suggestReply = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+/**
+ * Envia um item do catálogo na conversa.
+ *
+ * A IA já sabia fazer isso (`send_catalog_item`); o atendente não tinha por
+ * onde — ele abria o catálogo em outra tela, copiava nome e preço e digitava
+ * de novo no chat, com o preço saindo errado de vez em quando.
+ *
+ * A mídia vai junto quando existe: item de catálogo sem foto é uma frase, e
+ * uma frase não vende.
+ */
+export const sendCatalogItem = async (req, res) => {
+  const tenantId = req.tenantId;
+  const { leadId } = req.params;
+  const { productId } = req.body || {};
+
+  try {
+    const [lead, item] = await Promise.all([
+      prisma.lead.findFirst({ where: { id: leadId, tenantId } }),
+      prisma.product.findFirst({ where: { id: productId, tenantId, isActive: true } }),
+    ]);
+    if (!lead) return res.status(404).json({ error: "Contato não encontrado." });
+    if (!item) return res.status(404).json({ error: "Item não encontrado no catálogo." });
+    if (lead.optedOut) {
+      return res.status(403).json({ error: "Este contato pediu para não receber mensagens." });
+    }
+
+    const preco = item.price != null
+      ? item.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+      : "sob consulta";
+    const legenda = `*${item.name}* — ${preco}${item.description ? `\n${item.description}` : ""}`;
+
+    const midia = item.imageUrl
+      ? { url: item.imageUrl, tipo: "image" }
+      : item.videoUrl
+        ? { url: item.videoUrl, tipo: "video" }
+        : null;
+
+    // O chat do site não tem transporte externo: a entrega é a própria linha
+    // no histórico, e a imagem aparece porque `mediaUrl` fica na mensagem.
+    // Mandar isso pelo caminho do WhatsApp falharia por não haver conexão.
+    const canal = String(lead.channel || "WHATSAPP").toUpperCase();
+    const envio = midia && canal !== "SITE"
+      ? await MessagingService.sendMedia(tenantId, lead.phone, midia.url, midia.tipo, legenda, {
+          accountId: lead.waAccountId,
+        }).then((ok) => ({ ok: !!ok, erro: ok ? null : "Não consegui enviar a mídia pelo canal do cliente." }))
+      : await MessagingService.sendToLead(lead, legenda, { accountId: lead.waAccountId });
+
+    if (!envio?.ok) {
+      return res.status(502).json({ error: envio?.erro || "Não consegui enviar o item pelo canal do cliente." });
+    }
+
+    const conversa = await prisma.conversation.upsert({
+      where: { leadId: lead.id },
+      update: {},
+      create: { leadId: lead.id, tenantId },
+    });
+    const message = await prisma.message.create({
+      data: {
+        conversationId: conversa.id,
+        tenantId,
+        role: "ASSISTANT",
+        content: legenda,
+        messageType: midia ? (midia.tipo === "video" ? "VIDEO" : "IMAGE") : "TEXT",
+        mediaUrl: midia?.url || null,
+      },
+    });
+    await touchConversation(message);
+    messageEvents.emit("new_message", { tenantId, message });
+
+    res.json({ success: true, message });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

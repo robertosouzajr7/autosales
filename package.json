@@ -30,6 +30,7 @@
     "test:prompt": "node scripts/test-prompt-builder.mjs",
     "test:treinamento": "node scripts/test-treinamento.mjs",
     "test:atendente": "node scripts/test-atendente-etapa3.mjs",
+    "test:app4": "node scripts/test-app-etapa4.mjs",
     "test:pricing": "node scripts/test-dispatch-pricing.mjs",
     "test:usage": "node scripts/test-usage-limits.mjs",
     "test:channel": "node scripts/test-whatsapp-mode.mjs",
