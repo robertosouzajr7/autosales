@@ -1,5 +1,6 @@
 import prisma from "../config/prisma.js";
-import { normalizePhone, resolveContact, buildIdentifiers, mergeLeads } from "../services/ContactIdentity.js";
+import { normalizePhone, resolveContact, mergeLeads } from "../services/ContactIdentity.js";
+import ContactCleanup from "../services/ContactCleanup.js";
 
 /**
  * Seleção de contatos para disparo.
@@ -288,62 +289,50 @@ export const contactIdentities = async (req, res) => {
 };
 
 /**
- * Duplicatas que sobraram da base antiga.
+ * O que ainda precisa de decisão humana.
  *
- * O CDP impede duplicata nova, mas o que já estava gravado antes dele
- * continua lá. Aqui o cliente vê o que ainda dá para juntar — sem juntar
- * nada por conta própria: fusão é irreversível, quem decide é ele.
+ * Cadastro com identificador repetido não aparece mais aqui: telefone ou
+ * e-mail iguais são a mesma pessoa, e a unificação acontece sozinha — na
+ * entrada pelo CDP, e de hora em hora sobre o que escapou. O que resta são
+ * contatos que só dividem o NOME, sem nenhum identificador em comum: podem
+ * ser a mesma pessoa em duas fichas ou dois homônimos, e juntar duas pessoas
+ * diferentes não tem volta. Essa continua sendo uma escolha do dono.
+ *
+ * A resposta também traz quantos foram unificados automaticamente, para a
+ * tela poder dizer que o trabalho está sendo feito em vez de mostrar zero e
+ * parecer que nada acontece.
  */
 export const listDuplicates = async (req, res) => {
   try {
-    const leads = await prisma.lead.findMany({
-      where: { tenantId: req.tenantId },
-      orderBy: { createdAt: "asc" },
-      select: { id: true, name: true, phone: true, email: true, channel: true, createdAt: true },
+    const grupos = await ContactCleanup.ambiguos(req.tenantId);
+
+    const desdeOntem = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const registros = await prisma.auditLog.findMany({
+      where: { tenantId: req.tenantId, action: "CONTACTS_AUTO_MERGED", createdAt: { gte: desdeOntem } },
+      select: { metadata: true },
     });
-
-    const porChave = new Map();
-    for (const lead of leads) {
-      for (const c of buildIdentifiers({ phone: lead.phone, email: lead.email })) {
-        const k = `${c.type}|${c.value}`;
-        if (!porChave.has(k)) porChave.set(k, []);
-        porChave.get(k).push(lead);
-      }
+    let unificadosNoDia = 0;
+    for (const r of registros) {
+      try { unificadosNoDia += JSON.parse(r.metadata || "{}").fundidos || 0; } catch { /* registro antigo */ }
     }
 
-    // Um grupo por conjunto de contatos, não por chave: quem repete telefone
-    // E e-mail apareceria duas vezes.
-    const vistos = new Set();
-    const grupos = [];
-    const jaAgrupado = new Set();
-    for (const [chave, lista] of porChave) {
-      if (lista.length < 2) continue;
-      const assinatura = lista.map((l) => l.id).sort().join("|");
-      if (vistos.has(assinatura)) continue;
-      vistos.add(assinatura);
-      lista.forEach((l) => jaAgrupado.add(l.id));
-      const [tipo, valor] = chave.split("|");
-      grupos.push({ motivo: tipo === "PHONE" ? "Mesmo telefone" : "Mesmo e-mail", valor, contatos: lista, confianca: "ALTA" });
-    }
+    res.json({ total: grupos.length, grupos, unificadosNoDia });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+};
 
-    // Mesmo nome, sem nenhum identificador em comum: pode ser a mesma
-    // pessoa (uma ficha só com telefone, outra só com e-mail) ou dois
-    // homônimos. O sistema não funde por conta própria — sugere, e quem
-    // conhece o cliente decide.
-    const porNome = new Map();
-    for (const lead of leads) {
-      if (jaAgrupado.has(lead.id)) continue;
-      const n = normalizarNome(lead.name);
-      if (!n || n.length < 5) continue;
-      if (!porNome.has(n)) porNome.set(n, []);
-      porNome.get(n).push(lead);
-    }
-    for (const [nome, lista] of porNome) {
-      if (lista.length < 2) continue;
-      grupos.push({ motivo: "Mesmo nome", valor: lista[0].name, contatos: lista, confianca: "BAIXA" });
-    }
-
-    res.json({ total: grupos.length, grupos });
+/**
+ * Unifica agora, sem esperar a próxima passagem.
+ *
+ * A varredura automática roda de hora em hora sobre o que mudou. Quem acabou
+ * de importar uma planilha antiga quer ver a base limpa na hora — e quem tem
+ * base grande precisa de um jeito de varrer tudo, não só a janela recente.
+ */
+export const deduplicateNow = async (req, res) => {
+  try {
+    const resumo = await ContactCleanup.varrer(req.tenantId);
+    res.json({ success: true, ...resumo });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -378,11 +367,3 @@ export const mergeContacts = async (req, res) => {
   }
 };
 
-/** Nome comparável: sem acento, sem caixa, sem pontuação. */
-function normalizarNome(nome) {
-  return String(nome || "")
-    .trim().toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9 ]/g, "")
-    .replace(/\s+/g, " ");
-}
