@@ -96,6 +96,10 @@ class AutomationEngine {
     // para as 9h não espera que saia às 9h05.
     this.campaignInterval = setInterval(() => this.processScheduledCampaigns(), 60 * 1000);
     this.routineInterval = setInterval(() => this.processGlobalRoutines(), 5 * 60 * 1000);
+    // Unificação de contatos duplicados. De hora em hora e só sobre o que
+    // mudou: a fusão na entrada já é feita pelo CDP, aqui é a base antiga e o
+    // que escapou. Sem isto a limpeza dependia de alguém abrir uma tela.
+    this.dedupeInterval = setInterval(() => this.processContactDedupe(), 60 * 60 * 1000);
     this.inactivityInterval = setInterval(() => this.processInactivityTriggers(), 5 * 60 * 1000);
     this.queueInterval = setInterval(() => this.processQueue(), 1000);
     // Varredura de prospecção (novos leads) - a cada 1 min (mais proativo)
@@ -3044,6 +3048,26 @@ ${scrapeContext}
    * Dispara as campanhas cuja hora chegou. O `scheduledAt` era gravado desde
    * sempre, mas nada o lia — a campanha ficava esperando alguém clicar.
    */
+  /**
+   * Unifica contatos duplicados de todas as contas.
+   *
+   * Olha só o que mexeu desde a última passagem — mais um minuto de folga,
+   * porque um contato criado no fim da janela anterior pode ter sido gravado
+   * depois do carimbo. Reprocessar a base inteira de hora em hora seria caro
+   * e não acharia nada novo.
+   */
+  async processContactDedupe() {
+    try {
+      const { default: ContactCleanup } = await import("./src/api/services/ContactCleanup.js");
+      const desde = this.ultimaVarreduraDeContatos || null;
+      this.ultimaVarreduraDeContatos = new Date(Date.now() - 60 * 1000);
+      const r = await ContactCleanup.varrerTodas({ desde });
+      if (r.fundidos) console.log(`[CDP] ${r.fundidos} contato(s) unificado(s) em ${r.contas} conta(s).`);
+    } catch (e) {
+      console.error("[CDP] Falha na varredura de duplicados:", e.message);
+    }
+  }
+
   async processScheduledCampaigns() {
     try {
       const { dispararAgendadas } = await import("./src/api/controllers/CampaignController.js");

@@ -193,6 +193,7 @@ router.delete("/integrations/crm/:id", requirePermission("connections"), Integra
 // Contatos (CDP)
 router.post("/contacts/merge", requirePermission("contacts"), ContactController.mergeContacts);
 router.get("/contacts/duplicates", requirePermission("contacts"), ContactController.listDuplicates);
+router.post("/contacts/deduplicate", requirePermission("contacts"), ContactController.deduplicateNow);
 router.get("/contacts/:id/identities", requirePermission("contacts"), ContactController.contactIdentities);
 router.get("/contacts/search", ContactController.searchContacts);
 router.get("/contacts/search-ids", ContactController.searchContactIds);
