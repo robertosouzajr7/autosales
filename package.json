@@ -18,6 +18,7 @@
     "migrate:status": "prisma migrate status",
     "test:reminders": "node scripts/test-reminders.mjs",
     "test:attendance": "node scripts/test-attendance.mjs",
+    "test:agenda": "node scripts/test-agendamento-funil.mjs",
     "test:flows": "node scripts/test-flow-simulator.mjs",
     "test:triggers": "node scripts/test-triggers.mjs",
     "test:ai-flows": "node scripts/test-ai-flow-awareness.mjs",

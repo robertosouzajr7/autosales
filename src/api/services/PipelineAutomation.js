@@ -14,6 +14,11 @@ import prisma from "../config/prisma.js";
 
 // Apelidos por evento, na ordem de preferência. Comparação sem acento e em
 // minúsculo, por "contém" — funil de cliente raramente usa nome exato.
+//
+// Os apelidos passam pelo mesmo `normalizar()` das etapas na hora de comparar.
+// Sem isso, "reuniao marcada" e "no show" nunca casavam com nada: a etapa
+// "Reunião marcada" vira "reuniaomarcada" e o apelido com espaço não existe
+// em lugar nenhum. Eram dois apelidos mortos.
 const APELIDOS = {
   APPOINTMENT_CREATED: ["agendado", "agendamento", "reuniao marcada", "scheduled"],
   APPOINTMENT_CONFIRMED: ["confirmado", "confirmacao", "agendado"],
@@ -23,6 +28,24 @@ const APELIDOS = {
   LEAD_QUALIFIED: ["qualificado", "qualificando", "oportunidade"],
   LEAD_WON: ["ganho", "cliente", "fechado"],
   LEAD_LOST: ["perdido", "descartado"],
+};
+
+/**
+ * Etapa a criar quando o funil do tenant não tem nenhuma compatível.
+ *
+ * Antes, nesse caso, a função devolvia null e o lead ficava parado — em
+ * silêncio. Um funil com uma etapa só ("Novos") nunca ia mover ninguém, e do
+ * lado de fora parecia que a automação não funcionava. Agendar é um fato: se
+ * não existe onde colocar, a etapa passa a existir. O dono pode renomear ou
+ * apagar; o que não pode é o agendamento acontecer e o quadro não mostrar.
+ */
+const ETAPA_PADRAO = {
+  APPOINTMENT_CREATED: { name: "Agendado", color: "#2563EB" },
+  APPOINTMENT_CONFIRMED: { name: "Confirmado", color: "#0EA5E9" },
+  APPOINTMENT_COMPLETED: { name: "Atendido", color: "#22A06B" },
+  APPOINTMENT_NOSHOW: { name: "No-show", color: "#EF4444" },
+  LEAD_WON: { name: "Ganho", color: "#15803D" },
+  LEAD_LOST: { name: "Perdido", color: "#94A3B8" },
 };
 
 const STATUS_POR_EVENTO = {
@@ -49,9 +72,9 @@ function normalizar(texto) {
 
 class PipelineAutomation {
   /**
-   * Move o lead para a etapa do evento. Devolve a etapa aplicada, ou null
-   * quando o funil do tenant não tem nenhuma etapa compatível — nesse caso
-   * não inventamos nada, só registramos.
+   * Move o lead para a etapa do evento, criando a etapa se ela não existir.
+   * Devolve a etapa aplicada, ou null quando o evento não tem etapa prevista
+   * (aí só o status do lead muda).
    */
   async onEvent(tenantId, leadId, evento) {
     try {
@@ -60,10 +83,12 @@ class PipelineAutomation {
       const config = await prisma.automationConfig.findUnique({ where: { tenantId } }).catch(() => null);
       if (config && config.pipelineAutoEnabled === false) return null;
 
+      // Funil vazio não é motivo para desistir: era justamente aí que o lead
+      // ficava parado sem ninguém saber por quê.
       const stages = await prisma.pipelineStage.findMany({ where: { tenantId }, orderBy: { order: "asc" } });
-      if (!stages.length) return null;
 
-      const stage = this.resolveStage(stages, evento, config?.stageMap);
+      let stage = this.resolveStage(stages, evento, config?.stageMap);
+      if (!stage) stage = await this.criarEtapa(tenantId, evento, stages).catch(() => null);
       const data = {};
       if (stage) data.stageId = stage.id;
       if (STATUS_POR_EVENTO[evento]) data.status = STATUS_POR_EVENTO[evento];
@@ -116,10 +141,34 @@ class PipelineAutomation {
     }
 
     for (const apelido of APELIDOS[evento] || []) {
-      const achado = stages.find((s) => normalizar(s.name).includes(apelido));
+      const alvo = normalizar(apelido);
+      const achado = stages.find((s) => normalizar(s.name).includes(alvo));
       if (achado) return achado;
     }
     return null;
+  }
+
+  /** Cria a etapa que faltava, no fim do funil. */
+  async criarEtapa(tenantId, evento, stages) {
+    const modelo = ETAPA_PADRAO[evento];
+    if (!modelo) return null;
+    const ordem = stages.reduce((maior, s) => Math.max(maior, s.order ?? 0), 0) + 1;
+    const etapa = await prisma.pipelineStage.create({
+      data: { tenantId, name: modelo.name, color: modelo.color, order: ordem },
+    });
+    console.log(`[Funil] Etapa "${modelo.name}" criada: o funil não tinha onde colocar ${evento}.`);
+    await prisma
+      .auditLog.create({
+        data: {
+          tenantId,
+          action: "PIPELINE_STAGE_AUTOCREATED",
+          entity: "PipelineStage",
+          entityId: etapa.id,
+          metadata: JSON.stringify({ evento, nome: modelo.name }),
+        },
+      })
+      .catch(() => {});
+    return etapa;
   }
 }
 

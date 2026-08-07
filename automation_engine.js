@@ -687,6 +687,10 @@ class AutomationEngine {
                 meetLink,
               }
             });
+            // Sem isto o compromisso nascia mudo: sem régua de lembretes e sem
+            // sair da etapa do funil. É o caminho que fazia o dono agendar e
+            // não ver o lead mover.
+            await CalendarService.aposCriar(appt, lead);
             result.output = { appointmentId: appt.id, title, date: dateStr, googleEventId };
           } else {
             result.output = { error: "Data não fornecida" };
@@ -1367,7 +1371,10 @@ class AutomationEngine {
         },
         {
           name: "create_appointment",
-          description: "Cria um agendamento para o lead atual.",
+          description:
+            "Cria um agendamento para o lead atual. " +
+            "O e-mail do cliente é obrigatório: é por ele que sai o convite com o compromisso. " +
+            "Se você ainda não tem o e-mail, PERGUNTE antes de chamar esta ferramenta.",
           parameters: {
             type: "object",
             properties: {
@@ -1377,7 +1384,13 @@ class AutomationEngine {
                 description:
                   "Data e hora em ISO 8601 COM o fuso de Brasília, ex.: 2026-08-10T14:00:00-03:00. " +
                   "Use o horário que o cliente escolheu, no fuso local dele.",
-              }
+              },
+              email: {
+                type: "string",
+                description:
+                  "E-mail do cliente, para enviar o convite. Obrigatório se o cadastro ainda não tiver e-mail. " +
+                  "Use exatamente o que o cliente escreveu; não invente nem chute.",
+              },
             },
             required: ["title", "iso_date"]
           }
@@ -1548,6 +1561,34 @@ class AutomationEngine {
       }
       case "create_appointment": {
         try {
+          // O convite do compromisso vai por e-mail — sem endereço não há
+          // convite, e o cliente fica só com a mensagem no WhatsApp, que some
+          // no meio da conversa. Melhor devolver a pergunta ao agente do que
+          // agendar pela metade.
+          const emailInformado = String(args.email || "").trim();
+          if (emailInformado && emailInformado !== lead.email) {
+            const { resolveContact } = await import("./src/api/services/ContactIdentity.js");
+            const r = await resolveContact(lead.tenantId, {
+              channel: lead.channel,
+              phone: lead.phone,
+              email: emailInformado,
+              igUsername: lead.igUsername,
+              externalId: lead.externalId,
+              name: lead.name,
+            }).catch(() => null);
+            if (r?.lead) Object.assign(lead, r.lead);
+          }
+          if (!lead.email) {
+            return {
+              success: false,
+              need_email: true,
+              error: "Falta o e-mail do cliente.",
+              note:
+                "NÃO agende ainda. Peça o e-mail do cliente em uma frase curta, explicando que é para " +
+                "enviar o convite do compromisso, e só então chame create_appointment de novo com o campo email.",
+            };
+          }
+
           const booked = await CalendarService.createAppointment(
             lead.tenantId, lead, args.iso_date, args.title || "Consulta"
           );
