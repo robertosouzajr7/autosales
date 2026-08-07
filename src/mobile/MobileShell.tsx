@@ -148,6 +148,13 @@ export default function MobileShell() {
 
   // ── Ações ─────────────────────────────────────────────────────
 
+  /** Relê as mensagens da conversa aberta, sem mexer no resto da tela. */
+  const recarregarMensagens = useCallback(async (leadId: string) => {
+    try {
+      setMensagens(await listarMensagens(leadId));
+    } catch { /* o fluxo de eventos traz a próxima de qualquer jeito */ }
+  }, []);
+
   const abrirConversa = useCallback(async (c: Conversa) => {
     setAbertaId(c.id);
     setUltimaAberta(c);
@@ -277,6 +284,7 @@ export default function MobileShell() {
           aoEnviar={enviar}
           aoAssumir={() => assumirConversa(aberta.id)}
           aoDevolver={devolver}
+          aoRecarregar={() => { recarregar(); if (aberta) recarregarMensagens(aberta.leadId); }}
         />
       </div>
     );

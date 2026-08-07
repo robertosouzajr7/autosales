@@ -112,6 +112,7 @@ router.post("/contacts/import-bulk", requirePermission("contacts"), LeadControll
 
 // Appointments (integração com Google Calendar exige plano com enableCalendar)
 router.get("/appointments", requirePermission("appointments"), AppointmentController.getAppointments);
+router.get("/appointments/slots", requirePermission("appointments"), AppointmentController.getAvailableSlots);
 router.post("/appointments", requirePermission("appointments"), requireCalendar, AppointmentController.createAppointment);
 router.put("/appointments/:id", requirePermission("appointments"), requireCalendar, AppointmentController.updateAppointment);
 router.delete("/appointments/:id", requirePermission("appointments"), requireCalendar, AppointmentController.deleteAppointment);
@@ -229,6 +230,7 @@ router.put("/conversations/:leadId/toggle-bot", requirePermission("conversations
 router.get("/conversations/pending-count", requirePermission("conversations"), MessageController.getPendingCount);
 router.post("/conversations/start", requirePermission("conversations"), MessageController.startConversation);
 router.post("/conversations/:leadId/suggest", requirePermission("conversations"), MessageController.suggestReply);
+router.post("/conversations/:leadId/catalog-item", requirePermission("conversations"), MessageController.sendCatalogItem);
 
 // Respostas rápidas do atendimento.
 router.get("/quick-replies", requirePermission("conversations"), QuickReplyController.listar);

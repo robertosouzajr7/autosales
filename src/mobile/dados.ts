@@ -141,3 +141,48 @@ export const definirDisponibilidade = (estado: string, minutos?: number, recado?
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ estado, minutos: minutos ?? null, recado: recado ?? null }),
   });
+
+export type ItemDoCatalogo = {
+  id: string;
+  name: string;
+  category: string | null;
+  description: string | null;
+  price: number | null;
+  imageUrl: string | null;
+  type: string;
+};
+
+export type Horario = { iso: string; hora: string };
+
+export type Ficha = {
+  id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  channel: string;
+  handle?: string;
+  notes: string | null;
+  createdAt: string;
+  stage: { id: string; name: string; color?: string } | null;
+  tags: { id: string; name: string; color?: string }[];
+  nextAppointment: { id: string; title: string; date: string; status: string; meetLink?: string } | null;
+  messageCount?: number;
+  firstContactAt?: string;
+};
+
+export const listarCatalogo = () => pedir<ItemDoCatalogo[]>("/products");
+
+/** Envia o item pelo canal do cliente, com a mídia junto quando existe. */
+export const enviarItemDoCatalogo = (leadId: string, productId: string) =>
+  pedir<{ success: boolean; message: Mensagem }>(
+    `/conversations/${leadId}/catalog-item`,
+    comJson({ productId })
+  );
+
+export const listarHorarios = (data: string) =>
+  pedir<{ data: string; itens: Horario[] }>(`/appointments/slots?date=${data}`);
+
+export const marcarHorario = (leadId: string, iso: string, titulo: string) =>
+  pedir<any>("/appointments", comJson({ leadId, date: iso, title: titulo }));
+
+export const verFicha = (leadId: string) => pedir<Ficha>(`/conversations/${leadId}/contact`);

@@ -164,3 +164,35 @@ export const deleteAppointment = async (req, res) => {
     res.status(500).json({ error: "Erro ao excluir agendamento" });
   }
 };
+
+/**
+ * Horários livres de um dia.
+ *
+ * O agente já consultava isso por dentro (get_availability); o atendente não
+ * tinha por onde — ele abria a agenda em outra tela, conferia e voltava para
+ * a conversa de memória. Aqui a lista vem para dentro do chat.
+ */
+export const getAvailableSlots = async (req, res) => {
+  try {
+    const dia = req.query.date ? new Date(`${req.query.date}T12:00:00`) : new Date();
+    if (isNaN(dia.getTime())) return res.status(400).json({ error: "Data inválida." });
+
+    const slots = await CalendarService.listAvailableSlots(req.tenantId, dia);
+    const agora = Date.now();
+    res.json({
+      data: dia.toISOString().slice(0, 10),
+      // Horário que já passou não é horário livre: oferecê-lo é combinar algo
+      // impossível e descobrir só na hora de gravar.
+      itens: slots
+        .filter((s) => new Date(s).getTime() > agora)
+        .map((s) => ({
+          iso: new Date(s).toISOString(),
+          hora: new Date(s).toLocaleTimeString("pt-BR", {
+            timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit",
+          }),
+        })),
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+};

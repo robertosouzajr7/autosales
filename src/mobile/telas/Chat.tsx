@@ -1,9 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Bot, ChevronLeft, Loader2, Send, Sparkles, X } from "lucide-react";
+import { Bot, CalendarPlus, ChevronLeft, IdCard, Loader2, Package, Plus, Send, Sparkles, X } from "lucide-react";
 import { Avatar } from "../componentes/Avatar";
 import { Conversa, Mensagem, RespostaRapida, listarRespostas, marcarUsoDaResposta, pedirSugestao } from "../dados";
 import { hora } from "../tempo";
 import { baseDaApi } from "../plataforma";
+import { FolhaCatalogo } from "../componentes/FolhaCatalogo";
+import { FolhaAgendar } from "../componentes/FolhaAgendar";
+import { FolhaFicha } from "../componentes/FolhaFicha";
 
 /**
  * A conversa.
@@ -58,6 +61,7 @@ export function Chat({
   aoEnviar,
   aoAssumir,
   aoDevolver,
+  aoRecarregar,
 }: {
   conversa: Conversa;
   mensagens: Mensagem[];
@@ -68,6 +72,8 @@ export function Chat({
   aoEnviar: (texto: string) => Promise<boolean>;
   aoAssumir: () => void;
   aoDevolver: () => void;
+  /** Item enviado ou horário marcado: a conversa e a lista mudaram. */
+  aoRecarregar: () => void;
 }) {
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -75,6 +81,7 @@ export function Chat({
   const [sugestao, setSugestao] = useState<string | null>(null);
   const [pedindo, setPedindo] = useState(false);
   const [avisoDaIa, setAvisoDaIa] = useState<string | null>(null);
+  const [folha, setFolha] = useState<"" | "acoes" | "catalogo" | "agendar" | "ficha">("");
   const fim = useRef<HTMLDivElement>(null);
 
   const minha = conversa.phase === "HUMAN" && conversa.assignedTo?.id === localStorage.getItem("userId");
@@ -259,6 +266,16 @@ export function Chat({
         className="flex shrink-0 items-end gap-2.5 border-t border-[rgba(60,60,67,0.12)] bg-white/90 px-3.5 pt-2.5 backdrop-blur-xl"
         style={{ paddingBottom: "max(10px, env(safe-area-inset-bottom))" }}
       >
+        {/* Catálogo, agenda e ficha ficam atrás de um botão só: no compositor
+            cabem duas mãos de coisa, e três ícones soltos empurrariam o campo
+            de texto para um tamanho que não dá para escrever. */}
+        <button
+          onClick={() => setFolha(folha === "acoes" ? "" : "acoes")}
+          aria-label="Mais ações"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#F2F2F7] text-[#2563EB]"
+        >
+          <Plus className={`h-5 w-5 transition-transform ${folha === "acoes" ? "rotate-45" : ""}`} />
+        </button>
         <textarea
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
@@ -278,6 +295,57 @@ export function Chat({
           {enviando ? <Loader2 className="h-[19px] w-[19px] animate-spin" /> : <Send className="h-[19px] w-[19px]" />}
         </button>
       </div>
+
+      {folha === "acoes" && (
+        <>
+          <button
+            aria-label="Fechar ações"
+            onClick={() => setFolha("")}
+            className="fixed inset-0 z-40"
+          />
+          <div
+            className="fixed inset-x-3.5 z-40 overflow-hidden rounded-[18px] bg-white shadow-[0_16px_40px_-12px_rgba(15,23,42,0.35)]"
+            style={{ bottom: "calc(72px + env(safe-area-inset-bottom))" }}
+          >
+            {[
+              { id: "catalogo", rotulo: "Enviar item do catálogo", Icone: Package },
+              { id: "agendar", rotulo: "Marcar horário", Icone: CalendarPlus },
+              { id: "ficha", rotulo: "Ver ficha do cliente", Icone: IdCard },
+            ].map(({ id, rotulo, Icone }, i) => (
+              <button
+                key={id}
+                onClick={() => setFolha(id as any)}
+                className="flex min-h-[54px] w-full items-center gap-3.5 px-4 text-left"
+                style={{ borderTop: i ? "0.5px solid rgba(60,60,67,0.1)" : undefined }}
+              >
+                <Icone className="h-5 w-5 shrink-0 text-[#2563EB]" />
+                <span className="text-[16px] text-[#0F172A]">{rotulo}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      <FolhaCatalogo
+        aberta={folha === "catalogo"}
+        aoFechar={() => setFolha("")}
+        leadId={conversa.leadId}
+        nomeDoCliente={conversa.name}
+        aoEnviar={aoRecarregar}
+      />
+      <FolhaAgendar
+        aberta={folha === "agendar"}
+        aoFechar={() => setFolha("")}
+        leadId={conversa.leadId}
+        nomeDoCliente={conversa.name}
+        aoMarcar={(quando) => {
+          // A confirmação para o cliente é escolha do atendente: o texto entra
+          // no campo, ele lê e envia. Mandar sozinho seria decidir por ele.
+          setTexto(`Prontinho! Seu horário está marcado para ${quando}. Qualquer coisa é só me chamar por aqui.`);
+          aoRecarregar();
+        }}
+      />
+      <FolhaFicha aberta={folha === "ficha"} aoFechar={() => setFolha("")} leadId={conversa.leadId} />
     </div>
   );
 }
