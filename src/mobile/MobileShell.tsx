@@ -4,6 +4,7 @@ import { StatusBar, Style } from "@capacitor/status-bar";
 import { assinarEventos } from "@/lib/eventosDoPainel";
 import { ehNativo } from "./plataforma";
 import { restaurarSessao } from "./sessao";
+import { ligarPush } from "./push";
 import { Aba, BarraDeAbas } from "./componentes/BarraDeAbas";
 import {
   assumir,
@@ -135,6 +136,33 @@ export default function MobileShell() {
     });
     return () => { clearTimeout(agendada.current); cancelar(); };
   }, [autenticado, recarregar]);
+
+  /**
+   * Notificações: só depois do login.
+   *
+   * Quem ainda não sabe o que o app faz nega o pedido de permissão — e no
+   * iOS não há segunda chance dentro do app. Pedir com a caixa de entrada já
+   * na frente é pedir para quem já entendeu por que vale a pena.
+   */
+  useEffect(() => {
+    if (!autenticado) return;
+    ligarPush((dados) => {
+      // Tocou no aviso: abre a conversa apontada, em vez de largar o
+      // atendente no inbox para procurar de quem era a mensagem.
+      const alvo = conversasRef.current.find((c) => c.leadId === dados.leadId);
+      if (alvo) abrirConversa(alvo);
+      else recarregar().then(() => {
+        const achado = conversasRef.current.find((c) => c.leadId === dados.leadId);
+        if (achado) abrirConversa(achado);
+      });
+      setAba(dados.tipo === "fila" ? "fila" : "conversas");
+    });
+  }, [autenticado]);
+
+  // O ouvinte do push é registrado uma vez; sem esta referência ele veria
+  // para sempre a lista de conversas do momento da inscrição.
+  const conversasRef = useRef<Conversa[]>([]);
+  useEffect(() => { conversasRef.current = conversas; }, [conversas]);
 
   // Volta do segundo plano: o que aconteceu enquanto o app estava fechado
   // não chegou por SSE, porque a conexão cai junto.
@@ -317,7 +345,11 @@ export default function MobileShell() {
           />
         )}
         {aba === "buscar" && <Buscar aoAbrir={abrirConversa} />}
-        {aba === "perfil" && <Perfil aoSair={() => { setAba("conversas"); setAutenticado(false); }} />}
+        {aba === "perfil" && (
+          <Perfil
+            aoSair={() => { setAba("conversas"); setAutenticado(false); }}
+          />
+        )}
       </div>
       <BarraDeAbas ativa={aba} aoTrocar={setAba} aguardando={fila.length} naoLidas={naoLidas} />
     </div>

@@ -417,6 +417,24 @@ export const receiveWhatsappWebhook = async (req, res) => {
       messageEvents.emit("new_message", { tenantId, message: userMessage });
     } catch (_) {}
 
+    // 4.1 Se a conversa é de um atendente, o celular dele toca. Conversa com
+    // a IA não avisa ninguém: seria uma notificação por mensagem de robô, e
+    // aviso que sempre chega vira aviso que nunca é lido.
+    try {
+      const dona = await prisma.conversation.findUnique({
+        where: { id: userMessage.conversationId },
+        select: { assignedToId: true, phase: true, leadId: true, id: true },
+      });
+      if (dona?.phase === "HUMAN" && dona.assignedToId) {
+        const { default: PushService } = await import("../services/PushService.js");
+        PushService.avisar(dona.assignedToId, "MENSAGEM", {
+          titulo: lead.name || "Nova mensagem",
+          corpo: String(effectiveContent || "").slice(0, 140),
+          dados: { tipo: "mensagem", leadId: dona.leadId, conversationId: dona.id },
+        }).catch(() => {});
+      }
+    } catch (_) {}
+
     // 4.5 🛑 Stop-keyword (LGPD): honra o pedido de descadastro. Marca o lead
     // como optedOut, suprime respostas e futuros envios, e confirma uma vez.
     if (isStopKeyword(effectiveContent)) {

@@ -695,6 +695,12 @@ model User {
   disponivelAte   DateTime?
   recadoDeAusencia String?
 
+  // O que este atendente quer receber no celular. JSON com as chaves de
+  // AVISOS (PushService). Nulo = tudo ligado, que é o que faz sentido para
+  // quem acabou de instalar.
+  preferenciasDePush String?
+  dispositivos       DeviceToken[]
+
   // Acesso do colaborador. `active=false` bloqueia o login sem apagar o
   // histórico; `permissions` guarda os módulos liberados pelo admin (JSON),
   // e nulo significa "o que o perfil da função dá".
@@ -945,6 +951,12 @@ model PlatformSettings {
   /// parece ter custo zero, e não tem.
   baileysNumberCost Float @default(0)
 
+  // ─── Notificações push do app (global: um projeto Firebase serve todas
+  // as contas, porque o app é um só na loja). O JSON da conta de serviço
+  // fica aqui e nunca sai mascarado pela API.
+  fcmProjectId      String?
+  fcmServiceAccount String?
+
   // ─── Precificação de tokens (planos e recargas) ───
   // Câmbio USD→BRL usado para converter o preço real dos provedores.
   usdToBrl    Float @default(5.5)
@@ -1019,6 +1031,28 @@ model Product {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Aparelho onde um atendente recebe notificação.
+//
+// Um atendente pode ter mais de um (celular e tablet), e o mesmo aparelho
+// pode trocar de dono — daí a chave ser o token, não o usuário. Token que o
+// Firebase recusa é apagado na hora: token morto acumulado é a razão de uma
+// fila de push ficar lenta com o tempo.
+model DeviceToken {
+  id       String @id @default(uuid())
+  token    String @unique
+  userId   String
+  tenantId String
+  platform String // ios | android | web
+
+  ultimoUso DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tenantId])
 }
 
 // Conhecimento extraído de um material, esperando o dono confirmar.

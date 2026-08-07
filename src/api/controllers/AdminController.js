@@ -481,6 +481,10 @@ export const getPlatformSettings = async (_req, res) => {
       elevenLabsKeyMasked: maskSecret(s.elevenLabsApiKey || process.env.ELEVENLABS_API_KEY),
       elevenLabsKeyConfigured: !!(s.elevenLabsApiKey || process.env.ELEVENLABS_API_KEY),
       enabledVoices: (() => { try { return s.enabledVoices ? JSON.parse(s.enabledVoices) : []; } catch { return []; } })(),
+      // Push do app: o JSON da conta de serviço NUNCA volta, nem mascarado —
+      // ele contém a chave privada do projeto Firebase inteiro.
+      fcmProjectId: s.fcmProjectId || null,
+      fcmConfigured: !!(s.fcmProjectId && s.fcmServiceAccount),
       updatedAt: s.updatedAt,
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -495,6 +499,7 @@ export const updatePlatformSettings = async (req, res) => {
       aiProvider, aiModel, geminiApiKey, openaiApiKey, anthropicApiKey,
       usdToBrl, tokenMarkup, waRates, waMarkup, baileysNumberCost,
       voiceProvider, elevenLabsApiKey, enabledVoices,
+      fcmProjectId, fcmServiceAccount,
     } = req.body;
     const data = {};
 
@@ -567,6 +572,25 @@ export const updatePlatformSettings = async (req, res) => {
     if (typeof stripeWebhookSecret === "string" && stripeWebhookSecret.trim()) data.stripeWebhookSecret = stripeWebhookSecret.trim();
     if (typeof stripePublishableKey === "string" && stripePublishableKey.trim()) data.stripePublishableKey = stripePublishableKey.trim();
     if (Number.isFinite(parseInt(defaultTrialDays))) data.defaultTrialDays = parseInt(defaultTrialDays);
+
+    if (typeof fcmProjectId === "string") data.fcmProjectId = fcmProjectId.trim() || null;
+    if (typeof fcmServiceAccount === "string" && fcmServiceAccount.trim()) {
+      // Recusa aqui e não na primeira notificação: um JSON torto guardado só
+      // aparece quando alguém entra na fila e o celular não toca.
+      let conta;
+      try {
+        conta = JSON.parse(fcmServiceAccount);
+      } catch {
+        return res.status(400).json({ error: "A conta de serviço do Firebase não é um JSON válido." });
+      }
+      if (!conta.client_email || !conta.private_key) {
+        return res.status(400).json({
+          error: "Este JSON não parece uma conta de serviço: faltam client_email e private_key.",
+        });
+      }
+      data.fcmServiceAccount = fcmServiceAccount.trim();
+      if (!data.fcmProjectId && conta.project_id) data.fcmProjectId = conta.project_id;
+    }
 
     await prisma.platformSettings.upsert({
       where: { id: "singleton" },

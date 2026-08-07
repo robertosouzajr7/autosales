@@ -259,6 +259,11 @@ router.get("/attendance/agents", requirePermission("queues"), AttendanceControll
 router.get("/attendance/me", AttendanceController.minhaDisponibilidade);
 router.put("/attendance/me", AttendanceController.definirDisponibilidade);
 router.get("/attendance/team", requirePermission("conversations"), AttendanceController.equipeDisponivel);
+// Aparelho e avisos: sobre si mesmo, sem exigir permissão de fila.
+router.post("/attendance/device", AttendanceController.registrarAparelho);
+router.post("/attendance/device/forget", AttendanceController.esquecerAparelho);
+router.get("/attendance/push", AttendanceController.preferenciasDePush);
+router.put("/attendance/push", AttendanceController.preferenciasDePush);
 router.get("/attendance/queue", requirePermission("queues"), AttendanceController.getQueue);
 router.get("/conversations/:id/status", requirePermission("conversations"), AttendanceController.getConversationStatus);
 router.post("/conversations/:id/enqueue", requirePermission("conversations"), AttendanceController.enqueueConversation);

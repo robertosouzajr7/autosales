@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { Check, ChevronRight, Loader2, LogOut } from "lucide-react";
 import { encerrarSessao } from "../sessao";
-import { Disponibilidade, definirDisponibilidade, minhaDisponibilidade } from "../dados";
+import { desligarPush } from "../push";
+import {
+  Disponibilidade, PreferenciaDePush, definirDisponibilidade, lerPreferenciasDePush,
+  minhaDisponibilidade, salvarPreferenciasDePush,
+} from "../dados";
 
 /**
  * Você — quem está atendendo, se está disponível, e a saída da conta.
@@ -11,8 +15,9 @@ import { Disponibilidade, definirDisponibilidade, minhaDisponibilidade } from ".
  * vale para o que CHEGA, não para o que está na mão. Tirar conversa de alguém
  * no meio do atendimento deixaria cliente falando sozinho.
  *
- * As preferências de push continuam fora: não existe push ainda, e
- * interruptor que não liga em nada é pior do que não ter.
+ * As preferências de aviso mostram só o que o servidor sabe enviar: cada
+ * interruptor aqui corresponde a um gatilho que existe de verdade. Botão que
+ * não liga em nada é pior do que não ter.
  */
 
 const ESTADOS = [
@@ -42,10 +47,31 @@ export function Perfil({ aoSair }: { aoSair: () => void }) {
   const [estado, setEstado] = useState<Disponibilidade | null>(null);
   const [mudando, setMudando] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [avisos, setAvisos] = useState<PreferenciaDePush[]>([]);
+  const [prefs, setPrefs] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     minhaDisponibilidade().then(setEstado).catch((e) => setErro(e.message));
+    lerPreferenciasDePush()
+      .then((r) => { setAvisos(r.avisos); setPrefs(r.prefs); })
+      .catch(() => { /* sem preferências a tela segue: são opcionais */ });
   }, []);
+
+  /**
+   * O interruptor muda na hora e a gravação vai atrás. Esperar o servidor
+   * para o dedo sair do lugar é o que faz parecer que o toque não pegou.
+   */
+  const alternarAviso = async (chave: string) => {
+    const novo = { ...prefs, [chave]: !prefs[chave] };
+    setPrefs(novo);
+    try {
+      const r = await salvarPreferenciasDePush(novo);
+      setPrefs(r.prefs);
+    } catch (e: any) {
+      setPrefs(prefs);
+      setErro(e.message);
+    }
+  };
 
   const mudar = async (id: string, minutos?: number) => {
     setMudando(id);
@@ -61,6 +87,9 @@ export function Perfil({ aoSair }: { aoSair: () => void }) {
   };
 
   const sair = async () => {
+    // Primeiro o aparelho, depois a sessão: sem o token de acesso não há como
+    // pedir ao servidor para parar de notificar este celular.
+    await desligarPush();
     await encerrarSessao();
     aoSair();
   };
@@ -122,6 +151,38 @@ export function Perfil({ aoSair }: { aoSair: () => void }) {
           </p>
           {erro && <p className="mx-1 mt-2 text-[12.5px] text-rose-600">{erro}</p>}
         </section>
+
+        {avisos.length > 0 && (
+          <section className="mt-5">
+            <p className="mb-2 ml-1 text-[12px] font-semibold uppercase tracking-[0.1em] text-[rgba(60,60,67,0.5)]">
+              Avisos no celular
+            </p>
+            <div className="overflow-hidden rounded-[18px] bg-white">
+              {avisos.map((a, i) => {
+                const ligado = prefs[a.chave] !== false;
+                return (
+                  <button
+                    key={a.chave}
+                    onClick={() => alternarAviso(a.chave)}
+                    className="flex min-h-[54px] w-full items-center gap-3.5 px-4 text-left"
+                    style={{ borderTop: i ? "0.5px solid rgba(60,60,67,0.1)" : undefined }}
+                  >
+                    <span className="flex-1 text-[16px] text-[#0F172A]">{a.rotulo}</span>
+                    <span
+                      className="relative h-[26px] w-[44px] shrink-0 rounded-full transition-colors"
+                      style={{ background: ligado ? "#22A06B" : "rgba(120,120,128,0.32)" }}
+                    >
+                      <span
+                        className="absolute top-[3px] h-5 w-5 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.3)] transition-all"
+                        style={{ left: ligado ? 21 : 3 }}
+                      />
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         <button
           onClick={sair}
