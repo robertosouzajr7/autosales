@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import {
   Bot, Plus, Trash2, Save, Upload, FileText, Play, Lock, Check,
-  Send, Sparkles, MessageSquare, Instagram, Globe, Volume2, Loader2,
+  Send, Sparkles, MessageSquare, Instagram, Globe, Volume2, Loader2, Wand2,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AssistenteDePrompt } from "@/components/agents/AssistenteDePrompt";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { enviarArquivo } from "@/lib/enviarArquivo";
@@ -52,6 +53,7 @@ export default function SdrManagement() {
   const [loading, setLoading] = useState(true);
   const [selecionado, setSelecionado] = useState<any>(null);
   const [form, setForm] = useState({ ...VAZIO });
+  const [assistenteAberto, setAssistenteAberto] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [functions, setFunctions] = useState<any[]>([]);
@@ -361,11 +363,23 @@ export default function SdrManagement() {
               </div>
 
               <div className="mt-5 space-y-1.5">
-                <Label className="text-[12px] font-medium text-muted-foreground">Regras específicas do seu negócio</Label>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Label className="text-[12px] font-medium text-muted-foreground">Regras específicas do seu negócio</Label>
+                  {/* Escrever prompt do zero é uma habilidade que o dono de
+                      uma clínica não tem motivo para ter. O assistente
+                      pergunta sobre o negócio e escreve por ele. */}
+                  <Button
+                    type="button" variant="outline" size="sm"
+                    onClick={() => setAssistenteAberto(true)}
+                    className="h-7 gap-1.5 rounded-lg px-2.5 text-[11px] font-semibold"
+                  >
+                    <Wand2 className="h-3.5 w-3.5" /> Montar com o assistente
+                  </Button>
+                </div>
                 <Textarea
                   value={form.prompt}
                   onChange={(e) => setForm({ ...form, prompt: e.target.value })}
-                  rows={5}
+                  rows={form.prompt && form.prompt.length > 400 ? 14 : 5}
                   className="resize-none text-[13.5px]"
                   placeholder="Sempre confirmar o nome do cliente antes de agendar. Nunca prometer desconto sem aprovação."
                 />
@@ -643,6 +657,13 @@ export default function SdrManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AssistenteDePrompt
+        open={assistenteAberto}
+        onOpenChange={setAssistenteAberto}
+        agentFunction={form.agentFunction}
+        skills={form.skills}
+        aoGerar={(prompt) => setForm((f: any) => ({ ...f, prompt }))}
+      />
     </DashboardLayout>
   );
 }
