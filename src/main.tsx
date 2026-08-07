@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./globals.css";
+import { baseDaApi } from "./mobile/plataforma";
 
 // --- Global Fetch Interceptor: injeta o JWT em toda chamada /api/ ---
 // O tenant é derivado exclusivamente do token no backend; nenhum header
@@ -13,6 +14,11 @@ window.fetch = async (input, init) => {
     init = init || {};
     init.headers = { ...init.headers };
     if (token) init.headers["Authorization"] = `Bearer ${token}`;
+    // Dentro do app o bundle é servido do próprio aparelho, então "/api/..."
+    // bateria no empacotamento e não na API. `baseDaApi()` devolve string
+    // vazia em qualquer navegador: aqui a web segue byte a byte igual.
+    const base = baseDaApi();
+    if (base && typeof input === "string") input = base + url;
   }
   return originalFetch(input, init);
 };

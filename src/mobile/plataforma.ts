@@ -41,3 +41,28 @@ export function ehNativo(): boolean {
 export function plataforma(): "ios" | "android" | "web" {
   return Capacitor.getPlatform() as "ios" | "android" | "web";
 }
+
+/**
+ * Onde a API está, do ponto de vista de quem chama.
+ *
+ * Na web é string vazia: `/api/...` é o mesmo servidor que entregou a
+ * página, e continua sendo — nada muda.
+ *
+ * No aparelho não existe "mesmo servidor". O bundle é servido de dentro do
+ * app (`capacitor://localhost` no iOS, `http://localhost` no Android), então
+ * `/api/conversations` bateria no próprio empacotamento e voltaria 404. Por
+ * isso o app precisa da URL absoluta, definida no build:
+ *
+ *     VITE_API_URL=https://api.seudominio.com.br npx vite build
+ *
+ * Sem ela o app sobe e não fala com nada — daí o aviso no console em vez de
+ * uma tela em branco sem explicação.
+ */
+export function baseDaApi(): string {
+  if (!Capacitor.isNativePlatform()) return "";
+  const url = String(import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
+  if (!url && typeof console !== "undefined") {
+    console.error("VITE_API_URL não foi definida no build do app; nenhuma chamada vai funcionar.");
+  }
+  return url;
+}
