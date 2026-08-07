@@ -253,12 +253,11 @@ function desdeQuando(iso?: string) {
  * enviar, nunca dispara sozinho. Não vêm do banco porque o produto ainda não
  * tem cadastro de respostas prontas — quando tiver, é só trocar a origem.
  */
-const RESPOSTAS_RAPIDAS = [
-  { rotulo: "Confirmar horário", texto: "Consigo confirmar seu horário. Qual dia e período ficam melhores para você?" },
-  { rotulo: "Enviar valores", texto: "Vou te passar os valores agora mesmo." },
-  { rotulo: "Pedir documento", texto: "Para seguir, você pode me enviar o documento por aqui?" },
-  { rotulo: "Um momento", texto: "Só um momento, já verifico isso para você." },
-];
+/**
+ * As respostas rápidas vinham daqui: quatro frases fixas, iguais para todo
+ * mundo, sem como criar nem saber qual funciona. Agora são cadastradas e
+ * ordenadas pelas mais usadas — o painel e o app leem a mesma lista.
+ */
 
 export default function Conversations() {
   const [chats, setChats] = useState<any[]>([]);
@@ -280,6 +279,7 @@ export default function Conversations() {
   const [search, setSearch] = useState("");
   const [selectedChat, setSelectedChat] = useState<any>(null);
   const [novaConversa, setNovaConversa] = useState(false);
+  const [respostasRapidas, setRespostasRapidas] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -396,13 +396,14 @@ export default function Conversations() {
   const fetchData = async () => {
     try {
       const token = localStorage.getItem("token");
-      const [settingsRes, connRes, tplRes, agentsRes, queuesRes, etapasRes] = await Promise.all([
+      const [settingsRes, connRes, tplRes, agentsRes, queuesRes, etapasRes, respostasRes] = await Promise.all([
         fetch("/api/settings", { headers: { "Authorization": `Bearer ${token}` } }),
         fetch("/api/whatsapp/accounts", { headers: { "Authorization": `Bearer ${token}` } }),
         fetch("/api/templates", { headers: { "Authorization": `Bearer ${token}` } }),
         fetch("/api/attendance/agents", { headers: { "Authorization": `Bearer ${token}` } }),
         fetch("/api/queues", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch("/api/pipeline-stages", { headers: { "Authorization": `Bearer ${token}` } })
+        fetch("/api/pipeline-stages", { headers: { "Authorization": `Bearer ${token}` } }),
+        fetch("/api/quick-replies", { headers: { "Authorization": `Bearer ${token}` } })
       ]);
       await fetchConversations();
 
@@ -413,6 +414,9 @@ export default function Conversations() {
       setQueues(queuesRes.ok ? await queuesRes.json() : []);
       const etapasData = etapasRes.ok ? await etapasRes.json() : [];
       setEtapas(Array.isArray(etapasData) ? etapasData : []);
+
+      const respostasData = respostasRes.ok ? await respostasRes.json() : { itens: [] };
+      setRespostasRapidas(Array.isArray(respostasData.itens) ? respostasData.itens : []);
 
       setTemplates(tplData.filter((t: any) => t.status === "APPROVED"));
       setConnections(Array.isArray(connData) ? connData : []);
@@ -1333,14 +1337,23 @@ export default function Conversations() {
                   <>
                     {/* Respostas rápidas: preenchem o campo, não enviam. */}
                     <div className="mb-2 flex flex-wrap gap-1.5">
-                      {RESPOSTAS_RAPIDAS.map((r) => (
+                      {respostasRapidas.map((r: any) => (
                         <button
-                          key={r.rotulo}
+                          key={r.id}
                           type="button"
-                          onClick={() => setMessage(r.texto)}
+                          onClick={() => {
+                            setMessage(r.texto);
+                            // A contagem é o que ordena a lista pela utilidade
+                            // real; falhar aqui não pode atrapalhar o envio.
+                            fetch(`/api/quick-replies/${r.id}/used`, {
+                              method: "POST",
+                              headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+                            }).catch(() => {});
+                          }}
                           className="rounded-full border border-border-soft bg-surface-2 px-3 py-1 text-[11px] font-semibold text-faint transition-colors hover:border-accent-text/30 hover:bg-accent-soft hover:text-accent-text"
                         >
-                          {r.rotulo}
+                          {r.atalho && <span className="mr-1 font-mono text-[10px] text-accent-text">{r.atalho}</span>}
+                          {r.titulo}
                         </button>
                       ))}
                     </div>

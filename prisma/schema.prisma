@@ -121,6 +121,7 @@ model Tenant {
   crmConnections    CrmConnection[]
   awayPeriods AwayPeriod[]
   knowledgeDrafts KnowledgeDraft[]
+  quickReplies    QuickReply[]
 }
 
 model PipelineStage {
@@ -681,6 +682,19 @@ model User {
 
   lastLoginAt DateTime?
 
+  // Disponibilidade do atendente: ONLINE | PAUSA | FORA.
+  //
+  // É o que decide para quem a fila transfere. Sem isso, uma conversa era
+  // atribuída a quem estava almoçando e ficava parada até ele voltar — do
+  // lado do cliente, indistinguível de ninguém ter visto.
+  //
+  // `disponivelAte` é a volta prometida ("volto em 15 minutos"): passada a
+  // hora, a pessoa conta como ONLINE de novo, senão a pausa do almoço vira
+  // pausa até alguém lembrar de desligar.
+  disponibilidade String    @default("ONLINE")
+  disponivelAte   DateTime?
+  recadoDeAusencia String?
+
   // Acesso do colaborador. `active=false` bloqueia o login sem apagar o
   // histórico; `permissions` guarda os módulos liberados pelo admin (JSON),
   // e nulo significa "o que o perfil da função dá".
@@ -1013,6 +1027,33 @@ model Product {
 // responder com o que estava no rodapé do documento. Aqui o material vira
 // itens discretos — pergunta e resposta —, e nenhum entra na base sem o dono
 // ler. Ele é quem sabe se o que a máquina entendeu é o que o negócio faz.
+// Resposta rápida do atendente.
+//
+// Antes era uma constante no código do painel: as mesmas quatro frases para
+// todo mundo, sem como criar, editar ou saber qual funciona. O atalho é o que
+// faz valer a pena — digitar "/orc" é mais rápido do que procurar na lista.
+model QuickReply {
+  id       String  @id @default(uuid())
+  tenantId String
+  titulo   String
+  texto    String
+  atalho   String? // "/orc", "/horario"
+  categoria String?
+
+  // Quantas vezes foi usada. É o que ordena a lista por utilidade real em vez
+  // de por ordem de cadastro.
+  usos      Int      @default(0)
+  ativa     Boolean  @default(true)
+  criadaPor String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, ativa])
+}
+
 model KnowledgeDraft {
   id       String @id @default(uuid())
   tenantId String

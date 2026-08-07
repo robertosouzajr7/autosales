@@ -95,14 +95,49 @@ export const assumir = (conversationId: string) =>
 export const devolverAIa = (conversationId: string) =>
   pedir<{ success: boolean }>(`/conversations/${conversationId}/return-bot`, comJson({}));
 
+export type RespostaRapida = {
+  id: string;
+  titulo: string;
+  texto: string;
+  atalho: string | null;
+  categoria: string | null;
+  usos: number;
+};
+
+export type Disponibilidade = {
+  id: string;
+  name: string;
+  estado: "ONLINE" | "PAUSA" | "FORA";
+  estadoGuardado: string;
+  disponivelAte: string | null;
+  recado: string | null;
+  disponivel: boolean;
+};
+
+/** As respostas cadastradas, já ordenadas pelas mais usadas. */
+export const listarRespostas = () =>
+  pedir<{ total: number; itens: RespostaRapida[] }>("/quick-replies");
+
+/** Contagem de uso: é o que faz a lista se ordenar pela utilidade real. */
+export const marcarUsoDaResposta = (id: string) =>
+  pedir<{ success: boolean }>(`/quick-replies/${id}/used`, { method: "POST" });
+
 /**
- * As respostas rápidas ainda são uma lista fixa, igual à do painel. Virar
- * tabela com atalho e contagem de uso é a etapa do backend; até lá, repetir
- * a mesma lista é melhor do que inventar uma diferente no celular.
+ * A resposta que a IA sugere. Nada é enviado — o que volta é texto para o
+ * atendente ler e editar. Sem sugestão não é erro: `ok:false` vem com o
+ * motivo, para a tela explicar em vez de piscar um alerta.
  */
-export const RESPOSTAS_RAPIDAS = [
-  { rotulo: "Confirmar horário", texto: "Consigo confirmar seu horário. Qual dia e período ficam melhores para você?" },
-  { rotulo: "Enviar valores", texto: "Vou te passar os valores agora mesmo." },
-  { rotulo: "Pedir documento", texto: "Para seguir, você pode me enviar o documento por aqui?" },
-  { rotulo: "Um momento", texto: "Só um momento, já verifico isso para você." },
-];
+export const pedirSugestao = (leadId: string) =>
+  pedir<{ ok: boolean; sugestao?: string; motivo?: string }>(
+    `/conversations/${leadId}/suggest`,
+    comJson({})
+  );
+
+export const minhaDisponibilidade = () => pedir<Disponibilidade>("/attendance/me");
+
+export const definirDisponibilidade = (estado: string, minutos?: number, recado?: string) =>
+  pedir<Disponibilidade>("/attendance/me", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ estado, minutos: minutos ?? null, recado: recado ?? null }),
+  });

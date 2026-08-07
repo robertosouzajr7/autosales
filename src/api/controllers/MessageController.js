@@ -753,3 +753,21 @@ function avisoDeAbertura({ canal, whatsapp, precisaTemplate, oficial, templates 
   }
   return null;
 }
+
+/**
+ * A resposta que a IA sugere para o atendente revisar.
+ *
+ * Nada é enviado aqui. O que volta é texto para o atendente ler, editar e
+ * decidir — sugestão que envia sozinha não é sugestão.
+ */
+export const suggestReply = async (req, res) => {
+  try {
+    const { default: SuggestionService } = await import("../services/SuggestionService.js");
+    const r = await SuggestionService.sugerir(req.tenantId, req.params.leadId);
+    // Sem sugestão não é erro: o atendente segue escrevendo como antes, e a
+    // tela precisa do motivo para explicar em vez de piscar um alerta.
+    res.json(r);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

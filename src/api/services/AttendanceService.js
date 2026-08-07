@@ -215,6 +215,19 @@ class AttendanceService {
   /** Passa para outro atendente ou devolve para uma fila. */
   async transfer(conversationId, { toUserId = null, toQueueId = null, actor = null, reason = null, tenantId = null } = {}) {
     if (toUserId) {
+      // Transferir para quem está em pausa é o mesmo que deixar a conversa
+      // parada — e do lado do cliente isso é indistinguível de ninguém ter
+      // visto. Melhor recusar com o motivo do que entregar no vazio.
+      const { estaDisponivel, estadoDe } = await import("./AvailabilityService.js");
+      const destino = await prisma.user.findUnique({ where: { id: toUserId } });
+      if (destino && !estaDisponivel(destino)) {
+        const estado = estadoDe(destino);
+        throw new Error(
+          `${destino.name} está ${estado === "PAUSA" ? "em pausa" : "fora do turno"}` +
+          `${destino.recadoDeAusencia ? ` (${destino.recadoDeAusencia})` : ""}. ` +
+          "Escolha outro atendente ou devolva para a fila."
+        );
+      }
       return this.assign(conversationId, toUserId, { actor, tenantId });
     }
     const conversation = await this.carregar(conversationId, tenantId);

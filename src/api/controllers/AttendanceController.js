@@ -1,5 +1,6 @@
 import prisma from "../config/prisma.js";
 import AttendanceService, { PHASE_LABEL } from "../services/AttendanceService.js";
+import AvailabilityService from "../services/AvailabilityService.js";
 
 /**
  * Filas de atendimento e ações do operador sobre a conversa.
@@ -141,7 +142,10 @@ export const listAgents = async (req, res) => {
   try {
     const users = await prisma.user.findMany({
       where: { tenantId: req.tenantId },
-      select: { id: true, name: true, email: true, role: true },
+      select: {
+        id: true, name: true, email: true, role: true, active: true,
+        disponibilidade: true, disponivelAte: true, recadoDeAusencia: true,
+      },
       orderBy: { name: "asc" },
     });
     const emAtendimento = await prisma.conversation.groupBy({
@@ -150,7 +154,16 @@ export const listAgents = async (req, res) => {
       _count: { _all: true },
     });
     const carga = new Map(emAtendimento.map((e) => [e.assignedToId, e._count._all]));
-    res.json(users.map((u) => ({ ...u, emAtendimento: carga.get(u.id) || 0 })));
+    // Quem transfere precisa ver quem está de fato disponível: mandar conversa
+    // para quem está almoçando é a mesma coisa que deixá-la parada.
+    res.json(
+      users.map((u) => ({
+        ...AvailabilityService.formatar(u),
+        email: u.email,
+        role: u.role,
+        emAtendimento: carga.get(u.id) || 0,
+      }))
+    );
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -294,5 +307,44 @@ export const getConversationStatus = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+// ── Disponibilidade do atendente ──────────────────────────────────
+
+/** O próprio estado, para a tela mostrar sem adivinhar. */
+export const minhaDisponibilidade = async (req, res) => {
+  try {
+    const r = await AvailabilityService.doUsuario(req.userId);
+    if (!r) return res.status(404).json({ error: "Usuário não encontrado." });
+    res.json(r);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+};
+
+/**
+ * Entrar em pausa, sair do turno ou voltar.
+ *
+ * Só sobre si mesmo: quem coloca outra pessoa em pausa é a pessoa. Um gestor
+ * que precise tirar alguém da fila desativa o acesso, que é uma ação com
+ * outro peso e outro registro.
+ */
+export const definirDisponibilidade = async (req, res) => {
+  try {
+    const { estado, minutos = null, recado = null } = req.body || {};
+    const r = await AvailabilityService.definir(req.userId, { estado, minutos, recado });
+    res.json(r);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+};
+
+/** A equipe com o estado de cada um, para quem distribui a fila. */
+export const equipeDisponivel = async (req, res) => {
+  try {
+    res.json({ itens: await AvailabilityService.equipe(req.tenantId) });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 };
