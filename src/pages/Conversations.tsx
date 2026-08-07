@@ -7,7 +7,7 @@ import {
   Circle, MoreVertical, Smartphone, Bot,
   Phone, Mail, User, Copy, Video, ArrowLeft,
   ChevronRight, Calendar, Mic, MicOff, Play, Pause, Volume2,
-  Instagram, Globe, Clock, FileText, Paperclip, ArrowRightLeft, Users, XCircle
+  Instagram, Globe, Clock, FileText, Paperclip, ArrowRightLeft, Users, XCircle, Plus
 } from "lucide-react";
 import { TemplatePreview } from "@/components/templates/TemplatePreview";
 
@@ -111,6 +111,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { assinarEventos } from "@/lib/eventosDoPainel";
 import { enviarArquivo } from "@/lib/enviarArquivo";
+import { NovaConversa } from "@/components/conversations/NovaConversa";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -278,6 +279,7 @@ export default function Conversations() {
   const meuId = localStorage.getItem("userId") || "";
   const [search, setSearch] = useState("");
   const [selectedChat, setSelectedChat] = useState<any>(null);
+  const [novaConversa, setNovaConversa] = useState(false);
   const [messages, setMessages] = useState<any[]>([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -333,6 +335,37 @@ export default function Conversations() {
    * muda quando chega mensagem — recarregar templates, agentes, filas e
    * etapas a cada mensagem nova deixava o inbox lento no horário de pico.
    */
+  /**
+   * Contato escolhido no CRM: a conversa já foi criada no servidor, aqui é só
+   * trazê-la para a tela. Fora da janela de 24 h na conexão oficial, o único
+   * caminho é template — então a janela de templates abre junto, em vez de
+   * deixar o atendente escrever uma mensagem que seria recusada.
+   */
+  const abrirConversaDoCrm = async (dados: any, contato: any) => {
+    await fetchConversations();
+    setSelectedChat({
+      id: contato.id,
+      conversationId: dados.conversationId,
+      name: contato.name,
+      phone: contato.phone,
+      handle: contato.phoneFormatado || contato.phone || contato.email,
+      channel: dados.channel,
+      phase: "HUMAN",
+      botActive: false,
+      windowOpen: dados.janelaAberta,
+      windowMinutesLeft: dados.minutosRestantes,
+      assignedTo: dados.assignedTo,
+      conversations: [{ id: dados.conversationId, botActive: false }],
+    });
+    if (dados.aviso) {
+      toast({
+        title: dados.precisaTemplate ? "Fora da janela de 24 h" : "Atenção",
+        description: dados.aviso,
+      });
+    }
+    if (dados.precisaTemplate && dados.templates?.length) setTemplateModal(true);
+  };
+
   const fetchConversations = async () => {
     const token = localStorage.getItem("token");
     try {
@@ -822,10 +855,20 @@ export default function Conversations() {
         >
           <div className="space-y-3 border-b border-border-soft px-4 py-4">
             {/* Sem título: o cabeçalho do painel já diz "Conversas". */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <span className="num text-[11px] font-semibold uppercase tracking-wide text-faint">
                 {visibleChats.length} {visibleChats.length === 1 ? "conversa" : "conversas"}
               </span>
+              {/* Até aqui a conversa só nascia quando o cliente escrevia
+                  primeiro: contato cadastrado e nunca contatado não tinha por
+                  onde ser abordado. */}
+              <Button
+                size="sm"
+                onClick={() => setNovaConversa(true)}
+                className="h-7 gap-1.5 rounded-lg px-2.5 text-[11px] font-semibold"
+              >
+                <Plus className="h-3.5 w-3.5" /> Nova
+              </Button>
             </div>
 
             {!hasWhatsApp && (
@@ -1680,6 +1723,7 @@ export default function Conversations() {
         </DialogContent>
       </Dialog>
 
+      <NovaConversa open={novaConversa} onOpenChange={setNovaConversa} aoAbrir={abrirConversaDoCrm} />
     </DashboardLayout>
   );
 }

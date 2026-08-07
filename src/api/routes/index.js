@@ -226,6 +226,7 @@ router.put("/conversations/:leadId/read", requirePermission("conversations"), Me
 router.put("/conversations/:leadId/toggle-bot", requirePermission("conversations"), MessageController.toggleBot);
 // Badge do menu: quantas conversas esperam atenção humana.
 router.get("/conversations/pending-count", requirePermission("conversations"), MessageController.getPendingCount);
+router.post("/conversations/start", requirePermission("conversations"), MessageController.startConversation);
 // Ficha do contato, ao lado da conversa aberta.
 router.get("/conversations/:leadId/contact", requirePermission("conversations"), MessageController.getConversationContact);
 router.put("/conversations/:leadId/contact", requirePermission("conversations"), MessageController.updateConversationContact);

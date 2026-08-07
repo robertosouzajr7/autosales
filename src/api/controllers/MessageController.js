@@ -642,3 +642,114 @@ export const uploadAttachment = async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 };
+
+/**
+ * Abre conversa com um contato do CRM.
+ *
+ * Até aqui a conversa só nascia quando o cliente escrevia primeiro: um
+ * contato cadastrado e nunca contatado não tinha por onde ser abordado no
+ * painel. Isto cria a conversa e — mais importante — devolve, ANTES de
+ * qualquer tentativa, o que dá e o que não dá para fazer neste contato:
+ * se o número tem WhatsApp, se a janela de 24 h está aberta e se o caminho
+ * é texto livre ou template aprovado.
+ *
+ * Quem abre a conversa assume o atendimento. É uma pessoa começando a falar
+ * com outra; deixar a IA no comando de uma conversa que o atendente iniciou
+ * faria as duas vozes se atropelarem na primeira resposta do cliente.
+ */
+export const startConversation = async (req, res) => {
+  const tenantId = req.tenantId;
+  const { leadId } = req.body || {};
+
+  try {
+    const lead = await prisma.lead.findFirst({ where: { id: leadId, tenantId } });
+    if (!lead) return res.status(404).json({ error: "Contato não encontrado." });
+    if (lead.optedOut) {
+      return res.status(403).json({ error: "Este contato pediu para não receber mensagens." });
+    }
+
+    const canal = String(lead.channel || "WHATSAPP").toUpperCase();
+    const jaTem = await prisma.conversation.findUnique({ where: { leadId: lead.id } });
+
+    const conversa = jaTem
+      ? await prisma.conversation.update({
+          where: { id: jaTem.id },
+          // Conversa encerrada volta ao ar; a que já estava com outro
+          // atendente não muda de dono só porque alguém abriu a ficha.
+          data:
+            jaTem.phase === "CLOSED" || jaTem.phase === "BOT"
+              ? { phase: "HUMAN", assignedToId: req.userId, assignedAt: new Date(), botActive: false, closedAt: null }
+              : {},
+          include: { assignedTo: { select: { id: true, name: true } } },
+        })
+      : await prisma.conversation.create({
+          data: {
+            leadId: lead.id,
+            tenantId,
+            phase: "HUMAN",
+            assignedToId: req.userId,
+            assignedAt: new Date(),
+            botActive: false,
+          },
+          include: { assignedTo: { select: { id: true, name: true } } },
+        });
+
+    const janelaAberta = canal === "SITE" || isWindowOpen(conversa.lastInboundAt);
+    const transporte = await MessagingService.transportOf(tenantId, lead.waAccountId);
+
+    // Número nunca verificado: verifica agora, já que o atendente está
+    // prestes a tentar falar com ele.
+    let whatsapp = lead.whatsappStatus || null;
+    if (canal === "WHATSAPP" && !whatsapp) {
+      const { default: ChannelDetection } = await import("../services/ChannelDetection.js");
+      whatsapp = await ChannelDetection.detectar(lead.id).catch(() => null);
+    }
+
+    // Template só existe no WhatsApp oficial. Na conexão por QR Code não há
+    // janela de 24 h para respeitar, e no Instagram não existe template.
+    const oficial = transporte === "cloud";
+    const precisaTemplate = canal === "WHATSAPP" && oficial && !janelaAberta;
+
+    let templates = [];
+    if (precisaTemplate) {
+      templates = await prisma.messageTemplate.findMany({
+        where: { tenantId, status: "APPROVED" },
+        select: { id: true, name: true, content: true, language: true, headerType: true },
+        orderBy: { name: "asc" },
+      });
+    }
+
+    res.json({
+      conversationId: conversa.id,
+      leadId: lead.id,
+      channel: canal,
+      transporte,
+      whatsapp,
+      janelaAberta,
+      minutosRestantes: windowMinutesLeft(conversa.lastInboundAt),
+      precisaTemplate,
+      templates,
+      assignedTo: conversa.assignedTo || null,
+      aviso: avisoDeAbertura({ canal, whatsapp, precisaTemplate, oficial, templates }),
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/** A frase que explica ao atendente o que ele tem pela frente. */
+function avisoDeAbertura({ canal, whatsapp, precisaTemplate, oficial, templates }) {
+  if (canal === "WHATSAPP" && whatsapp === "NAO") {
+    return "Este número não tem WhatsApp. A mensagem não vai chegar por aqui.";
+  }
+  if (precisaTemplate && !templates.length) {
+    return "Fora da janela de 24 h só é possível iniciar com template aprovado, e nenhum está aprovado ainda. Aprove um em Modelos de mensagem.";
+  }
+  if (precisaTemplate) {
+    return "Passaram-se mais de 24 h desde a última mensagem do cliente. Na conexão oficial, só um template aprovado reabre a conversa.";
+  }
+  if (canal === "WHATSAPP" && whatsapp === "DESCONHECIDO" && oficial) {
+    return "Não dá para confirmar se o número tem WhatsApp: a API oficial não oferece essa consulta. Se a mensagem não chegar, é isso.";
+  }
+  return null;
+}
