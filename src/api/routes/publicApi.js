@@ -1,5 +1,6 @@
 import express from "express";
 import * as PublicController from "../controllers/PublicController.js";
+import * as PixController from "../controllers/PixController.js";
 import { receiveWhatsappWebhook } from "../controllers/LeadController.js";
 import { webhookTrigger } from "../controllers/AutomationController.js";
 
@@ -24,6 +25,9 @@ router.get("/chat/history", PublicController.getChatHistory);
 router.get("/chat/stream", PublicController.streamChat);
 router.post("/book", PublicController.bookAppointment);
 router.post("/waitlist", PublicController.addToWaitlist);
+
+// Página de pagamento por Pix, aberta pelo link que o agente manda.
+router.get("/pix/:code", PixController.publicCharge);
 
 // Webhook interno do WhatsApp (chamado pelo Baileys em whatsapp.js)
 router.post("/webhook/whatsapp", receiveWhatsappWebhook);

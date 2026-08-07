@@ -45,6 +45,7 @@ import {
 } from "../middlewares/planLimits.js";
 
 import { receberArquivo } from "../middlewares/upload.js";
+import * as PixController from "../controllers/PixController.js";
 import * as AwayController from "../controllers/AwayController.js";
 
 const router = express.Router();
@@ -450,6 +451,13 @@ router.post(
   BusinessController.uploadMenu
 );
 router.delete("/business/menu", requirePermission("business"), BusinessController.removeMenu);
+
+router.get("/business/pix", PixController.getSettings);
+router.put("/business/pix", requirePermission("business"), PixController.updateSettings);
+
+router.get("/pix/charges", PixController.list);
+router.post("/pix/charges", PixController.create);
+router.patch("/pix/charges/:id", PixController.update);
 
 router.post("/business/team", requirePermission("business"), BusinessController.teamMember.create);
 router.put("/business/team/:id", requirePermission("business"), BusinessController.teamMember.update);

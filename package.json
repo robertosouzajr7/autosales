@@ -38,7 +38,8 @@
     "test:channel": "node scripts/test-whatsapp-mode.mjs",
     "test:signup": "node scripts/test-signup-flow.mjs",
     "contacts:dedupe": "node scripts/dedupe-contacts.mjs",
-    "test:cardapio": "node scripts/test-cardapio.mjs"
+    "test:cardapio": "node scripts/test-cardapio.mjs",
+    "test:pix": "node scripts/test-pix.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.113.0",

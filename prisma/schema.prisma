@@ -63,6 +63,15 @@ model Tenant {
   menuFileName  String? // nome original, usado como legenda do documento
   menuUpdatedAt DateTime?
 
+  // Dados de recebimento por Pix. Servem para o agente mandar a chave e,
+  // depois, para conferir o comprovante contra quem deveria ter recebido.
+  pixKey        String? // a chave em si
+  pixKeyType    String? // CPF | CNPJ | EMAIL | PHONE | RANDOM
+  pixHolderName String? // nome do recebedor, como aparece no comprovante
+  pixHolderDoc  String? // CPF/CNPJ do recebedor, sem máscara
+  pixCity       String? // exigido pelo BR Code
+  pixBank       String? // instituição, só para conferência
+
   // Consumption Tracking (Real-time)
   usedTokens           Int      @default(0)
   extraTokens          Int      @default(0) // saldo de tokens comprados (recarga), consumido após a franquia do plano
@@ -119,6 +128,7 @@ model Tenant {
   paymentMethods PaymentMethod[]
   businessHours  BusinessHour[]
   faqs           Faq[]
+  pixCharges     PixCharge[]
   serviceQueues  ServiceQueue[]
 
   usageEvents UsageEvent[]
@@ -169,6 +179,8 @@ model Lead {
   source String?
   tags   Tag[] // Many-to-Many
   notes  String?
+
+  pixCharges PixCharge[]
 
   // Valor da oportunidade, em reais. É o que permite ao funil somar
   // "em negociação" e "fechado" — sem ele o board só conta cabeças.
@@ -1299,6 +1311,31 @@ model BusinessHour {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, weekday])
+}
+
+// Uma cobrança por Pix gerada para um cliente. Guarda o BR Code já montado
+// (copia e cola) e um código curto para o link público — os três formatos que
+// o cliente pode pedir: QR Code, texto e link.
+model PixCharge {
+  id          String    @id @default(uuid())
+  tenantId    String
+  leadId      String?
+  code        String    @unique // slug curto usado no link público
+  amount      Float? // null = o cliente digita o valor
+  description String?
+  txid        String?
+  payload     String // BR Code completo
+  status      String    @default("PENDING") // PENDING | PAID | CANCELED
+  paidAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead   Lead?  @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status])
+  @@index([leadId])
 }
 
 model Faq {

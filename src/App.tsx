@@ -26,6 +26,7 @@ import Analytics from "@/pages/Analytics";
 import AutomationConfig from "@/pages/AutomationConfig";
 import PublicBooking from "@/pages/PublicBooking";
 import PublicWebchat from "@/pages/PublicWebchat";
+import PublicPix from "@/pages/PublicPix";
 import Docs from "@/pages/Docs";
 import VerifyEmail from "@/pages/VerifyEmail";
 import Planos from "./pages/Planos";
@@ -74,6 +75,7 @@ function App() {
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/b/:tenantId" element={<PublicBooking />} />
         <Route path="/chat/:tenantId" element={<PublicWebchat />} />
+        <Route path="/pix/:code" element={<PublicPix />} />
 
         {/* CLIENTE SaaS */}
         <Route path="/dashboard" element={<Dashboard />} />

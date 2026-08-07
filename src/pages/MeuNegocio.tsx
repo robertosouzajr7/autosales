@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Building2, Sparkles, UserRound, CreditCard, HelpCircle, Check, AlertTriangle,
   Plus, Pencil, Trash2, Save, Loader2, Wand2, UtensilsCrossed, FileText, Upload, ExternalLink,
+  QrCode, Copy,
 } from "lucide-react";
 
 const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
@@ -26,6 +27,14 @@ const VERTICAL_LABELS: Record<string, { business: string; team: string; teamSing
   RESTAURANT: { business: "Restaurante", team: "Equipe",        teamSingular: "Membro da equipe", service: "Cardápio",    serviceSingular: "Prato / Experiência",     payment: "Formas de pagamento", paymentSingular: "Forma de pagamento", customer: "clientes" },
   OTHER:      { business: "Negócio",     team: "Equipe",        teamSingular: "Membro",         service: "Serviços",     serviceSingular: "Serviço",                 payment: "Formas de pagamento", paymentSingular: "Forma de pagamento", customer: "clientes" },
 };
+
+const TIPOS_DE_CHAVE_PIX = [
+  { value: "CPF", label: "CPF" },
+  { value: "CNPJ", label: "CNPJ" },
+  { value: "EMAIL", label: "E-mail" },
+  { value: "PHONE", label: "Telefone" },
+  { value: "RANDOM", label: "Chave aleatória" },
+];
 
 // Verticais em que o cardápio em arquivo aparece. Tem de bater com
 // NICHOS_COM_CARDAPIO no MenuService do servidor.
@@ -61,6 +70,9 @@ export default function MeuNegocio() {
   const [aba, setAba] = useState("info");
   const [cardapio, setCardapio] = useState<any>(null);
   const [enviandoCardapio, setEnviandoCardapio] = useState(false);
+  const [pix, setPix] = useState<any>({ pixKeyType: "CPF" });
+  const [pixPreview, setPixPreview] = useState<any>(null);
+  const [salvandoPix, setSalvandoPix] = useState(false);
 
   const vertical = profile.businessType || "OTHER";
   const L = useMemo(() => VERTICAL_LABELS[vertical] || VERTICAL_LABELS.OTHER, [vertical]);
@@ -87,6 +99,18 @@ export default function MeuNegocio() {
       setServices(d.services || []);
       setPaymentMethods(d.paymentMethods || []);
       setFaqs(d.faqs || []);
+
+      const rp = await fetch("/api/business/pix", { headers: authHeaders() });
+      const dp = await rp.json();
+      setPix({
+        pixKey: dp.pixKey || "",
+        pixKeyType: dp.pixKeyType || "CPF",
+        pixHolderName: dp.pixHolderName || "",
+        pixHolderDoc: dp.pixHolderDoc || "",
+        pixCity: dp.pixCity || "",
+        pixBank: dp.pixBank || "",
+      });
+      setPixPreview(dp.preview || null);
     } catch (e) {
       toast({ title: "Erro ao carregar dados do negócio", variant: "destructive" });
     }
@@ -139,6 +163,32 @@ export default function MeuNegocio() {
     } catch {
       toast({ title: "Erro ao remover o cardápio", variant: "destructive" });
     }
+  };
+
+  const salvarPix = async () => {
+    setSalvandoPix(true);
+    try {
+      const res = await fetch("/api/business/pix", {
+        method: "PUT",
+        headers: authHeaders(),
+        body: JSON.stringify(pix),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d?.error || "Não foi possível salvar os dados do Pix.");
+      // Recarrega para o preview do QR Code refletir a chave nova.
+      const rp = await fetch("/api/business/pix", { headers: authHeaders() });
+      const dp = await rp.json();
+      setPixPreview(dp.preview || null);
+      toast({
+        title: "Pix salvo",
+        description: pix.pixKey
+          ? "O agente já pode mandar o QR Code, o copia e cola e o link."
+          : "Chave removida — o agente deixa de oferecer Pix.",
+      });
+    } catch (e: any) {
+      toast({ title: "Erro ao salvar o Pix", description: e?.message, variant: "destructive" });
+    }
+    setSalvandoPix(false);
   };
 
   const applyTemplate = async () => {
@@ -523,7 +573,112 @@ export default function MeuNegocio() {
             )}
 
             {aba === "pay" && (
-              <CrudList
+              <div className="space-y-4">
+                <section className="rounded-[14px] border border-border bg-card p-5 shadow-card">
+                  <div className="flex items-start gap-2.5">
+                    <QrCode className="mt-0.5 h-4 w-4 shrink-0 text-accent-text" />
+                    <div className="min-w-0">
+                      <h2 className="text-[15px] font-semibold text-foreground">Recebimento por Pix</h2>
+                      <p className="mt-0.5 text-[12.5px] text-muted-foreground">
+                        Com a chave cadastrada, o agente manda o QR Code, o copia e cola e o link de
+                        pagamento — e depois consegue conferir o comprovante contra estes dados.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_auto]">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <Label className="text-[12.5px]">Tipo da chave</Label>
+                        <Select
+                          value={pix.pixKeyType || "CPF"}
+                          onValueChange={(v) => setPix({ ...pix, pixKeyType: v })}
+                        >
+                          <SelectTrigger className="mt-1 h-10"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {TIPOS_DE_CHAVE_PIX.map((t) => (
+                              <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-[12.5px]">Chave Pix</Label>
+                        <Input
+                          className="mt-1 h-10"
+                          value={pix.pixKey || ""}
+                          onChange={(e) => setPix({ ...pix, pixKey: e.target.value })}
+                          placeholder="A chave que recebe o dinheiro"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-[12.5px]">Nome do recebedor</Label>
+                        <Input
+                          className="mt-1 h-10"
+                          value={pix.pixHolderName || ""}
+                          onChange={(e) => setPix({ ...pix, pixHolderName: e.target.value })}
+                          placeholder="Como aparece no comprovante"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-[12.5px]">CPF/CNPJ do recebedor</Label>
+                        <Input
+                          className="mt-1 h-10"
+                          value={pix.pixHolderDoc || ""}
+                          onChange={(e) => setPix({ ...pix, pixHolderDoc: e.target.value })}
+                          placeholder="Só números"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-[12.5px]">Cidade</Label>
+                        <Input
+                          className="mt-1 h-10"
+                          value={pix.pixCity || ""}
+                          onChange={(e) => setPix({ ...pix, pixCity: e.target.value })}
+                          placeholder="Exigida pelo padrão do QR Code"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-[12.5px]">Instituição</Label>
+                        <Input
+                          className="mt-1 h-10"
+                          value={pix.pixBank || ""}
+                          onChange={(e) => setPix({ ...pix, pixBank: e.target.value })}
+                          placeholder="Banco onde a chave está"
+                        />
+                      </div>
+                    </div>
+
+                    {pixPreview ? (
+                      <div className="flex w-full flex-col items-center gap-2 rounded-xl border border-border-soft bg-surface-2 p-4 lg:w-[220px]">
+                        <img src={pixPreview.qrCode} alt="QR Code do Pix" className="h-[160px] w-[160px] rounded-lg bg-white" />
+                        <p className="text-center text-[11.5px] text-faint">
+                          Prévia sem valor. Nas cobranças o valor entra no código.
+                        </p>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard?.writeText(pixPreview.payload);
+                            toast({ title: "Copia e cola copiado" });
+                          }}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-[12px] font-semibold text-foreground hover:bg-card/80"
+                        >
+                          <Copy className="h-3.5 w-3.5" /> Copiar código
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex w-full items-center justify-center rounded-xl border border-dashed border-border p-4 text-center text-[12.5px] text-muted-foreground lg:w-[220px]">
+                        Cadastre a chave para ver o QR Code.
+                      </div>
+                    )}
+                  </div>
+
+                  <Button onClick={salvarPix} disabled={salvandoPix} className="mt-4 h-10 gap-2">
+                    {salvandoPix ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    {salvandoPix ? "Salvando…" : "Salvar dados do Pix"}
+                  </Button>
+                </section>
+
+                <CrudList
                 endpoint="/api/business/payments" items={paymentMethods} reload={load}
                 emptyIcon={<CreditCard className="h-6 w-6" />} emptyTitle={`Nenhum ${L.paymentSingular.toLowerCase()} cadastrado`}
                 emptyDesc={`Liste ${L.payment.toLowerCase()} aceitos para o agente responder com precisão.`}
@@ -538,7 +693,8 @@ export default function MeuNegocio() {
                     {x.notes && <p className="text-[12px] text-muted-foreground">{x.notes}</p>}
                   </>
                 )}
-              />
+                />
+              </div>
             )}
 
             {aba === "faq" && (
