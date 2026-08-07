@@ -82,8 +82,17 @@ app.use(helmet({ contentSecurityPolicy: false }));
 if (process.env.NODE_ENV === "production" && !process.env.ALLOWED_ORIGINS) {
   console.warn("⚠️  ALLOWED_ORIGINS não definido — CORS aberto para qualquer origem.");
 }
+// O app instalado no aparelho não tem o domínio do site como origem: o
+// bundle é servido de dentro do empacotamento. Estas duas origens são fixas
+// do Capacitor (iOS e Android) e entram sempre, senão o app é barrado pelo
+// CORS mesmo com ALLOWED_ORIGINS configurado corretamente para a web.
+const ORIGENS_DO_APP = ["capacitor://localhost", "ionic://localhost", "http://localhost"];
+const origensPermitidas = process.env.ALLOWED_ORIGINS
+  ? [...process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean), ...ORIGENS_DO_APP]
+  : "*";
+
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(",") : "*",
+  origin: origensPermitidas,
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));

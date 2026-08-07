@@ -7,6 +7,8 @@
  * as telas se inscrevem nela; quando a última sai, ela fecha.
  */
 
+import { baseDaApi } from "@/mobile/plataforma";
+
 type Ouvinte = (mensagem: any) => void;
 
 let fonte: EventSource | null = null;
@@ -14,7 +16,10 @@ let tokenAtual: string | null = null;
 const ouvintes = new Set<Ouvinte>();
 
 function abrir(token: string) {
-  fonte = new EventSource(`/api/events?token=${encodeURIComponent(token)}`);
+  // `EventSource` não passa pelo interceptador de fetch, então a URL absoluta
+  // do app precisa ser montada aqui também. Em qualquer navegador
+  // `baseDaApi()` é vazia e isto continua sendo `/api/events`.
+  fonte = new EventSource(`${baseDaApi()}/api/events?token=${encodeURIComponent(token)}`);
   tokenAtual = token;
   fonte.onmessage = (evento) => {
     let dados: any;

@@ -3,6 +3,7 @@ import { ChevronLeft, Loader2, Send } from "lucide-react";
 import { Avatar } from "../componentes/Avatar";
 import { Conversa, Mensagem, RESPOSTAS_RAPIDAS } from "../dados";
 import { hora } from "../tempo";
+import { baseDaApi } from "../plataforma";
 
 /**
  * A conversa.
@@ -34,7 +35,11 @@ function Bolha({ m }: { m: Mensagem }) {
         }}
       >
         {m.mediaUrl && (
-          <img src={m.mediaUrl} alt="" className="mb-2 max-h-52 w-full rounded-xl object-cover" />
+          <img
+            src={m.mediaUrl.startsWith("/") ? baseDaApi() + m.mediaUrl : m.mediaUrl}
+            alt=""
+            className="mb-2 max-h-52 w-full rounded-xl object-cover"
+          />
         )}
         {m.content}
       </div>
