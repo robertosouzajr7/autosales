@@ -1807,6 +1807,11 @@ class AutomationEngine {
               : null;
 
         // Efeito colateral: envia a mídia imediatamente pelo canal do lead.
+        //
+        // O resultado do envio TEM de ser olhado. Antes `mediaSent` virava
+        // true só por a chamada não ter estourado — e `sendMedia` não estoura,
+        // devolve `false`. O agente então dizia ao cliente "estou te enviando
+        // a foto" com a foto nunca tendo saído, e ninguém ficava sabendo.
         let mediaSent = false;
         if (media) {
           const isInstagram = (lead.source || "").toLowerCase().includes("instagram");
@@ -1819,25 +1824,38 @@ class AutomationEngine {
                 const { MetaManager } = await import("./meta.js");
                 // Meta busca a mídia remotamente → precisa de URL pública absoluta.
                 const { toPublicUrl } = await import("./src/api/services/StorageService.js");
-                await MetaManager.sendInstagramMedia(acc.pageId, acc.accessToken, lead.phone, toPublicUrl(media.url), media.type);
-                if (media.type !== "audio") {
+                mediaSent = !!(await MetaManager.sendInstagramMedia(
+                  acc.pageId, acc.accessToken, lead.phone, toPublicUrl(media.url), media.type
+                ));
+                if (mediaSent && media.type !== "audio") {
                   await MetaManager.sendInstagramMessage(acc.pageId, acc.accessToken, lead.phone, caption);
                 }
-                mediaSent = true;
               }
             } else {
-              await MessagingService.sendMedia(lead.tenantId, lead.phone, media.url, media.type, media.type === "audio" ? "" : caption);
-              mediaSent = true;
+              mediaSent = !!(await MessagingService.sendMedia(
+                lead.tenantId, lead.phone, media.url, media.type, media.type === "audio" ? "" : caption
+              ));
             }
           } catch (e) {
             console.error("[AutoEngine] Falha ao enviar mídia do catálogo:", e.message);
+          }
+          if (!mediaSent) {
+            console.error(
+              `[AutoEngine] A mídia do item "${item.name}" não foi entregue ao cliente ${lead.phone}.`
+            );
           }
         }
         return {
           success: true,
           sent_media: mediaSent,
           item: { name: item.name, price, description: item.description, buyUrl: item.buyUrl || null },
-          note: mediaSent ? "Mídia enviada ao cliente. Comente sobre o item." : "Item sem mídia — apresente os detalhes por texto.",
+          note: mediaSent
+            ? "Mídia enviada ao cliente. Comente sobre o item."
+            : media
+              // Sem esta instrução o modelo continua dizendo "vou te enviar a
+              // foto" — a promessa que não se cumpre é pior que a ausência.
+              ? "A imagem NÃO foi entregue. Apresente o item por texto e NÃO diga que enviou nem que vai enviar foto."
+              : "Item sem mídia — apresente os detalhes por texto.",
         };
       }
       case "escalate_human": {

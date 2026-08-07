@@ -37,6 +37,47 @@ export function isManagedElsewhere(account) {
 }
 
 // Classe responsável por orquestrar múltiplas conexões de empresas (Multi-tenant SaaS)
+
+/**
+ * O que o Baileys recebe como mídia.
+ *
+ * Ele aceita `Buffer` ou `{ url }` — e só isso. Passar a string
+ * "/uploads/x.jpg" não estoura de forma clara: a mensagem simplesmente não
+ * chega, e do lado do painel parece que foi enviada. Era assim que o agente
+ * dizia "estou te mandando a foto" com a foto nunca tendo saído.
+ *
+ * A ordem importa: arquivo no disco primeiro (não depende de DNS nem de a
+ * URL ser pública), URL absoluta depois, e por último a montagem da URL
+ * pública para o caso de a imagem estar no S3 ou o volume não ser o mesmo
+ * deste processo.
+ *
+ * Devolve `null` quando não há como alcançar o arquivo — e quem chamou tem de
+ * tratar isso como falha, não como envio.
+ */
+export async function resolverMidia(mediaUrl) {
+    if (typeof mediaUrl !== 'string' || !mediaUrl) return null;
+
+    if (mediaUrl.startsWith('data:')) {
+        const base64 = mediaUrl.split(',')[1];
+        return base64 ? Buffer.from(base64, 'base64') : null;
+    }
+
+    const { localPathFor, toPublicUrl } = await import('./src/api/services/StorageService.js');
+    const localPath = localPathFor(mediaUrl);
+    if (localPath && fs.existsSync(localPath)) return fs.readFileSync(localPath);
+
+    if (/^https?:\/\//i.test(mediaUrl)) return { url: mediaUrl };
+
+    const publica = toPublicUrl(mediaUrl);
+    if (/^https?:\/\//i.test(publica)) return { url: publica };
+
+    console.error(
+        `[WhatsApp Baileys] Mídia inacessível: "${mediaUrl}". ` +
+        'O arquivo não está neste disco e PUBLIC_URL não está configurada.'
+    );
+    return null;
+}
+
 export class WhatsAppManager {
     /**
      * Resolve o tenantId real a partir do accountId (WhatsAppAccount.id).
@@ -607,23 +648,8 @@ export class WhatsAppManager {
             const jid = phone.includes('@s.whatsapp.net') ? phone : `${phone}@s.whatsapp.net`;
             try {
                 let msgContent = {};
-                let source = mediaUrl;
-
-                // Handle base64 data URLs
-                if (typeof mediaUrl === 'string' && mediaUrl.startsWith('data:')) {
-                    const [meta, base64Data] = mediaUrl.split(',');
-                    source = Buffer.from(base64Data, 'base64');
-                } else if (typeof mediaUrl === 'string') {
-                    // Upload local (/api/uploads/...): lê o arquivo do disco. Evita
-                    // depender de URL pública/DNS para reenviar a mídia ao cliente.
-                    const { localPathFor } = await import('./src/api/services/StorageService.js');
-                    const localPath = localPathFor(mediaUrl);
-                    if (localPath && fs.existsSync(localPath)) {
-                        source = fs.readFileSync(localPath);
-                    } else if (/^https?:\/\//i.test(mediaUrl)) {
-                        source = { url: mediaUrl };
-                    }
-                }
+                const source = await resolverMidia(mediaUrl);
+                if (!source) return false;
 
                 switch (mediaType) {
                     case 'image':

@@ -32,6 +32,7 @@
     "test:atendente": "node scripts/test-atendente-etapa3.mjs",
     "test:app4": "node scripts/test-app-etapa4.mjs",
     "test:push": "node scripts/test-push.mjs",
+    "test:midia": "node scripts/test-midia-catalogo.mjs",
     "test:pricing": "node scripts/test-dispatch-pricing.mjs",
     "test:usage": "node scripts/test-usage-limits.mjs",
     "test:channel": "node scripts/test-whatsapp-mode.mjs",
