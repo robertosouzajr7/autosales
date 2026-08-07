@@ -179,6 +179,14 @@ model Lead {
   externalId String?
   igUsername String? // @usuario do Instagram
 
+  // O telefone cadastrado tem WhatsApp? SIM | NAO | DESCONHECIDO.
+  // Descoberto sozinho depois do cadastro, para o atendente saber por onde dá
+  // para começar uma conversa antes de tentar. DESCONHECIDO é honesto: a API
+  // oficial da Meta não oferece consulta de existência de número, então só a
+  // conexão via QR Code consegue responder.
+  whatsappStatus    String?
+  whatsappCheckedAt DateTime?
+
   // Contatos e canais adicionais (preenchidos pelo BDR)
   website     String?
   socialLinks String? // JSON: { linkedin, instagram, facebook, ... }

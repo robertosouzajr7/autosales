@@ -11,6 +11,7 @@ import {
   normalizePhone, normalizeEmail, buildIdentifiers,
 } from "../services/ContactIdentity.js";
 import { pushContactAsync } from "../services/CrmSyncService.js";
+import ChannelDetection from "../services/ChannelDetection.js";
 
 /** Guarda telefone/e-mail do contato como chave de identidade. */
 async function registrarNovasChaves(tenantId, lead) {
@@ -144,6 +145,10 @@ export const createLead = async (req, res) => {
       AutomationEngine.dispatchTrigger("NEW_LEAD", { lead, tenantId }).catch(console.error);
     }
     pushContactAsync(tenantId, lead.id, criado ? "CREATE" : "UPDATE");
+    // Descobre sozinho se o telefone cadastrado tem WhatsApp. Em segundo
+    // plano: o cadastro não espera pela consulta, e o atendente já encontra a
+    // resposta na ficha quando for começar a conversa.
+    ChannelDetection.emSegundoPlano(lead.id);
     // `duplicado` avisa a tela que o contato já existia — sem isso o usuário
     // acha que cadastrou de novo e vai procurar a duplicata.
     res.json({ ...lead, duplicado: !criado });
@@ -204,6 +209,11 @@ export const updateLead = async (req, res) => {
     // valendo: quem escrever do número velho ainda cai na mesma pessoa).
     await registrarNovasChaves(req.tenantId, lead);
     pushContactAsync(req.tenantId, lead.id, "UPDATE");
+
+    // Telefone novo, verificação nova: o resultado antigo era de outro número.
+    if (dataToUpdate.phone !== undefined && dataToUpdate.phone !== oldLead.phone) {
+      ChannelDetection.emSegundoPlano(lead.id);
+    }
 
     if (oldLead && req.body.stageId && oldLead.stageId !== req.body.stageId) {
       const stage = await prisma.pipelineStage.findFirst({ where: { id: req.body.stageId, tenantId: req.tenantId } });

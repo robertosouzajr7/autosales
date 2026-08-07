@@ -69,7 +69,7 @@ export const searchContacts = async (req, res) => {
         where,
         select: {
           id: true, name: true, phone: true, email: true, channel: true,
-          igUsername: true, optedOut: true,
+          igUsername: true, optedOut: true, whatsappStatus: true,
           stage: { select: { id: true, name: true } },
           tags: { select: { id: true, name: true, color: true } },
         },
