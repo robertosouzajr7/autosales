@@ -77,11 +77,73 @@ aparelho. As origens `capacitor://localhost`, `ionic://localhost` e
 `http://localhost` já entram sempre no CORS, mesmo com `ALLOWED_ORIGINS`
 configurado. Não é preciso mexer em nada.
 
+---
+
+## Notificações push
+
+O código está pronto dos dois lados. O que falta é a credencial — e ela é da
+PLATAFORMA, não de cada conta: o app na loja é um só, e o projeto Firebase que
+o assina também.
+
+### No Firebase (uma vez)
+
+1. Crie um projeto em <https://console.firebase.google.com>.
+2. **Configurações do projeto → Contas de serviço → Gerar nova chave privada**.
+   Baixa um JSON.
+3. **Android**: adicione um app Android com o pacote
+   `br.com.agentesvirtuais.atendente` e baixe o `google-services.json` para
+   `android/app/`.
+4. **iOS**: adicione um app iOS com o mesmo Bundle ID e baixe o
+   `GoogleService-Info.plist` para `ios/App/App/`. Depois, em **Cloud
+   Messaging**, envie a chave de autenticação APNs (`.p8`), que você gera no
+   portal da Apple em **Certificates, Identifiers & Profiles → Keys**.
+
+Sem a chave APNs o iOS não recebe nada, mesmo com o Firebase configurado — é
+o Firebase que fala com a Apple por você.
+
+### No painel
+
+**Admin → Configurações da plataforma**, cole o JSON da conta de serviço. Ele
+é validado na hora (JSON inválido ou sem `client_email`/`private_key` é
+recusado) e **nunca volta pela API, nem mascarado**: contém a chave privada
+do projeto inteiro.
+
+### No Xcode
+
+Alvo **App → Signing & Capabilities → + Capability**, adicione **Push
+Notifications** e **Background Modes** (marcando *Remote notifications*).
+
+### O que dispara notificação
+
+- alguém entra na fila esperando um humano — vai para quem está **disponível**
+  (quem está em pausa não é acordado; a segunda notificação ignorada ensina a
+  ignorar todas);
+- mensagem nova em conversa que já é sua;
+- conversa transferida para você.
+
+Cada atendente liga e desliga cada um desses em **Você → Avisos no celular**.
+Conversa que a IA está conduzindo não notifica ninguém: seria um aviso por
+mensagem de robô.
+
+---
+
+## Para publicar nas lojas
+
+O que falta é trabalho de loja, não de código:
+
+- **Ícone e tela de abertura** — hoje são os padrões do Capacitor. Precisa das
+  artes (1024×1024 para o ícone).
+- **Política de privacidade** — página pública obrigatória nas duas lojas.
+- **Ficha da App Store** — capturas de tela por tamanho de aparelho, descrição,
+  palavras-chave e o formulário de privacidade (*App Privacy*), onde é preciso
+  declarar que o app coleta dados de contato do cliente.
+- **Google Play** — mesma coisa, mais o formulário de *Data safety* e a
+  declaração de permissões sensíveis.
+- **Conta de teste para a revisão** — as duas lojas exigem login funcional
+  para o revisor. Crie um atendente com dados de exemplo, não com clientes
+  reais.
+
 ## O que ainda não existe
 
 - **Face ID** — o botão só aparece no aparelho e está desabilitado; falta o
   plugin de biometria.
-- **Notificações push** — nada ainda. É o que justifica o app existir, e é a
-  última etapa.
-- **Ícone e tela de abertura** — os padrões do Capacitor. Trocar é rápido, mas
-  precisa das artes.

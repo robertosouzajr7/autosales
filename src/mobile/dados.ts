@@ -186,3 +186,22 @@ export const marcarHorario = (leadId: string, iso: string, titulo: string) =>
   pedir<any>("/appointments", comJson({ leadId, date: iso, title: titulo }));
 
 export const verFicha = (leadId: string) => pedir<Ficha>(`/conversations/${leadId}/contact`);
+
+export type PreferenciaDePush = { chave: string; rotulo: string; padrao: boolean };
+
+export const registrarAparelho = (token: string, platform: string) =>
+  pedir<{ success: boolean }>("/attendance/device", comJson({ token, platform }));
+
+/** POST e não DELETE: corpo em DELETE é descartado por alguns proxies. */
+export const esquecerAparelho = (token: string) =>
+  pedir<{ success: boolean }>("/attendance/device/forget", comJson({ token }));
+
+export const lerPreferenciasDePush = () =>
+  pedir<{ avisos: PreferenciaDePush[]; prefs: Record<string, boolean> }>("/attendance/push");
+
+export const salvarPreferenciasDePush = (prefs: Record<string, boolean>) =>
+  pedir<{ avisos: PreferenciaDePush[]; prefs: Record<string, boolean> }>("/attendance/push", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(prefs),
+  });

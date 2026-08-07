@@ -158,6 +158,13 @@ class AttendanceService {
       ).catch(() => {});
     }
 
+    // O celular de quem pode atender toca agora. Sem isto, o atendente só
+    // descobre que tem gente esperando quando abre o app — e o cliente fica
+    // no vácuo exatamente pelo tempo que ninguém abriu.
+    this.avisarFilaNoCelular(atualizada, posicao, reason).catch((e) =>
+      console.error("[Atendimento] Falha ao notificar a fila no celular:", e.message)
+    );
+
     console.log(`[Atendimento] Conversa ${conversation.id} entrou na fila (posição ${posicao}).`);
     disparar("HANDOFF_QUEUED", atualizada.lead, atualizada.tenantId, {
       queueName: fila?.name || null,
@@ -228,7 +235,16 @@ class AttendanceService {
           "Escolha outro atendente ou devolva para a fila."
         );
       }
-      return this.assign(conversationId, toUserId, { actor, tenantId });
+      const r = await this.assign(conversationId, toUserId, { actor, tenantId });
+      if (r) {
+        const { default: PushService } = await import("./PushService.js");
+        PushService.avisar(toUserId, "TRANSFERIDA", {
+          titulo: `${r.lead?.name || "Uma conversa"} é sua agora`,
+          corpo: `${actor?.name || "A equipe"} transferiu esta conversa para você.`,
+          dados: { tipo: "transferida", leadId: r.leadId, conversationId: r.id },
+        }).catch(() => {});
+      }
+      return r;
     }
     const conversation = await this.carregar(conversationId, tenantId);
     if (!conversation) return null;
@@ -378,6 +394,39 @@ class AttendanceService {
   }
 
   /** Fila do painel: quem está esperando, há quanto tempo e em que posição. */
+  /**
+   * Toca o celular de quem pode assumir.
+   *
+   * Só quem está disponível: avisar quem está em pausa é acordar alguém que
+   * não vai poder atender, e a segunda notificação ignorada ensina a ignorar
+   * todas.
+   */
+  async avisarFilaNoCelular(conversa, posicao, motivo) {
+    const [{ default: PushService }, { default: AvailabilityService }] = await Promise.all([
+      import("./PushService.js"),
+      import("./AvailabilityService.js"),
+    ]);
+    // Primeiro quem atende aquela fila. Se a fila não tem ninguém vinculado —
+    // e a fila padrão nasce assim, criada sozinha na primeira transferência —
+    // vale para todo mundo que está disponível. Fila sem membro significa
+    // "ainda não foi dividido", não "ninguém atende": sem esta volta, a
+    // notificação simplesmente nunca sairia.
+    const daFila = conversa.queueId
+      ? await AvailabilityService.disponiveis(conversa.tenantId, { queueId: conversa.queueId })
+      : [];
+    const disponiveis = daFila.length
+      ? daFila
+      : await AvailabilityService.disponiveis(conversa.tenantId);
+    if (!disponiveis.length) return;
+
+    const nome = conversa.lead?.name || "Um cliente";
+    await PushService.avisarVarios(disponiveis.map((u) => u.id), "FILA", {
+      titulo: `${nome} está esperando`,
+      corpo: motivo || (posicao > 1 ? `${posicao}º da fila.` : "Pediu para falar com uma pessoa."),
+      dados: { tipo: "fila", leadId: conversa.leadId, conversationId: conversa.id },
+    });
+  }
+
   async listQueue(tenantId, { queueId = null } = {}) {
     const conversas = await prisma.conversation.findMany({
       where: { tenantId, phase: "QUEUE", ...(queueId ? { queueId } : {}) },

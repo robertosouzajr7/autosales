@@ -1,6 +1,7 @@
 import prisma from "../config/prisma.js";
 import AttendanceService, { PHASE_LABEL } from "../services/AttendanceService.js";
 import AvailabilityService from "../services/AvailabilityService.js";
+import PushService, { AVISOS as PUSH_AVISOS } from "../services/PushService.js";
 
 /**
  * Filas de atendimento e ações do operador sobre a conversa.
@@ -346,5 +347,39 @@ export const equipeDisponivel = async (req, res) => {
     res.json({ itens: await AvailabilityService.equipe(req.tenantId) });
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+};
+
+// ── Notificações no celular ───────────────────────────────────────
+
+/** O app manda o token do aparelho depois de o sistema autorizar o aviso. */
+export const registrarAparelho = async (req, res) => {
+  try {
+    const { token, platform = "android" } = req.body || {};
+    await PushService.registrarAparelho(req.userId, req.tenantId, token, platform);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+};
+
+/** Sair da conta: o aparelho para de receber o que era daquela pessoa. */
+export const esquecerAparelho = async (req, res) => {
+  try {
+    await PushService.esquecerAparelho(req.body?.token);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+};
+
+export const preferenciasDePush = async (req, res) => {
+  try {
+    const prefs = req.method === "PUT"
+      ? await PushService.definirPreferencias(req.userId, req.body || {})
+      : await PushService.preferencias(req.userId);
+    res.json({ avisos: Object.values(PUSH_AVISOS), prefs });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
   }
 };
