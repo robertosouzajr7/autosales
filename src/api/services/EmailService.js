@@ -34,7 +34,7 @@ function publicUrl() {
   return (process.env.PUBLIC_URL || "http://localhost:8080").replace(/\/$/, "");
 }
 
-async function send({ to, subject, html, text }) {
+async function send({ to, subject, html, text, icalEvent }) {
   // Padrão seguro: se SMTP_FROM não estiver setado, usa o próprio SMTP_USER
   // (evita rejeição por "sender not owned" em provedores como Hostinger).
   const from =
@@ -49,7 +49,7 @@ async function send({ to, subject, html, text }) {
     return { simulated: true };
   }
   try {
-    const info = await t.sendMail({ from, to, subject, text, html });
+    const info = await t.sendMail({ from, to, subject, text, html, ...(icalEvent ? { icalEvent } : {}) });
     return { messageId: info.messageId };
   } catch (e) {
     console.error("[EmailService] Falha ao enviar:", e.message);
@@ -181,4 +181,102 @@ export async function sendMeetingLinkEmail({ to, name, link, when, minutes = 10 
   return send({ to, subject: heading, html, text: `${heading}${when ? ` (${when})` : ""}. Entre por aqui: ${link}` });
 }
 
-export default { sendVerificationEmail, sendPasswordResetEmail, sendTrialReminder, sendMeetingLinkEmail };
+/**
+ * Convite de agendamento, com o anexo que o calendário entende.
+ *
+ * O Google já convida quem tem e-mail no evento, mas só quando o negócio
+ * conectou a agenda — e boa parte não conectou. Sem isto, o cliente marcava
+ * horário e não recebia nada no e-mail: ficava só a mensagem no WhatsApp, que
+ * some no meio da conversa. O `.ics` é o que faz o compromisso entrar na
+ * agenda do celular dele com um toque.
+ */
+export async function sendAppointmentInvite({ to, name, negocio, titulo, inicio, fim, link, uid, endereco }) {
+  const quando = inicio.toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo", dateStyle: "full", timeStyle: "short",
+  });
+  const remetente = process.env.SMTP_FROM || process.env.SMTP_USER || "no-reply@agentesvirtuais.local";
+  const emailDoRemetente = (remetente.match(/<([^>]+)>/) || [null, remetente])[1];
+
+  const ics = montarIcs({
+    uid, titulo, inicio, fim, link, endereco,
+    organizadorNome: negocio || "Agentes Virtuais",
+    organizadorEmail: emailDoRemetente,
+    convidadoNome: name,
+    convidadoEmail: to,
+  });
+
+  const html = wrap(`
+    <h2 style="margin:0 0 12px;font-size:20px;">Agendamento confirmado</h2>
+    <p style="margin:0 0 20px;font-size:15px;line-height:1.5;">
+      ${name ? `Oi, ${escaparHtml(name.split(" ")[0])}. ` : ""}Seu horário${negocio ? ` com <strong>${escaparHtml(negocio)}</strong>` : ""} está marcado.
+    </p>
+    <table style="width:100%;font-size:15px;line-height:1.6;margin:0 0 24px;">
+      <tr><td style="color:#64748b;padding:2px 0;">Quando</td><td style="font-weight:600;">${escaparHtml(quando)}</td></tr>
+      <tr><td style="color:#64748b;padding:2px 0;">O quê</td><td style="font-weight:600;">${escaparHtml(titulo)}</td></tr>
+      ${endereco ? `<tr><td style="color:#64748b;padding:2px 0;">Onde</td><td style="font-weight:600;">${escaparHtml(endereco)}</td></tr>` : ""}
+    </table>
+    ${link ? `<p style="margin:0 0 24px;">
+      <a href="${link}" style="display:inline-block;padding:12px 24px;background:#2563EB;color:#fff;text-decoration:none;border-radius:12px;font-weight:600;">
+        Entrar na reunião
+      </a>
+    </p>` : ""}
+    <p style="margin:0;font-size:13px;color:#64748b;">
+      O convite em anexo adiciona o compromisso à sua agenda.
+    </p>
+  `);
+
+  return send({
+    to,
+    subject: `Agendamento confirmado — ${quando}`,
+    html,
+    text: `Agendamento confirmado.
+${titulo}
+${quando}${link ? `
+Link: ${link}` : ""}`,
+    icalEvent: { filename: "convite.ics", method: "REQUEST", content: ics },
+  });
+}
+
+function escaparHtml(texto) {
+  return String(texto || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+/** Data no formato do iCalendar: sempre UTC, sem separadores. */
+function carimbo(data) {
+  return new Date(data).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+}
+
+/** Vírgula, ponto-e-vírgula e quebra de linha têm significado no .ics. */
+function escaparIcs(texto) {
+  return String(texto || "").replace(/([,;\\])/g, "\\$1").replace(/\r?\n/g, "\\n");
+}
+
+export function montarIcs({ uid, titulo, inicio, fim, link, endereco, organizadorNome, organizadorEmail, convidadoNome, convidadoEmail }) {
+  const linhas = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Agentes Virtuais//Agendamento//PT-BR",
+    "CALSCALE:GREGORIAN",
+    "METHOD:REQUEST",
+    "BEGIN:VEVENT",
+    `UID:${uid}@agentesvirtuais`,
+    `DTSTAMP:${carimbo(new Date())}`,
+    `DTSTART:${carimbo(inicio)}`,
+    `DTEND:${carimbo(fim)}`,
+    `SUMMARY:${escaparIcs(titulo)}`,
+    `DESCRIPTION:${escaparIcs(link ? `Link da reunião: ${link}` : "Agendado via Agentes Virtuais.")}`,
+    `LOCATION:${escaparIcs(link || endereco || "")}`,
+    `ORGANIZER;CN=${escaparIcs(organizadorNome)}:mailto:${organizadorEmail}`,
+    `ATTENDEE;CN=${escaparIcs(convidadoNome || convidadoEmail)};RSVP=TRUE:mailto:${convidadoEmail}`,
+    "STATUS:CONFIRMED",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ];
+  // CRLF é exigência do formato; com \n puro alguns clientes ignoram o anexo.
+  return linhas.join("\r\n");
+}
+
+export default {
+  sendVerificationEmail, sendPasswordResetEmail, sendTrialReminder,
+  sendMeetingLinkEmail, sendAppointmentInvite, montarIcs,
+};

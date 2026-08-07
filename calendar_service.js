@@ -508,18 +508,73 @@ class CalendarService {
       }
     });
 
-    // Régua de lembretes + movimentação no funil. Best-effort: o agendamento
-    // já está gravado e não pode falhar por causa de um lembrete.
+    await this.aposCriar(appointment, lead);
+
+    return { appointmentId: appointment.id, googleEventId, meetLink, date: start.toISOString() };
+  }
+
+  /**
+   * O que sempre tem de acontecer depois de um agendamento nascer: régua de
+   * lembretes e movimentação no funil.
+   *
+   * Existe como método porque o agendamento nasce em mais de um lugar — o
+   * agente, o painel, o link público e o nó SCHEDULE_APPOINTMENT dos fluxos.
+   * O nó dos fluxos gravava a linha e ia embora: sem lembrete e sem sair da
+   * etapa, exatamente o sintoma de "agendei e o lead não moveu".
+   *
+   * Best-effort: o compromisso já está gravado e não pode ser desfeito porque
+   * um lembrete falhou.
+   */
+  async aposCriar(appointment, lead) {
     try {
       const { default: ReminderService } = await import("./src/api/services/ReminderService.js");
       await ReminderService.scheduleForAppointment(appointment.id);
-      const { default: PipelineAutomation } = await import("./src/api/services/PipelineAutomation.js");
-      await PipelineAutomation.onEvent(tenantId, lead.id, "APPOINTMENT_CREATED");
     } catch (e) {
       console.error("[Calendar] Falha ao programar a régua de lembretes:", e.message);
     }
+    try {
+      const { default: PipelineAutomation } = await import("./src/api/services/PipelineAutomation.js");
+      await PipelineAutomation.onEvent(appointment.tenantId, lead?.id || appointment.leadId, "APPOINTMENT_CREATED");
+    } catch (e) {
+      console.error("[Calendar] Falha ao mover o lead no funil:", e.message);
+    }
+    await this.enviarConvitePorEmail(appointment, lead).catch((e) =>
+      console.error("[Calendar] Falha ao enviar o convite por e-mail:", e.message)
+    );
+  }
 
-    return { appointmentId: appointment.id, googleEventId, meetLink, date: start.toISOString() };
+  /**
+   * Manda o convite para o e-mail do cliente, com o `.ics` anexo.
+   *
+   * O Google só convida quando o negócio conectou a agenda, e boa parte não
+   * conectou: sem isto o cliente marcava horário e não recebia nada por
+   * e-mail. Silencioso quando não há e-mail — é o agente que tem a obrigação
+   * de pedir antes de agendar.
+   */
+  async enviarConvitePorEmail(appointment, lead) {
+    const contato = lead?.email
+      ? lead
+      : await prisma.lead.findUnique({ where: { id: appointment.leadId }, select: { name: true, email: true } });
+    if (!contato?.email) return false;
+
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: appointment.tenantId },
+      select: { name: true, address: true },
+    });
+    const { default: EmailService } = await import("./src/api/services/EmailService.js");
+    await EmailService.sendAppointmentInvite({
+      to: contato.email,
+      name: contato.name,
+      negocio: tenant?.name,
+      titulo: appointment.title,
+      inicio: appointment.date,
+      fim: new Date(new Date(appointment.date).getTime() + SLOT_MINUTES * 60000),
+      link: appointment.meetLink,
+      // Reunião com link é online; sem link, o endereço do negócio é o lugar.
+      endereco: appointment.meetLink ? null : tenant?.address,
+      uid: appointment.id,
+    });
+    return true;
   }
 }
 
