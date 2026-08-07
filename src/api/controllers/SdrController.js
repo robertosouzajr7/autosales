@@ -1,5 +1,6 @@
 import prisma from "../config/prisma.js";
 import { knowledgeBaseHeadroom } from "../middlewares/planLimits.js";
+import PromptBuilder, { QUESTIONARIO, SECOES } from "../services/PromptBuilder.js";
 
 export const getSdrs = async (req, res) => {
   const tenantId = req.tenantId;
@@ -266,5 +267,51 @@ export const simulateSdr = async (req, res) => {
     res.json({ response: resposta || "O agente não respondeu. Verifique se há créditos de IA no plano." });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+// ── Montagem guiada do prompt ─────────────────────────────────────
+
+/** As perguntas que o dono responde sobre o negócio dele — não sobre IA. */
+export const getPromptQuestionario = async (req, res) => {
+  try {
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: req.tenantId },
+      select: { name: true, businessType: true },
+    });
+    res.json({
+      questionario: QUESTIONARIO,
+      secoes: SECOES,
+      negocio: tenant?.name || null,
+      tipo: tenant?.businessType || null,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+};
+
+/**
+ * Gera o prompt a partir das respostas.
+ *
+ * Não grava: devolve para o dono ler, editar e só então salvar no agente.
+ * Prompt é a voz do negócio — trocar isso sem ele ver seria trocar o
+ * atendimento sem avisar.
+ */
+export const gerarPrompt = async (req, res) => {
+  try {
+    const { respostas = {}, agentFunction = null, skills = [] } = req.body || {};
+
+    const faltando = QUESTIONARIO.filter((q) => q.obrigatoria && !String(respostas[q.id] || "").trim());
+    if (faltando.length) {
+      return res.status(400).json({
+        error: `Responda antes: ${faltando.map((q) => q.pergunta).join(" / ")}`,
+        faltando: faltando.map((q) => q.id),
+      });
+    }
+
+    const r = await PromptBuilder.gerar(req.tenantId, respostas, { agentFunction, skills });
+    res.json(r);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 };
