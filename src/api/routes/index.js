@@ -298,6 +298,14 @@ router.post("/sdrs/:id/training", requirePermission("agents"), receberArquivo("f
 router.post("/sdrs/:id/simulate", requirePermission("agents"), SdrController.simulateSdr);
 router.get("/sdrs/prompt/questionario", requirePermission("agents"), SdrController.getPromptQuestionario);
 router.post("/sdrs/prompt/gerar", requirePermission("agents"), SdrController.gerarPrompt);
+router.post(
+  "/sdrs/:id/knowledge/extract",
+  requirePermission("agents"),
+  receberArquivo("file", "treinamento"),
+  SdrController.extrairConhecimento
+);
+router.get("/sdrs/:id/knowledge/pending", requirePermission("agents"), SdrController.listarConhecimentoPendente);
+router.post("/sdrs/:id/knowledge/consolidate", requirePermission("agents"), SdrController.consolidarConhecimento);
 
 // Vozes LIBERADAS pelo admin — o cliente escolhe entre estas no agente.
 // A chave do provedor é global e nunca é exposta.

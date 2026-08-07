@@ -28,6 +28,7 @@
     "test:catalogo": "node scripts/test-catalogo-import.mjs",
     "test:nova-conversa": "node scripts/test-nova-conversa.mjs",
     "test:prompt": "node scripts/test-prompt-builder.mjs",
+    "test:treinamento": "node scripts/test-treinamento.mjs",
     "test:pricing": "node scripts/test-dispatch-pricing.mjs",
     "test:usage": "node scripts/test-usage-limits.mjs",
     "test:channel": "node scripts/test-whatsapp-mode.mjs",

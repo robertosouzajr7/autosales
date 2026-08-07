@@ -22,6 +22,9 @@ export const LIMITES = {
   midia: 25 * MB,
   // Planilha de contatos.
   planilha: 10 * MB,
+  // Material de treino do agente: documento, planilha ou gravação de voz.
+  // Áudio de treino é fala longa, não recado — daí a folga sobre a mídia.
+  treinamento: 40 * MB,
 };
 
 /** Extensões aceitas por finalidade, para recusar antes de ler o arquivo. */
@@ -34,6 +37,10 @@ export const FORMATOS = {
     "pdf", "docx", "xlsx", "doc", "xls", "ppt", "pptx", "txt", "csv",
   ],
   planilha: ["csv", "txt", "xlsx", "xls"],
+  treinamento: [
+    "pdf", "docx", "xlsx", "xls", "csv", "txt", "md",
+    "mp3", "ogg", "opus", "wav", "m4a", "webm", "aac", "amr",
+  ],
 };
 
 const extensaoDe = (nome) => {
